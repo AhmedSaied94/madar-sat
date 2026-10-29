@@ -655,78 +655,78 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Setup (M)
 
-- [ ] T092 [US3] Create the Flutter project in `app/` and its flavors:
+- [x] T092 [US3] Create the Flutter project in `app/` and its flavors:
   - `flutter create --org com.madarsat --project-name madar_sat --platforms android,web app` (O1 package id `com.madarsat.app`);
   - pin the Flutter version in `app/.flutter-version`;
   - Android `productFlavors` `dev` (`applicationIdSuffix ".dev"`), `staging` (`".staging"`) and `prod` (no suffix) in `app/android/app/build.gradle.kts`;
   - remove the counter sample.
-- [ ] T093 [US3] Add the dependencies in `app/pubspec.yaml` and the lint config in `app/analysis_options.yaml`:
+- [x] T093 [US3] Add the dependencies in `app/pubspec.yaml` and the lint config in `app/analysis_options.yaml`:
   - **Dependencies:** flutter_riverpod, riverpod_annotation, go_router, dio, retrofit, freezed_annotation, json_annotation, drift, drift_flutter, intl.
   - **Dev dependencies:** build_runner, riverpod_generator, retrofit_generator, freezed, json_serializable, drift_dev, swagger_parser, flutter_lints.
   - **Lints:** `strict-casts`, `strict-inference`, `strict-raw-types`; `prefer_const_constructors` and `use_build_context_synchronously` as errors.
-- [ ] T094 [P] [US3] Write `app/CLAUDE.md` (delivery-plan §8.2). It covers:
+- [x] T094 [P] [US3] Write `app/CLAUDE.md` (delivery-plan §8.2). It covers:
   - the flavors and their run commands;
   - codegen (`dart run swagger_parser`, `dart run build_runner build -d`);
   - token and font copies;
   - looking up `madar-design/app-flutter/SCREENS.md`;
   - the platform-adapter pattern;
   - golden updates only in the pinned container (`flutter test --update-goldens` inside `ghcr.io/cirruslabs/flutter:<pin>`).
-- [ ] T095 [P] [US3] Create the flavor config and entry points in `app/env/` and `app/lib/`:
+- [x] T095 [P] [US3] Create the flavor config and entry points in `app/env/` and `app/lib/`:
   - `app/env/dev.json` (`API_BASE_URL=https://localhost:8443`), `app/env/staging.json` (the LAN Caddy over HTTPS) and `app/env/prod.json` (`https://api.<ip1>.sslip.io`, `https://media.<ip1>.sslip.io`), with public values only;
   - `app/lib/core/config/app_config.dart`, reading them with `String.fromEnvironment`;
   - `app/lib/main_dev.dart`, `main_staging.dart` and `main_prod.dart`.
-- [ ] T096 [P] [US3] Configure Android networking in `app/android/app/src/main/` ([R16](research.md#r16-flavors-hosts-and-https)):
+- [x] T096 [P] [US3] Configure Android networking in `app/android/app/src/main/` ([R16](research.md#r16-flavors-hosts-and-https)):
   - `app/android/app/src/main/res/xml/network_security_config.xml`: system CAs only and `cleartextTrafficPermitted="false"`;
   - a `<debug-overrides>` block that trusts user CAs, so debug builds accept the local Caddy root CA;
   - reference the file from `AndroidManifest.xml`.
-- [ ] T097 [P] [US3] Copy the design tokens and fonts verbatim into `app/`, and add a copy check:
+- [x] T097 [P] [US3] Copy the design tokens and fonts verbatim into `app/`, and add a copy check:
   - `madar-design/design-system/code/flutter/madar_tokens.dart` → `app/lib/core/theme/madar_tokens.dart`;
   - `madar-design/design-system/fonts/*.ttf` → `app/assets/fonts/`, declared in `pubspec.yaml` under the families `Changa`, `IBM Plex Sans Arabic` and `IBM Plex Mono` with their weights;
   - `app/tool/check_token_copy.sh` runs `cmp` on each copy against its source.
-- [ ] T098 [P] [US3] Write `app/tool/check_literals.sh` ([R20](research.md#r20-detecting-hard-coded-visual-values)). It uses `rg` over `app/lib/` outside `core/theme/` and `generated/`, failing on:
+- [x] T098 [P] [US3] Write `app/tool/check_literals.sh` ([R20](research.md#r20-detecting-hard-coded-visual-values)). It uses `rg` over `app/lib/` outside `core/theme/` and `generated/`, failing on:
   - `Color(0x` and `Colors.`;
   - `fontFamily:`;
   - numeric literals in `EdgeInsets.`, `SizedBox(`, `BorderRadius.` and `fontSize:`.
-- [ ] T099 [US3] Build the theme in `app/lib/core/theme/madar_theme.dart`:
+- [x] T099 [US3] Build the theme in `app/lib/core/theme/madar_theme.dart`:
   - `ThemeData` for light and dark from `MadarColors`, `MadarText`, `MadarRadii` and `MadarFonts`;
   - `context.madarColors` access;
   - the app forced RTL and the locale fixed to `ar`, with digits handled by `MadarFormat`.
-- [ ] T100 [US3] Set up localization: `app/l10n.yaml` and `app/lib/core/l10n/app_ar.arb`, with every string for the components, the matches route and the error-code map (`not_found`, `validation_error`, `internal_error`, network error, the empty day «لا توجد مباريات في هذا اليوم», «لم يُحدد», «مباشر», «انتهت» and the others). No literal user-facing string lives in widgets.
+- [x] T100 [US3] Set up localization: `app/l10n.yaml` and `app/lib/core/l10n/app_ar.arb`, with every string for the components, the matches route and the error-code map (`not_found`, `validation_error`, `internal_error`, network error, the empty day «لا توجد مباريات في هذا اليوم», «لم يُحدد», «مباشر», «انتهت» and the others). No literal user-facing string lives in widgets.
 
 ### Tests first (M): write them and see them fail
 
-- [ ] T101 [P] [US3] Write `app/test/core/format/digits_test.dart`: Western digits (0–9) for counts, times, scores and frequencies under the `ar` locale, with tabular figures applied ([R19](research.md#r19-western-digits-and-time-formatting)).
-- [ ] T102 [P] [US3] Write `app/test/core/format/time_test.dart`:
+- [x] T101 [P] [US3] Write `app/test/core/format/digits_test.dart`: Western digits (0–9) for counts, times, scores and frequencies under the `ar` locale, with tabular figures applied ([R19](research.md#r19-western-digits-and-time-formatting)).
+- [x] T102 [P] [US3] Write `app/test/core/format/time_test.dart`:
   - local kickoff in 12 h with `ص`/`م` (`9:00 م`) and in 24 h (`21:00`) from a UTC `kickoff_at`;
   - local-day bounds sent as UTC `from`/`to` across a DST change;
   - a `time_tbd` match renders «لم يُحدد».
-- [ ] T103 [P] [US3] Write `app/test/core/format/bidi_test.dart`:
+- [x] T103 [P] [US3] Write `app/test/core/format/bidi_test.dart`:
   - `11843 H 27500` and Latin channel or satellite names render inside an LTR `Directionality` island in an RTL tree;
   - a score is built from isolated parts, never a raw `1 - 0` string.
-- [ ] T104 [P] [US3] Write `app/test/core/db/matches_table_test.dart`: an in-memory drift database writes and reads back a `MatchSummary` fixture unchanged, including the nested `competition`, `home`, `away`, `broadcast.headline` and the null `score`.
-- [ ] T105 [P] [US3] Write `app/test/core/router/router_test.dart`:
+- [x] T104 [P] [US3] Write `app/test/core/db/matches_table_test.dart`: an in-memory drift database writes and reads back a `MatchSummary` fixture unchanged, including the nested `competition`, `home`, `away`, `broadcast.headline` and the null `score`.
+- [x] T105 [P] [US3] Write `app/test/core/router/router_test.dart`:
   - every PB §8.4 route resolves to its stub screen RTL, including `/`, `/live`, `/day/2026-10-28`, `/match/1`, `/my-satellites`, `/satellites`, `/satellites/1`, `/channel/1`, `/team/1`, `/competition/1`, `/favorites`, `/rights`, `/rights/1`, `/feeds`, `/search?q=x`, `/settings` and `/install`;
   - the back arrow points right;
   - `/gallery` exists only when `kDebugMode` is true (FR-045).
-- [ ] T106 [US3] Create the golden harness in `app/test/`:
+- [x] T106 [US3] Create the golden harness in `app/test/`:
   - `app/test/flutter_test_config.dart` loads the bundled TTFs with `FontLoader`;
   - `app/test/goldens/golden_harness.dart` provides `goldenVariants(name, builder)`, which renders each case in RTL × {light, dark} × text scale {1.0, 1.3} on a 360-dp-wide surface ([R18](research.md#r18-golden-tests)).
-- [ ] T107 [P] [US3] Write `app/test/goldens/match_row_test.dart`: `MatchRow` in every state from `madar-design/design-system/components/MatchRow/README.md`, including long Arabic names over two lines, a followed star, a channel line with `+N` and «مجانية», and no channel line. Add a `find.bySemanticsLabel` test: the row is one merged node whose Arabic label reads home, away, status, score and minute when shown, and the headline channel, in the PB §13.8 form «الأهلي ضد الزمالك، مباشر، الدقيقة 67، النتيجة 1 مقابل 0، على أون سبورت 1». An estimated-live row's label has no score or minute.
-- [ ] T108 [P] [US3] Write `app/test/goldens/status_block_test.dart`: `StatusBlock` in every PB S2 variant:
+- [x] T107 [P] [US3] Write `app/test/goldens/match_row_test.dart`: `MatchRow` in every state from `madar-design/design-system/components/MatchRow/README.md`, including long Arabic names over two lines, a followed star, a channel line with `+N` and «مجانية», and no channel line. Add a `find.bySemanticsLabel` test: the row is one merged node whose Arabic label reads home, away, status, score and minute when shown, and the headline channel, in the PB §13.8 form «الأهلي ضد الزمالك، مباشر، الدقيقة 67، النتيجة 1 مقابل 0، على أون سبورت 1». An estimated-live row's label has no score or minute.
+- [x] T108 [P] [US3] Write `app/test/goldens/status_block_test.dart`: `StatusBlock` in every PB S2 variant:
   - scheduled; imminent `بعد 25 د`; live score + minute; halftime; extra time; penalties `(4-3)`; finished;
   - postponed, cancelled, abandoned;
   - **estimated live: «مباشر» with no score and the quieter treatment**;
   - time unknown «لم يُحدد».
-- [ ] T109 [P] [US3] Write `app/test/goldens/frequency_readout_test.dart`: `FrequencyReadout` at its sizes and in its states (`ok`, `dim`, `note`, good, bad) from its README. It stays a dark well with cyan IBM Plex Mono digits, LTR, in **both** themes.
-- [ ] T110 [P] [US3] Write `app/test/goldens/carriage_row_test.dart`: `CarriageRow` collapsed (logo, name, access badge, satellite, readout visible) and expanded, with free and encrypted variants and the long-name truncation from its README. Add a `find.bySemanticsLabel` test: the collapsed row is one merged node whose Arabic label gives the channel, free or encrypted, the satellite and the frequency (PB §13.8).
-- [ ] T111 [P] [US3] Write `app/test/goldens/access_badge_test.dart`: `AccessBadge` free and encrypted (neutral with a lock, never the error color), plus `SatelliteBadge` and `ChangedBadge`, per `madar-design/design-system/components/Badges/README.md`.
-- [ ] T112 [P] [US3] Write `app/test/goldens/date_strip_test.dart`: `DateStrip` with today marked, a selected day and RTL order, per its README.
-- [ ] T113 [P] [US3] Write `app/test/goldens/bottom_nav_test.dart`: `MadarBottomNav` with each of the 5 destinations current, a badge, RTL order (المباريات first on the right), and touch targets ≥ 48 dp.
-- [ ] T114 [P] [US3] Write `app/test/goldens/top_bar_test.dart`: `MadarTopBar.root()` (the wordmark «مدار» at the start (right) and search at the end) and the detail variant (back arrow pointing right, title, up to 2 actions).
-- [ ] T115 [P] [US3] Write `app/test/goldens/empty_state_test.dart`: `EmptyState` with the orbit-ring illustration, title, help line and at most one action, covering the empty-day and load-failed copy.
-- [ ] T116 [P] [US3] Write `app/test/goldens/skeleton_test.dart`: `Skeleton` for the S2 first load (3 groups × 3 rows), static when reduced motion is on.
-- [ ] T117 [P] [US3] Write `app/test/goldens/logo_test.dart` per `madar-design/design-system/components/Logo/README.md`: `BrandMark` at 28, 40 and 64 (ink tile, bare ring, single-ink) and with the «مدار» wordmark; `TeamCrest` with a logo and with the first-letter shield fallback; `LogoTile` with a logo and with each entity fallback in the README, always on the neutral tile. Logos come from a test asset image, never the network.
-- [ ] T118 [P] [US3] Write `app/test/features/matches/matches_page_test.dart` with a fake generated API client:
+- [x] T109 [P] [US3] Write `app/test/goldens/frequency_readout_test.dart`: `FrequencyReadout` at its sizes and in its states (`ok`, `dim`, `note`, good, bad) from its README. It stays a dark well with cyan IBM Plex Mono digits, LTR, in **both** themes.
+- [x] T110 [P] [US3] Write `app/test/goldens/carriage_row_test.dart`: `CarriageRow` collapsed (logo, name, access badge, satellite, readout visible) and expanded, with free and encrypted variants and the long-name truncation from its README. Add a `find.bySemanticsLabel` test: the collapsed row is one merged node whose Arabic label gives the channel, free or encrypted, the satellite and the frequency (PB §13.8).
+- [x] T111 [P] [US3] Write `app/test/goldens/access_badge_test.dart`: `AccessBadge` free and encrypted (neutral with a lock, never the error color), plus `SatelliteBadge` and `ChangedBadge`, per `madar-design/design-system/components/Badges/README.md`.
+- [x] T112 [P] [US3] Write `app/test/goldens/date_strip_test.dart`: `DateStrip` with today marked, a selected day and RTL order, per its README.
+- [x] T113 [P] [US3] Write `app/test/goldens/bottom_nav_test.dart`: `MadarBottomNav` with each of the 5 destinations current, a badge, RTL order (المباريات first on the right), and touch targets ≥ 48 dp.
+- [x] T114 [P] [US3] Write `app/test/goldens/top_bar_test.dart`: `MadarTopBar.root()` (the wordmark «مدار» at the start (right) and search at the end) and the detail variant (back arrow pointing right, title, up to 2 actions).
+- [x] T115 [P] [US3] Write `app/test/goldens/empty_state_test.dart`: `EmptyState` with the orbit-ring illustration, title, help line and at most one action, covering the empty-day and load-failed copy.
+- [x] T116 [P] [US3] Write `app/test/goldens/skeleton_test.dart`: `Skeleton` for the S2 first load (3 groups × 3 rows), static when reduced motion is on.
+- [x] T117 [P] [US3] Write `app/test/goldens/logo_test.dart` per `madar-design/design-system/components/Logo/README.md`: `BrandMark` at 28, 40 and 64 (ink tile, bare ring, single-ink) and with the «مدار» wordmark; `TeamCrest` with a logo and with the first-letter shield fallback; `LogoTile` with a logo and with each entity fallback in the README, always on the neutral tile. Logos come from a test asset image, never the network.
+- [x] T118 [P] [US3] Write `app/test/features/matches/matches_page_test.dart` with a fake generated API client:
   - rows render teams and local kickoff in Western digits;
   - an empty response shows `EmptyState` «لا توجد مباريات في هذا اليوم»;
   - an `error.code` failure shows the mapped Arabic error;
@@ -734,30 +734,30 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Implementation (M)
 
-- [ ] T119 [P] [US3] Implement `MadarFormat` in `app/lib/core/format/` (`digits.dart`, `time.dart`, `bidi.dart`) until T101–T103 pass.
-- [ ] T120 [US3] Implement the router in `app/lib/core/router/app_router.dart` until T105 passes:
+- [x] T119 [P] [US3] Implement `MadarFormat` in `app/lib/core/format/` (`digits.dart`, `time.dart`, `bidi.dart`) until T101–T103 pass.
+- [x] T120 [US3] Implement the router in `app/lib/core/router/app_router.dart` until T105 passes:
   - go_router with every PB §8.4 route as a stub screen;
   - a `/gallery` route added only when `kDebugMode` is true.
-- [ ] T121 [US3] Generate the API client in `app/lib/core/network/generated/` after B1's T024 tag:
+- [x] T121 [US3] Generate the API client in `app/lib/core/network/generated/` after B1's T024 tag:
   - `app/swagger_parser.yaml`: input `../backend/openapi/public.json` at tag `contract-v1`, output `app/lib/core/network/generated/`, retrofit + freezed;
   - run `dart run swagger_parser && dart run build_runner build -d` and commit the output, which is never hand-edited.
-- [ ] T122 [US3] Implement the network and database core in `app/lib/core/`:
+- [x] T122 [US3] Implement the network and database core in `app/lib/core/`:
   - `app/lib/core/network/dio_provider.dart`: one Dio with the base URL from `AppConfig`, timeouts, and an `EtagInterceptor` (`app/lib/core/network/etag_interceptor.dart`) that stores ETags per URL in memory and sends `If-None-Match`;
   - `app/lib/core/db/app_database.dart`: the drift `Matches` table with `MatchSummary` fields and nested parts as JSON columns, `drift_flutter` for native and web;
   - run until T104 passes.
-- [ ] T123 [P] [US3] Implement `app/lib/design/components/logo.dart` (`BrandMark`, `TeamCrest`, `LogoTile`) until T117 passes. Finish it before T124, T127 and T131, which use it.
-- [ ] T124 [P] [US3] Implement `app/lib/design/components/match_row.dart` (`MatchRow(match:, onTap:, onLongPress:)`) until T107 passes. Wrap it in `MergeSemantics` with the Arabic label built from `MadarFormat` and ARB strings, never string literals in the widget.
-- [ ] T125 [P] [US3] Implement `app/lib/design/components/status_block.dart` (`StatusBlock(status:, kickoff:, score:, minute:)`) until T108 passes.
-- [ ] T126 [P] [US3] Implement `app/lib/design/components/frequency_readout.dart` (`FrequencyReadout(mhz:, polarization:, symbolRate:, size:)`) until T109 passes.
-- [ ] T127 [P] [US3] Implement `app/lib/design/components/carriage_row.dart` until T110 passes, with the same `MergeSemantics` label approach as `MatchRow`.
-- [ ] T128 [P] [US3] Implement `app/lib/design/components/badges.dart` (`AccessBadge`, `SatelliteBadge`, `ChangedBadge`) until T111 passes.
-- [ ] T129 [P] [US3] Implement `app/lib/design/components/date_strip.dart` until T112 passes.
-- [ ] T130 [P] [US3] Implement `app/lib/design/components/bottom_nav.dart` (`MadarBottomNav(current:)`) until T113 passes.
-- [ ] T131 [P] [US3] Implement `app/lib/design/components/top_bar.dart` (`MadarTopBar.root()`, `MadarTopBar.detail(...)`) until T114 passes.
-- [ ] T132 [P] [US3] Implement `app/lib/design/components/empty_state.dart` until T115 passes.
-- [ ] T133 [P] [US3] Implement `app/lib/design/components/skeleton.dart` until T116 passes.
-- [ ] T134 [US3] Implement the gallery in `app/lib/features/gallery/presentation/gallery_page.dart`: every FR-043 component in every state, with theme and text-scale toggles. Register it only when `kDebugMode` is true (FR-045).
-- [ ] T135 [US3] Implement the matches route in `app/lib/features/matches/`, until T118 passes:
+- [x] T123 [P] [US3] Implement `app/lib/design/components/logo.dart` (`BrandMark`, `TeamCrest`, `LogoTile`) until T117 passes. Finish it before T124, T127 and T131, which use it.
+- [x] T124 [P] [US3] Implement `app/lib/design/components/match_row.dart` (`MatchRow(match:, onTap:, onLongPress:)`) until T107 passes. Wrap it in `MergeSemantics` with the Arabic label built from `MadarFormat` and ARB strings, never string literals in the widget.
+- [x] T125 [P] [US3] Implement `app/lib/design/components/status_block.dart` (`StatusBlock(status:, kickoff:, score:, minute:)`) until T108 passes.
+- [x] T126 [P] [US3] Implement `app/lib/design/components/frequency_readout.dart` (`FrequencyReadout(mhz:, polarization:, symbolRate:, size:)`) until T109 passes.
+- [x] T127 [P] [US3] Implement `app/lib/design/components/carriage_row.dart` until T110 passes, with the same `MergeSemantics` label approach as `MatchRow`.
+- [x] T128 [P] [US3] Implement `app/lib/design/components/badges.dart` (`AccessBadge`, `SatelliteBadge`, `ChangedBadge`) until T111 passes.
+- [x] T129 [P] [US3] Implement `app/lib/design/components/date_strip.dart` until T112 passes.
+- [x] T130 [P] [US3] Implement `app/lib/design/components/bottom_nav.dart` (`MadarBottomNav(current:)`) until T113 passes.
+- [x] T131 [P] [US3] Implement `app/lib/design/components/top_bar.dart` (`MadarTopBar.root()`, `MadarTopBar.detail(...)`) until T114 passes.
+- [x] T132 [P] [US3] Implement `app/lib/design/components/empty_state.dart` until T115 passes.
+- [x] T133 [P] [US3] Implement `app/lib/design/components/skeleton.dart` until T116 passes.
+- [x] T134 [US3] Implement the gallery in `app/lib/features/gallery/presentation/gallery_page.dart`: every FR-043 component in every state, with theme and text-scale toggles. Register it only when `kDebugMode` is true (FR-045).
+- [x] T135 [US3] Implement the matches route in `app/lib/features/matches/`, until T118 passes:
   - `app/lib/features/matches/data/matches_api.dart`: wraps the generated client and computes today's local-day `from`/`to` in UTC;
   - `app/lib/features/matches/presentation/matches_page.dart`: a Riverpod provider and unstyled rows with `ListView.builder`, `EmptyState`, and error copy by `error.code`;
   - add a code comment pointing to the plan.md deviation (SWR repository on D2).

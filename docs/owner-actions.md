@@ -14,7 +14,7 @@ The runbooks are being written on lane B2's branch `d01-b2`. Their links work on
 
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
-| [001 D1 foundation](#001-d1-foundation) | B1 2 · B2 13 · A 1 · M 3 | B1 2 · B2 5, then the done check | **B1:** PR #2 merged on 2026-10-29; 45 of 49 tasks ticked in `../madar-b1`; the `contract-v1` tag isn't on GitHub, and T024 and T047–T049 are open. **B2:** implemented and uncommitted on `d01-b2` in `../madar-b2`; 13 of 18 ticked, with T058's live step and T064–T067 open. **A:** started in `../madar-a` (only `admin/package.json` so far), 0 of 24 ticked. **M:** not started; there's no `../madar-m`, and 0 of 45 are ticked. |
+| [001 D1 foundation](#001-d1-foundation) | B1 2 · B2 13 · A 1 · M 6 | B1 2 · B2 5, then the done check | **B1:** PR #2 merged on 2026-10-29; 45 of 49 tasks ticked in `../madar-b1`; the `contract-v1` tag isn't on GitHub, and T024 and T047–T049 are open. **B2:** implemented and uncommitted on `d01-b2` in `../madar-b2`; 13 of 18 ticked, with T058's live step and T064–T067 open. **A:** started in `../madar-a` (only `admin/package.json` so far), 0 of 24 ticked. **M:** implemented and uncommitted on `d01-m` in `../madar-m`; 44 of 45 ticked, with T136's phone, screenshot and browser steps open. |
 
 ## Every month
 
@@ -129,13 +129,16 @@ Started in `../madar-a`, with none of its tasks ticked yet. This subsection is r
 
 ### Lane M: app
 
-Not started: there's no `../madar-m` worktree ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-m), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-m-app)).
+Implemented on 2026-10-29 on `d01-m` in `../madar-m`; T092–T135 are ticked, T136's device and browser steps are the items below ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-m), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-m-app)).
 
 #### Before merge, in this order
 
-- [ ] **Start the lane.** Create `../madar-m` on `d01-m` from `origin/master`, and start it with `SPECIFY_FEATURE_DIRECTORY=specs/001-d01-foundation claude` (delivery-plan §5.1, §5.4).
-- [ ] **T136 step 3 On a phone.** Install the CI `app-prod-debug.apk` on an Android phone. Confirm that the matches route lists today's matches from VPS-1 (or `EmptyState`), and that `/gallery` opens. It needs VPS-1 serving `/v1` (B1's T048).
+- [ ] **T136 step 3 On a phone.** Install the CI `app-prod-debug.apk` on an Android phone. Confirm that the matches route lists today's matches from VPS-1 (or `EmptyState`), and that `/gallery` opens. It needs VPS-1 serving `/v1` (B1's T048). A local debug build is at `app/build/app/outputs/flutter-apk/app-prod-debug.apk`.
 - [ ] **T136 step 4 Screens against the design.** Compare the gallery screenshots, in both themes, with the four design-system PNGs and `Matches.png` (delivery-plan §5.4).
+- [ ] **T136 step 5 No runtime font fetch.** Serve `app/build/web` and open `/gallery` and the matches route in Chrome DevTools → Network: no request to `fonts.gstatic.com` or `fonts.googleapis.com` (FR-042). Fix a hit by bundling the glyph, never by allowing the fetch.
+- [ ] **T136 step 6 Attach the evidence.** Put the screenshots and the Network result in the PR (constitution "Done means").
+- [ ] **Staging host.** Replace the placeholder LAN address in `app/env/staging.json` with the real LAN Caddy host (public value only). The `prod` values already point at `api.130.110.117.215.sslip.io` and `media.130.110.117.215.sslip.io`.
+- [ ] **Golden container tag.** `ghcr.io/cirruslabs/flutter:3.47.7` did not exist when the lane ran, so the goldens were generated with Flutter 3.47.7 on the host. Confirm the tag `app.yml` uses exists, or bump `app/.flutter-version` and regenerate the goldens in the image (research R18).
 
 ### Day sign-off
 

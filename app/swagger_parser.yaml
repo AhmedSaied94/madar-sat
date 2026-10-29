@@ -1,0 +1,16 @@
+# Generated from backend/openapi/public.json at tag contract-v1 (D1 T121).
+# Never hand-edit the output under lib/core/network/generated/.
+swagger_parser:
+  schema_path: ../backend/openapi/public.json
+  output_directory: lib/core/network/generated
+  name: madar_api
+  language: dart
+  json_serializer: freezed
+  # Freezed 3.x/4.x require abstract model classes (swagger_parser README).
+  use_freezed3: true
+  root_client: true
+  root_client_name: MadarApi
+  merge_clients: true
+  export_file: true
+  mark_files_as_generated: true
+  put_clients_in_folder: false

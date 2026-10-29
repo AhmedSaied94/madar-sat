@@ -1,0 +1,76 @@
+name: madar_sat
+description: "Madar Sat (مدار سات) — which channel, satellite and frequency a match is on."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State, navigation and networking (constitution VIII).
+  flutter_riverpod: ^3.4.3
+  riverpod_annotation: ^4.0.7
+  go_router: ^18.1.2
+  dio: ^5.11.1
+  retrofit: ^4.10.0
+
+  # Models and the offline cache (P6: drift, never Hive/Isar).
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
+  drift: ^2.35.3
+  drift_flutter: ^0.3.1
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.16.2
+  riverpod_generator: ^4.0.9
+  retrofit_generator: ^10.3.2
+  freezed: ^4.0.3
+  json_serializable: ^6.15.2
+  drift_dev: ^2.35.2
+  swagger_parser: ^1.45.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  fonts:
+    - family: Changa
+      fonts:
+        - asset: assets/fonts/Changa-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Changa-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Changa-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Changa-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Changa-ExtraBold.ttf
+          weight: 800
+    - family: IBM Plex Sans Arabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
+    - family: IBM Plex Mono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
