@@ -8,13 +8,11 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 - **After merge** items are checks on the live hosts. The day passes once they and its done check (delivery-plan Appendix A) pass.
 - When a check fails, tell Claude what you saw. The fix goes in a follow-up PR, or in the next day's carry-over (delivery-plan §5.3).
 
-The runbooks are being written on lane B2's branch `d01-b2`. Their links work once it merges.
-
 ## Open now
 
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
-| [001 D1 foundation](#001-d1-foundation) | B1 2 · B2 13 · A 1 · M 3 | B1 2 · B2 5, then the done check | **B1:** PR #2 merged on 2026-10-29; 45 of 49 tasks ticked in `../madar-b1`; the `contract-v1` tag isn't on GitHub, and T024 and T047–T049 are open. **B2:** implemented and uncommitted on `d01-b2` in `../madar-b2`; 13 of 18 ticked, with T058's live step and T064–T067 open. **A:** started in `../madar-a` (only `admin/package.json` so far), 0 of 24 ticked. **M:** not started; there's no `../madar-m`, and 0 of 45 are ticked. |
+| [001 D1 foundation](#001-d1-foundation) | B1 1 · B2 11 · A 2 · M 3 | B1 1 · B2 4, then the done check | **B1:** PR #2 merged on 2026-10-29; 47 of 49 tasks ticked in `../madar-b1`. `contract-v1` is tagged (T024), and T048 is done: VPS-1 serves the snapshot and its media. T047 and T049 are open. **B2:** PRs #3 and #4 merged on 2026-10-29, and `backend.yml` deploys VPS-1; 14 of 18 ticked, with T064–T067 open. **A:** PR open from `d01-a`; 23 of 24 ticked, with T091's screenshots to attach. The PR also carries a contract fix made after the `contract-v1` tag, which its breaking-change check has to pass. **M:** not started; there's no `../madar-m`, and 0 of 45 are ticked. |
 
 ## Every month
 
@@ -36,11 +34,13 @@ The day's done check: VPS-1 serves `/v1` with snapshot data over HTTPS; the cont
 
 ### Lane B1: data and contract
 
-PR #2 merged on 2026-10-29. T024 and T047–T049 are open ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b1)).
+PR #2 merged on 2026-10-29. T024 and T048 were done the same day. T047 and T049 are open ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b1)).
 
 #### Before merge, in this order
 
-- [ ] **T024 Contract freeze.** Review `git diff` of `backend/openapi/*.json` against [contracts/](../specs/001-d01-foundation/contracts/), then push the tag: `git tag -a contract-v1 -m "D1 contract freeze" && git push origin contract-v1` ([quickstart](../specs/001-d01-foundation/quickstart.md#lane-b1-data-and-contract)). Lane A's T082 and Lane M's T121 generate their clients from this tag, so it blocks both lanes. Then tell them.
+- [x] **T024 Contract freeze.** Review `git diff` of `backend/openapi/*.json` against [contracts/](../specs/001-d01-foundation/contracts/), then push the tag: `git tag -a contract-v1 -m "D1 contract freeze" && git push origin contract-v1` ([quickstart](../specs/001-d01-foundation/quickstart.md#lane-b1-data-and-contract)). Lane A's T082 and Lane M's T121 generate their clients from this tag, so it blocks both lanes. Then tell them.
+
+  Tagged on 2026-10-29 at your request, on `master` at `231c221`. The contract files there are unchanged since B1's `390ba8a`. The diff review against `contracts/` wasn't done separately. Lanes A and M can now run T082 and T121, and `backend.yml`'s breaking-change check now runs.
 - [ ] **T025–T027 Migrations.** PR #2 already merged them, so read them on `master` line by line, as tasks.md "The owner must review" and delivery-plan §5.4 ask. → [database-migrations](runbooks/database-migrations.md)
 
 #### After merge
@@ -48,11 +48,13 @@ PR #2 merged on 2026-10-29. T024 and T047–T049 are open ([tasks.md](../specs/0
 These need B2's hosts up (T058, T060).
 
 - [ ] **Fresh snapshot.** In `../old_app`, run the README's "Refresh the snapshot" commands, then copy `migration/data/` to `~/madar-snapshot/`. Never copy it into `madar_sat/` ([quickstart Prerequisites](../specs/001-d01-foundation/quickstart.md#prerequisites); spec Edge Cases).
-- [ ] **T048 Snapshot on VPS-1.** Over WireGuard, `scp` the snapshot to `/srv/snapshot/<date>/` on VPS-1 (T048 step 1), and tell B1 to run the load. → [snapshot-load](runbooks/snapshot-load.md)
+- [x] **T048 Snapshot on VPS-1.** Over WireGuard, `scp` the snapshot to `/srv/snapshot/<date>/` on VPS-1 (T048 step 1), and tell B1 to run the load. → [snapshot-load](runbooks/snapshot-load.md)
+
+  Done on 2026-10-29. Both loads reconciled with the same counts (`load-report-20261029T180143Z`, `…180718Z`). `rehost-media` hosted 4,056 URLs with none failed (3,595 rehosted, 461 deduplicated). The API returns `304` on `If-None-Match`, and no media URL points at the old hosts.
 
 ### Lane B2: servers and CI
 
-Implemented on 2026-10-29 and uncommitted on `d01-b2` in `../madar-b2`. T050–T057 and T059–T063 are ticked; T058's live step and T064–T067 are left ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b2), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-b2-servers-and-ci)).
+Merged on 2026-10-29 in PRs #3 and #4. T050–T063 are ticked; T064–T067 are left ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b2), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-b2-servers-and-ci)).
 
 The bootstrap and the GitHub secrets come before the merge. Merging touches `infra/` and `.github/`, so `infra.yml`'s `sync` job runs on `master` straight away and needs the hosts and the secrets.
 
@@ -79,7 +81,7 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
   - `infra/scripts/deploy.sh`.
 
   → [firewall-changes](runbooks/firewall-changes.md), [deploy-and-rollback](runbooks/deploy-and-rollback.md)
-- [ ] **Commit and push the branch.** First run `/speckit-review-implementation lane=b2` until no CRITICAL or HIGH finding is left (delivery-plan §5.2). Then ask Claude to commit `d01-b2` and push it.
+- [x] **Commit and push the branch.** First run `/speckit-review-implementation lane=b2` until no CRITICAL or HIGH finding is left (delivery-plan §5.2). Then ask Claude to commit `d01-b2` and push it.
 - [ ] **T062 Firebase project.** Create the project if Day 0 step 2 isn't done. Give Claude its project ID: it goes into `infra/firebase/.firebaserc` and `CORS_ORIGINS`. Then set the secret `FIREBASE_SERVICE_ACCOUNT` yourself, from a service account with the Firebase Hosting Admin role. → [firebase-hosting](runbooks/firebase-hosting.md)
 - [ ] **ACME email and GHCR owner.** Give `ACME_EMAIL` for Let's Encrypt, and confirm the GHCR owner `ahmedsaied94`, which comes from the git remote. → [tls-certificates](runbooks/tls-certificates.md)
 - [ ] **T064 Bootstrap both hosts.**
@@ -95,11 +97,11 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
   - Variables: `VPS1_IP` and `VPS2_IP`, plus `ARM_RUNNER` if you have one.
 
   Today none of them is set. → [secrets](runbooks/secrets.md), [ci-workflows](runbooks/ci-workflows.md)
-- [ ] **Merge the PR** once its checks are green.
+- [x] **Merge the PR** once its checks are green.
 
 #### After merge
 
-- [ ] **T058 Certificates.** After the first `infra.yml` `sync` run (or a manual `deploy.sh --infra-only`), confirm that `api.`, `media.` and `app.<ip1>.sslip.io` have Let's Encrypt certificates. → [tls-certificates](runbooks/tls-certificates.md)
+- [x] **T058 Certificates.** After the first `infra.yml` `sync` run (or a manual `deploy.sh --infra-only`), confirm that `api.`, `media.` and `app.<ip1>.sslip.io` have Let's Encrypt certificates. → [tls-certificates](runbooks/tls-certificates.md)
 - [ ] **T065 Scan from outside.** On a machine not connected to WireGuard:
   - `nmap` shows only 80 and 443 open, and UDP 51820 answers;
   - each public host has a valid certificate and the system-design §8 headers;
@@ -121,11 +123,18 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
 
 ### Lane A: admin
 
-Started in `../madar-a`, with none of its tasks ticked yet. This subsection is refreshed when its `/speckit-implement` finishes ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-a), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-a-admin)).
+Implemented on 2026-10-29 on `d01-a` in the main checkout (`madar_sat`, not a `../madar-a` worktree), and opened as a PR. T068–T090 are ticked; T091 waits for its screenshots on the PR ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-a), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-a-admin)).
 
-#### Before merge
+The client was generated from `contract-v1` (`master` at `231c221`) plus the contract fix below.
 
-- [ ] **T091 Screens against the design.** Compare the PR's screenshots with `Login.png` and `Comp-Admin.png`: `/login?mock=invalid_credentials`, `/login?mock=account_locked`, and the shell at 1440 px and 1024 px (constitution "Done means", delivery-plan §5.4). Its client generation waits for B1's T024 tag.
+#### Before merge, in this order
+
+- [x] **Contract fix, outside Lane A's folder.** Decided 2026-10-29: it merges with Lane A's PR. `d01-a` changes Lane B1's backend because the exported specs didn't match what the API sends: examples lost `"data": null` / `"error": null` (FastAPI drops `None` when it writes the document), error responses had no schema, and 422 was FastAPI's `HTTPValidationError` instead of the envelope. Prism served bodies the generated client rejected, and Orval's mocks didn't type-check.
+  - Code: `backend/app/api/openapi.py` (new), `ErrorEnvelope` in `backend/app/api/envelope.py`, one line each in `backend/app/admin.py` and `backend/app/public.py`; test `backend/tests/contract/test_openapi_envelope.py`; re-exported `backend/openapi/public.json` and `admin.json`.
+  - It comes after the `contract-v1` tag, so FR-014 applies: CI's oasdiff check (`--fail-on ERR`) against the tag reports no breaking change for either document (run locally on 2026-10-29). The API's behaviour is unchanged; only the documents now say what it sends. Lane M's client (T121) sees the new `ErrorEnvelope` once it regenerates after this merge.
+- [ ] **T091 Screens against the design.** Compare the screenshots with `Login.png` and `Main.png` (the A0 shell): `/login?mock=invalid_credentials`, `/login?mock=account_locked`, and the shell after `/login?mock=login_ok`, each at 1440 px and 1024 px (constitution "Done means", delivery-plan §5.4). Claude took them with the app in a fixed-size frame, because the window manager ignores browser resizes. Attach them to the PR.
+- [x] **Commit and push.** Done 2026-10-29 at your request, without a `/speckit-review-implementation lane=a` round first; run one on the PR if you want it before merging. The untracked `.claude/settings.json` (Claude Code's local browser permission record) is left out.
+- [ ] **Merge the PR** once its checks are green.
 
 ### Lane M: app
 

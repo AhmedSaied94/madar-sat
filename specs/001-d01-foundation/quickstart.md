@@ -45,7 +45,7 @@ uv run python -m app.cli export-openapi && git diff --exit-code openapi/
 ```sh
 uv run uvicorn app.public:app --port 8000 &
 curl -si "localhost:8000/v1/matches?from=$(date -u +%FT00:00:00Z)&to=$(date -u -d tomorrow +%FT00:00:00Z)" | head -20
-ETAG=$(curl -sI "localhost:8000/v1/satellites" | awk -F': ' '/^etag/I{print $2}' | tr -d '\r')
+ETAG=$(curl -s -o /dev/null -D - "localhost:8000/v1/satellites" | awk -F': ' 'tolower($1)=="etag"{print $2}' | tr -d '\r')   # a GET: the API answers HEAD with 405
 curl -s -o /dev/null -w '%{http_code} %{size_download}\n' -H "If-None-Match: $ETAG" localhost:8000/v1/satellites   # 304 0
 curl -s "localhost:8000/v1/matches?from=2026-10-01T00:00:00Z&to=2026-10-20T00:00:00Z" | jq .error.code            # "validation_error"
 curl -s localhost:8000/v1/matches/999999999 | jq .error.code                                                        # "match_not_found"
@@ -80,7 +80,7 @@ sudo infra/scripts/check-firewall.sh          # prints the persisted rules
 ```sh
 nmap -Pn -p 22,80,443,5432,6379,8000,8001 <ip1>    # only 80, 443 open
 nmap -Pn -sU -p 51820 <ip1>                        # open|filtered (WireGuard)
-curl -sI https://api.<ip1>.sslip.io/healthz | grep -Ei 'strict-transport|nosniff|referrer-policy|etag'
+curl -s -o /dev/null -D - https://api.<ip1>.sslip.io/healthz | grep -Ei 'strict-transport|nosniff|referrer-policy|etag'
 curl -s https://api.<ip1>.sslip.io/healthz | jq .data           # {"db":"ok","redis":"ok"}
 ```
 
