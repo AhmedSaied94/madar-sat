@@ -101,7 +101,7 @@ NewSatApp/
 - Git can't check out one branch in two worktrees. So the day's spec lives on `master`, and each lane works on its own branch `dNN-<lane>`, cut from `master` each morning.
 - **`SPECIFY_FEATURE_DIRECTORY` tells Spec Kit which spec is active**, because the lane branch names don't match the spec folder and `.specify/feature.json` is per checkout (git-ignored): start each lane session as `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude`. `SPECIFY_FEATURE` alone doesn't select a spec in this Spec Kit version.
 - **The `feature-branch` hook switches branches** before every Spec Kit step (and right after `/speckit-specify`). In a lane worktree it checks out `dNN-<lane>`, creating it from `origin/master` if it doesn't exist. In the planning checkout it checks out the spec branch `0NN-dNN-<name>`, creating it from the current HEAD. It never stashes, resets or discards: if the switch is blocked, the step stops and you decide.
-- **The default branch is `master`**, and it stays `master` (it is not renamed to `main`). It is protected: PRs only, CI required, squash merge.
+- **The default branch is `master`**, and it stays `master` (it is not renamed to `main`). It isn't protected: the repo is private on GitHub Free, which can't protect a branch, and the owner is its only contributor (decided 2026-10-29). By convention, changes reach `master` only through a PR, squash-merged once every check is green.
 
 ### 5.2 The daily loop
 
@@ -168,7 +168,7 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 1. Install Spec Kit (`uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`) and run `specify init --here --ai claude`.
 2. Run `/speckit-constitution` with §8.1. *Done: v1.0.0 ratified; v1.1.0 (2026-10-29) adds the phased test bar for A4 and drops the Sync Impact Report.*
 3. Extend the root `CLAUDE.md` and add one per lane (§8.2).
-4. Protect `master` (§5.1). It stays the default branch.
+4. Keep `master` the default branch. It isn't protected (§5.1).
 5. **Plan spec 001** using the daily loop, from its brief in Appendix B.
 
 ### Phase 1: MVP (D1–D4)
@@ -522,7 +522,7 @@ Rules for every brief:
 | Lane | Story | Read | Acceptance |
 |---|---|---|---|
 | B1 | As an admin, an announcement reaches exactly the audience I chose | SD §6.8 announcement; §5.1 Remote Config | Audience "all" and "followers of X" with a dry-run count; maintenance and soft-update keys documented end to end |
-| B2 | As the owner, I've seen a full restore work | SD §7.3 | Restore drill on a scratch container recorded in the runbook; `docs/runbook.md` v1 |
+| B2 | As the owner, I've seen a full restore work | SD §7.3 | Restore drill on a scratch container recorded in `docs/runbooks/restore.md` |
 | A | As an editor, the bugs I reported this week are fixed | Admin bug queue | Queue from your notes closed or moved to D11 |
 | M | As a fan, I choose exactly which alerts I get per team, competition, match and channel | PB S10, S12, S15, S0; app: S10 Follow sheet, S15 Settings, S12 Feeds, S0 Maintenance, S0 Offline / soft update | S10 sheet with lead time and per-type toggles plus platform-state footer; S15 competition order / hide and notification group; S12 (if kept); maintenance screen and soft-update banner from Remote Config |
 

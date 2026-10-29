@@ -594,7 +594,7 @@ madar_sat/                    (git repository)
   admin/      src/ · Orval config · Dockerfile (static build)
   app/        lib/ · test/ · integration_test/ · env/ (public values only) · web/ (custom SW, bootstrap)
   infra/      compose/ (vps1.yml, vps2.yml) · Caddyfile · wireguard/ (templates, no keys) · scripts/
-  docs/       system-design.md · product-business.md · runbook.md (later)
+  docs/       system-design.md · product-business.md · delivery-plan.md · owner-actions.md · runbooks/
   .github/workflows/
 ```
 
