@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- Madar · Flutter app · S10 Follow notifications sheet · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S10 Follow notifications sheet</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.tr{display:flex;align-items:center;gap:12px;padding:12px 20px;min-height:56px}
+.tr .ii{width:34px;height:34px;border-radius:10px;background:var(--s2);display:flex;align-items:center;justify-content:center;color:var(--tx2);flex:none}
+.lead{display:flex;gap:6px;padding:0 20px 12px 20px;padding-inline-start:66px}
+.lead button{height:32px;min-width:52px;padding:0 10px;border-radius:9px;box-shadow:inset 0 0 0 1px var(--dv2);font-size:12px;font-weight:600;color:var(--tx2)}
+.lead button.on{background:var(--tx);color:var(--oninv);box-shadow:none}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="hero" style="padding:0 0 18px">
+    <div class="sbar"></div>
+    <header class="tb"><span class="ib"><span class="ic i-back s22"></span></span></header>
+    <div class="row g16 px16"><span class="tm t72"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><div class="col f1"><h1 style="font:700 28px/1.1 var(--f-d)">الأهلي</h1><span class="fs13 t2">الدوري المصري الممتاز</span></div></div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet" role="dialog" aria-label="تنبيهات متابعة الأهلي">
+    <div class="hdl"></div>
+    <div class="row g12" style="padding:2px 20px 10px">
+      <span class="tm t40"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span>
+      <div class="col f1"><span style="font:700 18px/1.2 var(--f-d)">تنبيهات الأهلي</span><span class="fs12 t3">اختر ما يصلك عن مبارياته</span></div>
+    </div>
+    <div class="hr"></div>
+    <div class="tr"><span class="ii"><span class="ic i-clock s18"></span></span><div class="col f1"><span class="w5">تذكير قبل المباراة</span><span class="fs12 t3">مع القناة والتردد على أقمارك</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    <div class="lead" role="radiogroup" aria-label="مدة التذكير"><button>5 د</button><button class="on" aria-checked="true">15 د</button><button>30 د</button><button>60 د</button></div>
+    <div class="tr bt"><span class="ii"><span class="ic i-whistle s18"></span></span><div class="col f1"><span class="w5">بداية المباراة</span></div><span class="tg" role="switch" aria-checked="false"></span></div>
+    <div class="tr bt"><span class="ii"><span class="ic i-ball s18"></span></span><div class="col f1"><span class="w5">الأهداف</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    <div class="tr bt"><span class="ii"><span class="ic i-check s18"></span></span><div class="col f1"><span class="w5">النتيجة النهائية</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    <div class="tr bt"><span class="ii"><span class="ic i-tv s18"></span></span><div class="col f1"><span class="w5">تحديث القنوات</span><span class="fs12 t3">عند إضافة قناة قبل المباراة</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    <div class="px16 mt8">
+      <div class="row g10" style="padding:12px 14px;border-radius:14px;background:var(--ppc);color:var(--pp)">
+        <span class="ic i-belloff s18"></span>
+        <div class="col f1"><span class="w6 fs13">الإشعارات متوقفة لهذا التطبيق</span><span class="fs12" style="opacity:.9">لن تصلك التنبيهات حتى تسمح بها من إعدادات الجهاز.</span></div>
+        <button class="btn btn-xs" style="background:var(--pp);color:var(--bg)">تفعيل</button>
+      </div>
+    </div>
+    <div class="row g8 px16" style="margin-top:14px">
+      <button class="btn btn-g" style="color:var(--err)">إلغاء المتابعة</button>
+      <span class="spacer"></span>
+      <button class="btn btn-p" style="min-width:120px">تم</button>
+    </div>
+    <div class="gest"></div>
+  </div>
+</div>
+
+
+
+
+</body></html>

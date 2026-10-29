@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- Madar · Flutter app · S2 Long-press quick actions · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S2 Long-press quick actions</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>body{margin:0}</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <header class="tb" style="padding:0 16px 0 6px">
+    <span class="wm"><span class="mk"></span>مدار</span>
+    <span class="spacer"></span>
+    <span class="ib"><span class="ic i-search s22"></span></span>
+  </header>
+  <div class="chips" style="padding-top:2px">
+    <span class="chip on">الكل <span class="cnt">85</span></span>
+    <span class="chip"><span class="ic i-starf s14 ac"></span>مبارياتي <span class="cnt">4</span></span>
+    <span class="chip"><span class="dot"></span>مباشر <span class="cnt">6</span></span>
+  </div>
+  <div class="body">
+    <div class="cg"><span class="lt"><span class="ic i-trophy s16" style="color:#7CC7FF"></span></span><span class="nm">كأس الرابطة الإنجليزية</span><span class="stg">الدور الرابع</span></div>
+    <div class="card">
+      
+        <div class="mr">
+          <div class="mr-g">
+            <div class="tmc"><span class="tm"><span class="crest" style="--c1: #6CABDD; --c2: #0B1F3A">م</span></span><span class="tmn">مان سيتي</span></div>
+            <div class="st"><span class="tm1"><span>10:30</span><span class="ap">م</span></span></div>
+            <div class="tmc away"><span class="tm"><span class="crest" style="--c1: #0057B8; --c2: #fff">ب</span></span><span class="tmn">برايتون</span></div>
+          </div>
+          <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">beIN SPORTS 2</span></span><span class="more-n"><span class="ltr">+92</span></span></div>
+        </div>
+      
+        <div class="mr bt">
+          <div class="mr-g">
+            <div class="tmc"><span class="tm"><span class="crest" style="--c1: #F4F4F4; --c2: #111">ف</span></span><span class="tmn">فولهام</span></div>
+            <div class="st"><span class="tm1"><span>10:45</span><span class="ap">م</span></span></div>
+            <div class="tmc away"><span class="tm"><span class="crest" style="--c1: #1B458F; --c2: #C4122E">ك</span></span><span class="tmn">كريستال بالاس</span></div>
+          </div>
+          <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">beIN SPORTS 3</span></span><span class="more-n"><span class="ltr">+45</span></span></div>
+        </div>
+      
+        <div class="mr bt">
+          <div class="mr-g">
+            <div class="tmc"><span class="tm"><span class="crest" style="--c1: #B50E12; --c2: #111">ب</span></span><span class="tmn">بورنموث</span></div>
+            <div class="st"><span class="tm1"><span>10:45</span><span class="ap">م</span></span></div>
+            <div class="tmc away"><span class="tm"><span class="crest" style="--c1: #670E36; --c2: #95BFE5">أ</span></span><span class="tmn">أستون فيلا</span></div>
+          </div>
+          <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">beIN SPORTS 4</span></span><span class="more-n"><span class="ltr">+56</span></span></div>
+        </div>
+      
+        <div class="mr bt sel">
+          <div class="mr-g">
+            <div class="tmc"><span class="tm"><span class="crest" style="--c1: #C8102E; --c2: #fff">ل</span></span><span class="tmn">ليفربول</span></div>
+            <div class="st"><span class="tm1"><span>11:00</span><span class="ap">م</span></span></div>
+            <div class="tmc away"><span class="tm"><span class="crest" style="--c1: #034694; --c2: #fff">ت</span></span><span class="tmn">تشيلسي</span></div>
+          </div>
+          <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">beIN SPORTS 1</span></span><span class="more-n"><span class="ltr">+124</span></span></div>
+        </div>
+      
+    </div>
+  </div>
+  <nav class="bn" aria-hidden="true">
+    <a class="on"><span class="pi"><span class="ic i-ball s22"></span></span>المباريات</a>
+    <a><span class="pi"><span class="ic i-dish s22"></span></span>أقماري</a>
+    <a><span class="pi"><span class="ic i-wave s22"></span></span>الترددات</a>
+    <a><span class="pi"><span class="ic i-star s22"></span></span>المفضلة</a>
+    <a><span class="pi"><span class="ic i-grid s22"></span></span>المزيد</a>
+  </nav>
+  <div class="gest" style="background:var(--s1)"></div>
+
+  <div class="scrim"></div>
+  <div class="sheet" role="dialog" aria-label="إجراءات سريعة للمباراة">
+    <div class="hdl"></div>
+    <div class="row g12" style="padding:6px 20px 16px">
+      <div class="row" style="gap:0">
+        <span class="tm t40"><span class="crest" style="--c1:#C8102E;--c2:#fff">ل</span></span>
+        <span class="tm t40" style="margin-inline-start:-10px;box-shadow:0 0 0 3px var(--el)"><span class="crest" style="--c1:#034694;--c2:#fff">ت</span></span>
+      </div>
+      <div class="col f1">
+        <span class="w6 fs15">ليفربول × تشيلسي</span>
+        <span class="fs12 t3">كأس الرابطة الإنجليزية · الأربعاء 28 أكتوبر · 11:00 م</span>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div class="col" style="padding-top:6px">
+      <a class="lr" href="../05-follow-and-search/FollowSheet.html"><span class="ii" style="background:var(--acc);color:var(--act)"><span class="ic i-bell s20"></span></span><div class="col f1"><span class="tt">تابع المباراة</span><span class="sub">تذكير قبل 15 دقيقة مع القناة، الأهداف والنتيجة</span></div></a>
+      <button class="lr"><span class="ii"><span class="ic i-share s20"></span></span><div class="col f1"><span class="tt">مشاركة المباراة</span><span class="sub">رابط يفتح المباراة في التطبيق أو المتصفح</span></div></button>
+      <button class="lr"><span class="ii"><span class="ic i-star s20"></span></span><div class="col f1"><span class="tt">تابع ليفربول</span></div></button>
+      <button class="lr"><span class="ii"><span class="ic i-star s20"></span></span><div class="col f1"><span class="tt">تابع تشيلسي</span></div></button>
+      <button class="lr"><span class="ii"><span class="ic i-trophy s20"></span></span><div class="col f1"><span class="tt">صفحة البطولة</span></div><span class="ic i-chl s18 go"></span></button>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

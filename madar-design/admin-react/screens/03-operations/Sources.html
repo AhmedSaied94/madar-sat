@@ -1,0 +1,168 @@
+<!doctype html>
+<!-- Madar · React admin · A13 Sources + unresolved names · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin sources</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.srcc.alert{box-shadow:inset 0 0 0 1.5px var(--err)}
+.sugg{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-radius:8px;background:var(--acc);font-size:12.5px;font-weight:600}
+.sugg small{font:600 10.5px var(--f-m);color:var(--act)}
+</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav on" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>المصادر</h1><div class="sub">الاستيراد التلقائي للمباريات والقنوات والنتائج</div></div></div>
+      <div class="g3c">
+        
+          <div class="box srcc">
+            <div class="row g8"><span class="nm">ysscores</span><span class="spacer"></span><span class="health ok"><span class="d"></span>سليم</span></div>
+            <span class="fs12 t3">مباريات اليوم حتى +3 · كل 3 ساعات · الجهاز المنزلي</span>
+            <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0.0,12.4 9.1,11.4 18.2,11.9 27.3,9.8 36.4,10.3 45.5,9.3 54.5,8.5 63.6,9.5 72.7,7.7 81.8,7.2 90.9,6.7 100.0,5.9" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+            <div class="mini"><div><b>85</b><span>آخر تشغيل</span></div><div><b>0%</b><span>أخطاء</span></div><div><b>5:00 م</b><span>آخر نجاح</span></div></div>
+            <div class="row g8"><span class="fs12 t2 f1">الدائرة مغلقة · التالي 8:00 م</span><button class="btn btn-s btn-xs"><span class="ic i-zap s14"></span>تشغيل الآن</button><button class="btn btn-o btn-xs"><span class="ic i-pause s14"></span>إيقاف</button></div>
+          </div>
+        
+          <div class="box srcc">
+            <div class="row g8"><span class="nm">LiveSoccerTV</span><span class="spacer"></span><span class="health ok"><span class="d"></span>سليم</span></div>
+            <span class="fs12 t3">القنوات حسب الدولة · كل ساعتين + قبل البداية بساعة</span>
+            <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0.0,17.6 9.1,13.7 18.2,14.5 27.3,12.4 36.4,12.9 45.5,10.8 54.5,9.8 63.6,8.8 72.7,9.3 81.8,7.2 90.9,6.2 100.0,5.1" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+            <div class="mini"><div><b>1,284</b><span>آخر تشغيل</span></div><div><b>2%</b><span>أخطاء</span></div><div><b>6:00 م</b><span>آخر نجاح</span></div></div>
+            <div class="row g8"><span class="fs12 t2 f1">الدائرة مغلقة · التالي 7:00 م</span><button class="btn btn-s btn-xs"><span class="ic i-zap s14"></span>تشغيل الآن</button><button class="btn btn-o btn-xs"><span class="ic i-pause s14"></span>إيقاف</button></div>
+          </div>
+        
+          <div class="box srcc">
+            <div class="row g8"><span class="nm">sporteventz</span><span class="spacer"></span><span class="health ok"><span class="d"></span>سليم</span></div>
+            <span class="fs12 t3">السلة واليد والطائرة والتنس · كل 6 ساعات</span>
+            <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0.0,20.2 9.1,19.7 18.2,19.9 27.3,18.9 36.4,19.2 45.5,19.4 54.5,18.6 63.6,18.9 72.7,19.2 81.8,18.6 90.9,18.9 100.0,19.2" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+            <div class="mini"><div><b>31</b><span>آخر تشغيل</span></div><div><b>0%</b><span>أخطاء</span></div><div><b>3:12 م</b><span>آخر نجاح</span></div></div>
+            <div class="row g8"><span class="fs12 t2 f1">الدائرة مغلقة · التالي 9:12 م</span><button class="btn btn-s btn-xs"><span class="ic i-zap s14"></span>تشغيل الآن</button><button class="btn btn-o btn-xs"><span class="ic i-pause s14"></span>إيقاف</button></div>
+          </div>
+        
+          <div class="box srcc alert">
+            <div class="row g8"><span class="nm">YallaKora</span><span class="spacer"></span><span class="health bad"><span class="d"></span>الدائرة مفتوحة</span></div>
+            <span class="fs12 t3">المباريات المصرية والعربية · يومياً + كل 6 ساعات</span>
+            <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0.0,15.0 9.1,14.5 18.2,14.7 27.3,15.5 36.4,15.0 45.5,20.2 54.5,25.4 63.6,28.0 72.7,28.0 81.8,28.0 90.9,28.0 100.0,28.0" fill="none" stroke="#FF6B6B" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+            <div class="mini"><div><b>0</b><span>آخر تشغيل</span></div><div><b>100%</b><span>أخطاء</span></div><div><b>12:10 م</b><span>آخر نجاح</span></div></div>
+            <div class="row g8"><span class="fs12 t2 f1">5 أخطاء متتالية · HTTP 403</span><button class="btn btn-s btn-xs"><span class="ic i-zap s14"></span>تشغيل الآن</button><button class="btn btn-o btn-xs"><span class="ic i-play s14"></span>استئناف</button></div>
+          </div>
+        
+          <div class="box srcc">
+            <div class="row g8"><span class="nm">API-Football</span><span class="spacer"></span><span class="health half"><span class="d"></span>قرب الحد</span></div>
+            <span class="fs12 t3">تكملة المباريات والتشكيلات · ميزانية يومية</span>
+            <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0.0,26.7 9.1,24.9 18.2,22.8 27.3,21.2 36.4,19.9 45.5,18.1 54.5,16.6 63.6,15.3 72.7,14.2 81.8,13.2 90.9,12.4 100.0,11.9" fill="none" stroke="#FFB627" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+            <div class="mini"><div><b>62/100</b><span>آخر تشغيل</span></div><div><b>0%</b><span>أخطاء</span></div><div><b>6:05 م</b><span>آخر نجاح</span></div></div>
+            <div class="row g8"><span class="fs12 t2 f1">يتجدد الحد 3:00 ص</span><button class="btn btn-s btn-xs"><span class="ic i-zap s14"></span>تشغيل الآن</button><button class="btn btn-o btn-xs"><span class="ic i-pause s14"></span>إيقاف</button></div>
+          </div>
+        
+          <div class="box srcc">
+            <div class="row g8"><span class="nm">Live poller</span><span class="spacer"></span><span class="health ok"><span class="d"></span>يعمل</span></div>
+            <span class="fs12 t3">الحالة والدقيقة والنتيجة والأحداث · كل 30–60 ث</span>
+            <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0.0,28.0 9.1,28.0 18.2,27.5 27.3,27.0 36.4,26.7 45.5,26.4 54.5,26.4 63.6,26.7 72.7,26.4 81.8,26.4 90.9,26.4 100.0,26.4" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+            <div class="mini"><div><b>6 مباشرة</b><span>آخر تشغيل</span></div><div><b>1%</b><span>أخطاء</span></div><div><b>قبل 22 ث</b><span>آخر نجاح</span></div></div>
+            <div class="row g8"><span class="fs12 t2 f1">كاش /v1/live كل 15 ث</span><button class="btn btn-s btn-xs"><span class="ic i-zap s14"></span>تشغيل الآن</button><button class="btn btn-o btn-xs"><span class="ic i-pause s14"></span>إيقاف</button></div>
+          </div>
+        
+      </div>
+      <section class="box">
+        <div class="box-h"><h2>أسماء غير محلولة</h2><span class="cnt-b">14</span><span class="fs12 t3">تبقى المباراة بالاسم النصي حتى تُربط</span><span class="spacer"></span><button class="dd"><span class="k">المصدر</span>الكل<span class="ic i-chd s16 t3"></span></button></div>
+        <div class="tw">
+          <table class="tbl">
+            <thead><tr><th>الاسم من المصدر</th><th>النوع</th><th>المصدر</th><th>سياق المباراة</th><th>اقتراح</th><th>الإجراء</th></tr></thead>
+            <tbody>
+              <tr><td><span class="mono w6">Nasaf Qarshi</span></td><td>فريق</td><td><span class="src">LST</span></td><td class="muted">ناساف × الكويت · دوري أبطال آسيا 2</td><td><span class="sugg">ناساف<small>92%</small></span></td><td><span class="row g6"><button class="btn btn-p btn-xs"><span class="ic i-link s14"></span>ربط</button><button class="btn btn-s btn-xs">جديد</button><button class="btn btn-g btn-xs">تجاهل</button></span></td></tr>
+              <tr><td><span class="mono w6">Gol Gohar Sirjan</span></td><td>فريق</td><td><span class="src">LST</span></td><td class="muted">كل كوهار رجان × أركاداغ · دوري أبطال آسيا 2</td><td><span class="sugg">كل كوهار رجان<small>88%</small></span></td><td><span class="row g6"><button class="btn btn-p btn-xs"><span class="ic i-link s14"></span>ربط</button><button class="btn btn-s btn-xs">جديد</button><button class="btn btn-g btn-xs">تجاهل</button></span></td></tr>
+              <tr class="sel"><td><span class="mono w6">Al Ahli</span></td><td>فريق</td><td><span class="src">LST</span></td><td class="muted">الشحانية × الأهلي · الدوري القطري</td><td><span class="fs12" style="color:var(--pp)">3 مرشحين بنفس الاسم</span></td><td><span class="row g6"><button class="btn btn-s btn-xs focus"><span class="ic i-search s14"></span>اختر الفريق</button><button class="btn btn-g btn-xs">تجاهل</button></span></td></tr>
+              <tr><td><span class="mono w6">Persib Bandung</span></td><td>فريق</td><td><span class="src">LST</span></td><td class="muted">بيرسيب باندونغ × ملبورن فيكتوري</td><td><span class="sugg">بيرسيب باندونغ<small>95%</small></span></td><td><span class="row g6"><button class="btn btn-p btn-xs"><span class="ic i-link s14"></span>ربط</button><button class="btn btn-s btn-xs">جديد</button><button class="btn btn-g btn-xs">تجاهل</button></span></td></tr>
+              <tr><td><span class="mono w6">beIN SPORTS 2 MENA</span></td><td>قناة</td><td><span class="src">LST</span></td><td class="muted">النهضة × الريان</td><td><span class="sugg"><span class="ltr">beIN SPORTS 2</span><small>90%</small></span></td><td><span class="row g6"><button class="btn btn-p btn-xs"><span class="ic i-link s14"></span>ربط</button><button class="btn btn-s btn-xs">جديد</button><button class="btn btn-g btn-xs">تجاهل</button></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="row g10 bt" style="padding:12px 18px">
+          <span class="fs12 w6 t2">اختر الفريق لـ <span class="mono">Al Ahli</span>:</span>
+          <span class="tok"><span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span>الأهلي · الدوري القطري<span class="src">YSS 3311</span></span>
+          <span class="tok" style="opacity:.6"><span class="tm t24"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">أ</span></span>الأهلي · الدوري السعودي</span>
+          <span class="tok" style="opacity:.6"><span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span>الأهلي · الدوري المصري</span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

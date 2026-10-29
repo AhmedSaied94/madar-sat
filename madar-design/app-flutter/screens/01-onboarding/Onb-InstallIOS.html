@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- Madar · Flutter app · S1.5 iOS install guide (PWA) · 360×800 · default theme light.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S1.5 iOS install guide</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.stp{display:flex;gap:14px;align-items:stretch}
+.stp .n{width:28px;height:28px;border-radius:50%;background:var(--tx);color:var(--oninv);display:flex;align-items:center;justify-content:center;font:700 14px/1 var(--f-d);flex:none}
+.stp .ill{border-radius:16px;background:var(--s2);padding:10px;display:flex;align-items:center;justify-content:center;gap:14px;height:64px}
+.hl{position:relative;color:var(--act)}
+.hl::after{content:"";position:absolute;inset:-7px;border-radius:12px;box-shadow:0 0 0 2px var(--ac)}
+.sheetrow{display:flex;align-items:center;gap:10px;height:30px;padding:0 10px;border-radius:9px;font-size:12px;font-weight:500;width:100%}
+.hs{display:grid;grid-template-columns:repeat(5,22px);gap:9px}
+.hs i{display:block;width:22px;height:22px;border-radius:6px;background:var(--s3)}
+</style></head>
+<body>
+
+
+<div class="phone t-light">
+  <div class="sbar" style="height:40px"></div>
+  <header class="tb"><a class="ib" href="../06-more-settings-rights/More.html" aria-label="إغلاق"><span class="ic i-x s22"></span></a></header>
+  <div class="body" style="padding:0 20px">
+    <div class="row g12"><span class="mk m48" style="width:48px;height:48px;border-radius:12px"></span><h1 style="font:700 24px/1.25 var(--f-d)">ثبّت مدار على iPhone</h1></div>
+    <p class="fs13 t2" style="margin-top:12px;line-height:1.7">على iPhone لا تصل التنبيهات إلا بعد إضافة مدار إلى الشاشة الرئيسية وفتحه من أيقونته. يتطلب iOS 16.4 أو أحدث.</p>
+    <div class="col g20" style="margin-top:22px">
+      <div class="stp"><span class="n">1</span><div class="col f1 g8"><span class="w6">اضغط زر المشاركة في Safari</span>
+        <div class="ill" aria-hidden="true"><span class="ic i-chr s20 t3"></span><span class="ic i-chl s20 t3"></span><span class="hl"><span class="ic i-iosshare s22"></span></span><span class="ic i-doc s20 t3"></span><span class="ic i-grid s20 t3"></span></div></div></div>
+      <div class="stp"><span class="n">2</span><div class="col f1 g8"><span class="w6">اختر «إضافة إلى الشاشة الرئيسية»</span>
+        <div class="ill" aria-hidden="true" style="height:auto;flex-direction:column;gap:2px;padding:8px">
+          <div class="sheetrow t3"><span class="ic i-copy s16"></span>نسخ</div>
+          <div class="sheetrow" style="background:var(--acc);box-shadow:inset 0 0 0 2px var(--ac)"><span class="ic i-addsq s16 ac"></span>إضافة إلى الشاشة الرئيسية</div>
+          <div class="sheetrow t3"><span class="ic i-star s16"></span>إضافة إشارة مرجعية</div>
+        </div></div></div>
+      <div class="stp"><span class="n">3</span><div class="col f1 g8"><span class="w6">افتح مدار من أيقونته</span>
+        <div class="ill" aria-hidden="true" style="height:auto;padding:12px"><div class="hs"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="mk" style="width:22px;height:22px;border-radius:6px;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ac)"></span><i></i><i></i></div></div></div></div>
+    </div>
+  </div>
+  <div class="col g8" style="padding:12px 16px 30px">
+    <a class="btn btn-p btn-blk" href="../02-matches/Matches-Light.html">فهمت</a>
+    <a class="btn btn-g btn-blk" href="../02-matches/Matches-Light.html" style="color:var(--tx2)">لاحقاً</a>
+  </div>
+</div>
+
+
+
+
+</body></html>

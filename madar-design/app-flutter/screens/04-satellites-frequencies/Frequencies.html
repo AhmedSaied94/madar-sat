@@ -1,0 +1,123 @@
+<!doctype html>
+<!-- Madar · Flutter app · S5.1 Satellite list · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S5.1 Satellite list</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.pos{width:52px;height:52px;border-radius:14px;background:var(--rdb);box-shadow:inset 0 0 0 1px var(--rdl);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;color:var(--rd);direction:ltr}
+.pos b{font:600 13px/1 var(--f-m);text-shadow:var(--rdg)}
+.pos i{width:28px;height:3px;border-radius:2px;background:rgba(143,231,255,.18);position:relative;display:block}
+.pos i::after{content:"";position:absolute;top:-1px;width:5px;height:5px;border-radius:50%;background:var(--rd);left:var(--x,50%);transform:translateX(-50%)}
+.satrow{display:flex;align-items:center;gap:12px;padding:12px 14px}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <header class="tb" style="padding:0 18px 0 6px">
+    <h1 style="font:700 24px/1 var(--f-d)">الترددات</h1>
+    <span class="spacer"></span>
+    <span class="fs12 t3">32 قمراً</span>
+  </header>
+  <div class="px16" style="padding-bottom:6px"><label class="sf"><span class="ic i-search s18"></span><input type="text" placeholder="ابحث عن قمر..." aria-label="ابحث عن قمر"></label></div>
+  <div class="body">
+    <div class="sec" style="padding-top:14px">أقماري</div>
+    <div class="card">
+      
+        <a class="satrow" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 45%"><b>7.0W</b><i></i></span>
+          <div class="col f1 g2">
+            <div class="row g8"><span class="w6 fs15">نايل سات</span><span class="mine"><span class="ic i-dish s12"></span>طبقي</span></div>
+            <span class="fs12 t3"><span class="ltr">Nilesat 7.0W</span> · 63 قناة</span>
+          </div>
+          <span class="chgb">3 تغييرات هذا الأسبوع</span>
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 70%"><b>26.0E</b><i></i></span>
+          <div class="col f1 g2">
+            <div class="row g8"><span class="w6 fs15">بدر 26</span><span class="mine"><span class="ic i-dish s12"></span>طبقي</span></div>
+            <span class="fs12 t3"><span class="ltr">Badr 26.0E</span> · 69 قناة</span>
+          </div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+    </div>
+    <div class="sec">كل الأقمار</div>
+    <div class="card">
+      
+        <a class="satrow" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 28%"><b>30.0W</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">هيسباسات</span><span class="fs12 t3"><span class="ltr">Hispasat 30.0W</span> · 35 قناة</span></div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 47%"><b>4.0W</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">اموس</span><span class="fs12 t3"><span class="ltr">Amos 4.0W</span> · 20 قناة</span></div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 49%"><b>0.8W</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">ثور</span><span class="fs12 t3"><span class="ltr">Thor 0.8W</span> · 31 قناة</span></div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 52%"><b>1.9E</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">البلغاري</span><span class="fs12 t3"><span class="ltr">Bulgariasat 1.9E</span> · 34 قناة</span></div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 57%"><b>9.0E</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">يوتل 9</span><span class="fs12 t3"><span class="ltr">Eutel 9.0E</span> · 14 قناة</span></div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 60%"><b>13.0E</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">هوت بيرد</span><span class="fs12 t3"><span class="ltr">Hotbird 13.0E</span> · 189 قناة</span></div>
+          <span class="chgb">5 تغييرات</span>
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+        <a class="satrow bt" href="../04-satellites-frequencies/Satellite.html">
+          <span class="pos" style="--x: 62%"><b>16.0E</b><i></i></span>
+          <div class="col f1 g2"><span class="w6 fs15">يوتل 16</span><span class="fs12 t3"><span class="ltr">Eutel 16.0E</span> · 134 قناة</span></div>
+          
+          <span class="ic i-chl s18 t3"></span>
+        </a>
+      
+    </div>
+  </div>
+  <div class="ad"><span class="tag">إعلان</span><div class="box"><span class="ltr">AdMob banner · 320×50</span></div></div>
+  <nav class="bn" aria-label="التنقل الرئيسي">
+    <a href="../02-matches/Matches.html"><span class="pi"><span class="ic i-ball s22"></span></span>المباريات</a>
+    <a href="../04-satellites-frequencies/MySatellites.html"><span class="pi"><span class="ic i-dish s22"></span></span>أقماري</a>
+    <a href="../04-satellites-frequencies/Frequencies.html" class="on"><span class="pi"><span class="ic i-wave s22"></span></span>الترددات</a>
+    <a href="../05-follow-and-search/Favorites.html"><span class="pi"><span class="ic i-star s22"></span></span>المفضلة</a>
+    <a href="../06-more-settings-rights/More.html"><span class="pi"><span class="ic i-grid s22"></span></span>المزيد</a>
+  </nav>
+  <div class="gest" style="background:var(--s1)"></div>
+</div>
+
+
+
+
+</body></html>

@@ -1,0 +1,215 @@
+<!doctype html>
+<!-- Madar · React admin · A6 Competitions · drag priority · 1440×900 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin competitions</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>body{margin:0}</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav on" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>البطولات</h1><div class="sub">134 بطولة · الترتيب يحدد أولوية العرض في التطبيق</div></div><div class="acts"><button class="btn btn-s btn-sm"><span class="ic i-refresh s16"></span>ترتيب افتراضي</button><button class="btn btn-p btn-sm"><span class="ic i-plus s16"></span>بطولة جديدة</button></div></div>
+      <div class="split">
+        <div class="l box">
+          <div class="box-h"><h2>ترتيب الأولوية</h2><span class="fs12 t3">اسحب أو استخدم <span class="kbd">Alt ↑</span> <span class="kbd">Alt ↓</span></span><span class="spacer"></span><label class="in" style="height:34px;min-height:34px;width:220px"><span class="ic i-search s14 t3"></span><input type="search" placeholder="بحث" aria-label="بحث في البطولات"></label></div>
+          <div class="col g6" style="padding:14px 16px">
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">1</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #7CC7FF"></span></span>
+                <span class="w6 f1">دوري الأمم الأوروبية</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">2</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #FFB627"></span></span>
+                <span class="w6 f1">تصفيات كأس أمم أفريقيا</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">3</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #A9B2BF"></span></span>
+                <span class="w6 f1">مباراة ودية</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">4</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #3EE0A1"></span></span>
+                <span class="w6 f1">كأس الخليج العربي 27</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">5</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #B9A2FF"></span></span>
+                <span class="w6 f1">كأس القارات للأندية</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag lift">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">6</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #7CC7FF"></span></span>
+                <span class="w6 f1">دوري أبطال أوروبا</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag ghost">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">6</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #FFB627"></span></span>
+                <span class="w6 f1">دوري أبطال أفريقيا</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">7</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #FFB627"></span></span>
+                <span class="w6 f1">كأس الكونفدرالية</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">8</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #FF9E58"></span></span>
+                <span class="w6 f1">الدوري الأوروبي</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">9</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #3EE0A1"></span></span>
+                <span class="w6 f1">دوري المؤتمر الأوروبي</span>
+                <span class="fs12 t3">—</span>
+                
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+              <div class="drag">
+                <span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="rk">10</span>
+                <span class="lt" style="width:28px;height:28px"><span class="ic i-trophy s14" style="color: #FF9E58"></span></span>
+                <span class="w6 f1">كأس هولندا</span>
+                <span class="fs12 t3">اليوم: 10</span>
+                <span class="stat nu"><span class="ic i-eyeoff s12"></span>مخفية</span>
+                <button class="ib sm" aria-label="تعديل"><span class="ic i-edit s16"></span></button>
+              </div>
+            
+          </div>
+        </div>
+        <aside class="r drawer">
+          <div class="dh"><span class="lt l40"><span class="ic i-trophy s20" style="color:#7CC7FF"></span></span><div class="col f1"><span class="w7" style="font-family:var(--f-d);font-size:17px">دوري أبطال أوروبا</span><span class="fs12 t3">الأولوية 6 · 31 جهة بث</span></div></div>
+          <div class="col g14" style="padding:16px 18px;gap:14px">
+            <div class="fld"><label>الاسم</label><div class="in"><input type="text" value="دوري أبطال أوروبا" aria-label="الاسم"></div></div>
+            <div class="fld"><label>أسماء بديلة <span class="hint">للمطابقة مع المصادر</span></label><div class="in" style="flex-wrap:wrap;padding:6px;gap:6px;min-height:44px"><span class="tok"><span class="ltr">UEFA Champions League</span><button class="ib sm" style="width:20px;height:20px" aria-label="حذف"><span class="ic i-x s12"></span></button></span><span class="tok">أبطال أوروبا<button class="ib sm" style="width:20px;height:20px" aria-label="حذف"><span class="ic i-x s12"></span></button></span><input type="text" placeholder="أضف اسماً" aria-label="إضافة اسم بديل" style="min-width:80px"></div></div>
+            <div class="fld"><label>الشعار <span class="hint">WebP · 512px كحد أقصى</span></label>
+              <div class="row g10">
+                <div class="prevtile" style="background:#07090C"><span class="lt l48" style="background:#161B22"><span class="ic i-trophy s24" style="color:#7CC7FF"></span></span></div>
+                <div class="prevtile" style="background:#F2F3EF"><span class="lt l48" style="background:#fff;color:#475160"><span class="ic i-trophy s24" style="color:#0B5FAD"></span></span></div>
+                <div class="drop f1" style="height:72px"><span class="ic i-ul s18"></span>اسحب صورة أو اخترها</div>
+              </div>
+            </div>
+            <div class="row g10" style="padding:12px;border-radius:12px;background:var(--bg)"><span class="ic i-eye s18 t2"></span><span class="f1 fs13">ظاهرة في التطبيق</span><span class="tg on" role="switch" aria-checked="true"></span></div>
+            <button class="btn btn-s btn-sm"><span class="ic i-refresh s16"></span>تحديث لوجوهات المباريات</button>
+          </div>
+          <div class="df"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn btn-p btn-sm">حفظ</button></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

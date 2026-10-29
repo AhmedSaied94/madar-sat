@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- Madar · Flutter app · S1.3 My satellites · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S1.3 My satellites</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.pos{width:50px;height:50px;border-radius:14px;background:var(--rdb);box-shadow:inset 0 0 0 1px var(--rdl);display:flex;align-items:center;justify-content:center;flex:none;color:var(--rd);direction:ltr;font:600 12.5px/1 var(--f-m);text-shadow:var(--rdg)}
+.so{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%}
+.so.on{background:var(--acc)}
+.pop{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 7px;border-radius:6px;background:var(--s3);color:var(--tx2);font-size:10.5px;font-weight:600}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <div class="row" style="height:56px;padding:0 6px">
+    <a class="ib" href="../01-onboarding/Onb-Teams.html" aria-label="رجوع"><span class="ic i-back s22"></span></a>
+    <div class="pdots f1 jc"><i class="done"></i><i class="done"></i><i class="on"></i><i></i></div>
+    <a class="btn btn-g btn-sm" href="../01-onboarding/Onb-Notifications.html">تخطي</a>
+  </div>
+  <div style="padding:2px 20px 14px">
+    <h1 style="font:700 24px/1.3 var(--f-d)">اختر الأقمار التي يستقبلها طبقك</h1>
+    <p class="fs13 t2 mt4">سنعرض القنوات على أقمارك أولاً، والمجانية قبل المشفرة.</p>
+  </div>
+  <div class="body">
+    <div class="card">
+      
+        <button class="so on" role="checkbox" aria-checked="true">
+          <span class="pos">7.0W</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">نايل سات</span><span class="pop"><span class="ic i-starf s12"></span>الأكثر استخداماً</span></div>
+            <span class="fs12 t3"><span class="ltr">Nilesat 7.0W</span> · 63 قناة</span>
+          </div>
+          <span class="tick on sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+        <button class="so bt on" role="checkbox" aria-checked="true">
+          <span class="pos">26.0E</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">بدر 26</span><span class="pop"><span class="ic i-starf s12"></span>الأكثر استخداماً</span></div>
+            <span class="fs12 t3"><span class="ltr">Badr 26.0E</span> · 69 قناة</span>
+          </div>
+          <span class="tick on sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+        <button class="so bt" role="checkbox" aria-checked="false">
+          <span class="pos">13.0E</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">هوت بيرد</span><span class="pop"><span class="ic i-starf s12"></span>الأكثر استخداماً</span></div>
+            <span class="fs12 t3"><span class="ltr">Hotbird 13.0E</span> · 189 قناة</span>
+          </div>
+          <span class="tick sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+        <button class="so bt" role="checkbox" aria-checked="false">
+          <span class="pos">16.0E</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">يوتل 16</span></div>
+            <span class="fs12 t3"><span class="ltr">Eutel 16.0E</span> · 134 قناة</span>
+          </div>
+          <span class="tick sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+        <button class="so bt" role="checkbox" aria-checked="false">
+          <span class="pos">19.2E</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">استرا 19</span></div>
+            <span class="fs12 t3"><span class="ltr">Astra 19.2E</span> · 101 قناة</span>
+          </div>
+          <span class="tick sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+        <button class="so bt" role="checkbox" aria-checked="false">
+          <span class="pos">30.0W</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">هيسباسات</span></div>
+            <span class="fs12 t3"><span class="ltr">Hispasat 30.0W</span> · 35 قناة</span>
+          </div>
+          <span class="tick sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+        <button class="so bt" role="checkbox" aria-checked="false">
+          <span class="pos">4.0W</span>
+          <div class="col f1 g2" style="text-align:start">
+            <div class="row g6"><span class="w6 fs15">اموس</span></div>
+            <span class="fs12 t3"><span class="ltr">Amos 4.0W</span> · 20 قناة</span>
+          </div>
+          <span class="tick sq"><span class="ic i-check s14"></span></span>
+        </button>
+      
+    </div>
+    <p class="fs12 t3" style="text-align:center;padding:14px 24px">إذا تخطيت هذه الخطوة سنعرض نايل سات وبدر افتراضياً.</p>
+  </div>
+  <div class="bt bg1" style="padding:12px 16px 20px"><a class="btn btn-p btn-blk" href="../01-onboarding/Onb-Notifications.html">التالي (2)<span class="ic i-fwd s18"></span></a></div>
+</div>
+
+
+
+
+</body></html>

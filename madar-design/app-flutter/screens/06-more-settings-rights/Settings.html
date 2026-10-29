@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- Madar · Flutter app · S15 Settings — full scroll · 360×2120 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S15 Settings</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.sg{padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.sg .tt{font-size:14.5px;font-weight:500}
+.dr{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px}
+.dr .nm{flex:1;font-size:14px;font-weight:500}
+.dr.hid .nm{color:var(--tx3);text-decoration:line-through}
+</style></head>
+<body>
+
+
+<div class="phone tall t-dark" style="height:2120px">
+  <div class="sbar"></div>
+  <header class="tb">
+    <a class="ib" href="../06-more-settings-rights/More.html" aria-label="رجوع"><span class="ic i-back s22"></span></a>
+    <h1 class="tb-t">الإعدادات</h1>
+  </header>
+
+  <div class="sec" style="padding-top:8px">التوقيت</div>
+  <div class="card">
+    <a class="lr" href="#"><span class="ii"><span class="ic i-globe s18"></span></span><div class="col f1"><span class="tt">المنطقة الزمنية</span></div><span class="val">تلقائي (<span class="ltr">GMT+3</span>)</span><span class="ic i-chl s18 go"></span></a>
+    <div class="sg bt"><span class="tt">صيغة الوقت</span><div class="seg"><button class="on">12 ساعة · <span class="num">9:00 م</span></button><button>24 ساعة · <span class="num">21:00</span></button></div></div>
+  </div>
+
+  <div class="sec">المظهر</div>
+  <div class="card">
+    <div class="sg"><span class="tt">الوضع</span><div class="seg"><button class="on"><span class="ic i-moon s16"></span>داكن</button><button><span class="ic i-sun s16"></span>فاتح</button><button><span class="ic i-auto s16"></span>تلقائي</button></div></div>
+    <div class="sg bt"><div class="row"><span class="tt f1">حجم الخط</span><span class="fs12 t3">يُضاف إلى حجم خط الجهاز</span></div><div class="seg"><button class="on" style="font-size:13px">عادي</button><button style="font-size:15px">كبير</button><button style="font-size:17px">كبير جداً</button></div></div>
+  </div>
+
+  <div class="sec">الإشعارات</div>
+  <div class="card">
+    <div class="lr"><span class="ii" style="background:var(--acc);color:var(--act)"><span class="ic i-bellf s18"></span></span><div class="col f1"><span class="tt">السماح بالإشعارات</span><span class="sub row g4" style="color:var(--ok)"><span class="ic i-check s12"></span>مسموح على هذا الجهاز</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    <a class="lr bt" href="#"><span class="ii"><span class="ic i-clock s18"></span></span><div class="col f1"><span class="tt">التذكير الافتراضي</span></div><span class="val">قبل 15 دقيقة</span><span class="ic i-chl s18 go"></span></a>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-clock s18"></span></span><div class="col f1"><span class="tt">تذكير قبل المباراة</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-whistle s18"></span></span><div class="col f1"><span class="tt">بداية المباراة</span></div><span class="tg" role="switch" aria-checked="false"></span></div>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-ball s18"></span></span><div class="col f1"><span class="tt">الأهداف</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-check s18"></span></span><div class="col f1"><span class="tt">النتيجة النهائية</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-tv s18"></span></span><div class="col f1"><span class="tt">تحديث القنوات</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-wave s18"></span></span><div class="col f1"><span class="tt">تغيير التردد</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    
+      <div class="lr bt"><span class="ii"><span class="ic i-msg s18"></span></span><div class="col f1"><span class="tt">إعلانات التطبيق</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+    
+  </div>
+
+  <div class="sec">أقماري</div>
+  <div class="card">
+    <a class="lr" href="../01-onboarding/Onb-Satellites.html"><span class="ii"><span class="ic i-dish s18"></span></span><div class="col f1"><span class="tt">اختر أقماري</span><span class="sub">نايل سات، بدر</span></div><span class="ic i-chl s18 go"></span></a>
+    <a class="lr bt" href="#"><span class="ii"><span class="ic i-eye s18"></span></span><div class="col f1"><span class="tt">الأقمار في قوائم القنوات</span><span class="sub">24 من 32 مرئي</span></div><span class="ic i-chl s18 go"></span></a>
+    <div class="lr bt"><span class="ii"><span class="ic i-globe s18"></span></span><div class="col f1"><span class="tt">إظهار منصات وقنوات أخرى</span><span class="sub">قنوات بلا قمر، حسب المنطقة والدولة</span></div><span class="tg on" role="switch" aria-checked="true"></span></div>
+  </div>
+
+  <div class="sec row jb" style="padding-left:16px"><span>البطولات</span><span class="fs11 w5 t3">اسحب لإعادة الترتيب</span></div>
+  <div class="card">
+    
+      <div class="dr"><span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="lt"><span class="ic i-trophy s14" style="color: #3EE0A1"></span></span><span class="nm">الدوري المصري الممتاز</span><button class="ib sm" aria-label="إخفاء الدوري المصري الممتاز"><span class="ic i-eye s18 t2"></span></button></div>
+    
+      <div class="dr bt"><span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="lt"><span class="ic i-trophy s14" style="color: #FFB627"></span></span><span class="nm">دوري أبطال أفريقيا</span><button class="ib sm" aria-label="إخفاء دوري أبطال أفريقيا"><span class="ic i-eye s18 t2"></span></button></div>
+    
+      <div class="dr bt"><span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="lt"><span class="ic i-trophy s14" style="color: #B9A2FF"></span></span><span class="nm">الدوري الإنجليزي الممتاز</span><button class="ib sm" aria-label="إخفاء الدوري الإنجليزي الممتاز"><span class="ic i-eye s18 t2"></span></button></div>
+    
+      <div class="dr bt hid"><span class="ic i-grip s18 t3" aria-hidden="true"></span><span class="lt"><span class="ic i-trophy s14" style="color: #7CC7FF"></span></span><span class="nm">الدوري الإسكتلندي الممتاز</span><button class="ib sm" aria-label="إظهار الدوري الإسكتلندي الممتاز"><span class="ic i-eyeoff s18 t2"></span></button></div>
+    
+    <div class="row g8 bt" style="padding:10px 12px"><button class="btn btn-s btn-sm f1">ترتيب افتراضي</button><button class="btn btn-s btn-sm f1">إظهار الكل</button></div>
+  </div>
+
+  <div class="sec">البيانات</div>
+  <div class="card">
+    <div class="lr"><span class="ii"><span class="ic i-refresh s18"></span></span><div class="col f1"><span class="tt">آخر مزامنة</span></div><span class="val">منذ دقيقتين</span></div>
+    <button class="lr bt" style="width:100%"><span class="ii"><span class="ic i-trash s18"></span></span><div class="col f1"><span class="tt">مسح الذاكرة المؤقتة</span><span class="sub">الصور والبيانات المحفوظة · 18 ميغابايت</span></div></button>
+    <a class="lr bt" href="../01-onboarding/Onb-Welcome.html"><span class="ii"><span class="ic i-history s18"></span></span><div class="col f1"><span class="tt">إعادة خطوات البداية</span></div><span class="ic i-chl s18 go"></span></a>
+  </div>
+
+  <div class="sec">عن التطبيق</div>
+  <div class="card">
+    
+      <a class="lr" href="#"><span class="ii"><span class="ic i-info s18"></span></span><div class="col f1"><span class="tt">الإصدار</span></div><span class="val">1.0.0 (15)</span></a>
+    
+      <a class="lr bt" href="#"><span class="ii"><span class="ic i-share s18"></span></span><div class="col f1"><span class="tt">شارك التطبيق</span></div><span class="val"></span></a>
+    
+      <a class="lr bt" href="#"><span class="ii"><span class="ic i-star s18"></span></span><div class="col f1"><span class="tt">قيّم التطبيق</span></div><span class="val"></span></a>
+    
+      <a class="lr bt" href="#"><span class="ii"><span class="ic i-mail s18"></span></span><div class="col f1"><span class="tt">تواصل معنا</span></div><span class="val"></span></a>
+    
+      <a class="lr bt" href="#"><span class="ii"><span class="ic i-shieldck s18"></span></span><div class="col f1"><span class="tt">سياسة الخصوصية</span></div><span class="val"></span></a>
+    
+      <a class="lr bt" href="#"><span class="ii"><span class="ic i-doc s18"></span></span><div class="col f1"><span class="tt">الشروط والأحكام</span></div><span class="val"></span></a>
+    
+      <a class="lr bt" href="#"><span class="ii"><span class="ic i-code s18"></span></span><div class="col f1"><span class="tt">تراخيص البرمجيات مفتوحة المصدر</span></div><span class="val"></span></a>
+    
+    <button class="lr bt" style="width:100%"><span class="ii" style="background:var(--errc);color:var(--err)"><span class="ic i-trash s18"></span></span><div class="col f1"><span class="tt" style="color:var(--err)">حذف بيانات جهازي</span><span class="sub">المتابعات ورمز الإشعارات من الخادم</span></div></button>
+  </div>
+  <div style="height:28px"></div>
+</div>
+
+
+
+
+</body></html>

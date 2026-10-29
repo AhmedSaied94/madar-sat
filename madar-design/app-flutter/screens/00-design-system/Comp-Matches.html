@@ -1,0 +1,159 @@
+<!doctype html>
+<!-- Madar · Flutter app · Components · Matches · 1680×1240 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Components matches</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.pan{background:var(--s1);border-radius:24px;box-shadow:inset 0 0 0 1px var(--dv);padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.lab{font:600 11px/1 var(--f-m);letter-spacing:.14em;color:var(--tx3);direction:ltr;text-align:right;text-transform:uppercase}
+.vg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.vt{border-radius:16px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv);padding:12px 8px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:104px;justify-content:space-between}
+.vt .k{font:500 10px/1.2 var(--f-m);color:var(--tx3);direction:ltr}
+.sl{font-size:11px;color:var(--tx3);margin-bottom:-4px}
+.menu{border-radius:16px;background:var(--el);box-shadow:var(--sh),inset 0 0 0 1px var(--dv);padding:6px;width:230px}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 12px;border-radius:10px;font-size:14px}
+.menu button:hover,.menu .hv{background:var(--s2)}
+</style></head>
+<body>
+
+
+<div class="sheetbg t-dark" style="width:1680px;height:1240px;padding:44px 48px;box-sizing:border-box;display:grid;grid-template-columns:600px minmax(0,1fr) 440px;gap:22px;align-items:start">
+
+  <div class="col g20">
+    <div class="pan">
+      <span class="lab">StatusBlock · every variant</span>
+      <div class="vg">
+        <div class="vt"><div class="st"><span class="tm1"><span>9:00</span><span class="ap">م</span></span></div><span class="k">scheduled · 12h</span></div>
+        <div class="vt"><div class="st"><span class="tm1"><span>21:00</span></span></div><span class="k">scheduled · 24h</span></div>
+        <div class="vt"><div class="st"><span class="soon"><span class="ic i-clock s14"></span>بعد 25 د</span><span class="fs11 t3">7:00 م</span></div><span class="k">imminent ≤60′</span></div>
+        <div class="vt"><div class="st"><div class="sc live"><b>1</b><i></i><b>0</b></div><span class="pill p-live"><span class="dot pulse"></span><span class="ltr">67′</span></span></div><span class="k">live</span></div>
+        <div class="vt"><div class="st"><div class="sc live"><b>1</b><i></i><b>0</b></div><span class="pill p-ht">استراحة</span></div><span class="k">halftime</span></div>
+        <div class="vt"><div class="st"><div class="sc live"><b>2</b><i></i><b>2</b></div><span class="pill p-live"><span class="ltr">105′</span> إضافي</span></div><span class="k">extra time</span></div>
+        <div class="vt"><div class="st"><div class="sc live"><b>1</b><i></i><b>1</b></div><span class="pens row g4">(<b>4</b><span>-</span><b>3</b>)</span><span class="fs11 t3">ركلات الترجيح</span></div><span class="k">penalties</span></div>
+        <div class="vt"><div class="st fin"><div class="sc"><b>2</b><i></i><b>1</b></div><span class="pill p-fin">انتهت</span></div><span class="k">finished</span></div>
+        <div class="vt"><div class="st"><span class="pill p-pp" style="height:24px">تأجلت</span></div><span class="k">postponed</span></div>
+        <div class="vt"><div class="st"><span class="pill p-mute" style="height:24px;text-decoration:line-through">أُلغيت</span></div><span class="k">cancelled</span></div>
+        <div class="vt"><div class="st"><div class="sc" style="color:var(--tx3)"><b>1</b><i></i><b>0</b></div><span class="pill p-mute">توقفت</span></div><span class="k">abandoned</span></div>
+        <div class="vt"><div class="st"><span class="pill p-est">مباشر</span><span class="fs11 t3">بدون نتيجة</span></div><span class="k">estimated</span></div>
+      </div>
+      <div class="row g10"><div class="vt" style="flex:1;min-height:76px"><div class="st"><span class="fs13 w6 t3">لم يُحدد</span></div><span class="k">time unknown</span></div><div class="vt" style="flex:2;min-height:76px"><div class="st"><div class="sc live flash" style="padding:4px 10px;border-radius:10px"><b>2</b><i></i><b>0</b></div></div><span class="k">score change · highlight 1.2s</span></div></div>
+    </div>
+
+    <div class="pan">
+      <span class="lab">EventTimelineItem</span>
+      <div class="tl" style="padding:0">
+        <div class="ev"><div class="e"><span class="ei goal"><span class="ic i-ball s16"></span></span><div class="col"><span class="who">محمد صلاح</span><span class="what">هدف</span></div></div><span class="m">23′</span><div></div></div>
+        <div class="ev"><div></div><span class="m">45+2′</span><div class="e a"><span class="ei goal"><span class="ic i-own s16"></span></span><div class="col"><span class="who">فيرجيل فان دايك</span><span class="what">هدف عكسي</span></div></div></div>
+        <div class="ev"><div class="e"><span class="ei goal"><span class="ic i-target s16"></span></span><div class="col"><span class="who">محمد صلاح</span><span class="what">ركلة جزاء</span></div></div><span class="m">58′</span><div></div></div>
+        <div class="ev"><div></div><span class="m">71′</span><div class="e a"><span class="ei miss"><span class="ic i-miss s16"></span></span><div class="col"><span class="who">كول بالمر</span><span class="what">ركلة جزاء ضائعة</span></div></div></div>
+        <div class="ev"><div></div><span class="m">90+5′</span><div class="e a"><span class="ei red"><span class="ic i-card s16"></span></span><div class="col"><span class="who">مويسيس كايسيدو</span><span class="what">بطاقة حمراء</span></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col g20" style="min-width:0">
+    <div class="pan">
+      <span class="lab">MatchRow · variants</span>
+      <span class="sl">قناة على أقمارك + مجانية + فريق متابَع + تذكير</span>
+      <div class="card flat" style="background:var(--bg)">
+        <div class="mr"><span class="ic i-bellf s12 bellm"></span>
+          <div class="mr-g"><div class="tmc"><span class="tm"><span class="crest" style="--c1:#F4F4F4;--c2:#C8102E">ز</span></span><span class="tmn">الزمالك<span class="ic i-starf s12 mk-fav"></span></span></div><div class="st"><span class="tm1"><span>8:00</span><span class="ap">م</span></span></div><div class="tmc away"><span class="tm"><span class="crest" style="--c1:#F2C200;--c2:#111">م</span></span><span class="tmn">المقاولون العرب</span></div></div>
+          <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">ON Sport</span></span><span class="free-m"><span class="ic i-unlock s12"></span>مجانية</span></div>
+        </div>
+      </div>
+      <span class="sl">اسمان طويلان على سطرين + قناتان + <span class="ltr">+N</span></span>
+      <div class="card flat" style="background:var(--bg)">
+        <div class="mr">
+          <div class="mr-g"><div class="tmc"><span class="tm"><span class="crest" style="--c1:#0B4FA0;--c2:#F2C200">ج</span></span><span class="tmn">جمهورية الكونغو الديمقراطية</span></div><div class="st"><div class="sc live"><b>1</b><i></i><b>1</b></div><span class="pill p-live"><span class="dot pulse"></span><span class="ltr">45+2′</span></span></div><div class="tmc away"><span class="tm"><span class="crest" style="--c1:#1D8A3B;--c2:#fff">غ</span></span><span class="tmn">غينيا الاستوائية</span></div></div>
+          <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">beIN SPORTS 3</span></span><span class="sep"></span><span class="n"><span class="ltr">SuperSport Premier League Nigeria</span></span><span class="more-n"><span class="ltr">+14</span></span></div>
+        </div>
+      </div>
+      <div class="row g12">
+        <div class="col g6 f1"><span class="sl">مضغوط (pressed)</span><div class="card flat" style="background:var(--s2)"><div class="mr"><div class="mr-g"><div class="tmc"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#111">م</span></span><span class="tmn">ميلان</span></div><div class="st"><span class="tm1"><span>8:30</span><span class="ap">م</span></span></div><div class="tmc away"><span class="tm"><span class="crest" style="--c1:#1A2B5F;--c2:#E8333A">ب</span></span><span class="tmn">بولونيا</span></div></div></div></div></div>
+        <div class="col g6 f1"><span class="sl">بلا قنوات بعد</span><div class="card flat" style="background:var(--bg)"><div class="mr"><div class="mr-g"><div class="tmc"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><span class="tmn">أبردين</span></div><div class="st"><span class="tm1"><span>10:45</span><span class="ap">م</span></span></div><div class="tmc away"><span class="tm"><span class="crest" style="--c1:#1B2A4A;--c2:#fff">ف</span></span><span class="tmn">فالكريك</span></div></div></div></div></div>
+      </div>
+      <span class="sl">التنس · أسماء لاعبين بدون شعارات</span>
+      <div class="card flat" style="background:var(--bg)"><div class="mr"><div class="mr-g"><div class="tmc"><span class="tmn">يانيك سينر</span></div><div class="st"><div class="sc live" style="font-size:18px"><b>6</b><i></i><b>4</b></div><span class="pill p-live"><span class="dot pulse"></span>المجموعة 2</span></div><div class="tmc away"><span class="tmn">كارلوس ألكاراز</span></div></div></div></div>
+    </div>
+
+    <div class="pan">
+      <span class="lab">CompetitionGroupHeader · overflow menu</span>
+      <div class="row g16 ais">
+        <div class="f1 col g8">
+          <div class="cg" style="padding:0"><span class="lt"><span class="ic i-trophy s16" style="color:#FFB627"></span></span><span class="nm">دوري أبطال أفريقيا | الأدوار الإقصائية</span><span class="stg">ذهاب دور 16</span><span class="spacer"></span><span class="ib sm fill"><span class="ic i-dotsv s18"></span></span></div>
+          <div class="cg" style="padding:0"><span class="lt"><span class="ic i-trophy s16 t3"></span></span><span class="nm t3">موعد لم يُحدد</span><span class="stg">3</span></div>
+        </div>
+        <div class="menu" role="menu">
+          <button role="menuitem"><span class="ic i-star s18"></span>تابع البطولة</button>
+          <button role="menuitem" class="hv"><span class="ic i-eyeoff s18"></span>إخفاء البطولة</button>
+          <button role="menuitem"><span class="ic i-trophy s18"></span>صفحة البطولة</button>
+        </div>
+      </div>
+      <div class="snack" style="position:relative;inset:auto;bottom:auto"><span class="f1">أُخفيت «كأس هولندا» من القائمة</span><button class="sa">تراجع</button></div>
+    </div>
+  </div>
+
+  <div class="col g20">
+    <div class="pan">
+      <span class="lab">DateStrip · FilterChips · SportSwitcher</span>
+      <div class="ds" style="padding:0">
+        <button class="dcell"><span class="wd">إثنين</span><span class="dn">26</span></button>
+        <button class="dcell" style="background:var(--s2)"><span class="wd">ثلاثاء</span><span class="dn">27</span></button>
+        <button class="dcell today on"><span class="wd">اليوم</span><span class="dn">28</span></button>
+        <button class="dcell today focus"><span class="wd">خميس</span><span class="dn">29</span></button>
+        <button class="dcell"><span class="wd">جمعة</span><span class="dn">30</span></button>
+        <button class="dcell"><span class="wd">سبت</span><span class="dn">31</span></button>
+        <button class="dcell"><span class="wd">أحد</span><span class="dn">1</span></button>
+      </div>
+      <div class="row g8"><span class="fs11 t3 f1">مضغوط · مختار + اليوم · تركيز لوحة المفاتيح</span><button class="today-btn"><span class="ic i-back s14"></span>اليوم</button></div>
+      <div class="row wrap g8">
+        <button class="chip on">الكل <span class="cnt">85</span></button>
+        <button class="chip"><span class="ic i-starf s14 ac"></span>مبارياتي <span class="cnt">4</span></button>
+        <button class="chip"><span class="dot pulse"></span>مباشر <span class="cnt">6</span></button>
+        <button class="chip" style="box-shadow:inset 0 0 0 1px var(--tx3)">hover</button>
+        <button class="chip focus">تركيز</button>
+        <button class="chip" style="opacity:.4">معطل</button>
+      </div>
+      <div class="row wrap g8">
+        <button class="chip on"><span class="ic i-ball s16"></span>كرة القدم <span class="cnt">85</span></button>
+        <button class="chip"><span class="ic i-bball s16"></span>السلة <span class="cnt">9</span></button>
+        <button class="chip"><span class="ic i-hball s16"></span>اليد <span class="cnt">4</span></button>
+        <button class="chip"><span class="ic i-vball s16"></span>الطائرة</button>
+        <button class="chip"><span class="ic i-tennis s16"></span>التنس <span class="cnt">12</span></button>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">BottomNav · dark / light · badge</span>
+      <nav class="bn" style="border-radius:16px;height:64px">
+        <a class="on"><span class="pi"><span class="ic i-ball s22"></span></span>المباريات</a>
+        <a><span class="pi"><span class="ic i-dish s22"></span></span>أقماري</a>
+        <a><span class="pi"><span class="ic i-wave s22"></span></span>الترددات</a>
+        <a><span class="pi"><span class="ic i-star s22"></span><span class="bdg">2</span></span>المفضلة</a>
+        <a><span class="pi"><span class="ic i-grid s22"></span></span>المزيد</a>
+      </nav>
+      <nav class="bn t-light" style="border-radius:16px;height:64px;background:#fff">
+        <a><span class="pi"><span class="ic i-ball s22"></span></span>المباريات</a>
+        <a class="on"><span class="pi"><span class="ic i-dish s22"></span></span>أقماري</a>
+        <a><span class="pi"><span class="ic i-wave s22"></span></span>الترددات</a>
+        <a><span class="pi"><span class="ic i-star s22"></span></span>المفضلة</a>
+        <a><span class="pi"><span class="ic i-grid s22"></span></span>المزيد</a>
+      </nav>
+    </div>
+    <div class="pan">
+      <span class="lab">TopBar · root / detail / sheet</span>
+      <div class="tb" style="background:var(--bg);border-radius:14px;padding:0 14px 0 6px"><span class="wm" style="font-size:20px"><span class="mk"></span>مدار</span><span class="spacer"></span><span class="ib"><span class="ic i-search s22"></span></span></div>
+      <div class="tb" style="background:var(--bg);border-radius:14px"><span class="ib"><span class="ic i-back s22"></span></span><span class="tb-t">نايل سات</span><span class="ib on"><span class="ic i-bellf s22"></span></span><span class="ib"><span class="ic i-share s22"></span></span></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

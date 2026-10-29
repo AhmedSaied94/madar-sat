@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Madar · React admin · Conflict, typed confirm, unsaved guard, toasts, empty, skeleton · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin dialogs and states</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.lab{font:600 11px/1 var(--f-m);letter-spacing:.14em;color:var(--tx3);direction:ltr;text-align:right;text-transform:uppercase}
+.stage{border-radius:24px;background:var(--ov);padding:28px;display:flex;align-items:center;justify-content:center;min-height:300px}
+</style></head>
+<body>
+
+
+<div class="sheetbg t-dark" style="width:1440px;height:1000px;padding:40px 44px;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start;font-size:13.5px">
+  <div class="col g10">
+    <span class="lab">ConflictDialog · If-Match</span>
+    <div class="stage">
+      <div class="mdl" role="alertdialog" aria-label="تعارض في التعديل" style="width:100%">
+        <div class="row g10"><span class="lt l40" style="background:var(--ppc);color:var(--pp);box-shadow:none"><span class="ic i-users s20"></span></span><h3 class="f1">عدّل يوسف عمر هذا العنصر</h3></div>
+        <span class="fs13 t2">حُفظت نسخة أحدث من «ميلان × بولونيا» قبل دقيقة. تعديلاتك لم تُحفظ بعد.</span>
+        <div class="diff" style="grid-template-columns:1fr"><div class="col" style="padding:6px 0"><div class="ln del"><span class="k">stage</span><span class="v">الجولة 9</span></div><div class="ln add"><span class="k">stage</span><span class="v">الجولة 9 - الذهاب</span></div></div></div>
+        <div class="row g8 wrap"><button class="btn btn-p btn-sm">اعرض التغييرات</button><button class="btn btn-s btn-sm">أعد تطبيق تعديلاتي</button><span class="spacer"></span><button class="btn btn-g btn-sm">تجاهل تعديلاتي</button></div>
+      </div>
+    </div>
+    <span class="lab" style="margin-top:12px">Toasts</span>
+    <div class="col g8">
+      <div class="toastx ok"><span class="ic i-check s18"></span><span class="f1 w6">تم الحفظ</span><button class="btn btn-g btn-xs">تراجع</button></div>
+      <div class="toastx er"><span class="ic i-alert s18"></span><span class="f1"><b class="w6">فشل الحفظ</b> · انقطع الاتصال بالخادم</span><button class="btn btn-s btn-xs">إعادة المحاولة</button></div>
+      <div class="toastx"><span class="ic i-info s18" style="color:var(--info)"></span><span class="f1">جارٍ تشغيل <span class="ltr">LiveSoccerTV</span>…</span><span class="spin" style="color:var(--tx3)"></span></div>
+    </div>
+  </div>
+
+  <div class="col g10">
+    <span class="lab">ConfirmDialog · typed confirmation</span>
+    <div class="stage">
+      <div class="mdl" role="alertdialog" aria-label="تأكيد الحذف" style="width:100%">
+        <div class="row g10"><span class="lt l40" style="background:var(--errc);color:var(--err);box-shadow:none"><span class="ic i-trash s20"></span></span><h3 class="f1">حذف 20 مباراة؟</h3></div>
+        <span class="fs13 t2">ستُحذف مباريات «كأس ملك إسبانيا» المحددة ليوم 28 أكتوبر، مع قنواتها ومتابعاتها. لا يمكن التراجع.</span>
+        <div class="fld"><label>للتأكيد اكتب <b class="ltr mono" style="color:var(--tx)">حذف 20</b></label><div class="in focus"><input type="text" value="حذف 2" aria-label="نص التأكيد"></div></div>
+        <div class="row g8"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn dis btn-sm" disabled=""><span class="ic i-trash s16"></span>حذف 20 مباراة</button></div>
+      </div>
+    </div>
+    <span class="lab" style="margin-top:12px">Unsaved-changes guard</span>
+    <div class="mdl" style="padding:18px">
+      <div class="row g10"><span class="ic i-alert s20" style="color:var(--pp)"></span><span class="w7 f1" style="font-family:var(--f-d);font-size:16px">لديك تغييرات غير محفوظة</span></div>
+      <span class="fs13 t2">إذا غادرت الآن ستفقد تعديلات القنوات والمرحلة.</span>
+      <div class="row g8"><button class="btn btn-g btn-sm">غادر دون حفظ</button><span class="spacer"></span><button class="btn btn-s btn-sm">ابقَ</button><button class="btn btn-p btn-sm">احفظ وغادر</button></div>
+    </div>
+  </div>
+
+  <div class="col g10">
+    <span class="lab">Table skeleton</span>
+    <div class="box">
+      <div class="box-h"><span class="sk" style="width:140px;height:14px"></span></div>
+      <div class="col" style="padding:6px 16px">
+        <div class="row g12" style="height:48px"><span class="sk" style="width:18px;height:18px;border-radius:5px"></span><span class="sk" style="width:46px;height:12px"></span><span class="sk" style="width:24px;height:24px;border-radius:50%"></span><span class="sk" style="width:150px;height:12px"></span><span class="spacer"></span><span class="sk" style="width:60px;height:12px"></span></div>
+        <div class="row g12 bt" style="height:48px"><span class="sk" style="width:18px;height:18px;border-radius:5px"></span><span class="sk" style="width:46px;height:12px"></span><span class="sk" style="width:24px;height:24px;border-radius:50%"></span><span class="sk" style="width:120px;height:12px"></span><span class="spacer"></span><span class="sk" style="width:60px;height:12px"></span></div>
+        <div class="row g12 bt" style="height:48px"><span class="sk" style="width:18px;height:18px;border-radius:5px"></span><span class="sk" style="width:46px;height:12px"></span><span class="sk" style="width:24px;height:24px;border-radius:50%"></span><span class="sk" style="width:170px;height:12px"></span><span class="spacer"></span><span class="sk" style="width:60px;height:12px"></span></div>
+      </div>
+    </div>
+    <span class="lab" style="margin-top:12px">Empty state</span>
+    <div class="box">
+      <div class="empty" style="padding:28px 20px">
+        <div class="illus" aria-hidden="true" style="width:110px;height:110px"><i style="width:110px;height:110px"></i><i style="width:78px;height:78px"></i><i style="width:46px;height:46px;background:var(--freec)"></i><b style="width:46px;height:46px;color:var(--free)"><span class="ic i-check s20"></span></b><u style="left:86px;top:14px;width:8px;height:8px"></u></div>
+        <h3 style="font-size:17px">كل مباريات اليوم لها قنوات</h3>
+        <p style="font-size:13px">لا توجد مباريات بلا قنوات في هذا اليوم.</p>
+        <button class="btn btn-s btn-sm">إزالة الفلتر</button>
+      </div>
+    </div>
+    <span class="lab" style="margin-top:12px">Keyboard map</span>
+    <div class="box box-b col g8 fs13">
+      <div class="row g8"><span class="kbd">Ctrl K</span><span class="t2">بحث شامل</span><span class="spacer"></span><span class="kbd">Ctrl S</span><span class="t2">حفظ</span></div>
+      <div class="row g8"><span class="kbd">J</span><span class="kbd">K</span><span class="t2">التالي / السابق</span><span class="spacer"></span><span class="kbd">E</span><span class="t2">تعديل</span></div>
+      <div class="row g8"><span class="kbd">X</span><span class="t2">تحديد</span><span class="spacer"></span><span class="kbd">Alt ↑↓</span><span class="t2">إعادة الترتيب</span></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

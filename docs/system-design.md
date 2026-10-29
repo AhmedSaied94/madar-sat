@@ -1,4 +1,4 @@
-# ‹Brand› — System Design
+# Madar Sat — System Design
 
 | | |
 |---|---|
@@ -7,7 +7,7 @@
 | Companion | [product-business.md](product-business.md): product scope, screen specs, design-system requirements |
 | Readers | Engineers building the backend, admin and app. Claude Design reads §5.3, §6.2–6.3 and §11 for platform limits and data shapes |
 
-`‹Brand›` is a placeholder. The new name and package ID are still open (O1 in §3.2).
+The brand is **Madar Sat** (مدار سات). The package ID is still open (O1 in §3.2).
 
 ---
 
@@ -123,7 +123,7 @@ Web: satair-6983b.web.app shows a "get it on Google Play" page; ?app=1 opens a p
 
 | # | Question | Blocks |
 |---|---|---|
-| O1 | Brand name and package ID (`com.<brand>.app`). The ID can never change after the first upload | Store listing, Firebase apps, icon, wordmark |
+| O1 | Package ID, for example `com.madarsat.app`. The ID can never change after the first upload | Store listing, Firebase apps |
 | O2 | The v1 feature cut. Proposal in the product doc, §6 | Phase 3 scope |
 | O3 | Whether to drop the card-sharing labels and BISS keys (risk R3) | Channel `access` field, Feeds screen |
 | O4 | A domain (about $10/year) for the API and media hosts | Not urgent: hosts come from Remote Config, and the PWA lives on `web.app`. It removes the dependence on sslip.io (R6) |
@@ -581,7 +581,7 @@ B2's free tier is 10 GB, so watch the size. Test a restore every month on a scra
 ## 9. Repository and CI/CD
 
 ```
-new_app/                      (git repository)
+madar_sat/                    (git repository)
   backend/    app/ (domain, db, public, admin, workers, adapters) · alembic/ · tests/ · Dockerfile
   admin/      src/ · Orval config · Dockerfile (static build)
   app/        lib/ · test/ · integration_test/ · env/ (public values only) · web/ (custom SW, bootstrap)
@@ -633,9 +633,11 @@ new_app/                      (git repository)
 
 ## 12. Delivery plan
 
+The detailed plan is in [delivery-plan.md](delivery-plan.md): day-by-day lanes, gates, and the Spec Kit catalog. Where the two differ, that file wins. The table below is a summary.
+
 | Phase | Work | Done when |
 |---|---|---|
-| 0 · Accounts | Brand + package ID (O1). New Firebase project. Play Console app. Apple enrollment (O5). Reserve OCI IPs. Create the repo | IDs fixed; console access works |
+| 0 · Accounts | Package ID (O1). New Firebase project. Play Console app. Apple enrollment (O5). Reserve OCI IPs. Create the repo | IDs fixed; console access works |
 | 1 · Foundation | FastAPI skeleton, both ASGI apps, Alembic `0001` + additions, snapshot load, media rehosting, admin auth, infra (Compose, Caddy, WireGuard, backups, Kuma), CI for backend | Snapshot served by `/v1`; admin can log in over WireGuard; a restore has been tested |
 | 2 · Admin + ingestion | Admin web for all entities and operations. Adapters (ysscores, LiveSoccerTV, sporteventz, YallaKora), entity resolution, source health, shadow-run diff reports | Two weeks of unattended imports with diffs explained |
 | 3 · App v1 | Flutter: parity screens + the v1 features chosen in O2. Devices/follows endpoints, notifications dispatcher, live poller, PWA delivery with mirror, Remote Config, ads (Android) | Internal track + PWA beta with 20+ testers; crash-free ≥ 99.5 % |

@@ -1,0 +1,136 @@
+<!doctype html>
+<!-- Madar · React admin · A13 Run detail · 1440×960 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin source run detail</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.steps{display:flex;gap:0;flex-wrap:wrap}
+.stp{flex:1;min-width:120px;display:flex;flex-direction:column;gap:6px;padding:12px 14px;position:relative}
+.stp+.stp{box-shadow:inset -1px 0 0 var(--dv)}
+.stp .t{font:600 11px/1 var(--f-m);color:var(--tx3);direction:ltr;text-align:right}
+</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav on" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1">
+        <div><div class="row g6 fs12 t3"><a href="../03-operations/Sources.html" class="lnk">المصادر</a><span class="ic i-chl s12"></span><span class="ltr">YallaKora</span></div><h1 class="row g10" style="margin-top:6px"><span class="ltr">YallaKora</span><span class="ltr mono t3" style="font-size:18px">run #4182</span><span class="stat er"><span class="ic i-x s12"></span>فشل</span></h1><div class="sub">بدأ 6:10:02 م · استغرق 41 ث · العامل <span class="ltr mono">worker-scrape@vps-2</span></div></div>
+        <div class="acts"><button class="btn btn-s btn-sm"><span class="ic i-doc s16"></span>الصفحة الخام</button><button class="btn btn-p btn-sm"><span class="ic i-zap s16"></span>إعادة التشغيل</button></div>
+      </div>
+      <section class="box">
+        <div class="steps">
+          <div class="stp"><span class="t">fetch</span><span class="stat er">5 × HTTP 403</span><span class="fs12 t3">6 صفحات مطلوبة</span></div>
+          <div class="stp"><span class="t">parse</span><span class="stat nu">لم يبدأ</span><span class="fs12 t3">0 عنصر</span></div>
+          <div class="stp"><span class="t">normalize</span><span class="stat nu">لم يبدأ</span></div>
+          <div class="stp"><span class="t">resolve</span><span class="stat nu">لم يبدأ</span></div>
+          <div class="stp"><span class="t">upsert</span><span class="stat nu">لم يبدأ</span></div>
+        </div>
+      </section>
+      <div class="split">
+        <section class="l box">
+          <div class="box-h"><h2>السجل</h2><span class="spacer"></span><button class="dd"><span class="k">المستوى</span>الكل<span class="ic i-chd s16 t3"></span></button></div>
+          <div class="box-b"><div class="code"><span class="t">18:10:02</span> <span class="o">INFO</span>  run 4182 started window=2026-10-28..2026-10-29
+<span class="t">18:10:03</span> <span class="o">INFO</span>  GET /matches/2026-10-28  token-bucket ok
+<span class="t">18:10:04</span> <span class="e">ERROR</span> 403 Forbidden  retry 1/5 backoff=2.3s
+<span class="t">18:10:07</span> <span class="e">ERROR</span> 403 Forbidden  retry 2/5 backoff=4.9s
+<span class="t">18:10:13</span> <span class="e">ERROR</span> 403 Forbidden  retry 3/5 backoff=9.6s
+<span class="t">18:10:24</span> <span class="e">ERROR</span> 403 Forbidden  retry 4/5 backoff=16.1s
+<span class="t">18:10:41</span> <span class="e">ERROR</span> 403 Forbidden  retry 5/5 giving up
+<span class="t">18:10:41</span> <span class="w">WARN</span>  circuit breaker OPEN after 5 consecutive failures
+<span class="t">18:10:41</span> <span class="w">WARN</span>  zero-items alarm raised · admins notified</div></div>
+        </section>
+        <section class="r box">
+          <div class="box-h"><h2>آخر التشغيلات</h2></div>
+          <div class="tw"><table class="tbl">
+            <thead><tr><th>#</th><th>البدء</th><th>العناصر</th><th>الحالة</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td class="mono">4182</td><td>6:10 م</td><td>0</td><td><span class="stat er">فشل</span></td></tr>
+              <tr><td class="mono">4171</td><td>12:10 م</td><td>62</td><td><span class="stat ok">نجح</span></td></tr>
+              <tr><td class="mono">4160</td><td>6:10 ص</td><td>58</td><td><span class="stat ok">نجح</span></td></tr>
+              <tr><td class="mono">4149</td><td>أمس 6:10 م</td><td>71</td><td><span class="stat ok">نجح</span></td></tr>
+              <tr><td class="mono">4138</td><td>أمس 12:10 م</td><td>69</td><td><span class="stat wa">جزئي · 2 أخطاء</span></td></tr>
+            </tbody>
+          </table></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

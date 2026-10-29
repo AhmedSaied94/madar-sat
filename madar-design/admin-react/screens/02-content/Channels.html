@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- Madar · React admin · A8 Channels + editor drawer (light) · 1440×1000 · default theme light.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin channels</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.fqin{display:grid;grid-template-columns:minmax(0,1.3fr) auto minmax(0,1fr);gap:8px;direction:ltr}
+.pol{display:flex;background:var(--bg);border-radius:10px;box-shadow:inset 0 0 0 1px var(--dv2);padding:3px;gap:2px}
+.pol button{width:30px;height:32px;border-radius:7px;font:600 12px var(--f-m);color:var(--tx2)}
+.pol button.on{background:var(--tx);color:var(--oninv)}
+.tgs{transform:scale(.8);transform-origin:center}
+</style></head>
+<body>
+
+
+<div class="adm t-light">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav on" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>القنوات</h1><div class="sub">2,418 صفاً · 949 على أقمار · 1,469 منصة بلا قمر</div></div><div class="acts"><button class="btn btn-s btn-sm"><span class="ic i-trash s16"></span>أدوات التنظيف</button><button class="btn btn-p btn-sm"><span class="ic i-plus s16"></span>قناة جديدة</button></div></div>
+      <div class="fbar">
+        <label class="in" style="height:36px;min-height:36px;width:240px"><span class="ic i-search s16 t3"></span><input type="search" placeholder="اسم أو رقم تردد" aria-label="بحث في القنوات"></label>
+        <button class="dd on"><span class="k">القمر</span>نايل سات<span class="ic i-x s14 t3"></span></button>
+        <button class="dd"><span class="k">الفئة</span>الكل<span class="ic i-chd s16 t3"></span></button>
+        <button class="dd"><span class="k">الوصول</span>الكل<span class="ic i-chd s16 t3"></span></button>
+        <button class="dd"><span class="ic i-image s14"></span>بلا شعار</button>
+        <button class="dd"><span class="ic i-globe s14"></span>منصات فقط</button>
+        <button class="dd"><span class="ic i-eye s14"></span>يظهر في المباريات</button>
+      </div>
+      <div class="split">
+        <div class="l box">
+          <div class="tw">
+            <table class="tbl">
+              <thead><tr><th>القناة</th><th>التردد</th><th>الوصول</th><th>الفئة</th><th>في المباريات</th><th>آخر تغيير</th></tr></thead>
+              <tbody>
+                <tr class="sel"><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">bS1</span></span><span class="col"><span class="w6 ltr" style="text-align:right">beIN SPORTS 1</span><span class="fs11 t3 ltr" style="text-align:right">beIN SPORTS 1 HD</span></span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>11013</span><span class="p" style="width:15px;height:15px;font-size:10px">H</span><span class="sr">27500</span></span></td><td><span class="ab enc"><span class="ic i-lock s12"></span><span class="ltr">beIN</span></span></td><td><span class="pill p-sp">رياضة</span></td><td><span class="tg on tgs"></span></td><td><span class="chgb">20 أكتوبر</span></td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">bS5</span></span><span class="w6 ltr">beIN SPORTS 5</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>12188</span><span class="p" style="width:15px;height:15px;font-size:10px">H</span><span class="sr">27500</span></span></td><td><span class="ab enc"><span class="ic i-lock s12"></span><span class="ltr">beIN</span></span></td><td><span class="pill p-sp">رياضة</span></td><td><span class="tg on tgs"></span></td><td><span class="chgb">22 أكتوبر</span></td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">ON</span></span><span class="w6 ltr">ON Sport HD</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>11977</span><span class="p" style="width:15px;height:15px;font-size:10px">V</span><span class="sr">27500</span></span></td><td><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></td><td><span class="pill p-sp">رياضة</span></td><td><span class="tg on tgs"></span></td><td class="muted">3 سبتمبر</td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">ON</span></span><span class="w6 ltr">ON Sport Max HD</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>11977</span><span class="p" style="width:15px;height:15px;font-size:10px">V</span><span class="sr">27500</span></span></td><td><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></td><td><span class="pill p-sp">رياضة</span></td><td><span class="tg on tgs"></span></td><td class="muted">3 سبتمبر</td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">AK1</span></span><span class="w6 ltr">Al Kass One HD</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>11919</span><span class="p" style="width:15px;height:15px;font-size:10px">H</span><span class="sr">27500</span></span></td><td><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></td><td><span class="pill p-sp">رياضة</span></td><td><span class="tg on tgs"></span></td><td class="muted">—</td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">AD1</span></span><span class="w6 ltr">Abu Dhabi Sports 1</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>11411</span><span class="p" style="width:15px;height:15px;font-size:10px">H</span><span class="sr">30000</span></span></td><td><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></td><td><span class="pill p-sp">رياضة</span></td><td><span class="tg on tgs"></span></td><td class="muted">—</td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">WT1</span></span><span class="w6 ltr">Watania 1 HD</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>10873</span><span class="p" style="width:15px;height:15px;font-size:10px">V</span><span class="sr">27500</span></span></td><td><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></td><td><span class="pill p-en">ترفيه</span></td><td><span class="tg tgs"></span></td><td class="muted">—</td></tr>
+                <tr><td><span class="row g10"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">MBC</span></span><span class="w6 ltr">MBC Masr 2 HD</span></span></td><td><span class="fq" style="height:24px;font-size:12px"><span>11219</span><span class="p" style="width:15px;height:15px;font-size:10px">H</span><span class="sr">27500</span></span></td><td><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></td><td><span class="pill p-en">ترفيه</span></td><td><span class="tg tgs"></span></td><td class="muted">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager bt"><span>8 من 63 على نايل سات</span></div>
+        </div>
+        <aside class="r drawer">
+          <div class="dh"><span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">bS1</span></span><div class="col f1"><span class="w7 ltr" style="font-family:var(--f-d);font-size:17px;text-align:right">beIN SPORTS 1</span><span class="fs12 t3">نايل سات · تتابعه 1,240 جهازاً</span></div><button class="ib sm" aria-label="إغلاق"><span class="ic i-x s16"></span></button></div>
+          <div class="col" style="padding:16px 18px;gap:14px">
+            <div class="fgrid"><div class="fld"><label>اسم المطابقة</label><div class="in"><input type="text" value="beIN SPORTS 1 HD" class="ltr" aria-label="اسم المطابقة"></div></div><div class="fld"><label>اسم العرض</label><div class="in"><input type="text" value="beIN SPORTS 1" class="ltr" aria-label="اسم العرض"></div></div></div>
+            <div class="fld"><label>التردد</label><div class="fqin"><div class="in focus"><input type="text" value="11013" class="mono" aria-label="التردد"><span class="fs11 t3">MHz</span></div><div class="pol"><button class="on">H</button><button>V</button><button>L</button><button>R</button></div><div class="in"><input type="text" value="27500" class="mono" aria-label="معدل الترميز"><span class="fs11 t3">SR</span></div></div><span class="hint">تغيير التردد يرسل تنبيهاً لمتابعي القناة.</span></div>
+            <div class="fld"><label>الوصول</label><div class="row g8"><div class="seg" style="flex:none;padding:2px;border-radius:10px"><button style="height:32px;padding:0 12px">مجانية</button><button class="on" style="height:32px;padding:0 12px"><span class="ic i-lock s14"></span>مشفرة</button></div><div class="in f1"><input type="text" value="beIN" class="ltr" aria-label="المزود"></div><div class="in f1" style="color:var(--tx3)"><input type="text" placeholder="الباقة (اختياري)" aria-label="الباقة"></div></div></div>
+            <div class="fgrid"><div class="fld"><label>الفئة</label><div class="in"><span class="f1">رياضة</span><span class="ic i-chd s16 t3"></span></div></div><div class="fld"><label>الدولة</label><div class="in"><span class="f1">قطر</span><span class="ic i-chd s16 t3"></span></div></div></div>
+            <div class="row g10" style="padding:10px 12px;border-radius:12px;background:var(--bg)"><span class="ic i-eye s18 t2"></span><span class="f1 fs13">إظهار في صفحات المباريات</span><span class="tg on" role="switch" aria-checked="true"></span></div>
+            <div class="fld"><label><span class="ic i-history s14"></span>سجل التردد</label>
+              <div class="row g8 fs12"><span class="chgb">20 أكتوبر</span><span class="fq dim" style="height:22px;font-size:11px"><span>11766</span><span class="p" style="width:14px;height:14px;font-size:9px">H</span></span><span class="ic i-fwd s14 t3"></span><span class="fq" style="height:22px;font-size:11px"><span>11013</span><span class="p" style="width:14px;height:14px;font-size:9px">H</span></span><span class="t3">· محمد علي</span></div>
+            </div>
+            <button class="btn btn-s btn-sm" style="align-self:flex-start"><span class="ic i-sat s16"></span>إضافة على قمر آخر</button>
+          </div>
+          <div class="df"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn btn-p btn-sm">حفظ</button></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

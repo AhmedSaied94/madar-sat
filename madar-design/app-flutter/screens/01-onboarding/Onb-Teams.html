@@ -1,0 +1,147 @@
+<!doctype html>
+<!-- Madar · Flutter app · S1.2 Teams · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S1.2 Teams</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.tg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 16px}
+.tt3{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px 10px;border-radius:16px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--dv);position:relative;min-height:96px}
+.tt3 .nm{font-size:12.5px;font-weight:600;text-align:center;line-height:1.25}
+.tt3.on{box-shadow:inset 0 0 0 2px var(--ac);background:var(--acc)}
+.tt3 .ck{position:absolute;top:7px;left:7px;width:20px;height:20px;border-radius:50%;background:var(--ac);color:var(--onac);display:flex;align-items:center;justify-content:center}
+.gh{display:flex;align-items:center;gap:8px;padding:16px 18px 10px;font-size:13px;font-weight:600;color:var(--tx2)}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <div class="row" style="height:56px;padding:0 6px">
+    <a class="ib" href="../01-onboarding/Onb-Welcome.html" aria-label="رجوع"><span class="ic i-back s22"></span></a>
+    <div class="pdots f1 jc"><i class="done"></i><i class="on"></i><i></i><i></i></div>
+    <a class="btn btn-g btn-sm" href="../01-onboarding/Onb-Satellites.html">تخطي</a>
+  </div>
+  <div style="padding:2px 20px 12px">
+    <h1 style="font:700 24px/1.25 var(--f-d)">اختر فرقك المفضلة</h1>
+    <p class="fs13 t2 mt4">سنعرض مبارياتها أولاً ونذكّرك قبل انطلاقها.</p>
+  </div>
+  <div class="px16" style="padding-bottom:4px"><label class="sf"><span class="ic i-search s18"></span><input type="text" placeholder="ابحث عن فريق..." aria-label="ابحث عن فريق"></label></div>
+  <div class="body">
+    
+      <section>
+        <div class="gh"><span class="lt" style="width:22px;height:22px;border-radius:6px"><span class="ic i-trophy s12" style="color: #3EE0A1"></span></span>الدوري المصري الممتاز</div>
+        <div class="tg3">
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #C8102E; --c2: #fff">أ</span></span>
+              <span class="nm">الأهلي</span>
+            </button>
+          
+            <button class="tt3 on" aria-pressed="true">
+              <span class="ck"><span class="ic i-check s12"></span></span>
+              <span class="tm t48"><span class="crest" style="--c1: #F4F4F4; --c2: #C8102E">ز</span></span>
+              <span class="nm">الزمالك</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #14213D; --c2: #5BC0EB">ب</span></span>
+              <span class="nm">بيراميدز</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #1D8A3B; --c2: #fff">م</span></span>
+              <span class="nm">المصري</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #F2C200; --c2: #0B4FA0">إ</span></span>
+              <span class="nm">الإسماعيلي</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #0B6B3A; --c2: #fff">ب</span></span>
+              <span class="nm">البنك الأهلي</span>
+            </button>
+          
+        </div>
+      </section>
+    
+      <section>
+        <div class="gh"><span class="lt" style="width:22px;height:22px;border-radius:6px"><span class="ic i-trophy s12" style="color: #7CC7FF"></span></span>الدوري السعودي للمحترفين</div>
+        <div class="tg3">
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #0B4FA0; --c2: #fff">ه</span></span>
+              <span class="nm">الهلال</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #F2C200; --c2: #0B2A5B">ن</span></span>
+              <span class="nm">النصر</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #F2C200; --c2: #111">ا</span></span>
+              <span class="nm">الاتحاد</span>
+            </button>
+          
+        </div>
+      </section>
+    
+      <section>
+        <div class="gh"><span class="lt" style="width:22px;height:22px;border-radius:6px"><span class="ic i-trophy s12" style="color: #B9A2FF"></span></span>الدوري الإنجليزي الممتاز</div>
+        <div class="tg3">
+          
+            <button class="tt3 on" aria-pressed="true">
+              <span class="ck"><span class="ic i-check s12"></span></span>
+              <span class="tm t48"><span class="crest" style="--c1: #C8102E; --c2: #fff">ل</span></span>
+              <span class="nm">ليفربول</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #6CABDD; --c2: #0B1F3A">م</span></span>
+              <span class="nm">مان سيتي</span>
+            </button>
+          
+            <button class="tt3" aria-pressed="false">
+              
+              <span class="tm t48"><span class="crest" style="--c1: #EF0107; --c2: #fff">أ</span></span>
+              <span class="nm">أرسنال</span>
+            </button>
+          
+        </div>
+      </section>
+    
+    <div style="height:16px"></div>
+  </div>
+  <div class="bt bg1" style="padding:12px 16px 20px;display:flex;flex-direction:column;gap:12px">
+    <div class="tray">
+      
+        <button class="tk"><span class="tm t24"><span class="crest" style="--c1: #F4F4F4; --c2: #C8102E">ز</span></span>الزمالك<span class="ic i-x s14 t3"></span></button>
+      
+        <button class="tk"><span class="tm t24"><span class="crest" style="--c1: #C8102E; --c2: #fff">ل</span></span>ليفربول<span class="ic i-x s14 t3"></span></button>
+      
+    </div>
+    <a class="btn btn-p btn-blk" href="../01-onboarding/Onb-Satellites.html">التالي (2)<span class="ic i-fwd s18"></span></a>
+  </div>
+</div>
+
+
+
+
+</body></html>

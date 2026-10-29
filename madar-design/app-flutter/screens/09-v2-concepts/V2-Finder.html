@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- Madar · Flutter app · S18 Satellite finder [V2] · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S18 Satellite finder</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.dial{position:relative;width:268px;height:268px;margin:0 auto;border-radius:50%;background:var(--s1);box-shadow:inset 0 0 0 1px var(--dv2)}
+.dial .rg{position:absolute;inset:18px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--dv)}
+.dial .rg2{position:absolute;inset:62px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--dv)}
+.tick{position:absolute;left:50%;top:0;width:2px;height:134px;transform-origin:50% 100%;margin-left:-1px}
+.tick i{display:block;width:2px;height:10px;background:var(--tx3);border-radius:2px}
+.tick.mj i{height:16px;background:var(--tx2)}
+.card-l{position:absolute;font:700 12px/1 var(--f-m);color:var(--tx2);transform:translate(-50%,-50%)}
+.ndl{position:absolute;left:50%;top:50%;width:4px;height:108px;margin-left:-2px;transform-origin:50% 0;border-radius:4px}
+.hub{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--tx);box-shadow:0 0 0 4px var(--s1)}
+.ro{flex:1;min-width:0;border-radius:16px;background:var(--rdb);box-shadow:inset 0 0 0 1px var(--rdl);padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.ro .k{font-size:11px;color:#9AA3AF}
+.ro .v{font:600 20px/1 var(--f-m);color:var(--rd);text-shadow:var(--rdg);direction:ltr;text-align:right}
+.ro .s{font:500 11px/1 var(--f-m);color:var(--rd2);direction:ltr;text-align:right}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <header class="tb"><a class="ib" href="../06-more-settings-rights/More.html" aria-label="رجوع"><span class="ic i-back s22"></span></a><h1 class="tb-t">مكتشف الأقمار</h1><span class="pill p-acc" style="margin-inline-end:12px">V2</span></header>
+  <div class="chips" style="padding-top:0">
+    <button class="chip on"><span class="ic i-dish s14"></span>نايل سات</button>
+    <button class="chip"><span class="ic i-dish s14"></span>بدر</button>
+    <button class="chip">هوت بيرد</button>
+    <button class="chip">عرب سات</button>
+  </div>
+  <div class="row g8 px16" style="padding-bottom:10px"><span class="ic i-pin s16 ac"></span><span class="fs13 w6">القاهرة</span><span class="fs12 t3">· من موقع الجهاز</span><span class="spacer"></span><button class="btn btn-g btn-xs">تغيير</button></div>
+  <div class="row g8 px16">
+    <div class="ro"><span class="k">السمت (حقيقي)</span><span class="v">237.6°</span><span class="s">MAG 232.9°</span></div>
+    <div class="ro"><span class="k">الارتفاع</span><span class="v">35.8°</span><span class="s">ELEV</span></div>
+    <div class="ro"><span class="k">ميل LNB</span><span class="v">46.9°</span><span class="s">SKEW</span></div>
+  </div>
+  <div class="body" style="padding-top:18px">
+    <div class="dial" role="img" aria-label="البوصلة: الاتجاه الحالي 226 درجة، الهدف 237.6 درجة">
+      <div class="rg"></div><div class="rg2"></div>
+      <span class="tick mj" style="transform: rotate(0deg)"><i></i></span><span class="tick" style="transform: rotate(10deg)"><i></i></span><span class="tick" style="transform: rotate(20deg)"><i></i></span><span class="tick" style="transform: rotate(30deg)"><i></i></span><span class="tick" style="transform: rotate(40deg)"><i></i></span><span class="tick" style="transform: rotate(50deg)"><i></i></span><span class="tick" style="transform: rotate(60deg)"><i></i></span><span class="tick" style="transform: rotate(70deg)"><i></i></span><span class="tick" style="transform: rotate(80deg)"><i></i></span><span class="tick mj" style="transform: rotate(90deg)"><i></i></span><span class="tick" style="transform: rotate(100deg)"><i></i></span><span class="tick" style="transform: rotate(110deg)"><i></i></span><span class="tick" style="transform: rotate(120deg)"><i></i></span><span class="tick" style="transform: rotate(130deg)"><i></i></span><span class="tick" style="transform: rotate(140deg)"><i></i></span><span class="tick" style="transform: rotate(150deg)"><i></i></span><span class="tick" style="transform: rotate(160deg)"><i></i></span><span class="tick" style="transform: rotate(170deg)"><i></i></span><span class="tick mj" style="transform: rotate(180deg)"><i></i></span><span class="tick" style="transform: rotate(190deg)"><i></i></span><span class="tick" style="transform: rotate(200deg)"><i></i></span><span class="tick" style="transform: rotate(210deg)"><i></i></span><span class="tick" style="transform: rotate(220deg)"><i></i></span><span class="tick" style="transform: rotate(230deg)"><i></i></span><span class="tick" style="transform: rotate(240deg)"><i></i></span><span class="tick" style="transform: rotate(250deg)"><i></i></span><span class="tick" style="transform: rotate(260deg)"><i></i></span><span class="tick mj" style="transform: rotate(270deg)"><i></i></span><span class="tick" style="transform: rotate(280deg)"><i></i></span><span class="tick" style="transform: rotate(290deg)"><i></i></span><span class="tick" style="transform: rotate(300deg)"><i></i></span><span class="tick" style="transform: rotate(310deg)"><i></i></span><span class="tick" style="transform: rotate(320deg)"><i></i></span><span class="tick" style="transform: rotate(330deg)"><i></i></span><span class="tick" style="transform: rotate(340deg)"><i></i></span><span class="tick" style="transform: rotate(350deg)"><i></i></span>
+      <span class="card-l" style="left:50%;top:36px">N</span><span class="card-l" style="left:232px;top:50%">E</span><span class="card-l" style="left:50%;top:232px">S</span><span class="card-l" style="left:36px;top:50%">W</span>
+      <span class="ndl" style="background:var(--ac);transform:rotate(57.6deg);box-shadow:0 0 12px rgba(200,245,66,.5)"></span>
+      <span class="ndl" style="background:var(--tx2);width:2px;margin-left:-1px;transform:rotate(46deg)"></span>
+      <span class="hub"></span>
+    </div>
+    <div class="col" style="align-items:center;gap:4px;margin-top:14px">
+      <span class="w6 fs15 row g6"><span class="ic i-refresh s16 ac"></span>أدر الطبق يميناً 12°</span>
+      <span class="fs12 t3">حرّك الهاتف على شكل ∞ لمعايرة البوصلة</span>
+    </div>
+  </div>
+  <div class="gest"></div>
+</div>
+
+
+
+
+</body></html>

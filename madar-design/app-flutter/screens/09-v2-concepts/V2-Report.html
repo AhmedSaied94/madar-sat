@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- Madar · Flutter app · S19 Report a problem [V2] · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S19 Report a problem</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.ko{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 20px;width:100%}
+.ta{margin:4px 16px 0;border-radius:14px;background:var(--s2);box-shadow:inset 0 0 0 1.5px var(--fr);padding:12px 14px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between}
+.ta textarea{background:none;border:0;outline:0;resize:none;width:100%;font-size:14px;line-height:1.6;color:var(--tx);padding:0}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <header class="tb"><span class="ib"><span class="ic i-back s22"></span></span><span class="tb-t">ميلان × بولونيا</span></header>
+  <div class="card mt8">
+    <div class="cr"><span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">DZN</span></span><div class="bd"><span class="cn"><span class="ltr">DAZN 1 HD Italia</span></span><span class="fq"><span>11843</span><span class="p">V</span><span class="sr">29900</span></span></div></div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet" role="dialog" aria-label="الإبلاغ عن مشكلة">
+    <div class="hdl"></div>
+    <div class="row g10" style="padding:0 20px 12px"><span class="lt l40" style="background:var(--errc);color:var(--err);box-shadow:none"><span class="ic i-flag s18"></span></span><div class="col f1"><span style="font:700 18px/1.2 var(--f-d)">الإبلاغ عن مشكلة</span><span class="fs12 t3"><span class="ltr">DAZN 1 HD Italia</span> · هوت بيرد · <span class="ltr mono">11843 V 29900</span></span></div><span class="pill p-acc">V2</span></div>
+    <div class="hr"></div>
+    <div role="radiogroup" aria-label="نوع المشكلة" style="padding:6px 0">
+      <button class="ko" role="radio" aria-checked="false"><span class="rad"></span>القناة لا تعمل</button>
+      <button class="ko" role="radio" aria-checked="true"><span class="rad on"></span><span class="w6">التردد خاطئ</span></button>
+      <button class="ko" role="radio" aria-checked="false"><span class="rad"></span>القناة لا تنقل المباراة</button>
+      <button class="ko" role="radio" aria-checked="false"><span class="rad"></span>أخرى</button>
+    </div>
+    <label class="fs12 t3" style="padding:0 20px">ملاحظة (اختياري)</label>
+    <div class="ta"><textarea rows="2" aria-label="ملاحظة">التردد الصحيح الآن 11804 V 30000 حسب الريسيفر</textarea><span class="fs11 t3" style="align-self:flex-end"><span class="ltr mono">47/280</span></span></div>
+    <div class="row g8" style="padding:16px 16px 4px"><button class="btn btn-g">إلغاء</button><span class="spacer"></span><button class="btn btn-p" style="min-width:150px"><span class="ic i-send s16"></span>إرسال البلاغ</button></div>
+    <div class="gest"></div>
+  </div>
+</div>
+
+
+
+
+</body></html>

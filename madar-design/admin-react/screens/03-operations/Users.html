@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Madar · React admin · A16 Admin users (light) · 1440×900 · default theme light.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin users</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.opt{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv)}
+.opt.on{box-shadow:inset 0 0 0 1.5px var(--act);background:var(--acc)}
+</style></head>
+<body>
+
+
+<div class="adm t-light">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav on" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>المستخدمون</h1><div class="sub">4 حسابات · كل حساب له سجل تغييرات مستقل</div></div><div class="acts"><button class="btn btn-p btn-sm"><span class="ic i-plus s16"></span>مستخدم جديد</button></div></div>
+      <div class="split">
+        <section class="l box">
+          <div class="tw"><table class="tbl">
+            <thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>آخر دخول</th><th>التحقق بخطوتين</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><span class="row g10"><span class="av a28">م ع</span><span class="col"><span class="w6">محمد علي</span><span class="fs11 t3 ltr" style="text-align:right">mohamed@example.com</span></span></span></td><td><span class="role">مدير</span></td><td><span class="health ok"><span class="d"></span>نشط</span></td><td>الآن</td><td><span class="src">V2</span></td><td><span class="rowact"><button class="ib" aria-label="خيارات"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr><td><span class="row g10"><span class="av a28">س ح</span><span class="col"><span class="w6">سارة حسن</span><span class="fs11 t3 ltr" style="text-align:right">sara@example.com</span></span></span></td><td><span class="role ed">محرر</span></td><td><span class="health ok"><span class="d"></span>نشطة</span></td><td>منذ 4 د</td><td><span class="src">V2</span></td><td><span class="rowact"><button class="ib" aria-label="خيارات"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr><td><span class="row g10"><span class="av a28">ي ع</span><span class="col"><span class="w6">يوسف عمر</span><span class="fs11 t3 ltr" style="text-align:right">youssef@example.com</span></span></span></td><td><span class="role ed">محرر</span></td><td><span class="health half"><span class="d"></span>مقفل مؤقتاً · 11 د</span></td><td>أمس 11:40 م</td><td><span class="src">V2</span></td><td><span class="rowact"><button class="ib" aria-label="خيارات"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr><td><span class="row g10"><span class="av a28" style="opacity:.5">ن ك</span><span class="col"><span class="w6 t3">نور كمال</span><span class="fs11 t3 ltr" style="text-align:right">nour@example.com</span></span></span></td><td><span class="role ed" style="opacity:.6">محرر</span></td><td><span class="health off"><span class="d"></span>معطّل</span></td><td>12 سبتمبر</td><td>—</td><td><span class="rowact"><button class="ib" aria-label="خيارات"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+            </tbody>
+          </table></div>
+        </section>
+        <aside class="r drawer">
+          <div class="dh"><span class="ic i-user s20 ac"></span><span class="w7" style="font-family:var(--f-d);font-size:17px">مستخدم جديد</span></div>
+          <div class="col" style="padding:16px 18px;gap:14px">
+            <div class="fld"><label>الاسم</label><div class="in"><input type="text" value="ليلى منصور" aria-label="الاسم"></div></div>
+            <div class="fld"><label>البريد الإلكتروني</label><div class="in focus"><input type="email" value="laila@example.com" class="ltr" aria-label="البريد الإلكتروني"></div></div>
+            <div class="fld"><label>الدور</label>
+              <label class="opt on"><span class="rad on" style="margin-top:2px"></span><div class="col"><span class="w6 fs13">محرر</span><span class="fs12 t3">المباريات والقنوات والفرق والمحتوى</span></div></label>
+              <label class="opt"><span class="rad" style="margin-top:2px"></span><div class="col"><span class="w6 fs13">مدير</span><span class="fs12 t3">كل ما سبق + المستخدمون والمصادر وإرسال الإعلانات والحذف الجماعي</span></div></label>
+            </div>
+            <div class="fld"><label>كلمة مرور مؤقتة <span class="hint">12 حرفاً على الأقل · تُغيَّر عند أول دخول</span></label><div class="row g8"><div class="in f1"><span class="mono ltr f1" style="text-align:left">k7Q-rv2m-X9tp</span></div><button class="btn btn-s btn-sm"><span class="ic i-copy s16"></span>نسخ</button><button class="btn btn-s btn-sm" aria-label="توليد أخرى"><span class="ic i-refresh s16"></span></button></div></div>
+          </div>
+          <div class="df"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn btn-p btn-sm">إنشاء الحساب</button></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

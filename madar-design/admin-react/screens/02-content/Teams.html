@@ -1,0 +1,137 @@
+<!doctype html>
+<!-- Madar · React admin · A5 Teams + merge tool · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin teams and merge</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.sv{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv)}
+.sv.on{box-shadow:inset 0 0 0 1.5px var(--act);background:var(--acc)}
+</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav on" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">ي ع</span><div class="col f1"><span class="w6 fs13">يوسف عمر</span><span class="fs11 t3">محرر</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role ed">محرر</span><span class="av a28">ي ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>الفرق</h1><div class="sub">1,513 فريقاً · 86 بلا شعار</div></div><div class="acts"><button class="btn btn-s btn-sm"><span class="ic i-merge s16"></span>دمج المحدد</button><button class="btn btn-p btn-sm"><span class="ic i-plus s16"></span>فريق جديد</button></div></div>
+      <div class="fbar">
+        <label class="in focus" style="height:36px;min-height:36px;width:260px"><span class="ic i-search s16 t3"></span><input type="search" value="الاهلي" aria-label="بحث في الفرق"></label>
+        <button class="dd"><span class="k">البطولة</span>الكل<span class="ic i-chd s16 t3"></span></button>
+        <button class="dd"><span class="ic i-image s14"></span>بلا شعار</button>
+        <span class="fs12 t3">يتجاهل البحث الهمزات والتاء المربوطة</span>
+      </div>
+      <div class="split">
+        <div class="l box">
+          <div class="tw">
+            <table class="tbl">
+              <thead><tr><th style="width:36px"><span class="cb"></span></th><th>الفريق</th><th>البطولة الرئيسية</th><th>أسماء بديلة</th><th>مباريات</th><th>المعرفات</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><span class="cb"></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><span class="w6">الأهلي</span></span></td><td>الدوري المصري الممتاز</td><td class="muted"><span class="ltr">Al Ahly SC</span> · +3</td><td>42</td><td><span class="row g4"><span class="src">YSS 1191</span><span class="src">LST</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr><td><span class="cb"></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">أ</span></span><span class="w6">الأهلي</span></span></td><td>الدوري السعودي للمحترفين</td><td class="muted"><span class="ltr">Al Ahli Saudi</span> · +2</td><td>38</td><td><span class="row g4"><span class="src">YSS 2264</span><span class="src">LST</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr class="sel"><td><span class="cb on"><span class="ic i-check s12"></span></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><span class="w6">الأهلي</span><span class="stat wa">مكرر محتمل</span></span></td><td>الدوري القطري</td><td class="muted"><span class="ltr">Al Ahli Doha</span></td><td>14</td><td><span class="row g4"><span class="src">YSS 3311</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr class="sel"><td><span class="cb on"><span class="ic i-check s12"></span></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#5B6470;--c2:#fff">أ</span></span><span class="w6">الأهلي</span><span class="stat wa">مكرر محتمل</span></span></td><td>الدوري القطري</td><td class="muted">—</td><td>2</td><td><span class="row g4"><span class="src">LST</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr><td><span class="cb"></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">ب</span></span><span class="w6">البنك الأهلي</span></span></td><td>الدوري المصري الممتاز</td><td class="muted"><span class="ltr">National Bank of Egypt</span></td><td>31</td><td><span class="row g4"><span class="src">YSS</span><span class="src">LST</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr><td><span class="cb"></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">أ</span></span><span class="w6">الأهلي طرابلس</span></span></td><td>الدوري الليبي</td><td class="muted"><span class="ltr">Al Ahli Tripoli</span></td><td>9</td><td><span class="row g4"><span class="src">YSS</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr><td><span class="cb"></span></td><td><span class="row g8"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#111">ش</span></span><span class="w6">شباب الأهلي</span></span></td><td>الدوري الإماراتي للمحترفين</td><td class="muted"><span class="ltr">Shabab Al Ahli</span></td><td>27</td><td><span class="row g4"><span class="src">YSS</span><span class="src">LST</span></span></td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager bt"><span>7 نتائج لـ «الاهلي»</span></div>
+        </div>
+        <aside class="r drawer" aria-label="أداة الدمج">
+          <div class="dh"><span class="ic i-merge s20 ac"></span><span class="w7" style="font-family:var(--f-d);font-size:17px">دمج فريقين</span><span class="spacer"></span><button class="ib sm" aria-label="إغلاق"><span class="ic i-x s16"></span></button></div>
+          <div class="col g12" style="padding:16px 18px">
+            <span class="fs12 w6 t2">1 · اختر الفريق الباقي</span>
+            <label class="sv on"><span class="rad on"></span><span class="tm t40"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><div class="col f1"><span class="w6">الأهلي · الدوري القطري</span><span class="fs12 t3">له شعار · 14 مباراة · <span class="ltr mono">YSS 3311</span></span></div></label>
+            <label class="sv"><span class="rad"></span><span class="tm t40"><span class="crest" style="--c1:#5B6470;--c2:#fff">أ</span></span><div class="col f1"><span class="w6">الأهلي · الدوري القطري</span><span class="fs12 t3">بلا شعار · مباراتان · <span class="ltr mono">LST</span></span></div></label>
+            <span class="fs12 w6 t2" style="margin-top:6px">2 · معاينة التأثير</span>
+            <div class="box" style="background:var(--bg)">
+              <div class="row g8 bt" style="padding:10px 12px;box-shadow:none"><span class="ic i-ball s16 t3"></span><span class="f1 fs13">الشحانية × الأهلي</span><span class="fs12 t3">الجمعة 30 · 4:15 م</span></div>
+              <div class="row g8 bt" style="padding:10px 12px"><span class="ic i-ball s16 t3"></span><span class="f1 fs13">الأهلي × الغرافة</span><span class="fs12 t3">10 أكتوبر · انتهت</span></div>
+              <div class="row g8 bt" style="padding:10px 12px"><span class="ic i-link s16 t3"></span><span class="f1 fs13">ينتقل الاسم البديل ومعرّف <span class="ltr mono">LST</span></span></div>
+            </div>
+            <span class="fs12 w6 t2" style="margin-top:6px">3 · للتأكيد اكتب «دمج»</span>
+            <div class="in focus"><input type="text" value="دمج" aria-label="تأكيد الدمج"></div>
+          </div>
+          <div class="df"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn btn-p btn-sm"><span class="ic i-merge s16"></span>دمج ونقل مباراتين</button></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

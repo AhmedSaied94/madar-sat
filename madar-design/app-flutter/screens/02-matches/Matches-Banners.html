@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- Madar · Flutter app · S0 Offline cache, soft update, exit · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S0 Offline with cache, soft update, exit</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>body{margin:0}</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <header class="tb" style="padding:0 16px 0 6px">
+    <span class="wm"><span class="mk"></span>مدار</span>
+    <span class="spacer"></span>
+    <a class="ib" href="../05-follow-and-search/Search.html" aria-label="بحث"><span class="ic i-search s22"></span></a>
+  </header>
+  <div class="bnr upd" role="status">
+    <span class="ic i-dl s18 ac"></span>
+    <span class="f1 w6">يتوفر إصدار جديد</span>
+    <button class="btn btn-p btn-xs">تحديث</button>
+    <button class="ib sm" aria-label="إغلاق" style="width:30px;height:30px"><span class="ic i-x s16"></span></button>
+  </div>
+  <div class="bnr off" role="status">
+    <span class="ic i-wifioff s16"></span>
+    <span class="f1">أنت غير متصل — آخر تحديث منذ 12 دقيقة</span>
+  </div>
+  <div class="ds" style="padding-top:6px">
+    
+      <button class="dcell"><span class="wd">إثنين</span><span class="dn">26</span></button>
+    
+      <button class="dcell"><span class="wd">ثلاثاء</span><span class="dn">27</span></button>
+    
+      <button class="dcell today on"><span class="wd">اليوم</span><span class="dn">28</span></button>
+    
+      <button class="dcell"><span class="wd">خميس</span><span class="dn">29</span></button>
+    
+      <button class="dcell"><span class="wd">جمعة</span><span class="dn">30</span></button>
+    
+      <button class="dcell"><span class="wd">سبت</span><span class="dn">31</span></button>
+    
+      <button class="dcell"><span class="wd">أحد</span><span class="dn">1</span></button>
+    
+  </div>
+  <div class="chips">
+    <button class="chip on">الكل <span class="cnt">85</span></button>
+    <button class="chip"><span class="ic i-starf s14 ac"></span>مبارياتي <span class="cnt">4</span></button>
+    <button class="chip"><span class="dot"></span>مباشر <span class="cnt">6</span></button>
+  </div>
+  <div class="body">
+    <div class="cg"><span class="lt"><span class="ic i-trophy s16" style="color:#3EE0A1"></span></span><span class="nm">الدوري المصري الممتاز</span><span class="stg">الجولة 8</span></div>
+    <div class="card">
+      <div class="mr">
+        <div class="mr-g">
+          <div class="tmc"><span class="tm"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">ب</span></span><span class="tmn">البنك الأهلي</span></div>
+          <div class="st"><div class="sc live"><b>0</b><i></i><b>1</b></div><span class="stale"><span class="ic i-clock s12"></span>قبل 12 د</span></div>
+          <div class="tmc away"><span class="tm"><span class="crest" style="--c1:#1D8A3B;--c2:#fff">م</span></span><span class="tmn">المصري</span></div>
+        </div>
+        <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">ON Sport Max</span></span><span class="free-m"><span class="ic i-unlock s12"></span>مجانية</span></div>
+      </div>
+      <div class="mr bt">
+        <div class="mr-g">
+          <div class="tmc"><span class="tm"><span class="crest" style="--c1:#F4F4F4;--c2:#C8102E">ز</span></span><span class="tmn">الزمالك<span class="ic i-starf s12 mk-fav"></span></span></div>
+          <div class="st"><span class="tm1"><span>8:00</span><span class="ap">م</span></span></div>
+          <div class="tmc away"><span class="tm"><span class="crest" style="--c1:#F2C200;--c2:#111">م</span></span><span class="tmn">المقاولون العرب</span></div>
+        </div>
+        <div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">ON Sport</span></span><span class="free-m"><span class="ic i-unlock s12"></span>مجانية</span></div>
+      </div>
+    </div>
+    <div class="cg"><span class="lt"><span class="ic i-trophy s16" style="color:#7CC7FF"></span></span><span class="nm">دوري أبطال آسيا 2</span><span class="stg">الجولة 3 - الذهاب</span></div>
+    <div class="card">
+      <div class="mr">
+        <div class="mr-g">
+          <div class="tmc"><span class="tm"><span class="crest" style="--c1:#0A4DA2;--c2:#fff">ن</span></span><span class="tmn">النهضة</span></div>
+          <div class="st"><span class="tm1"><span>7:00</span><span class="ap">م</span></span></div>
+          <div class="tmc away"><span class="tm"><span class="crest" style="--c1:#B8121B;--c2:#fff">ر</span></span><span class="tmn">الريان</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="snack" style="bottom:150px" role="status">
+    <span class="f1">اضغط رجوع مرة أخرى للخروج</span>
+  </div>
+  <div class="ad"><span class="tag">إعلان</span><div class="box"><span class="ltr">AdMob banner · 320×50</span></div></div>
+  <nav class="bn" aria-label="التنقل الرئيسي">
+    <a href="../02-matches/Matches.html" class="on"><span class="pi"><span class="ic i-ball s22"></span></span>المباريات</a>
+    <a href="../04-satellites-frequencies/MySatellites.html"><span class="pi"><span class="ic i-dish s22"></span></span>أقماري</a>
+    <a href="../04-satellites-frequencies/Frequencies.html"><span class="pi"><span class="ic i-wave s22"></span></span>الترددات</a>
+    <a href="../05-follow-and-search/Favorites.html"><span class="pi"><span class="ic i-star s22"></span></span>المفضلة</a>
+    <a href="../06-more-settings-rights/More.html"><span class="pi"><span class="ic i-grid s22"></span></span>المزيد</a>
+  </nav>
+  <div class="gest" style="background:var(--s1)"></div>
+</div>
+
+
+
+
+</body></html>

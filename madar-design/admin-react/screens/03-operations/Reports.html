@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Madar · React admin · A14 Reports [V2] · 1440×900 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin reports</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>body{margin:0}</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav on" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">س ح</span><div class="col f1"><span class="w6 fs13">سارة حسن</span><span class="fs11 t3">محررة</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role ed">محرر</span><span class="av a28">س ح</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1 class="row g10">البلاغات <span class="pill p-acc" style="height:24px">V2</span></h1><div class="sub">بلاغات المستخدمين عن قنوات لا تعمل أو ترددات خاطئة · الهدف: حل خلال 24 ساعة</div></div></div>
+      <div class="split">
+        <section class="l box">
+          <div class="box-h"><nav class="pt"><button class="on">مفتوحة · 6</button><button>مقبولة</button><button>مرفوضة</button></nav></div>
+          <div class="tw"><table class="tbl">
+            <thead><tr><th>النوع</th><th>القناة</th><th>المباراة</th><th>البلاغات</th><th>العمر</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td><span class="stat wa">التردد خاطئ</span></td><td><span class="ltr w6">DAZN 1 HD Italia</span> <span class="t3 fs12">هوت بيرد</span></td><td class="muted">ميلان × بولونيا</td><td><span class="w6">7</span> <span class="t3 fs12">· 3 في ساعة</span></td><td>42 د</td></tr>
+              <tr><td><span class="stat er">القناة لا تعمل</span></td><td><span class="ltr w6">Al Kass Five HD</span> <span class="t3 fs12">بدر</span></td><td class="muted">النهضة × الريان</td><td>2</td><td>1 س</td></tr>
+              <tr><td><span class="stat nu">لا تنقل المباراة</span></td><td><span class="ltr w6">beIN SPORTS 3</span> <span class="t3 fs12">نايل سات</span></td><td class="muted">الجزيرة × المحرق</td><td>1</td><td>3 س</td></tr>
+              <tr><td><span class="stat wa">التردد خاطئ</span></td><td><span class="ltr w6">Abu Dhabi Sports 1</span> <span class="t3 fs12">نايل سات</span></td><td class="muted">—</td><td>3</td><td>9 س</td></tr>
+            </tbody>
+          </table></div>
+        </section>
+        <aside class="r drawer">
+          <div class="dh"><span class="ic i-flag s20" style="color:var(--pp)"></span><div class="col f1"><span class="w7" style="font-family:var(--f-d);font-size:17px">التردد خاطئ · 7 بلاغات</span><span class="fs12 t3">ميلان × بولونيا · أول بلاغ منذ 42 دقيقة</span></div></div>
+          <div class="col" style="padding:16px 18px;gap:14px">
+            <div class="col g8" style="padding:12px;border-radius:14px;background:var(--bg)">
+              <span class="fs12 t3">البيانات الحالية</span>
+              <div class="row g8"><span class="ltr w6">DAZN 1 HD Italia</span><span class="fs12 t3">هوت بيرد</span><span class="spacer"></span><span class="fq"><span>11843</span><span class="p">V</span><span class="sr">29900</span></span></div>
+            </div>
+            <span class="fs12 w6 t2">ملاحظات المستخدمين</span>
+            <div class="col g8">
+              <div class="row g8 fs13"><span class="ic i-msg s16 t3"></span><span class="f1">«التردد الصحيح الآن 11804 V 30000 حسب الريسيفر»</span><span class="fs11 t3">42 د</span></div>
+              <div class="row g8 fs13"><span class="ic i-msg s16 t3"></span><span class="f1">«القناة انتقلت لتردد آخر»</span><span class="fs11 t3">30 د</span></div>
+              <div class="row g8 fs12 t3"><span class="ic i-users s16"></span>5 بلاغات بدون ملاحظة · من 7 أجهزة مختلفة</div>
+            </div>
+          </div>
+          <div class="df"><button class="btn btn-d btn-sm">رفض</button><span class="spacer"></span><a class="btn btn-p btn-sm" href="../02-content/Channels.html"><span class="ic i-edit s16"></span>قبول وتعديل القناة</a></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

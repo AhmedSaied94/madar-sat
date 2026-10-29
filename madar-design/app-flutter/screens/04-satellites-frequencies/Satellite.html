@@ -1,0 +1,124 @@
+<!doctype html>
+<!-- Madar · Flutter app · S5.2 Satellite detail · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S5.2 Satellite detail</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.aid{flex:1;min-width:0;border-radius:16px;background:var(--s2);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.aid .t{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <header class="tb">
+    <a class="ib" href="../04-satellites-frequencies/Frequencies.html" aria-label="رجوع"><span class="ic i-back s22"></span></a>
+    <span class="spacer"></span>
+    <button class="fb on" style="margin-inline-end:8px"><span class="ic i-dish s16"></span>في أقماري</button>
+  </header>
+  <div class="row g12 px16">
+    <span class="fq lg" style="height:52px;border-radius:14px;flex-direction:column;gap:2px;justify-content:center;padding:0 12px"><span style="font-size:17px">7.0°W</span></span>
+    <div class="col f1">
+      <h1 style="font:700 24px/1.15 var(--f-d)">نايل سات</h1>
+      <span class="fs12 t3"><span class="ltr">Nilesat 7.0W</span> · 63 قناة</span>
+    </div>
+  </div>
+  <div class="row g8 px16 mt12">
+    <div class="aid"><span class="t" style="color:var(--free)"><span class="ic i-signal s14"></span>أقوى تردد</span><span class="fq fq-good"><span>12054</span><span class="p">V</span><span class="sr">27500</span></span></div>
+    <div class="aid"><span class="t" style="color:var(--live)"><span class="ic i-signal s14"></span>أضعف تردد</span><span class="fq fq-bad"><span>11373</span><span class="p">H</span><span class="sr">27500</span></span></div>
+  </div>
+  <div class="px16 mt8"><button class="btn btn-s btn-sm btn-blk"><span class="ic i-yt s18"></span>طريقة استقبال القمر</button></div>
+  <div class="px16 mt12"><div class="seg" role="tablist"><button class="on" role="tab" aria-selected="true">رياضة <span class="t3 fs12">48</span></button><button role="tab">ترفيه <span class="t3 fs12">15</span></button></div></div>
+  <div class="px16 mt8" style="padding-bottom:8px"><label class="sf sm"><span class="ic i-search s18"></span><input type="text" placeholder="بحث في القنوات..." aria-label="بحث في القنوات"></label></div>
+  <div class="body">
+    <div class="card">
+      
+        <a class="cr" href="../04-satellites-frequencies/Channel.html">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">bS5</span></span>
+          <div class="bd" style="gap:6px">
+            <div class="l1"><span class="cn"><span class="ltr">beIN SPORTS 5</span></span><span class="spacer"></span>
+              
+              <span class="ab enc"><span class="ic i-lock s12"></span>مشفرة · <span class="ltr">beIN</span></span>
+            </div>
+            <div class="l2"><span class="fq"><span>12188</span><span class="p">H</span><span class="sr">27500</span></span><span class="chgb"><span class="ic i-history s12"></span>تغيّر مؤخراً · 20 أكتوبر</span></div>
+          </div>
+          <span class="ic i-chd s18 chev"></span>
+        </a>
+      
+        <a class="cr bt" href="../04-satellites-frequencies/Channel.html">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">bS1</span></span>
+          <div class="bd" style="gap:6px">
+            <div class="l1"><span class="cn"><span class="ltr">beIN SPORTS 1</span></span><span class="spacer"></span>
+              
+              <span class="ab enc"><span class="ic i-lock s12"></span>مشفرة · <span class="ltr">beIN</span></span>
+            </div>
+            <div class="l2"><span class="fq"><span>11013</span><span class="p">H</span><span class="sr">27500</span></span></div>
+          </div>
+          <span class="ic i-chd s18 chev"></span>
+        </a>
+      
+        <a class="cr bt" href="../04-satellites-frequencies/Channel.html">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">ON</span></span>
+          <div class="bd" style="gap:6px">
+            <div class="l1"><span class="cn"><span class="ltr">ON Sport HD</span></span><span class="spacer"></span>
+              <span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span>
+              
+            </div>
+            <div class="l2"><span class="fq"><span>11977</span><span class="p">V</span><span class="sr">27500</span></span></div>
+          </div>
+          <span class="ic i-chd s18 chev"></span>
+        </a>
+      
+        <a class="cr bt" href="../04-satellites-frequencies/Channel.html">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">ON</span></span>
+          <div class="bd" style="gap:6px">
+            <div class="l1"><span class="cn"><span class="ltr">ON Sport Max HD</span></span><span class="spacer"></span>
+              <span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span>
+              
+            </div>
+            <div class="l2"><span class="fq"><span>11977</span><span class="p">V</span><span class="sr">27500</span></span></div>
+          </div>
+          <span class="ic i-chd s18 chev"></span>
+        </a>
+      
+        <a class="cr bt" href="../04-satellites-frequencies/Channel.html">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">AK1</span></span>
+          <div class="bd" style="gap:6px">
+            <div class="l1"><span class="cn"><span class="ltr">Al Kass One HD</span></span><span class="spacer"></span>
+              <span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span>
+              
+            </div>
+            <div class="l2"><span class="fq"><span>11919</span><span class="p">H</span><span class="sr">27500</span></span></div>
+          </div>
+          <span class="ic i-chd s18 chev"></span>
+        </a>
+      
+        <a class="cr bt" href="../04-satellites-frequencies/Channel.html">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">AD1</span></span>
+          <div class="bd" style="gap:6px">
+            <div class="l1"><span class="cn"><span class="ltr">Abu Dhabi Sports 1</span></span><span class="spacer"></span>
+              <span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span>
+              
+            </div>
+            <div class="l2"><span class="fq"><span>11411</span><span class="p">H</span><span class="sr">30000</span></span></div>
+          </div>
+          <span class="ic i-chd s18 chev"></span>
+        </a>
+      
+    </div>
+  </div>
+  <div class="ad"><span class="tag">إعلان</span><div class="box"><span class="ltr">AdMob banner · 320×50</span></div></div>
+  <div class="gest" style="background:var(--s2)"></div>
+</div>
+
+
+
+
+</body></html>

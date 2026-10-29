@@ -1,0 +1,189 @@
+<!doctype html>
+<!-- Madar · React admin · A4 Match editor (light) · 1440×1260 · default theme light.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin match editor</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{height:28px;padding:0 10px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--dv2);font-size:12px;color:var(--tx2)}
+.presets button.on{background:var(--tx);color:var(--oninv);box-shadow:none}
+.cm2{display:flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 4px;border-radius:8px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv);font-size:12px}
+.cm2.add{color:var(--tx3);box-shadow:inset 0 0 0 1px var(--dv2);background:transparent;padding:0 10px}
+.savebar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:16px;background:var(--tx);color:var(--oninv);flex-wrap:wrap}
+</style></head>
+<body>
+
+
+<div class="adm t-light">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav on" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">س ح</span><div class="col f1"><span class="w6 fs13">سارة حسن</span><span class="fs11 t3">محررة</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role ed">محرر</span><span class="av a28">س ح</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1">
+        <div>
+          <div class="row g6 fs12 t3"><a href="../02-content/Matches.html" class="lnk">المباريات</a><span class="ic i-chl s12"></span>اليوم</div>
+          <h1 class="row g10" style="margin-top:6px"><span class="tm t40"><span class="crest" style="--c1:#C8102E;--c2:#111">م</span></span>ميلان × بولونيا<span class="tm t40"><span class="crest" style="--c1:#1A2B5F;--c2:#E8333A">ب</span></span></h1>
+          <div class="sub row g8"><span class="src">YSS</span><span class="src">LST</span><span>· آخر استيراد 6:00 م · حُفظ بواسطة سارة قبل دقيقتين</span></div>
+        </div>
+        <div class="acts"><button class="btn btn-s btn-sm"><span class="ic i-phone s16"></span>معاينة</button><button class="btn btn-p btn-sm"><span class="ic i-check s16"></span>حفظ <span class="kbd" style="color:inherit;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)">Ctrl S</span></button></div>
+      </div>
+      <nav class="pt"><button class="on">التفاصيل</button><a href="../03-operations/Audit.html">السجل · 7</a></nav>
+
+      <div class="split">
+        <div class="l col g16">
+          <section class="box fsec">
+            <h3><span class="ic i-shield s18 t2"></span>الفريقان والموعد</h3>
+            <div class="fgrid">
+              <div class="fld"><label>صاحب الأرض</label><div class="in"><span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#111">م</span></span><span class="f1">ميلان</span><span class="fs11 t3">الدوري الإيطالي</span><span class="ic i-chd s16 t3"></span></div></div>
+              <div class="fld"><label>الضيف</label><div class="in"><span class="tm t24"><span class="crest" style="--c1:#1A2B5F;--c2:#E8333A">ب</span></span><span class="f1">بولونيا</span><span class="fs11 t3">الدوري الإيطالي</span><span class="ic i-chd s16 t3"></span></div></div>
+              <div class="fld"><label>التاريخ</label><div class="in"><span class="ic i-cal s16 t3"></span><span class="ltr mono">28/10/2026</span></div></div>
+              <div class="fld"><label>الوقت</label><div class="in"><span class="ic i-clock s16 t3"></span><span class="f1" style="font-family:var(--f-d);font-weight:600">8:30 م</span></div><span class="hint">بتوقيت القاهرة · يُحفظ <span class="ltr mono">17:30 UTC</span></span></div>
+            </div>
+            <div class="fgrid">
+              <div class="fld"><label>البطولة</label><div class="in"><span class="ic i-trophy s16" style="color:#FFB627"></span><span class="f1">الدوري الإيطالي</span><span class="ic i-chd s16 t3"></span></div></div>
+              <div class="fld"><label>الملعب</label><div class="in"><input type="text" value="سان سيرو" aria-label="الملعب"></div></div>
+            </div>
+            <div class="fld"><label>المرحلة</label><div class="in focus"><input type="text" value="الجولة 9 - الذهاب" aria-label="المرحلة"></div>
+              <div class="presets"><button>الجولة الأولى</button><button>ذهاب دور 16</button><button>إياب دور 16</button><button>ربع النهائي</button><button>نصف النهائي</button><button>النهائي</button></div></div>
+          </section>
+
+          <section class="box">
+            <div class="box-h"><h2>القنوات الناقلة</h2><span class="cnt-b">130</span><span class="spacer"></span><span class="fs12 t3">مرتبة: أقمار المستخدمين الافتراضية ثم المجانية</span></div>
+            <div class="box-b col g10" style="padding-bottom:10px">
+              <div class="row wrap g8">
+                <label class="in focus f1" style="min-width:240px"><span class="ic i-search s16 t3"></span><input type="search" value="sky sport" aria-label="بحث عن قناة"></label>
+                <button class="dd"><span class="k">القمر</span>الكل<span class="ic i-chd s16 t3"></span></button>
+                <div class="seg" style="padding:2px;border-radius:10px"><button class="on" style="height:32px;padding:0 12px">رياضة</button><button style="height:32px;padding:0 12px">ترفيه</button></div>
+                <button class="dd"><span class="ic i-globe s14"></span>منصات بلا قمر</button>
+              </div>
+              <div class="pick" style="box-shadow:inset 0 0 0 1px var(--dv);background:var(--bg)">
+                <div class="o hv"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">SKY</span></span><span class="ltr w6">Sky Sport Italy</span><span class="fs12 t3">هوت بيرد</span><span class="spacer"></span><span class="fq" style="height:22px;font-size:11px"><span>11958</span><span class="p" style="width:14px;height:14px;font-size:9px">V</span></span><button class="btn btn-p btn-xs"><span class="ic i-plus s14"></span>إضافة</button></div>
+                <div class="o"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">SKY</span></span><span class="ltr w6">Sky Sport Germany</span><span class="fs12 t3">استرا 19</span><span class="spacer"></span><span class="fq" style="height:22px;font-size:11px"><span>11914</span><span class="p" style="width:14px;height:14px;font-size:9px">H</span></span><button class="btn btn-s btn-xs"><span class="ic i-plus s14"></span>إضافة</button></div>
+              </div>
+            </div>
+            <div class="tw">
+              <table class="tbl">
+                <thead><tr><th>القناة</th><th>القمر والتردد</th><th>المصدر</th><th>المعلقون</th><th>الإخفاء</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="row g8"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">STC</span></span><span class="ltr w6">STC TV</span></span></td><td class="muted">منصة · الشرق الأوسط</td><td><span class="src">LST</span></td><td><span class="row g6"><span class="cm2"><span class="av a28" style="width:22px;height:22px;font-size:9px">ف ع</span>فارس عوض<span class="ic i-lock s12 lockc"></span></span><span class="cm2 add"><span class="ic i-plus s12"></span>معلق 2</span></span></td><td><span class="rowact"><button class="ib" aria-label="إخفاء من هذا الماتش فقط"><span class="ic i-eyeoff s16"></span></button><button class="ib" aria-label="إخفاء دائماً"><span class="ic i-x s16"></span></button></span></td></tr>
+                  <tr><td><span class="row g8"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">DZN</span></span><span class="ltr w6">DAZN 1 HD Italia</span></span></td><td><span class="row g6"><span class="fs12 t3">هوت بيرد</span><span class="fq" style="height:22px;font-size:11px"><span>11843</span><span class="p" style="width:14px;height:14px;font-size:9px">V</span><span class="sr">29900</span></span></span></td><td><span class="src">LST</span></td><td><span class="cm2 add"><span class="ic i-plus s12"></span>معلق</span></td><td><span class="rowact"><button class="ib" aria-label="إخفاء من هذا الماتش فقط"><span class="ic i-eyeoff s16"></span></button><button class="ib" aria-label="إخفاء دائماً"><span class="ic i-x s16"></span></button></span></td></tr>
+                  <tr><td><span class="row g8"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">E11</span></span><span class="ltr w6">Eleven Sports 1 HD</span></span></td><td><span class="row g6"><span class="fs12 t3">هوت بيرد</span><span class="fq" style="height:22px;font-size:11px"><span>10796</span><span class="p" style="width:14px;height:14px;font-size:9px">V</span><span class="sr">27500</span></span></span></td><td><span class="src">LST</span></td><td><span class="cm2 add"><span class="ic i-plus s12"></span>معلق</span></td><td><span class="rowact"><button class="ib" aria-label="إخفاء من هذا الماتش فقط"><span class="ic i-eyeoff s16"></span></button><button class="ib" aria-label="إخفاء دائماً"><span class="ic i-x s16"></span></button></span></td></tr>
+                  <tr class="sel"><td><span class="row g8"><span class="lt l32 ch"><span class="ic i-tv s12"></span><span class="ltr">MAX</span></span><span class="ltr w6">MAX Sport 3 HD</span></span></td><td><span class="row g6"><span class="fs12 t3">هوت بيرد</span><span class="fq" style="height:22px;font-size:11px"><span>12673</span><span class="p" style="width:14px;height:14px;font-size:9px">V</span><span class="sr">30000</span></span></span></td><td><span class="src man">يدوي</span></td><td><span class="cm2 add"><span class="ic i-plus s12"></span>معلق</span></td><td><span class="rowact"><button class="ib" aria-label="إخفاء من هذا الماتش فقط"><span class="ic i-eyeoff s16"></span></button><button class="ib" aria-label="إخفاء دائماً"><span class="ic i-x s16"></span></button></span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pager bt"><span>4 من 130 قناة</span><span class="spacer"></span><button class="btn btn-g btn-xs">عرض الكل</button></div>
+          </section>
+
+          <section class="box fsec">
+            <h3><span class="ic i-tv s18 t2"></span>البث اليدوي</h3>
+            <div class="fgrid">
+              <div class="fld"><label>يعرض على</label><div class="in"><span class="lt" style="width:24px;height:24px;border-radius:6px;font-size:8px"><span class="ltr">STC</span></span><span class="f1 ltr" style="text-align:right">STC TV</span><span class="fs11 t3">من القائمة</span><span class="ic i-chd s16 t3"></span></div></div>
+              <div class="fld"><label>المعلق</label><div class="in"><span class="av a28" style="width:22px;height:22px;font-size:9px">ف ع</span><span class="f1">فارس عوض</span><span class="ic i-chd s16 t3"></span></div></div>
+              <div class="fld"><label>يعرض أيضاً على</label><div class="in" style="color:var(--tx3)"><span class="ic i-plus s16"></span><span class="f1">اختر من القائمة أو اكتب اسماً</span></div></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="r col g16">
+          <section class="box fsec">
+            <h3><span class="ic i-whistle s18 t2"></span>الحالة والنتيجة</h3>
+            <div class="fld"><label>الحالة</label><div class="in"><span class="f1">تلقائي · من المصدر</span><span class="ic i-chd s16 t3"></span></div><span class="hint">اختيار حالة يدوياً يتقدم على المصدر حتى تعيده إلى «تلقائي».</span></div>
+            <div class="row g10"><div class="fld f1"><label>صاحب الأرض</label><div class="in" style="opacity:.5"><input type="text" value="—" disabled="" aria-label="نتيجة صاحب الأرض"></div></div><div class="fld f1"><label>الضيف</label><div class="in" style="opacity:.5"><input type="text" value="—" disabled="" aria-label="نتيجة الضيف"></div></div></div>
+          </section>
+          <section class="box fsec">
+            <h3><span class="ic i-lock s18 lockc"></span>الحقول المقفلة</h3>
+            <div class="row wrap g6"><span class="tok">المعلق · <span class="ltr">STC TV</span><button class="ib sm" style="width:22px;height:22px" aria-label="فك القفل"><span class="ic i-x s12"></span></button></span><span class="tok">البث اليدوي<button class="ib sm" style="width:22px;height:22px" aria-label="فك القفل"><span class="ic i-x s12"></span></button></span></div>
+            <span class="hint">لن تغيّر المصادر هذه الحقول. يُقفل الحقل تلقائياً عند تعديله يدوياً.</span>
+          </section>
+          <section class="box fsec">
+            <h3><span class="ic i-ball s18 t2"></span>الأحداث</h3>
+            <span class="fs13 t3">لم تبدأ المباراة بعد.</span>
+            <button class="btn btn-s btn-sm" style="align-self:flex-start"><span class="ic i-plus s16"></span>إضافة حدث</button>
+          </section>
+          <section class="box fsec">
+            <h3><span class="ic i-phone s18 t2"></span>معاينة في التطبيق</h3>
+            <div class="t-dark" style="border-radius:16px;background:#07090C;padding:8px 0;color:#F1F4F7">
+              <div class="mr"><div class="mr-g"><div class="tmc"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#111">م</span></span><span class="tmn">ميلان</span></div><div class="st"><span class="tm1"><span>8:30</span><span class="ap">م</span></span></div><div class="tmc away"><span class="tm"><span class="crest" style="--c1:#1A2B5F;--c2:#E8333A">ب</span></span><span class="tmn">بولونيا</span></div></div><div class="chl"><span class="ic i-tv s14"></span><span class="n"><span class="ltr">STC TV</span></span><span class="more-n"><span class="ltr">+129</span></span></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="savebar" role="status"><span class="ic i-alert s18" style="color:var(--snk)"></span><span class="w6 f1">لديك تغييرات غير محفوظة · المرحلة، قناة واحدة</span><button class="btn btn-sm" style="background:transparent;color:var(--oninv)">تجاهل</button><button class="btn btn-p btn-sm">حفظ</button></div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

@@ -1,0 +1,13 @@
+/* Local copies of the three OFL families (see OFL-*.txt). Lets every HTML file in this package render offline, exactly as designed. */
+@font-face{font-family:'Changa';src:url('Changa-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Changa';src:url('Changa-Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Changa';src:url('Changa-SemiBold.ttf') format('truetype');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'Changa';src:url('Changa-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'Changa';src:url('Changa-ExtraBold.ttf') format('truetype');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('IBMPlexSansArabic-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('IBMPlexSansArabic-Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('IBMPlexSansArabic-SemiBold.ttf') format('truetype');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('IBMPlexSansArabic-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url('IBMPlexMono-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url('IBMPlexMono-Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url('IBMPlexMono-SemiBold.ttf') format('truetype');font-weight:600;font-style:normal;font-display:swap}

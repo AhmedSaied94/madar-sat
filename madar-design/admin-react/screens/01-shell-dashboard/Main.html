@@ -1,0 +1,198 @@
+<!doctype html>
+<!-- Madar · React admin · A2 Dashboard in the A0 shell (dark) · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin dashboard</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>body{margin:0}</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav on" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+
+    <div class="content">
+      <div class="ph1">
+        <div><h1>لوحة المتابعة</h1><div class="sub">الأربعاء 28 أكتوبر · بتوقيت القاهرة · آخر تحديث 6:23 م</div></div>
+        <div class="acts"><button class="btn btn-s btn-sm"><span class="ic i-refresh s16"></span>تشغيل المصادر</button><a class="btn btn-p btn-sm" href="../02-content/MatchEditor.html"><span class="ic i-plus s16"></span>إضافة مباراة</a></div>
+      </div>
+
+      <div class="g4c">
+        <div class="box kpi"><span class="k"><span class="ic i-ball s16"></span>مباريات اليوم</span><span class="v">85<small>في 16 بطولة</small></span></div>
+        <div class="box kpi"><span class="k"><span class="ic i-tv s16" style="color:var(--pp)"></span>بدون قنوات</span><span class="v" style="color:var(--pp)">41<small>من 85</small></span><div class="bar" aria-label="التغطية 52%"><i style="width:52%;background:var(--ok)"></i></div></div>
+        <div class="box kpi"><span class="k"><span class="ic i-target s16"></span>تغطية البطولات ذات الأولوية · قبل ساعتين</span><span class="v">94%<small>الهدف 95%</small></span><div class="bar"><i style="width:94%;background:var(--ac)"></i></div></div>
+        <div class="box kpi"><span class="k"><span class="ic i-merge s16"></span>أسماء غير محلولة</span><span class="v">14<small>من 3 مصادر</small></span><a class="lnk fs12" href="../03-operations/Sources.html">افتح القائمة</a></div>
+      </div>
+
+      <div class="split">
+        <div class="l col g16">
+          <div class="box">
+            <div class="box-h"><h2>تغطية اليوم</h2><span class="fs12 t3">مباريات بلا قنوات، حسب أولوية البطولة</span><span class="spacer"></span><a class="btn btn-g btn-xs" href="../02-content/Matches.html">كل المباريات</a></div>
+            <div class="tw">
+              <table class="tbl">
+                <thead><tr><th>البطولة</th><th>أول مباراة</th><th>بلا قنوات</th><th style="width:34%">التغطية</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="warn"><td><span class="row g8"><span class="lt" style="width:24px;height:24px;border-radius:7px"><span class="ic i-trophy s12" style="color:#FF9E58"></span></span><span class="w6">كأس ملك إسبانيا</span></span></td><td><span class="w6" style="font-family:var(--f-d)">9:00</span> <span class="t3 fs12">م</span></td><td><span class="w6">20</span> <span class="t3">/ 25</span></td><td><div class="bar"><i style="width:20%;background:var(--ok)"></i></div></td><td><a class="btn btn-s btn-xs" href="../02-content/MatchEditor.html"><span class="ic i-plus s14"></span>قنوات</a></td></tr>
+                  <tr class="warn"><td><span class="row g8"><span class="lt" style="width:24px;height:24px;border-radius:7px"><span class="ic i-trophy s12" style="color:#FF9E58"></span></span><span class="w6">كأس هولندا</span></span></td><td><span class="w6" style="font-family:var(--f-d)">8:45</span> <span class="t3 fs12">م</span></td><td><span class="w6">10</span> <span class="t3">/ 10</span></td><td><div class="bar"><i style="width:0%;background:var(--ok)"></i></div></td><td><a class="btn btn-s btn-xs" href="../02-content/MatchEditor.html"><span class="ic i-plus s14"></span>قنوات</a></td></tr>
+                  <tr class="warn"><td><span class="row g8"><span class="lt" style="width:24px;height:24px;border-radius:7px"><span class="ic i-trophy s12" style="color:#7CC7FF"></span></span><span class="w6">الدوري الإسكتلندي الممتاز</span></span></td><td><span class="w6" style="font-family:var(--f-d)">10:45</span> <span class="t3 fs12">م</span></td><td><span class="w6">5</span> <span class="t3">/ 6</span></td><td><div class="bar"><i style="width:17%;background:var(--ok)"></i></div></td><td><a class="btn btn-s btn-xs" href="../02-content/MatchEditor.html"><span class="ic i-plus s14"></span>قنوات</a></td></tr>
+                  <tr class="warn"><td><span class="row g8"><span class="lt" style="width:24px;height:24px;border-radius:7px"><span class="ic i-trophy s12" style="color:#3EE0A1"></span></span><span class="w6">الدوري الليبي</span></span></td><td><span class="w6" style="font-family:var(--f-d)">4:00</span> <span class="t3 fs12">م</span></td><td><span class="w6">4</span> <span class="t3">/ 4</span></td><td><div class="bar"><i style="width:0%;background:var(--ok)"></i></div></td><td><a class="btn btn-s btn-xs" href="../02-content/MatchEditor.html"><span class="ic i-plus s14"></span>قنوات</a></td></tr>
+                  <tr><td><span class="row g8"><span class="lt" style="width:24px;height:24px;border-radius:7px"><span class="ic i-trophy s12" style="color:#FF6B6B"></span></span><span class="w6">كأس ألمانيا</span></span></td><td><span class="w6" style="font-family:var(--f-d)">8:00</span> <span class="t3 fs12">م</span></td><td><span class="w6">1</span> <span class="t3">/ 8</span></td><td><div class="bar"><i style="width:88%;background:var(--ok)"></i></div></td><td><a class="btn btn-s btn-xs" href="../02-content/MatchEditor.html"><span class="ic i-plus s14"></span>قنوات</a></td></tr>
+                  <tr><td><span class="row g8"><span class="lt" style="width:24px;height:24px;border-radius:7px"><span class="ic i-trophy s12" style="color:#FFB627"></span></span><span class="w6">دوري أبطال الخليج</span></span></td><td><span class="w6" style="font-family:var(--f-d)">5:30</span> <span class="t3 fs12">م</span></td><td><span class="w6">1</span> <span class="t3">/ 3</span></td><td><div class="bar"><i style="width:67%;background:var(--ok)"></i></div></td><td><a class="btn btn-s btn-xs" href="../02-content/MatchEditor.html"><span class="ic i-plus s14"></span>قنوات</a></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="box">
+            <div class="box-h"><h2>بدون معلق</h2><span class="cnt-b">5</span></div>
+            <div class="tw"><table class="tbl"><tbody>
+              <tr><td><span class="w6" style="font-family:var(--f-d)">10:45</span> <span class="t3 fs12">م</span></td><td class="w6">هانوفر × كايزرسلاوترن</td><td class="muted">كأس ألمانيا</td><td class="muted">23 قناة</td><td><a class="lnk fs12" href="../02-content/MatchEditor.html">تعيين معلق</a></td></tr>
+              <tr><td><span class="w6" style="font-family:var(--f-d)">10:45</span> <span class="t3 fs12">م</span></td><td class="w6">هولشتاين كيل × هوفنهايم</td><td class="muted">كأس ألمانيا</td><td class="muted">25 قناة</td><td><a class="lnk fs12" href="../02-content/MatchEditor.html">تعيين معلق</a></td></tr>
+              <tr><td><span class="w6" style="font-family:var(--f-d)">11:30</span> <span class="t3 fs12">م</span></td><td class="w6">بورتو × أكاديميكو</td><td class="muted">كأس الرابطة البرتغالية</td><td class="muted">15 قناة</td><td><a class="lnk fs12" href="../02-content/MatchEditor.html">تعيين معلق</a></td></tr>
+            </tbody></table></div>
+          </div>
+        </div>
+
+        <div class="r col g16">
+          <div class="box">
+            <div class="box-h"><h2>صحة المصادر</h2><span class="spacer"></span><a class="btn btn-g btn-xs" href="../03-operations/Sources.html">التفاصيل</a></div>
+            
+              <a class="row g12 bt" href="../03-operations/Sources.html" style="padding:12px 18px">
+                <div class="col" style="width:118px;flex:none"><span class="w6 ltr" style="text-align:right">ysscores</span><span class="fs11 t3">نجح 5:00 م · 85 عنصراً</span></div>
+                <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" style="flex:1;height:30px"><polyline points="0.0,12.4 9.1,11.4 18.2,11.9 27.3,9.8 36.4,10.3 45.5,9.3 54.5,8.5 63.6,9.5 72.7,7.7 81.8,7.2 90.9,6.7 100.0,5.9" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+                <span class="health ok" style="width:96px;justify-content:flex-end"><span class="d"></span>سليم</span>
+              </a>
+            
+              <a class="row g12 bt" href="../03-operations/Sources.html" style="padding:12px 18px">
+                <div class="col" style="width:118px;flex:none"><span class="w6 ltr" style="text-align:right">LiveSoccerTV</span><span class="fs11 t3">نجح 6:00 م · 1,284 رابطاً</span></div>
+                <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" style="flex:1;height:30px"><polyline points="0.0,17.6 9.1,13.7 18.2,14.5 27.3,12.4 36.4,12.9 45.5,10.8 54.5,9.8 63.6,8.8 72.7,9.3 81.8,7.2 90.9,6.2 100.0,5.1" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+                <span class="health ok" style="width:96px;justify-content:flex-end"><span class="d"></span>سليم</span>
+              </a>
+            
+              <a class="row g12 bt" href="../03-operations/Sources.html" style="padding:12px 18px">
+                <div class="col" style="width:118px;flex:none"><span class="w6 ltr" style="text-align:right">sporteventz</span><span class="fs11 t3">نجح 3:12 م · 31 حدثاً</span></div>
+                <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" style="flex:1;height:30px"><polyline points="0.0,20.2 9.1,19.7 18.2,19.9 27.3,18.9 36.4,19.2 45.5,19.4 54.5,18.6 63.6,18.9 72.7,19.2 81.8,18.6 90.9,18.9 100.0,19.2" fill="none" stroke="#3EE0A1" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+                <span class="health ok" style="width:96px;justify-content:flex-end"><span class="d"></span>سليم</span>
+              </a>
+            
+              <a class="row g12 bt" href="../03-operations/Sources.html" style="padding:12px 18px">
+                <div class="col" style="width:118px;flex:none"><span class="w6 ltr" style="text-align:right">YallaKora</span><span class="fs11 t3">فشل 6:10 م · 5 محاولات</span></div>
+                <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" style="flex:1;height:30px"><polyline points="0.0,15.0 9.1,14.5 18.2,14.7 27.3,15.5 36.4,15.0 45.5,20.2 54.5,25.4 63.6,28.0 72.7,28.0 81.8,28.0 90.9,28.0 100.0,28.0" fill="none" stroke="#FF6B6B" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+                <span class="health bad" style="width:96px;justify-content:flex-end"><span class="d"></span>الدائرة مفتوحة</span>
+              </a>
+            
+              <a class="row g12 bt" href="../03-operations/Sources.html" style="padding:12px 18px">
+                <div class="col" style="width:118px;flex:none"><span class="w6 ltr" style="text-align:right">API-Football</span><span class="fs11 t3">الاستهلاك 62 / 100 طلب</span></div>
+                <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true" style="flex:1;height:30px"><polyline points="0.0,26.7 9.1,24.9 18.2,22.8 27.3,21.2 36.4,19.9 45.5,18.1 54.5,16.6 63.6,15.3 72.7,14.2 81.8,13.2 90.9,12.4 100.0,11.9" fill="none" stroke="#FFB627" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>
+                <span class="health half" style="width:96px;justify-content:flex-end"><span class="d"></span>قرب الحد</span>
+              </a>
+            
+          </div>
+          <div class="box">
+            <div class="box-h"><h2>آخر التغييرات</h2><span class="spacer"></span><a class="btn btn-g btn-xs" href="../03-operations/Audit.html">السجل</a></div>
+            
+              <div class="row g10 bt" style="padding:11px 18px">
+                <span class="av a28" style="font-size:10px">س ح</span>
+                <div class="col f1" style="min-width:0"><span class="fs13"><b class="w6">سارة حسن</b> أضافت 3 قنوات إلى ميلان × بولونيا</span><span class="fs11 t3">منذ 4 دقائق</span></div>
+              </div>
+            
+              <div class="row g10 bt" style="padding:11px 18px">
+                <span class="av a28" style="font-size:10px">م ع</span>
+                <div class="col f1" style="min-width:0"><span class="fs13"><b class="w6">محمد علي</b> غيّر تردد beIN SPORTS 1 على نايل سات</span><span class="fs11 t3">منذ 18 دقيقة</span></div>
+              </div>
+            
+              <div class="row g10 bt" style="padding:11px 18px">
+                <span class="av a28" style="font-size:10px">ي ع</span>
+                <div class="col f1" style="min-width:0"><span class="fs13"><b class="w6">يوسف عمر</b> دمج «الأهلي» المكرر في الدوري القطري</span><span class="fs11 t3">منذ 40 دقيقة</span></div>
+              </div>
+            
+              <div class="row g10 bt" style="padding:11px 18px">
+                <span class="av a28" style="font-size:10px">س ح</span>
+                <div class="col f1" style="min-width:0"><span class="fs13"><b class="w6">سارة حسن</b> عيّنت المعلق حسن العيدروس للنهضة × الريان</span><span class="fs11 t3">منذ ساعة</span></div>
+              </div>
+            
+              <div class="row g10 bt" style="padding:11px 18px">
+                <span class="av a28" style="font-size:10px">م ع</span>
+                <div class="col f1" style="min-width:0"><span class="fs13"><b class="w6">محمد علي</b> أخفى «كأس هولندا» من الصفحة الرئيسية</span><span class="fs11 t3">منذ ساعتين</span></div>
+              </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

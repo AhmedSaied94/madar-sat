@@ -1,0 +1,126 @@
+<!doctype html>
+<!-- Madar · React admin · Admin components · all states · 1440×1320 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin components</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.pan{background:var(--s1);border-radius:22px;box-shadow:inset 0 0 0 1px var(--dv);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.lab{font:600 11px/1 var(--f-m);letter-spacing:.14em;color:var(--tx3);direction:ltr;text-align:right;text-transform:uppercase}
+.sl{font-size:11px;color:var(--tx3)}
+.wv{display:flex;align-items:center;gap:2px;height:22px;flex:1;min-width:0;direction:ltr}
+.wv i{flex:1;border-radius:2px;background:var(--dv2);display:block}
+.wv i.p{background:var(--act)}
+</style></head>
+<body>
+
+
+<div class="sheetbg t-dark" style="width:1440px;height:1320px;padding:40px 44px;box-sizing:border-box;display:grid;grid-template-columns:300px minmax(0,1fr) 400px;gap:20px;align-items:start;font-size:13.5px">
+
+  <div class="col g16">
+    <div class="pan" style="padding:14px 10px">
+      <span class="lab" style="padding:0 8px">SidebarNav</span>
+      <div class="nav-g" style="padding-top:6px">المحتوى</div>
+      <a class="nav on"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+      <a class="nav" style="background:var(--s2);color:var(--tx)"><span class="ic i-shield s18"></span>الفرق<span class="fs11 t3" style="margin-inline-start:auto">hover</span></a>
+      <a class="nav"><span class="ic i-tv s18"></span>القنوات</a>
+      <a class="nav focus"><span class="ic i-sat s18"></span>الأقمار<span class="fs11 t3" style="margin-inline-start:auto">focus</span></a>
+      <div class="nav-g">التشغيل</div>
+      <a class="nav"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+      <a class="nav"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    </div>
+    <div class="pan">
+      <span class="lab">Status chips</span>
+      <div class="row wrap g6"><span class="stat ok">أُرسل</span><span class="stat er">فشل</span><span class="stat wa">جزئي</span><span class="stat nu">مجدول</span><span class="stat lv">مباشر</span></div>
+      <div class="row wrap g6"><span class="src">YSS</span><span class="src">LST</span><span class="src">SEZ</span><span class="src">YK</span><span class="src">API</span><span class="src man">يدوي</span><span class="ic i-lock s14 lockc"></span></div>
+      <div class="row wrap g6"><span class="role">مدير</span><span class="role ed">محرر</span><span class="health ok"><span class="d"></span>سليم</span><span class="health half"><span class="d"></span>قرب الحد</span><span class="health bad"><span class="d"></span>مفتوحة</span></div>
+    </div>
+    <div class="pan">
+      <span class="lab">Day tabs · FilterBar</span>
+      <nav class="pt"><button>أمس</button><button class="on">اليوم</button><button>غداً</button></nav>
+      <div class="fbar"><button class="dd"><span class="k">البطولة</span>الكل<span class="ic i-chd s16 t3"></span></button><button class="dd on"><span class="ic i-check s14 ac"></span>بلا قنوات</button></div>
+    </div>
+  </div>
+
+  <div class="col g16" style="min-width:0">
+    <div class="pan" style="padding:0;overflow:hidden">
+      <div class="row" style="padding:14px 18px 0"><span class="lab">DataTable · header, group, hover, selected, warning, locked</span></div>
+      <div class="bulk" style="margin:12px 14px 4px"><span class="cb on"><span class="ic i-check s12"></span></span><span class="w6">تم تحديد 1</span><span class="spacer"></span><button class="bb"><span class="ic i-trophy s14"></span>تغيير البطولة</button><button class="bb d"><span class="ic i-trash s14"></span>حذف</button></div>
+      <div class="tw"><table class="tbl">
+        <thead><tr><th style="width:36px"><span class="cb"></span></th><th><span class="row g4">الوقت<span class="ic i-sort s12"></span></span></th><th>المباراة</th><th>القنوات</th><th>المصدر</th><th></th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="6">كأس ألمانيا · الدور الثاني<span class="cnt-b" style="margin-inline-start:8px">8</span></td></tr>
+          <tr><td><span class="cb"></span></td><td>8:00 م</td><td class="w6">فرايبورج × فولفسبورغ</td><td>51</td><td><span class="src">LST</span></td><td><span class="muted fs11">default</span></td></tr>
+          <tr style="background:var(--s2)"><td style="background:var(--s2)"><span class="cb"></span></td><td style="background:var(--s2)">8:00 م</td><td class="w6" style="background:var(--s2)">بادربورن × شتوتجارت</td><td style="background:var(--s2)">41</td><td style="background:var(--s2)"><span class="src">LST</span></td><td style="background:var(--s2)"><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+          <tr class="sel"><td><span class="cb on"><span class="ic i-check s12"></span></span></td><td>10:45 م</td><td class="w6">بايرن ميونخ × مجدبرج</td><td>75</td><td><span class="row g4"><span class="src">YSS</span><span class="src man">يدوي</span></span></td><td><span class="ic i-lock s14 lockc"></span></td></tr>
+          <tr class="warn"><td><span class="cb"></span></td><td>8:00 م</td><td class="w6">يديلوه × هرتا برلين</td><td><span class="stat wa"><span class="ic i-alert s12"></span>0</span></td><td><span class="src">YSS</span></td><td><span class="muted fs11">warning</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="pan">
+      <span class="lab">EntityPicker · same-name disambiguation</span>
+      <div class="in focus"><span class="ic i-search s16 t3"></span><input type="text" value="الأهلي" aria-label="اختيار فريق"></div>
+      <div class="pick" role="listbox">
+        <div class="o hv"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><div class="col f1"><span class="w6">الأهلي</span><span class="fs11 t3">الدوري المصري الممتاز · <span class="ltr mono">YSS 1191</span></span></div><span class="kbd">Enter</span></div>
+        <div class="o"><span class="tm"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">أ</span></span><div class="col f1"><span class="w6">الأهلي</span><span class="fs11 t3">الدوري السعودي للمحترفين</span></div></div>
+        <div class="o"><span class="tm"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span><div class="col f1"><span class="w6">الأهلي</span><span class="fs11 t3">الدوري القطري</span></div></div>
+        <div class="o" style="color:var(--act)"><span class="ic i-plus s16"></span>إنشاء فريق «الأهلي» جديد</div>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">FormSection · input states</span>
+      <div class="fgrid">
+        <div class="fld"><label>افتراضي</label><div class="in"><input type="text" value="سان سيرو" aria-label="افتراضي"></div></div>
+        <div class="fld"><label>تركيز</label><div class="in focus"><input type="text" value="الجولة 9" aria-label="تركيز"></div></div>
+        <div class="fld"><label>خطأ</label><div class="in err"><input type="text" value="11843 X 29900" class="mono" aria-label="خطأ"></div><span class="hint e">الاستقطاب يجب أن يكون H أو V أو L أو R</span></div>
+        <div class="fld"><label><span class="ic i-lock s12 lockc"></span>مقفل من المحرر</label><div class="in lk"><input type="text" value="بلال علام" aria-label="مقفل"></div><span class="hint">لن يغيّره الاستيراد</span></div>
+        <div class="fld"><label>معطل</label><div class="in" style="opacity:.5"><input type="text" value="—" disabled="" aria-label="معطل"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col g16">
+    <div class="pan">
+      <span class="lab">SourceHealthCard · Sparkline</span>
+      <div class="box srcc" style="background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--err)">
+        <div class="row g8"><span class="nm">YallaKora</span><span class="spacer"></span><span class="health bad"><span class="d"></span>الدائرة مفتوحة</span></div>
+        <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,15 10,14 20,14.7 30,15.5 40,15 50,20 60,25.4 70,28 80,28 90,28 100,28" fill="none" stroke="var(--err)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline></svg>
+        <div class="mini"><div><b>0</b><span>آخر تشغيل</span></div><div><b>100%</b><span>أخطاء</span></div><div><b>12:10</b><span>آخر نجاح</span></div></div>
+        <div class="row g8"><span class="fs12 t2 f1">5 أخطاء متتالية · HTTP 403</span><button class="btn btn-o btn-xs"><span class="ic i-play s14"></span>استئناف</button></div>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">ImageUpload · dark + light preview</span>
+      <div class="row g10"><div class="prevtile" style="background:#07090C"><span class="tm t48" style="background:#161B22"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span></div><div class="prevtile" style="background:#F2F3EF"><span class="tm t48" style="background:#fff"><span class="crest" style="--c1:#C8102E;--c2:#fff">أ</span></span></div><div class="drop f1" style="height:72px;box-shadow:inset 0 0 0 1.5px var(--ac);background:var(--acc);color:var(--tx)"><span class="w6 fs12">جارٍ الرفع · 64%</span><div class="bar" style="width:80%;height:6px"><i style="width:64%;background:var(--ac)"></i></div></div></div>
+      <div class="row g8 fs12" style="color:var(--err)"><span class="ic i-alert s14"></span>الملف أكبر من 2 ميغابايت · الحد للصور 2 ميغابايت</div>
+    </div>
+    <div class="pan">
+      <span class="lab">AudioUpload + player</span>
+      <div class="row g10" style="padding:10px;border-radius:14px;background:var(--bg)">
+        <button class="play on" style="width:36px;height:36px" aria-label="إيقاف"><span class="ic i-pause s16"></span></button>
+        <div class="wv" aria-hidden="true"><i class="p" style="height:40%"></i><i class="p" style="height:70%"></i><i class="p" style="height:55%"></i><i class="p" style="height:90%"></i><i class="p" style="height:60%"></i><i style="height:80%"></i><i style="height:45%"></i><i style="height:70%"></i><i style="height:35%"></i><i style="height:65%"></i><i style="height:85%"></i><i style="height:50%"></i><i style="height:40%"></i><i style="height:75%"></i><i style="height:30%"></i><i style="height:55%"></i></div>
+        <span class="ltr mono fs11 t3">0:06 / 0:18</span>
+        <button class="btn btn-s btn-xs"><span class="ic i-ul s14"></span>استبدال</button>
+      </div>
+      <span class="hint">يُحوَّل إلى AAC بطول 30 ثانية كحد أقصى · 1 ميغابايت</span>
+    </div>
+    <div class="pan">
+      <span class="lab">DragOrderList · lifted + drop slot</span>
+      <div class="drag"><span class="ic i-grip s18 t3"></span><span class="rk">1</span><span class="w6">نايل سات</span></div>
+      <div class="drag lift"><span class="ic i-grip s18 t3"></span><span class="rk">2</span><span class="w6">بدر 26</span><span class="spacer"></span><span class="fs11 t3">يُسحب</span></div>
+      <div class="drag ghost"><span class="rk">2</span><span class="fs12">أفلت هنا</span></div>
+      <div class="drag"><span class="ic i-grip s18 t3"></span><span class="rk">3</span><span class="w6">هوت بيرد</span></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

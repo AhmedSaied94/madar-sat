@@ -1,0 +1,136 @@
+<!doctype html>
+<!-- Madar · React admin · A3 Matches · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin matches</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>body{margin:0}.tm .crest{width:15px;height:17px;font-size:8px}</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav on" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">س ح</span><div class="col f1"><span class="w6 fs13">سارة حسن</span><span class="fs11 t3">محررة</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role ed">محرر</span><span class="av a28">س ح</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1">
+        <div><h1>المباريات</h1><div class="sub">85 مباراة · 16 بطولة · <span style="color:var(--pp)">41 بلا قنوات</span></div></div>
+        <div class="acts"><a class="btn btn-p btn-sm" href="../02-content/MatchEditor.html"><span class="ic i-plus s16"></span>إضافة مباراة</a></div>
+      </div>
+      <div class="row wrap g12">
+        <nav class="pt" aria-label="اليوم"><button>أمس</button><button class="on">اليوم · 28 أكتوبر</button><button>غداً</button><button>بعد غد</button><button><span class="ic i-cal s16"></span>تاريخ…</button></nav>
+        <span class="spacer"></span>
+        <div class="fbar">
+          <label class="in" style="height:36px;min-height:36px;width:220px"><span class="ic i-search s16 t3"></span><input type="search" placeholder="فريق في هذا اليوم" aria-label="بحث في الفرق"></label>
+          <button class="dd"><span class="k">البطولة</span>الكل<span class="ic i-chd s16 t3"></span></button>
+          <button class="dd"><span class="k">المصدر</span>الكل<span class="ic i-chd s16 t3"></span></button>
+          <button class="dd"><span class="k">الحالة</span>الكل<span class="ic i-chd s16 t3"></span></button>
+          <button class="dd on"><span class="ic i-check s14 ac"></span>بلا قنوات فقط</button>
+        </div>
+      </div>
+      <div class="bulk" role="toolbar" aria-label="إجراءات جماعية">
+        <span class="cb on"><span class="ic i-check s12"></span></span><span class="w6">تم تحديد 2</span>
+        <span class="spacer"></span>
+        <button class="bb"><span class="ic i-trophy s14"></span>تغيير البطولة</button>
+        <button class="bb"><span class="ic i-tv s14"></span>إسناد قنوات</button>
+        <button class="bb"><span class="ic i-x s14"></span>إزالة القنوات</button>
+        <button class="bb d"><span class="ic i-trash s14"></span>حذف</button>
+        <button class="bb" style="background:transparent">إلغاء</button>
+      </div>
+      <div class="box">
+        <div class="tw">
+          <table class="tbl">
+            <thead><tr><th style="width:36px"><span class="cb"></span></th><th><span class="row g4">الوقت<span class="ic i-sort s12"></span></span></th><th>المباراة</th><th>الحالة</th><th>القنوات</th><th>المعلق</th><th>المصدر</th><th aria-label="مقفل"><span class="ic i-lock s14"></span></th><th></th></tr></thead>
+            <tbody>
+              <tr class="grp"><td colspan="9"><span class="row g8"><span class="ic i-trophy s14" style="color:#FF9E58"></span>كأس ملك إسبانيا · الدور الأول<span class="cnt-b">25</span><span class="fs11" style="color:var(--pp)">20 بلا قنوات</span></span></td></tr>
+              <tr class="warn"><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">9:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#0B4FA0;--c2:#fff">ك</span></span>كوروشو<span class="t3">×</span>زامورا<span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#fff">ز</span></span></span></td><td><span class="stat nu">مجدولة</span></td><td><span class="stat wa"><span class="ic i-alert s12"></span>0</span></td><td class="muted">—</td><td><span class="src">YSS</span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr class="warn"><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">9:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#fff">ب</span></span>بنبلونة<span class="t3">×</span>ايبار<span class="tm t24"><span class="crest" style="--c1:#0B4FA0;--c2:#C8102E">ا</span></span></span></td><td><span class="stat nu">مجدولة</span></td><td><span class="stat wa"><span class="ic i-alert s12"></span>0</span></td><td class="muted">—</td><td><span class="src">YSS</span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">9:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#1D8A3B;--c2:#fff">أ</span></span>أنايتاسونا<span class="t3">×</span>ألافيس<span class="tm t24"><span class="crest" style="--c1:#0B4FA0;--c2:#fff">أ</span></span></span></td><td><span class="stat nu">مجدولة</span></td><td><span class="w6">16</span></td><td>عبدالله الشهري</td><td><span class="row g4"><span class="src">YSS</span><span class="src">LST</span></span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr class="warn sel"><td><span class="cb on"><span class="ic i-check s12"></span></span></td><td><span class="w6" style="font-family:var(--f-d)">10:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#1D4E9C;--c2:#fff">أ</span></span>ألكويانو<span class="t3">×</span>ريال مايوركا<span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#111">ر</span></span></span></td><td><span class="stat nu">مجدولة</span></td><td><span class="stat wa"><span class="ic i-alert s12"></span>0</span></td><td class="muted">—</td><td><span class="src">YSS</span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr class="warn sel"><td><span class="cb on"><span class="ic i-check s12"></span></span></td><td><span class="w6" style="font-family:var(--f-d)">10:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#0B4FA0">ن</span></span>نومانسيا<span class="t3">×</span>ريال أوفييدو<span class="tm t24"><span class="crest" style="--c1:#0B4FA0;--c2:#fff">ر</span></span></span></td><td><span class="stat nu">مجدولة</span></td><td><span class="stat wa"><span class="ic i-alert s12"></span>0</span></td><td class="muted">—</td><td><span class="src">YSS</span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr class="grp"><td colspan="9"><span class="row g8"><span class="ic i-trophy s14" style="color:#3EE0A1"></span>الدوري المصري الممتاز · الجولة 8<span class="cnt-b">2</span></span></td></tr>
+              <tr><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">5:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#0B6B3A;--c2:#fff">ب</span></span>البنك الأهلي<span class="row g4 w7" style="font-family:var(--f-d);padding:0 4px"><b>0</b><span class="t3">–</span><b>1</b></span>المصري<span class="tm t24"><span class="crest" style="--c1:#1D8A3B;--c2:#fff">م</span></span></span></td><td><span class="pill p-live"><span class="dot pulse"></span><span class="ltr">68′</span></span></td><td><span class="w6">1</span></td><td>عصام عبده</td><td><span class="row g4"><span class="src">YK</span><span class="src">YSS</span></span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">8:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#F4F4F4;--c2:#C8102E">ز</span></span>الزمالك<span class="t3">×</span>المقاولون العرب<span class="tm t24"><span class="crest" style="--c1:#F2C200;--c2:#111">م</span></span></span></td><td><span class="stat nu">مجدولة</span></td><td><span class="w6">1</span></td><td>بلال علام</td><td><span class="row g4"><span class="src">YK</span><span class="src man">يدوي</span></span></td><td><span class="ic i-lock s14 lockc" aria-label="حقول مقفلة: القنوات، المعلق"></span></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr class="grp"><td colspan="9"><span class="row g8"><span class="ic i-trophy s14" style="color:#7CC7FF"></span>دوري أبطال آسيا 2 · الجولة 3 - الذهاب<span class="cnt-b">8</span></span></td></tr>
+              <tr><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">7:00</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#0A4DA2;--c2:#fff">ن</span></span>النهضة<span class="t3">×</span>الريان<span class="tm t24"><span class="crest" style="--c1:#B8121B;--c2:#fff">ر</span></span></span></td><td><span class="stat wa"><span class="ic i-clock s12"></span>بعد 37 د</span></td><td><span class="w6">29</span></td><td>حسن العيدروس <span class="t3 fs11">+1</span></td><td><span class="row g4"><span class="src">YSS</span><span class="src">LST</span></span></td><td><span class="ic i-lock s14 lockc" aria-label="حقول مقفلة: المعلق"></span></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+              <tr><td><span class="cb"></span></td><td><span class="w6" style="font-family:var(--f-d)">4:45</span> <span class="t3 fs12">م</span></td><td><span class="row g6"><span class="tm t24"><span class="crest" style="--c1:#2E7D32;--c2:#fff">ك</span></span>كل كوهار رجان<span class="t3">×</span>أركاداغ<span class="tm t24"><span class="crest" style="--c1:#0D47A1;--c2:#fff">أ</span></span></span></td><td><span class="pill p-est">مباشر · تقديري</span></td><td><span class="w6">20</span></td><td>جواد بدة</td><td><span class="row g4"><span class="src">YSS</span><span class="src">LST</span></span></td><td></td><td><span class="rowact"><a class="ib" href="../02-content/MatchEditor.html" aria-label="تعديل"><span class="ic i-edit s16"></span></a><button class="ib" aria-label="المزيد"><span class="ic i-dotsv s16"></span></button></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager bt"><span>عرض 10 من 85</span><span class="spacer"></span><span class="kbd">J</span><span class="kbd">K</span> للتنقل · <span class="kbd">E</span> للتعديل · <span class="kbd">X</span> للتحديد</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

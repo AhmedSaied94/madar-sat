@@ -1,0 +1,138 @@
+<!doctype html>
+<!-- Madar · React admin · A15 Notifications · outbox + composer · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin notifications</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.an{border-radius:18px;background:#1B2129;color:#EEF1F4;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.an .hd{display:flex;align-items:center;gap:6px;font-size:11px;color:#9AA3AF}
+.ios{border-radius:18px;background:rgba(255,255,255,.9);color:#0B0F13;padding:11px 12px;display:flex;gap:10px;align-items:flex-start}
+.opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv)}
+.opt.on{box-shadow:inset 0 0 0 1.5px var(--act);background:var(--acc)}
+</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav on" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>الإشعارات</h1><div class="sub">صندوق الإرسال وإنشاء إعلان · الإرسال للمديرين فقط</div></div></div>
+      <div class="split">
+        <section class="l box fsec">
+          <h3><span class="ic i-send s18 ac"></span>إعلان جديد</h3>
+          <div class="fld"><label>العنوان <span class="hint">36/65</span></label><div class="in focus"><input type="text" value="ليفربول × تشيلسي الليلة 11:00 م" aria-label="العنوان"></div></div>
+          <div class="fld"><label>النص <span class="hint">58/180</span></label><div class="in ta"><textarea rows="2" aria-label="النص">على beIN SPORTS 1 · نايل سات وبدر — اضغط لعرض القنوات والترددات</textarea></div></div>
+          <div class="fgrid">
+            <div class="fld"><label>يفتح</label><div class="in"><span class="ic i-ball s16 t3"></span><span class="f1">مباراة · ليفربول × تشيلسي</span><span class="ic i-chd s16 t3"></span></div><span class="hint ltr" style="text-align:right">/match/48213</span></div>
+            <div class="fld"><label>الموعد</label><div class="row g6"><div class="seg" style="padding:2px;border-radius:10px;flex:none"><button style="height:34px;padding:0 12px">الآن</button><button class="on" style="height:34px;padding:0 12px">مجدول</button></div><div class="in f1"><span style="font-family:var(--f-d);font-weight:600">اليوم · 9:00 م</span></div></div></div>
+          </div>
+          <div class="fld"><label>الجمهور</label>
+            <div class="g2c" style="gap:8px">
+              <label class="opt"><span class="rad"></span><div class="col f1"><span class="w6 fs13">كل الأجهزة</span><span class="fs11 t3">≈ 48,200 جهاز</span></div></label>
+              <label class="opt on"><span class="rad on"></span><div class="col f1"><span class="w6 fs13">متابعو ليفربول أو تشيلسي</span><span class="fs11 t3">≈ 6,310 جهاز · بدون تكرار</span></div></label>
+            </div>
+          </div>
+          <div class="row g8 wrap"><button class="btn btn-s btn-sm"><span class="ic i-phone s16"></span>إرسال تجريبي لجهازي</button><span class="toastx ok" style="min-width:0;padding:6px 10px;box-shadow:none;background:var(--freec)"><span class="ic i-check s14"></span><span class="fs12">وصل التجريبي إلى Pixel 7</span></span><span class="spacer"></span><button class="btn btn-p btn-sm"><span class="ic i-clock s16"></span>جدولة الإرسال</button></div>
+        </section>
+        <aside class="r col g12">
+          <div class="box fsec">
+            <h3><span class="ic i-eye s18 t2"></span>معاينة</h3>
+            <span class="fs11 t3">Android</span>
+            <div class="an"><div class="hd"><span style="width:16px;height:16px;border-radius:50%;background:#C8F542;color:#0A0D0F;display:flex;align-items:center;justify-content:center"><span class="mk-mono" style="width:10px;height:10px"></span></span>مدار · 9:00 م</div><span class="w7 fs13">ليفربول × تشيلسي الليلة 11:00 م</span><span class="fs12" style="color:#C9D0D8">على <span class="ltr">beIN SPORTS 1</span> · نايل سات وبدر — اضغط لعرض القنوات والترددات</span></div>
+            <span class="fs11 t3">iPhone (PWA مثبّت)</span>
+            <div class="ios" style="box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)"><span class="mk" style="width:32px;height:32px;border-radius:8px"></span><div class="col f1"><span class="w7 fs13">ليفربول × تشيلسي الليلة 11:00 م</span><span class="fs12" style="color:#3A4350">على <span class="ltr">beIN SPORTS 1</span> · نايل سات وبدر — اضغط لعرض القنوات والترددات</span></div></div>
+          </div>
+        </aside>
+      </div>
+      <section class="box">
+        <div class="box-h"><h2>صندوق الإرسال</h2><span class="spacer"></span><button class="dd"><span class="k">النوع</span>الكل<span class="ic i-chd s16 t3"></span></button><button class="dd"><span class="k">الحالة</span>الكل<span class="ic i-chd s16 t3"></span></button></div>
+        <div class="tw"><table class="tbl">
+          <thead><tr><th>النوع</th><th>الهدف</th><th>المستقبلون</th><th>نجح</th><th>فشل</th><th>الوقت</th><th>الحالة</th></tr></thead>
+          <tbody>
+            <tr><td><span class="src">goal</span></td><td>البنك الأهلي × المصري · <span class="ltr mono">53′</span></td><td>1,904</td><td>1,889</td><td>15</td><td>6:01 م</td><td><span class="stat ok">أُرسل</span></td></tr>
+            <tr><td><span class="src">kickoff_reminder</span></td><td>النهضة × الريان</td><td>2,311</td><td>—</td><td>—</td><td>6:45 م</td><td><span class="stat nu">مجدول</span></td></tr>
+            <tr><td><span class="src">frequency_changed</span></td><td><span class="ltr">beIN SPORTS 1</span> · نايل سات</td><td>1,240</td><td>1,233</td><td>7</td><td>6:05 م</td><td><span class="stat ok">أُرسل</span></td></tr>
+            <tr><td><span class="src">channels_updated</span></td><td>ميلان × بولونيا</td><td>874</td><td>870</td><td>4</td><td>5:52 م</td><td><span class="stat ok">أُرسل</span></td></tr>
+            <tr><td><span class="src">final_score</span></td><td>غامبا أوساكا × بوريرام</td><td>312</td><td>0</td><td>312</td><td>2:55 م</td><td><span class="stat er">فشل · FCM 503</span></td></tr>
+          </tbody>
+        </table></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

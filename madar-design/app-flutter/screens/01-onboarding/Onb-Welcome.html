@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- Madar · Flutter app · S1.1 Welcome + theme · 360×800 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>S1.1 Welcome and theme</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.thm{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 8px 12px;border-radius:20px;box-shadow:inset 0 0 0 1px var(--dv2);position:relative}
+.thm.on{box-shadow:inset 0 0 0 2px var(--ac);background:var(--acc)}
+.thm .ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;background:var(--ac);color:var(--onac);display:flex;align-items:center;justify-content:center}
+.pv{width:76px;height:104px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;gap:5px;padding:8px 7px;box-shadow:0 0 0 1px rgba(127,127,127,.25)}
+.pv i{display:block;height:16px;border-radius:5px}
+.pv b{display:block;width:26px;height:6px;border-radius:3px;background:#C8F542}
+.pv.d{background:#07090C}.pv.d i{background:#161B22}
+.pv.l{background:#F2F3EF}.pv.l i{background:#FFFFFF}
+.pv.a{background:linear-gradient(90deg,#07090C 50%,#F2F3EF 50%)}.pv.a i{background:linear-gradient(90deg,#161B22 50%,#FFFFFF 50%)}
+.thm span.n{font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px}
+</style></head>
+<body>
+
+
+<div class="phone t-dark">
+  <div class="sbar"></div>
+  <div class="row" style="height:56px;padding:0 6px">
+    <span style="width:44px"></span>
+    <div class="pdots f1 jc"><i class="on"></i><i></i><i></i><i></i></div>
+    <a class="btn btn-g btn-sm" href="../02-matches/Matches.html">تخطي</a>
+  </div>
+  <div class="body" style="padding:12px 24px 0;align-items:center;text-align:center">
+    <div class="illus" aria-hidden="true" style="width:180px;height:180px">
+      <i style="width:180px;height:180px"></i><i style="width:128px;height:128px"></i><i style="width:80px;height:80px;background:transparent;box-shadow:inset 0 0 0 1px var(--dv2)"></i>
+      <b><span class="mk m64" style="border-radius:18px"></span></b>
+      <u style="left:150px;top:36px"></u>
+    </div>
+    <h1 style="font:700 28px/1.25 var(--f-d);margin-top:14px">مرحباً بك في مدار</h1>
+    <p style="font-size:15px;line-height:1.7;color:var(--tx2);margin-top:8px;max-width:290px">مباراتك، القناة الناقلة، وترددها على طبقك — في مكان واحد.</p>
+
+    <div class="col g10" style="width:100%;margin-top:26px;text-align:start">
+      <span class="w6 fs13 t2">اختر المظهر</span>
+      <div class="row g8" role="radiogroup" aria-label="المظهر">
+        
+          <button class="thm on" role="radio" aria-checked="true">
+            <span class="ck"><span class="ic i-check s12"></span></span>
+            <span class="pv d" aria-hidden="true"><b></b><i></i><i></i><i></i></span>
+            <span class="n"><span class="ic i-moon s14"></span>داكن</span>
+          </button>
+        
+          <button class="thm" role="radio" aria-checked="false">
+            
+            <span class="pv l" aria-hidden="true"><b></b><i></i><i></i><i></i></span>
+            <span class="n"><span class="ic i-sun s14"></span>فاتح</span>
+          </button>
+        
+          <button class="thm" role="radio" aria-checked="false">
+            
+            <span class="pv a" aria-hidden="true"><b></b><i></i><i></i><i></i></span>
+            <span class="n"><span class="ic i-auto s14"></span>تلقائي</span>
+          </button>
+        
+      </div>
+      <span class="fs12 t3" style="text-align:center">تقدر تغيّره في أي وقت من الإعدادات</span>
+    </div>
+  </div>
+  <div style="padding:16px 20px 22px"><a class="btn btn-p btn-blk" href="../01-onboarding/Onb-Teams.html">التالي<span class="ic i-fwd s18"></span></a></div>
+</div>
+
+
+
+
+</body></html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- Madar Design System · ConfirmDialog · Admin. Static specimen: classes come from components.css, values from tokens.css. Set data-theme="light" on <html> for the light theme. -->
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<link rel="stylesheet" href="../../tokens.css">
+<link rel="stylesheet" href="../../components.css">
+</head>
+<body>
+<div class="dsx">
+<div class="cols">
+  <div class="mdl" role="alertdialog" aria-label="تأكيد الحذف">
+    <div class="row g10"><span class="lt l40" style="background:var(--errc);color:var(--err);box-shadow:none"><span class="ic i-trash s20"></span></span><h3 class="f1">حذف 20 مباراة؟</h3></div>
+    <span class="fs13 t2">ستُحذف المباريات المحددة مع قنواتها ومتابعاتها. لا يمكن التراجع.</span>
+    <div class="fld"><label>للتأكيد اكتب <b class="ltr mono" style="color:var(--tx)">حذف 20</b></label><div class="in focus"><input type="text" value="حذف 2" aria-label="نص التأكيد"></div></div>
+    <div class="row g8"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn dis btn-sm" disabled><span class="ic i-trash s16"></span>حذف 20 مباراة</button></div>
+  </div>
+  <div class="mdl" role="alertdialog" aria-label="تعارض في التعديل">
+    <div class="row g10"><span class="lt l40" style="background:var(--ppc);color:var(--pp);box-shadow:none"><span class="ic i-users s20"></span></span><h3 class="f1">عدّل يوسف عمر هذا العنصر</h3></div>
+    <span class="fs13 t2">حُفظت نسخة أحدث قبل دقيقة. تعديلاتك لم تُحفظ بعد.</span>
+    <div class="diff" style="grid-template-columns:1fr"><div class="col" style="padding:6px 0"><div class="ln del"><span class="k">stage</span><span class="v">الجولة 9</span></div><div class="ln add"><span class="k">stage</span><span class="v">الجولة 9 - الذهاب</span></div></div></div>
+    <div class="row g8 wrap"><button class="btn btn-p btn-sm">اعرض التغييرات</button><button class="btn btn-s btn-sm">أعد تطبيق تعديلاتي</button><span class="spacer"></span><button class="btn btn-g btn-sm">تجاهل تعديلاتي</button></div>
+  </div>
+</div>
+</div>
+<script>/* static specimen: markup and classes from components/bundle.css */</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<!-- Madar · Flutter app · Components · Core, feedback, platform · 1680×1240 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Components core</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.pan{background:var(--s1);border-radius:24px;box-shadow:inset 0 0 0 1px var(--dv);padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.lab{font:600 11px/1 var(--f-m);letter-spacing:.14em;color:var(--tx3);direction:ltr;text-align:right;text-transform:uppercase}
+.bm{display:grid;grid-template-columns:70px repeat(5,minmax(0,1fr));gap:8px;align-items:center}
+.bm .k{font:500 10px/1.2 var(--f-m);color:var(--tx3);direction:ltr;text-align:right}
+.bm .btn{padding:0 8px;font-size:13px;height:40px;border-radius:12px;width:100%}
+.icg{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
+.icg div{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px 8px;border-radius:12px;background:var(--bg)}
+.icg span.n{font:500 9px/1 var(--f-m);color:var(--tx3);direction:ltr}
+</style></head>
+<body>
+
+
+<div class="sheetbg t-dark" style="width:1680px;height:1240px;padding:44px 48px;box-sizing:border-box;display:grid;grid-template-columns:560px minmax(0,1fr) 420px;gap:22px;align-items:start">
+
+  <div class="col g20">
+    <div class="pan">
+      <span class="lab">Buttons · states</span>
+      <div class="bm">
+        <span></span><span class="k">default</span><span class="k">hover</span><span class="k">pressed</span><span class="k">focus</span><span class="k">disabled</span>
+        <span class="k">primary</span><button class="btn btn-p">تفعيل</button><button class="btn btn-p" style="filter:brightness(1.06)">تفعيل</button><button class="btn btn-p press">تفعيل</button><button class="btn btn-p focus">تفعيل</button><button class="btn dis">تفعيل</button>
+        <span class="k">secondary</span><button class="btn btn-s">نسخ</button><button class="btn btn-s" style="background:var(--s3)">نسخ</button><button class="btn btn-s" style="background:var(--s3);filter:brightness(.92)">نسخ</button><button class="btn btn-s focus">نسخ</button><button class="btn dis">نسخ</button>
+        <span class="k">outline</span><button class="btn btn-o">تابع</button><button class="btn btn-o" style="background:var(--s2)">تابع</button><button class="btn btn-o" style="background:var(--s3)">تابع</button><button class="btn btn-o focus">تابع</button><button class="btn btn-o" style="opacity:.4">تابع</button>
+        <span class="k">ghost</span><button class="btn btn-g">تخطي</button><button class="btn btn-g" style="background:var(--s2)">تخطي</button><button class="btn btn-g" style="background:var(--s3)">تخطي</button><button class="btn btn-g focus">تخطي</button><button class="btn btn-g" style="opacity:.4">تخطي</button>
+        <span class="k">danger</span><button class="btn btn-d">حذف</button><button class="btn btn-d" style="filter:brightness(1.1)">حذف</button><button class="btn btn-d" style="filter:brightness(.9)">حذف</button><button class="btn btn-d focus">حذف</button><button class="btn btn-d" style="opacity:.4">حذف</button>
+      </div>
+      <div class="row g8"><button class="btn btn-p" aria-busy="true"><span class="spin"></span>جارٍ الحفظ</button><button class="btn btn-s btn-sm"><span class="ic i-copy s16"></span>صغير</button><button class="btn btn-s btn-xs">أصغر</button></div>
+    </div>
+    <div class="pan">
+      <span class="lab">FollowButton · BellButton</span>
+      <div class="row wrap g8">
+        <button class="fb"><span class="ic i-star s16"></span>تابع</button>
+        <button class="fb on"><span class="ic i-starf s16"></span>تتابعه</button>
+        <button class="fb focus"><span class="ic i-star s16"></span>تابع</button>
+        <span class="ib fill"><span class="ic i-bell s20"></span></span>
+        <span class="ib fill on"><span class="ic i-bellf s20"></span></span>
+        <span class="ib fill t3"><span class="ic i-belloff s20"></span></span>
+        <span class="ib fill focus"><span class="ic i-bell s20"></span></span>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">Inputs</span>
+      <label class="sf"><span class="ic i-search s18"></span><input type="text" placeholder="ابحث عن فريق..." aria-label="بحث فارغ"></label>
+      <label class="sf focus"><span class="ic i-search s18"></span><input type="text" value="نايل" aria-label="بحث مع نص"><span class="ib sm" style="width:28px;height:28px;background:var(--s3)"><span class="ic i-x s14"></span></span></label>
+      <div class="seg"><button class="on">رياضة</button><button>ترفيه</button></div>
+      <div class="row g16" style="align-items:center">
+        <span class="tg"></span><span class="tg on"></span><span class="tg dis"></span><span class="tg on dis"></span>
+        <span class="rad"></span><span class="rad on"></span><span class="tick sq"><span class="ic i-check s14"></span></span><span class="tick sq on"><span class="ic i-check s14"></span></span>
+      </div>
+      <div class="row g8" style="align-items:center"><span class="fs13 f1">حجم الخط</span><div class="stepper"><button aria-label="تصغير"><span class="ic i-chr s18"></span></button><span class="v">كبير · 1.15×</span><button aria-label="تكبير"><span class="ic i-chl s18"></span></button></div></div>
+    </div>
+  </div>
+
+  <div class="col g20" style="min-width:0">
+    <div class="pan">
+      <span class="lab">Feedback · banners, hints, snackbar, skeleton</span>
+      <div class="bnr off" style="border-radius:12px"><span class="ic i-wifioff s16"></span><span class="f1">أنت غير متصل — آخر تحديث منذ 12 دقيقة</span></div>
+      <div class="bnr upd" style="border-radius:12px"><span class="ic i-dl s18 ac"></span><span class="f1 w6">يتوفر إصدار جديد</span><button class="btn btn-p btn-xs">تحديث</button></div>
+      <div class="bnr warn" style="border-radius:12px"><span class="ic i-belloff s16"></span><span class="f1">الإشعارات متوقفة على هذا الجهاز</span><button class="btn btn-xs" style="background:var(--pp);color:var(--bg)">تفعيل</button></div>
+      <div class="row g16"><span class="stale"><span class="ic i-clock s12"></span>آخر تحديث منذ دقيقتين</span><span class="stale"><span class="ic i-alert s12"></span>النتيجة قبل 12 د</span></div>
+      <div class="snack" style="position:relative;inset:auto;bottom:auto"><span class="f1">اضغط رجوع مرة أخرى للخروج</span></div>
+      <div class="row g8"><span class="toast"><span class="ic i-check s16" style="color:var(--snk)"></span>أُضيفت إلى المفضلة</span></div>
+      <div class="card flat" style="background:var(--bg);padding:12px 14px"><div class="row g10"><span class="sk" style="width:32px;height:32px;border-radius:50%"></span><span class="sk" style="width:90px;height:12px"></span><span class="spacer"></span><span class="sk" style="width:46px;height:18px"></span><span class="spacer"></span><span class="sk" style="width:70px;height:12px"></span><span class="sk" style="width:32px;height:32px;border-radius:50%"></span></div></div>
+    </div>
+    <div class="row g20 ais">
+      <div class="pan f1">
+        <span class="lab">EmptyState</span>
+        <div class="empty" style="padding:6px 8px">
+          <div class="illus" aria-hidden="true" style="width:110px;height:110px"><i style="width:110px;height:110px"></i><i style="width:78px;height:78px"></i><i style="width:46px;height:46px"></i><b style="width:46px;height:46px"><span class="ic i-search s20"></span></b><u style="left:88px;top:16px;width:8px;height:8px"></u></div>
+          <h3 style="font-size:16px">لا توجد نتائج لـ «يوفنتس»</h3>
+          <p style="font-size:13px">جرّب كتابة الاسم بطريقة أخرى.</p>
+        </div>
+      </div>
+      <div class="pan f1">
+        <span class="lab">ErrorState</span>
+        <div class="empty" style="padding:6px 8px">
+          <div class="illus" aria-hidden="true" style="width:110px;height:110px"><i style="width:110px;height:110px"></i><i style="width:78px;height:78px"></i><i style="width:46px;height:46px;background:var(--errc)"></i><b style="width:46px;height:46px;color:var(--err)"><span class="ic i-alert s20"></span></b></div>
+          <h3 style="font-size:16px">تعذّر تحميل البيانات</h3>
+          <button class="btn btn-s btn-sm"><span class="ic i-refresh s16"></span>إعادة المحاولة</button>
+        </div>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">Icon set · 1.8px stroke, 24 grid, currentColor</span>
+      <div class="icg">
+        <div><span class="ic i-ball s22"></span><span class="n">ball</span></div><div><span class="ic i-sat s22"></span><span class="n">sat</span></div><div><span class="ic i-dish s22"></span><span class="n">dish</span></div><div><span class="ic i-signal s22"></span><span class="n">signal</span></div><div><span class="ic i-wave s22"></span><span class="n">wave</span></div><div><span class="ic i-lock s22"></span><span class="n">lock</span></div><div><span class="ic i-unlock s22"></span><span class="n">unlock</span></div><div><span class="ic i-mic s22"></span><span class="n">mic</span></div><div><span class="ic i-whistle s22"></span><span class="n">whistle</span></div><div><span class="ic i-card s22"></span><span class="n">card</span></div><div><span class="ic i-target s22"></span><span class="n">target</span></div><div><span class="ic i-miss s22"></span><span class="n">miss</span></div><div><span class="ic i-own s22"></span><span class="n">own</span></div><div><span class="ic i-bell s22"></span><span class="n">bell</span></div><div><span class="ic i-bellf s22"></span><span class="n">bellf</span></div><div><span class="ic i-belloff s22"></span><span class="n">belloff</span></div><div><span class="ic i-star s22"></span><span class="n">star</span></div><div><span class="ic i-starf s22"></span><span class="n">starf</span></div><div><span class="ic i-copy s22"></span><span class="n">copy</span></div><div><span class="ic i-share s22"></span><span class="n">share</span></div><div><span class="ic i-tv s22"></span><span class="n">tv</span></div><div><span class="ic i-trophy s22"></span><span class="n">trophy</span></div><div><span class="ic i-shield s22"></span><span class="n">shield</span></div><div><span class="ic i-stadium s22"></span><span class="n">stadium</span></div><div><span class="ic i-globe s22"></span><span class="n">globe</span></div><div><span class="ic i-clock s22"></span><span class="n">clock</span></div><div><span class="ic i-cal s22"></span><span class="n">cal</span></div><div><span class="ic i-search s22"></span><span class="n">search</span></div><div><span class="ic i-sliders s22"></span><span class="n">sliders</span></div><div><span class="ic i-refresh s22"></span><span class="n">refresh</span></div><div><span class="ic i-wifioff s22"></span><span class="n">wifioff</span></div><div><span class="ic i-dl s22"></span><span class="n">dl</span></div><div><span class="ic i-info s22"></span><span class="n">info</span></div><div><span class="ic i-alert s22"></span><span class="n">alert</span></div><div><span class="ic i-yt s22"></span><span class="n">yt</span></div><div><span class="ic i-compass s22"></span><span class="n">compass</span></div><div><span class="ic i-grip s22"></span><span class="n">grip</span></div><div><span class="ic i-filter s22"></span><span class="n">filter</span></div><div><span class="ic i-sun s22"></span><span class="n">sun</span></div><div><span class="ic i-moon s22"></span><span class="n">moon</span></div><div><span class="ic i-auto s22"></span><span class="n">auto</span></div><div><span class="ic i-trash s22"></span><span class="n">trash</span></div><div><span class="ic i-edit s22"></span><span class="n">edit</span></div><div><span class="ic i-eye s22"></span><span class="n">eye</span></div><div><span class="ic i-eyeoff s22"></span><span class="n">eyeoff</span></div><div><span class="ic i-flag s22"></span><span class="n">flag</span></div><div><span class="ic i-history s22"></span><span class="n">history</span></div><div><span class="ic i-bball s22"></span><span class="n">bball</span></div><div><span class="ic i-hball s22"></span><span class="n">hball</span></div><div><span class="ic i-vball s22"></span><span class="n">vball</span></div><div><span class="ic i-tennis s22"></span><span class="n">tennis</span></div><div><span class="ic i-cert s22"></span><span class="n">cert</span></div><div><span class="ic i-tower s22"></span><span class="n">tower</span></div><div><span class="ic i-grid s22"></span><span class="n">grid</span></div><div><span class="ic i-iosshare s22"></span><span class="n">iosshare</span></div><div><span class="ic i-addsq s22"></span><span class="n">addsq</span></div><div><span class="ic i-pin s22"></span><span class="n">pin</span></div><div><span class="ic i-up s22"></span><span class="n">up</span></div><div><span class="ic i-back s22"></span><span class="n">back</span></div><div><span class="ic i-fwd s22"></span><span class="n">fwd</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col g20">
+    <div class="pan">
+      <span class="lab">Platform · AdBannerSlot (Android only)</span>
+      <div class="ad" style="border-radius:12px"><span class="tag">إعلان</span><div class="box"><span class="ltr">AdMob banner · 320×50</span></div></div>
+      <span class="fs11 t3">يأخذ مساحة بعد تحميل الإعلان فقط، ولا يزيح المحتوى أثناء التمرير.</span>
+    </div>
+    <div class="pan">
+      <span class="lab">PermissionPrimingCard</span>
+      <div class="prime col g12" style="background:var(--bg)">
+        <div class="row g10"><span class="lt l40" style="background:var(--acc);color:var(--act);box-shadow:none"><span class="ic i-bell s20"></span></span><div class="col f1"><span class="w6">لا تفوّت أي مباراة</span><span class="fs12 t3">تذكير، أهداف، نتيجة نهائية، تغيّر الترددات</span></div></div>
+        <div class="row g8"><button class="btn btn-p btn-sm f1">تفعيل التنبيهات</button><button class="btn btn-g btn-sm">ليس الآن</button></div>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">InstallGuideStep (iOS PWA)</span>
+      <div class="row g12" style="align-items:center"><span style="width:28px;height:28px;border-radius:50%;background:var(--tx);color:var(--oninv);display:flex;align-items:center;justify-content:center;font:700 14px var(--f-d)">1</span><span class="w6 f1">اضغط زر المشاركة في Safari</span><span class="lt l40" style="color:var(--act);box-shadow:inset 0 0 0 2px var(--ac)"><span class="ic i-iosshare s20"></span></span></div>
+    </div>
+    <div class="pan">
+      <span class="lab">ListRow · settings</span>
+      <div class="card flat" style="background:var(--bg)">
+        <div class="lr"><span class="ii"><span class="ic i-globe s18"></span></span><div class="col f1"><span class="tt">المنطقة الزمنية</span></div><span class="val">تلقائي</span><span class="ic i-chl s18 go"></span></div>
+        <div class="lr bt"><span class="ii"><span class="ic i-bell s18"></span></span><div class="col f1"><span class="tt">الأهداف</span><span class="sub">للفرق والمباريات المتابَعة</span></div><span class="tg on"></span></div>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">Dialog</span>
+      <div style="border-radius:22px;background:var(--el);box-shadow:var(--sh),inset 0 0 0 1px var(--dv);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:700 17px/1.3 var(--f-d)">حذف بيانات جهازي؟</span>
+        <span class="fs13 t2">سنحذف المتابعات ورمز الإشعارات من الخادم. لا يمكن التراجع.</span>
+        <div class="row g8" style="justify-content:flex-end;margin-top:4px"><button class="btn btn-g btn-sm">إلغاء</button><button class="btn btn-d btn-sm">حذف</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

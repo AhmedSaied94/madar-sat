@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- Madar · React admin · A1 Login · error + lockout · 1440×900 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin login</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.lc{width:100%;max-width:400px;border-radius:26px;background:var(--s1);box-shadow:var(--sh),inset 0 0 0 1px var(--dv);padding:30px;display:flex;flex-direction:column;gap:16px;position:relative}
+.otp{display:flex;gap:8px;direction:ltr;justify-content:center}
+.otp span{width:44px;height:52px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv2);display:flex;align-items:center;justify-content:center;font:600 22px var(--f-m)}
+.otp span.f{box-shadow:inset 0 0 0 1.5px var(--fr)}
+</style></head>
+<body>
+
+
+<div class="adm t-dark" style="align-items:center;justify-content:center;position:relative;overflow:hidden;padding:48px 24px;gap:28px">
+  <div class="illus" aria-hidden="true" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1100px;height:1100px;opacity:.8"><i style="width:1100px;height:1100px"></i><i style="width:760px;height:760px"></i><i style="width:440px;height:440px;background:transparent;box-shadow:inset 0 0 0 1px var(--dv)"></i><u style="left:920px;top:250px"></u></div>
+
+  <form class="lc" aria-label="تسجيل الدخول">
+    <div class="row g10"><span class="mk m40"></span><div class="col"><span style="font:800 22px/1 var(--f-d)">مدار</span><span class="ltr" style="font:600 9.5px/1 var(--f-m);letter-spacing:.18em;color:var(--tx3);margin-top:4px;text-align:right">ADMIN</span></div></div>
+    <h1 style="font:700 24px/1.3 var(--f-d)">سجل دخول للوحة التحكم</h1>
+    <div class="row g10" style="padding:10px 12px;border-radius:12px;background:var(--errc);color:var(--err)" role="alert"><span class="ic i-alert s18"></span><span class="fs13 w6">إيميل أو باسوورد غلط</span></div>
+    <div class="fld"><label for="em">البريد الإلكتروني</label><div class="in err"><span class="ic i-mail s16 t3"></span><input id="em" type="email" value="sara@example.com" class="ltr" aria-invalid="true"></div></div>
+    <div class="fld"><label for="pw">كلمة المرور</label><div class="in focus"><span class="ic i-lock s16 t3"></span><input id="pw" type="password" value="••••••••••••" class="ltr"><button type="button" class="ib sm" style="width:30px;height:30px" aria-label="إظهار كلمة المرور"><span class="ic i-eye s16"></span></button></div><span class="hint">تبقّت 3 محاولات قبل الإيقاف المؤقت</span></div>
+    <button type="submit" class="btn btn-p btn-blk">دخول</button>
+    <span class="row g6 fs12 t3" style="justify-content:center"><span class="ic i-shieldck s14"></span>متاح فقط عبر شبكة WireGuard</span>
+  </form>
+
+  <div class="col g20" style="width:100%;max-width:360px">
+    <div class="lc" style="max-width:none;padding:22px;gap:12px">
+      <div class="row g10"><span class="lt l40" style="background:var(--ppc);color:var(--pp);box-shadow:none"><span class="ic i-clock s20"></span></span><span class="w7" style="font-family:var(--f-d);font-size:17px">تم إيقاف الدخول مؤقتاً</span></div>
+      <span class="fs13 t2">محاولات كثيرة غير صحيحة لهذا الحساب. حاول مرة أخرى بعد <b class="w7" style="color:var(--tx)">14:32</b> دقيقة أو تواصل مع المدير.</span>
+      <button class="btn dis btn-blk" disabled="">دخول</button>
+    </div>
+    <div class="lc" style="max-width:none;padding:22px;gap:12px">
+      <div class="row g8"><span class="w7" style="font-family:var(--f-d);font-size:17px">رمز التحقق</span><span class="pill p-acc">V2</span></div>
+      <span class="fs13 t2">أدخل الرمز من تطبيق المصادقة</span>
+      <div class="otp" aria-label="رمز من 6 أرقام"><span>4</span><span>8</span><span>1</span><span class="f"></span><span></span><span></span></div>
+      <button class="btn btn-g btn-sm">استخدم رمز استرداد</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

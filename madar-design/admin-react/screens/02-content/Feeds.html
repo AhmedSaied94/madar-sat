@@ -1,0 +1,123 @@
+<!doctype html>
+<!-- Madar · React admin · A12 Feeds · 1440×900 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin feeds</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>
+body{margin:0}
+.lines{border-radius:12px;background:var(--rdb);box-shadow:inset 0 0 0 1px var(--rdl);padding:10px 0;direction:ltr;font:600 13px/2 var(--f-m);color:var(--rd)}
+.lines div{display:flex;gap:12px;padding:0 12px}
+.lines .n{color:var(--rd2);width:16px;text-align:right}
+.lines .bad{background:rgba(255,77,94,.16);color:#FF8A95}
+</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav on" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">ي ع</span><div class="col f1"><span class="w6 fs13">يوسف عمر</span><span class="fs11 t3">محرر</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role ed">محرر</span><span class="av a28">ي ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1 class="row g10">الفيدات <span class="stat wa">بانتظار قرار O8</span></h1><div class="sub">ترددات النقل المباشر من الملاعب · الترددات فقط</div></div><div class="acts"><button class="btn btn-p btn-sm"><span class="ic i-plus s16"></span>فيد جديد</button></div></div>
+      <div class="split">
+        <div class="l box">
+          <div class="tw">
+            <table class="tbl">
+              <thead><tr><th>المباراة</th><th>الموعد</th><th>الأسطر</th><th>آخر تعديل</th><th></th></tr></thead>
+              <tbody>
+                <tr class="sel"><td class="w6">ليفربول × تشيلسي</td><td>اليوم · 11:00 م</td><td><span class="mono fs12">2</span></td><td class="muted">يوسف · منذ 3 د</td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr><td class="w6">البنك الأهلي × المصري</td><td>اليوم · 5:00 م</td><td><span class="mono fs12">1</span></td><td class="muted">سارة · منذ ساعة</td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+                <tr><td class="w6">بايرن ميونخ × مجدبرج</td><td>اليوم · 10:45 م</td><td><span class="mono fs12">1</span></td><td class="muted">يوسف · منذ ساعتين</td><td><span class="rowact"><button class="ib" aria-label="تعديل"><span class="ic i-edit s16"></span></button></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <aside class="r drawer">
+          <div class="dh"><span class="ic i-tower s20 ac"></span><span class="w7" style="font-family:var(--f-d);font-size:17px">فيد ليفربول × تشيلسي</span></div>
+          <div class="col" style="padding:16px 18px;gap:14px">
+            <div class="fgrid"><div class="fld"><label>صاحب الأرض</label><div class="in"><span class="tm t24"><span class="crest" style="--c1:#C8102E;--c2:#fff">ل</span></span><span class="f1">ليفربول</span></div></div><div class="fld"><label>الضيف</label><div class="in"><span class="tm t24"><span class="crest" style="--c1:#034694;--c2:#fff">ت</span></span><span class="f1">تشيلسي</span></div></div></div>
+            <div class="fgrid"><div class="fld"><label>التاريخ</label><div class="in"><span class="ltr mono">28/10/2026</span></div></div><div class="fld"><label>الوقت</label><div class="in"><span style="font-family:var(--f-d);font-weight:600">11:00 م</span></div></div></div>
+            <div class="fld"><label>الأسطر <span class="hint">تردد واحد في كل سطر</span></label>
+              <div class="lines" role="textbox" aria-multiline="true" aria-label="أسطر الفيد"><div><span class="n">1</span>Eutelsat 10.0°E - 11054 V 7200</div><div><span class="n">2</span>Eutelsat 7.0°E - 11590 H 7500</div><div class="bad"><span class="n">3</span>BISS ••••••••••••</div></div>
+              <span class="hint e row g6"><span class="ic i-alert s14"></span>السطر 3: مفاتيح التشفير غير مسموحة. احذف السطر للحفظ.</span>
+            </div>
+          </div>
+          <div class="df"><button class="btn btn-g btn-sm">إلغاء</button><span class="spacer"></span><button class="btn dis btn-sm" disabled="">حفظ</button></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

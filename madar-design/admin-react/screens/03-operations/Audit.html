@@ -1,0 +1,156 @@
+<!doctype html>
+<!-- Madar · React admin · A17 Audit log + diff · 1440×1000 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Admin audit log</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<link rel="stylesheet" href="../../styles/admin.css">
+<style>body{margin:0}</style></head>
+<body>
+
+
+<div class="adm t-dark">
+  <aside class="side" aria-label="القائمة الرئيسية">
+    <div class="brand"><span class="mk m40"></span><div><b>مدار</b><small>ADMIN</small></div></div>
+    
+      
+      <a class="nav" href="../01-shell-dashboard/Main.html"><span class="ic i-dash s18"></span>لوحة المتابعة</a>
+    
+      <div class="nav-g">المحتوى</div>
+      
+    
+      
+      <a class="nav" href="../02-content/Matches.html"><span class="ic i-ball s18"></span>المباريات<span class="n w">41</span></a>
+    
+      
+      <a class="nav" href="../02-content/Teams.html"><span class="ic i-shield s18"></span>الفرق</a>
+    
+      
+      <a class="nav" href="../02-content/Competitions.html"><span class="ic i-trophy s18"></span>البطولات</a>
+    
+      
+      <a class="nav" href="../02-content/Channels.html"><span class="ic i-tv s18"></span>القنوات</a>
+    
+      
+      <a class="nav" href="../02-content/Satellites.html"><span class="ic i-sat s18"></span>الأقمار</a>
+    
+      
+      <a class="nav" href="../02-content/Rights.html"><span class="ic i-cert s18"></span>حقوق البث</a>
+    
+      
+      <a class="nav" href="../02-content/Commentators.html"><span class="ic i-mic s18"></span>المعلقون</a>
+    
+      
+      <a class="nav" href="../02-content/Feeds.html"><span class="ic i-tower s18"></span>الفيدات</a>
+    
+      
+      <a class="nav" href="../02-content/Lists.html"><span class="ic i-layers s18"></span>القوائم</a>
+    
+      <div class="nav-g">التشغيل</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Sources.html"><span class="ic i-db s18"></span>المصادر<span class="n r">1</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Reports.html"><span class="ic i-flag s18"></span>البلاغات<span class="v2">V2</span></a>
+    
+      
+      <a class="nav" href="../03-operations/Notifications.html"><span class="ic i-bell s18"></span>الإشعارات</a>
+    
+      <div class="nav-g">الإدارة</div>
+      
+    
+      
+      <a class="nav" href="../03-operations/Users.html"><span class="ic i-users s18"></span>المستخدمون</a>
+    
+      
+      <a class="nav on" href="../03-operations/Audit.html"><span class="ic i-history s18"></span>سجل التغييرات</a>
+    
+    <div class="me"><span class="av" style="width:34px;height:34px;font-size:12px">م ع</span><div class="col f1"><span class="w6 fs13">محمد علي</span><span class="fs11 t3">مدير</span></div><button class="ib sm" aria-label="تسجيل الخروج"><span class="ic i-logout s18"></span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topb">
+      <label class="gsearch"><span class="ic i-search s16"></span><input type="search" placeholder="ابحث عن مباراة، فريق، قناة أو تردد..." aria-label="بحث شامل"><span class="kbd">Ctrl K</span></label>
+      <span class="env"><span class="d"></span>متصل عبر WireGuard</span>
+      <div class="user"><span class="role">مدير</span><span class="av a28">م ع</span></div>
+    </header>
+    <div class="content">
+      <div class="ph1"><div><h1>سجل التغييرات</h1><div class="sub">كل تعديل يُسجَّل باسم صاحبه مع الفرق قبل وبعد</div></div></div>
+      <div class="fbar">
+        <button class="dd"><span class="k">المستخدم</span>الكل<span class="ic i-chd s16 t3"></span></button>
+        <button class="dd on"><span class="k">النوع</span>قناة<span class="ic i-x s14 t3"></span></button>
+        <button class="dd"><span class="ic i-cal s14"></span><span class="k">الفترة</span>آخر 7 أيام<span class="ic i-chd s16 t3"></span></button>
+      </div>
+      <div class="split">
+        <section class="l box" style="flex:1 1 420px">
+          
+            <div class="sel" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+              <span class="av a28" style="font-size:10px">م ع</span>
+              <div class="col f1" style="min-width:0;gap:2px"><span class="fs13"><b class="w6">محمد علي</b> غيّر تردد beIN SPORTS 1 على نايل سات</span><span class="row g6 fs11 t3"><span class="src">channel</span>اليوم 6:05 م</span></div>
+            </div>
+          
+            <div class="bt" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+              <span class="av a28" style="font-size:10px">س ح</span>
+              <div class="col f1" style="min-width:0;gap:2px"><span class="fs13"><b class="w6">سارة حسن</b> أخفت DAZN 1 HD Italia من ميلان × بولونيا فقط</span><span class="row g6 fs11 t3"><span class="src">match_channel</span>اليوم 5:58 م</span></div>
+            </div>
+          
+            <div class="bt" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+              <span class="av a28" style="font-size:10px">س ح</span>
+              <div class="col f1" style="min-width:0;gap:2px"><span class="fs13"><b class="w6">سارة حسن</b> أضافت Sky Sport Italy على هوت بيرد</span><span class="row g6 fs11 t3"><span class="src">channel</span>اليوم 5:40 م</span></div>
+            </div>
+          
+            <div class="bt" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+              <span class="av a28" style="font-size:10px">ي ع</span>
+              <div class="col f1" style="min-width:0;gap:2px"><span class="fs13"><b class="w6">يوسف عمر</b> غيّر اسم العرض لـ SS-1 HD</span><span class="row g6 fs11 t3"><span class="src">channel</span>أمس 11:12 م</span></div>
+            </div>
+          
+            <div class="bt" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+              <span class="av a28" style="font-size:10px">م ع</span>
+              <div class="col f1" style="min-width:0;gap:2px"><span class="fs13"><b class="w6">محمد علي</b> أضاف beIN SPORTS 1 على قمر آخر (بدر)</span><span class="row g6 fs11 t3"><span class="src">channel</span>أمس 9:30 م</span></div>
+            </div>
+          
+            <div class="bt" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+              <span class="av a28" style="font-size:10px">ي ع</span>
+              <div class="col f1" style="min-width:0;gap:2px"><span class="fs13"><b class="w6">يوسف عمر</b> جعل ON Sport Max HD مجانية</span><span class="row g6 fs11 t3"><span class="src">channel</span>الإثنين 4:02 م</span></div>
+            </div>
+          
+        </section>
+        <section class="r box" style="flex:999 1 560px">
+          <div class="box-h"><h2>تغيير تردد <span class="ltr">beIN SPORTS 1</span></h2><span class="spacer"></span><span class="fs12 t3">محمد علي · 6:05 م · <span class="ltr mono">channel/5512</span></span></div>
+          <div class="box-b col g14" style="gap:14px">
+            <div class="diff">
+              <div class="col" style="box-shadow:inset -1px 0 0 var(--dv)">
+                <span class="hd">قبل</span>
+                <div class="ln"><span class="k">frequency.mhz</span><span class="v">11766</span></div>
+                <div class="ln"><span class="k">frequency.pol</span><span>H</span></div>
+                <div class="ln"><span class="k">frequency.sr</span><span>27500</span></div>
+                <div class="ln del"><span class="k">locked_fields</span><span class="v">[]</span></div>
+                <div class="ln del"><span class="k">frequency_changed_at</span><span class="v">2026-09-02</span></div>
+              </div>
+              <div class="col">
+                <span class="hd">بعد</span>
+                <div class="ln add"><span class="k">frequency.mhz</span><span class="v">11013</span></div>
+                <div class="ln"><span class="k">frequency.pol</span><span>H</span></div>
+                <div class="ln"><span class="k">frequency.sr</span><span>27500</span></div>
+                <div class="ln add"><span class="k">locked_fields</span><span class="v">["frequency"]</span></div>
+                <div class="ln add"><span class="k">frequency_changed_at</span><span class="v">2026-10-28</span></div>
+              </div>
+            </div>
+            <div class="row g10 wrap" style="padding:12px 14px;border-radius:12px;background:var(--bg)"><span class="ic i-send s16 ac"></span><span class="fs13 f1">أُرسل تنبيه «تغيّر التردد» إلى 1,233 جهازاً من 1,240 متابعاً</span><a class="lnk fs12" href="../03-operations/Notifications.html">صندوق الإرسال</a></div>
+            <div class="row g8"><button class="btn btn-s btn-sm"><span class="ic i-history s16"></span>استرجاع القيمة السابقة</button><a class="btn btn-g btn-sm" href="../02-content/Channels.html">فتح القناة</a></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+
+
+
+</body></html>

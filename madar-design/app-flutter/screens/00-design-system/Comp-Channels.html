@@ -1,0 +1,137 @@
+<!doctype html>
+<!-- Madar · Flutter app · Components · Channels · 1680×1240 · default theme dark.
+     Static snapshot of the design board. Structure, copy, order and states are the spec; CSS classes map to components (design-system/components/INDEX.md);
+     colours are token aliases (design-system/TOKEN-ALIASES.md). Swap the root class t-dark <-> t-light to see the other theme. -->
+<html lang="ar" dir="rtl"><head>
+<link rel="stylesheet" href="../../../design-system/fonts/fonts.css">
+<meta charset="utf-8">
+<title>Components channels</title>
+
+<link rel="stylesheet" href="../../styles/app.css">
+<style>
+body{margin:0}
+.pan{background:var(--s1);border-radius:24px;box-shadow:inset 0 0 0 1px var(--dv);padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.lab{font:600 11px/1 var(--f-m);letter-spacing:.14em;color:var(--tx3);direction:ltr;text-align:right;text-transform:uppercase}
+.sl{font-size:11px;color:var(--tx3)}
+.ph{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:0;padding:12px 4px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--dv)}
+.ph span.k{font-size:11px;color:var(--tx3);text-align:center}
+</style></head>
+<body>
+
+
+<div class="sheetbg t-dark" style="width:1680px;height:1240px;padding:44px 48px;box-sizing:border-box;display:grid;grid-template-columns:480px minmax(0,1fr) 480px;gap:22px;align-items:start">
+
+  <div class="col g20">
+    <div class="pan">
+      <span class="lab">FrequencyReadout · sizes &amp; states</span>
+      <div class="row g10 wrap" style="align-items:center">
+        <span class="fq"><span>11843</span><span class="p">H</span><span class="sr">27500</span></span>
+        <span class="fq lg"><span>11843</span><span class="p">H</span><span class="sr">27500</span></span>
+      </div>
+      <span class="fq xl" style="align-self:flex-start"><span>11843</span><span class="p">H</span><span class="sr">27500</span></span>
+      <div class="row g10 wrap">
+        <div class="col g6"><span class="sl">نُسخ</span><span class="fq ok"><span>11013</span><span class="p">H</span><span class="sr">27500</span></span></div>
+        <div class="col g6"><span class="sl">أقوى تردد</span><span class="fq fq-good"><span>12054</span><span class="p">V</span><span class="sr">27500</span></span></div>
+        <div class="col g6"><span class="sl">أضعف تردد</span><span class="fq fq-bad"><span>11373</span><span class="p">H</span><span class="sr">27500</span></span></div>
+      </div>
+      <div class="row g10 wrap">
+        <div class="col g6"><span class="sl">ملاحظة بدل التردد</span><span class="fq note">UHF 32</span></div>
+        <div class="col g6"><span class="sl">قديم (سجل)</span><span class="fq dim"><span>11766</span><span class="p">H</span><span class="sr">27500</span></span></div>
+        <div class="col g6"><span class="sl">استقطاب دائري</span><span class="fq"><span>12188</span><span class="p">L</span><span class="sr">27500</span></span></div>
+      </div>
+      <div class="row g8"><span class="toast"><span class="ic i-check s16" style="color:var(--snk)"></span>تم نسخ التردد</span></div>
+    </div>
+    <div class="pan">
+      <span class="lab">Badges</span>
+      <div class="row wrap g8">
+        <span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span>
+        <span class="ab enc"><span class="ic i-lock s12"></span>مشفرة</span>
+        <span class="ab enc"><span class="ic i-lock s12"></span>مشفرة · <span class="ltr">beIN</span></span>
+        <span class="satb"><span class="ic i-sat s14"></span>نايل سات</span>
+        <span class="chgb"><span class="ic i-history s12"></span>تغيّر مؤخراً · 20 أكتوبر</span>
+        <span class="chgb">3 تغييرات هذا الأسبوع</span>
+        <span class="mine"><span class="ic i-dish s12"></span>على أقمارك</span>
+        <span class="pill p-sp">رياضة</span>
+        <span class="pill p-en">ترفيه</span>
+        <span class="cnt-b">171</span>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">Logo placeholders · always in a neutral frame</span>
+      <div class="row g8">
+        <div class="ph"><span class="tm t48"><span class="crest" style="--c1:#5B6470;--c2:#fff">ه</span></span><span class="k">فريق · حرف داخل درع</span></div>
+        <div class="ph"><span class="lt l48"><span class="ic i-trophy s22"></span></span><span class="k">بطولة · كأس</span></div>
+        <div class="ph"><span class="lt l48 ch"><span class="ic i-tv s16"></span><span class="ltr">ON</span></span><span class="k">قناة · شاشة وأحرف</span></div>
+        <div class="ph"><span class="lt l48"><span class="ic i-sat s22"></span></span><span class="k">قمر</span></div>
+        <div class="ph"><span class="av" style="width:48px;height:48px">ع ع</span><span class="k">معلق · أحرف</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col g20" style="min-width:0">
+    <div class="pan">
+      <span class="lab">CarriageRow · collapsed / expanded</span>
+      <div class="card flat" style="background:var(--bg)">
+        <div class="cr">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">ON</span></span>
+          <div class="bd"><div class="l1"><span class="cn"><span class="ltr">ON Sport HD</span></span><span class="spacer"></span><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></div><div class="l2"><span class="satb"><span class="ic i-sat s14"></span>نايل سات</span><span class="fq"><span>11977</span><span class="p">V</span><span class="sr">27500</span></span></div></div>
+          <span class="ic i-chd s18 chev"></span>
+        </div>
+        <div class="cr open bt">
+          <span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">bS1</span></span>
+          <div class="bd">
+            <div class="l1"><span class="cn"><span class="ltr">beIN SPORTS 1</span></span><span class="spacer"></span><span class="ab enc"><span class="ic i-lock s12"></span>مشفرة · <span class="ltr">beIN</span></span></div>
+            <div class="l2"><span class="satb"><span class="ic i-sat s14"></span>نايل سات</span><span class="fq"><span>11013</span><span class="p">H</span><span class="sr">27500</span></span></div>
+            <div class="xd">
+              <span class="k">القمر</span><span class="v">نايل سات · <span class="ltr">Nilesat 7.0W</span></span>
+              <span class="k">التردد</span><span class="v"><span class="ltr mono">11013 MHz</span></span>
+              <span class="k">الاستقطاب</span><span class="v"><span class="ltr mono">H</span> · أفقي</span>
+              <span class="k">معدل الترميز</span><span class="v"><span class="ltr mono">27500</span></span>
+              <span class="k">الوصول</span><span class="v">مشفرة · <span class="ltr">beIN</span></span>
+              <span class="k">الفئة</span><span class="v"><span class="pill p-sp">رياضة</span></span>
+            </div>
+            <div class="cm" style="background:var(--s1)"><span class="av">أب</span><div class="col f1"><span class="lbl"><span class="ic i-mic s12"></span>المعلق</span><span class="nm">أحمد البلوشي</span></div><button class="play" aria-label="تشغيل"><span class="ic i-play s18"></span></button></div>
+            <div class="acts">
+              <button class="btn btn-s btn-xs"><span class="ic i-copy s14"></span>نسخ التردد</button>
+              <button class="btn btn-s btn-xs"><span class="ic i-bell s14"></span>تابع القناة</button>
+              <button class="btn btn-s btn-xs"><span class="ic i-yt s14"></span>طريقة استقبال القمر</button>
+              <button class="btn btn-o btn-xs"><span class="ic i-tv s14"></span>عرض القناة</button>
+            </div>
+          </div>
+          <span class="ic i-chu s18 chev"></span>
+        </div>
+      </div>
+    </div>
+    <div class="pan">
+      <span class="lab">RegionGroup · platforms without satellite</span>
+      <div class="card flat" style="background:var(--bg)">
+        <button class="grp" style="width:100%"><span class="lt l32"><span class="ic i-globe s16"></span></span><div class="col f1"><span class="gt">أوروبا</span><span class="gs">فرنسا · إسبانيا · بلجيكا</span></div><span class="cnt-b">12</span><span class="ic i-chu s18 t3"></span></button>
+        <div class="px16 bt" style="padding-top:10px;padding-bottom:2px"><span class="fs12 t3">تبث داخل فرنسا</span></div>
+        <div class="cr" style="align-items:center"><span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">bSC</span></span><div class="bd"><span class="cn"><span class="ltr">beIN SPORTS CONNECT</span></span></div><span class="fs11 t3">فرنسا</span></div>
+        <div class="cr bt" style="align-items:center"><span class="lt l40 ch"><span class="ic i-tv s14"></span><span class="ltr">DZN</span></span><div class="bd"><span class="cn"><span class="ltr">DAZN France</span></span></div><span class="fs11 t3">فرنسا</span></div>
+        <button class="grp bt" style="width:100%"><span class="lt l32"><span class="ic i-globe s16"></span></span><div class="col f1"><span class="gt">الأمريكتان</span><span class="gs">كندا · الولايات المتحدة · الأرجنتين</span></div><span class="cnt-b">14</span><span class="ic i-chd s18 t3"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col g20">
+    <div class="pan">
+      <span class="lab">CommentatorRow · idle / loading / playing / error</span>
+      <div class="cm"><span class="av">ع ع</span><div class="col f1"><span class="lbl"><span class="ic i-mic s12"></span>المعلق</span><span class="nm">عصام عبده</span></div><button class="play" aria-label="تشغيل"><span class="ic i-play s18"></span></button></div>
+      <div class="cm"><span class="av">ب ع</span><div class="col f1"><span class="lbl"><span class="ic i-mic s12"></span>المعلق</span><span class="nm">بلال علام</span><span class="fs11 t3">جارٍ التحميل...</span></div><button class="play ld" aria-label="جار التحميل" aria-busy="true"><span class="ic i-play s18"></span></button></div>
+      <div class="cm"><span class="av">أب</span><div class="col f1"><span class="lbl"><span class="ic i-mic s12"></span>المعلق</span><span class="nm">أحمد البلوشي</span><span class="stt"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>جاري التشغيل...</span><div class="prog"><i style="width:38%"></i></div></div><button class="play on" aria-label="إيقاف"><span class="ic i-pause s18"></span></button></div>
+      <div class="cm"><span class="av">ف ع</span><div class="col f1"><span class="lbl"><span class="ic i-mic s12"></span>المعلق</span><span class="nm">فارس عوض</span><span class="fs11" style="color:var(--err)">تعذّر تشغيل المقطع</span></div><button class="play er" aria-label="إعادة المحاولة"><span class="ic i-refresh s18"></span></button></div>
+      <span class="fs11 t3">مقطع واحد يعمل في كل مرة · التشغيل بضغطة المستخدم فقط</span>
+    </div>
+    <div class="pan">
+      <span class="lab">BroadcasterCard</span>
+      <div class="bc" style="background:var(--bg)"><span class="lt l48 ch"><span class="ic i-tv s16"></span><span class="ltr">ON</span></span><div class="col f1"><span class="on-l">يعرض على</span><span class="on-n">أون سبورت 1</span></div><span class="ab free"><span class="ic i-unlock s12"></span>مجانية</span></div>
+      <div class="bc" style="background:var(--bg)"><span class="lt l48 ch"><span class="ic i-tv s16"></span><span class="ltr">AK5</span></span><div class="col f1"><span class="on-l">يعرض أيضاً على</span><span class="on-n"><span class="ltr">Al Kass Five HD</span></span></div><span class="ab enc"><span class="ic i-lock s12"></span>مشفرة</span></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body></html>

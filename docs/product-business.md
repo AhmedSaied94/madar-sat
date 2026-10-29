@@ -1,4 +1,4 @@
-# ‹Brand› — Product & Business
+# Madar Sat — Product & Business
 
 | | |
 |---|---|
@@ -6,7 +6,7 @@
 | Companion | [system-design.md](system-design.md): architecture, API shapes (§6.3), platform limits (§5.3) |
 | Readers | **Claude Design**, which will produce the full UI for the Flutter app (Android, iOS PWA, desktop web) and the admin web. Also the product owner |
 
-`‹Brand›` / `‹الاسم›` stand for the new name, which isn't chosen yet (O1). The product replaces **Sat Air 3.8** (`com.satair.app`); its recovered source is in `old_app/`.
+The brand is **Madar Sat** (Arabic: **مدار سات**). The product replaces **Sat Air 3.8** (`com.satair.app`); its recovered source is in `old_app/`.
 
 ---
 
@@ -18,7 +18,7 @@
 2. App screens §9 (S0–S16) at 360 × 800 dp, checked at 412 × 915 and at font scale 1.3. Dark and light.
 3. Web-specific screens: the iOS install guide (S1.5), push-permission priming on the PWA, and a desktop two-pane layout at 1440 × 900 (§8.3).
 4. Admin web screens §10 (A0–A17) at 1440 × 900.
-5. Brand assets once the name is set: app icon, wordmark, splash, monochrome notification icon.
+5. Brand assets for Madar Sat: app icon, wordmark (Latin and Arabic), splash, monochrome notification icon.
 
 **Fixed:** content, data fields, states, platform limits, Arabic RTL, both themes, phases.
 **Yours to decide:** visual direction (a recommendation is in §13.1), layout, motion, and navigation details. The proposed navigation (§8.2) can change as long as the priorities in §8.1 hold.
@@ -38,14 +38,14 @@
 
 ## 1. Product summary
 
-‹Brand› is an Arabic-first guide for football fans who watch on a satellite dish. For every match it answers, in two taps or fewer: **where can I watch it, on which satellite and frequency, and can my dish receive it?** Around that answer it adds:
+Madar Sat is an Arabic-first guide for football fans who watch on a satellite dish. For every match it answers, in two taps or fewer: **where can I watch it, on which satellite and frequency, and can my dish receive it?** Around that answer it adds:
 - live scores;
 - the commentator for each channel, with a voice clip;
 - broadcast rights by competition;
 - a complete frequency list for 32 satellites;
 - alerts when a followed team plays, scores, or when a followed channel changes frequency.
 
-**Positioning:** for Arab viewers who watch on a dish, ‹Brand› is the match guide that knows your dish. It's the only one that joins the fixture list to the exact channels, frequencies and commentators you can receive.
+**Positioning:** for Arab viewers who watch on a dish, Madar Sat is the match guide that knows your dish. It's the only one that joins the fixture list to the exact channels, frequencies and commentators you can receive.
 
 ---
 
@@ -99,7 +99,7 @@
 | Frequency databases | KingOfSat, LyngSat, FlySat | Match context; Arabic UX; mobile-first |
 | Social pages | Daily "جدول المباريات والقنوات الناقلة" images on Facebook and Telegram | Search, personalization, accuracy, alerts |
 
-**Why ‹Brand› wins:**
+**Why Madar Sat wins:**
 1. Fixture + channel + satellite + frequency in one place.
 2. **My satellites** filters everything to what the user can receive.
 3. A commentator per channel, with a voice clip.
@@ -263,11 +263,11 @@ Four steps with progress dots, back and skip. Each step can be reopened later fr
 
 | Step | Content |
 |---|---|
-| S1.1 Welcome + theme | Logo, "مرحباً بك في ‹الاسم›", one-line value statement. Choice: داكن / فاتح / تلقائي (system), with live preview tiles. Note: "تقدر تغيّره في أي وقت من الإعدادات" |
+| S1.1 Welcome + theme | Logo, "مرحباً بك في مدار سات", one-line value statement. Choice: داكن / فاتح / تلقائي (system), with live preview tiles. Note: "تقدر تغيّره في أي وقت من الإعدادات" |
 | S1.2 Teams | "اختر فرقك المفضلة". Search ("ابحث عن فريق..."). Teams grouped under competition headers (logo + name), popular first. Multi-select; selected teams collect in a tray. 1,513 teams, so search does the heavy lifting |
 | S1.3 My satellites | "اختر الأقمار التي يستقبلها طبقك". Rows: satellite glyph or logo, Arabic name, English name + position (LTR, `Nilesat 7.0W`), channel count, a "الأكثر استخداماً" badge on the top ones. Multi-select. If skipped, match pages default to Nilesat + Badr, the old app's rule, and show a "حدد أقمارك" prompt |
 | S1.4 Notifications | Priming card: what they'll get (reminder before kickoff with the channel, goals, final score, frequency changes) → "تفعيل التنبيهات" opens the OS or browser dialog; "ليس الآن". On iOS Safari when **not installed**, this step shows S1.5 instead |
-| S1.5 iOS install guide (PWA) | Three illustrated steps that show the Safari UI: tap Share → "إضافة إلى الشاشة الرئيسية" → open ‹الاسم› from its icon. Explains that alerts need this. Also reachable from More |
+| S1.5 iOS install guide (PWA) | Three illustrated steps that show the Safari UI: tap Share → "إضافة إلى الشاشة الرئيسية" → open مدار سات from its icon. Explains that alerts need this. Also reachable from More |
 
 ### S2 · Matches (المباريات) [P + V1]
 
@@ -777,7 +777,7 @@ O1–O3 and O7 are the same items as in system-design §3.2. O8–O10 are produc
 
 | # | Decision | Owner input needed |
 |---|---|---|
-| O1 | Brand name, Arabic name, package ID | Name, then trademark and store-name checks |
+| O1 | Package ID (the name is set: Madar Sat / مدار سات) | Trademark and store-name checks for "Madar Sat", then the ID |
 | O2 | v1 scope (§6) | Confirm or trim [V1] items |
 | O3 | Card-sharing labels and BISS keys: drop (recommended) or keep | Yes/no. The designs assume drop |
 | O7 | Live data source for minute, events and lineups | Affects how rich S3's live center can be |
