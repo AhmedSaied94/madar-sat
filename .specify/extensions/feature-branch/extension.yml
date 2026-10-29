@@ -1,0 +1,78 @@
+schema_version: "1.0"
+
+extension:
+  id: feature-branch
+  name: "Feature Branch Guard"
+  version: "1.0.0"
+  description: "Check out the active spec's git branch (dNN-<lane> in a lane session, the spec name in the planning session), or create it, before every Spec Kit step that works on a spec"
+  author: madar-sat
+  repository: https://github.com/AhmedSaied94/madar-sat
+  license: MIT
+
+requires:
+  speckit_version: ">=1.2.0"
+  tools:
+    - name: git
+      required: false
+
+provides:
+  commands:
+    - name: speckit.feature-branch.ensure
+      file: commands/speckit.feature-branch.ensure.md
+      description: "Check out the active spec's git branch, or create it if it does not exist"
+
+# No git extension is installed here, so nothing creates a branch before /speckit-specify, and
+# before_specify cannot be hooked: the new spec does not exist yet. after_specify creates the spec
+# branch instead, carrying the uncommitted spec files over from HEAD.
+# Priority 5 keeps these ahead of any priority-10 auto-commit hook, so a commit lands on the branch.
+hooks:
+  after_specify:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Create or check out the spec branch after specification"
+  before_clarify:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before clarification"
+  before_plan:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before planning"
+  before_tasks:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before task generation"
+  before_analyze:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before analysis"
+  before_checklist:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before checklist generation"
+  before_implement:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the lane branch before implementation"
+  before_converge:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before convergence"
+  before_taskstoissues:
+    command: speckit.feature-branch.ensure
+    optional: false
+    priority: 5
+    description: "Check out the feature branch before syncing tasks to issues"
+
+tags:
+  - "git"
+  - "branching"
+  - "workflow"

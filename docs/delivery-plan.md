@@ -99,16 +99,17 @@ NewSatApp/
 
 - Worktrees must be **siblings** of `madar_sat/`, so `../old_app/` resolves the same way in every lane.
 - Git can't check out one branch in two worktrees. So the day's spec lives on `main`, and each lane works on its own branch `dNN-<lane>`, cut from `main` each morning.
-- **`SPECIFY_FEATURE` tells Spec Kit which spec is active**, because the lane branch names don't match the spec folder: start each lane session as `SPECIFY_FEATURE=0NN-dNN-<name> claude`.
+- **`SPECIFY_FEATURE_DIRECTORY` tells Spec Kit which spec is active**, because the lane branch names don't match the spec folder and `.specify/feature.json` is per checkout (git-ignored): start each lane session as `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude`. `SPECIFY_FEATURE` alone doesn't select a spec in this Spec Kit version.
+- **The `feature-branch` hook switches branches** before every Spec Kit step (and right after `/speckit-specify`). In a lane worktree it checks out `dNN-<lane>`, creating it from `origin/main` if it doesn't exist. In the planning checkout it checks out the spec branch `0NN-dNN-<name>`, creating it from the current HEAD. It never stashes, resets or discards: if the switch is blocked, the step stops and you decide.
 - `main` is protected: PRs only, CI required, squash merge.
 
 ### 5.2 The daily loop
 
 | When | Who | Steps |
 |---|---|---|
-| **Day N−1, afternoon** | Planning session in `madar_sat/` + you | 1. `git switch main && git pull` · 2. `/speckit.specify` with the template in Appendix A for day N (its scope is the day's brief in Appendix B), plus carry-over (§5.3) · 3. `/speckit.clarify` only if questions remain · 4. `/speckit.plan` · 5. `/speckit.tasks` · 6. `/speckit.analyze` · 7. You review the spec and the lane sections · 8. Merge a docs-only PR to `main` |
-| **Day N, morning** | Each lane | `git fetch && git switch -C dNN-<lane> origin/main` → `SPECIFY_FEATURE=0NN-dNN-<name> claude` → `/speckit.implement Only the tasks under "Lane <X>" in tasks.md.` |
-| **Day N, midday and evening** | Each lane → you | Reviewer agents run; the lane opens a PR; you merge it. **At least two merges per lane per day.** Lanes rebase on `main` after each merge to pick up the others' work |
+| **Day N−1, afternoon** | Planning session in `madar_sat/` + you | 1. `git switch main && git pull` · 2. `/speckit-specify` with the template in Appendix A for day N (its scope is the day's brief in Appendix B), plus carry-over (§5.3); the hook then creates the spec branch `0NN-dNN-<name>` · 3. `/speckit-clarify` only if questions remain · 4. `/speckit-plan` · 5. `/speckit-tasks` · 6. `/speckit-analyze` · 7. You review the spec and the lane sections · 8. Merge the spec branch to `main` as a docs-only PR |
+| **Day N, morning** | Each lane | `git fetch && git switch -C dNN-<lane> origin/main` → `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude` → `/speckit-implement Only the tasks under "Lane <X>" in tasks.md.` |
+| **Day N, midday and evening** | Each lane → you | `/speckit-review-implementation`, ideally on a different model from the implementer, reviews the lane and appends its fix tasks to the lane's section; the lane fixes them with `/speckit-implement` and reviews again until there is no CRITICAL or HIGH finding. Then the lane opens a PR, and you merge it after reading the review's "Owner must review" files. **At least two merges per lane per day.** Lanes rebase on `main` after each merge to pick up the others' work |
 | **Day N, evening** | You | Run the day's **done check** (Appendix A) on the deployed `main` and on devices. Anything that fails becomes carry-over |
 
 **Required shape of every `tasks.md`**, which the template asks for:
@@ -121,7 +122,7 @@ Planning only one day ahead means each spec is written against the **real** stat
 
 ### 5.3 Carry-over
 
-- When a day ends with unchecked tasks, the next day's `/speckit.specify` prompt starts with: *"Carry-over: the unchecked tasks in `specs/0NN-dNN-<name>/tasks.md` come first."*
+- When a day ends with unchecked tasks, the next day's `/speckit-specify` prompt starts with: *"Carry-over: the unchecked tasks in `specs/0NN-dNN-<name>/tasks.md` come first."*
 - If carry-over exceeds about a quarter of a lane's day, move that lane's lowest-priority item for the new day to the next hardening day (D4, D11, D19 or D30), and note it in the spec.
 
 ### 5.4 Your daily rhythm
@@ -165,7 +166,7 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 
 **Repo:**
 1. Install Spec Kit (`uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`) and run `specify init --here --ai claude`.
-2. Run `/speckit.constitution` with §8.1. *Done: v1.0.0 is in `.specify/memory/constitution.md`. Still to do: amend its Quality Gates for A4 (or drop A4), and delete its Sync Impact Report comment.*
+2. Run `/speckit-constitution` with §8.1. *Done: v1.0.0 is in `.specify/memory/constitution.md`. Still to do: amend its Quality Gates for A4 (or drop A4), and delete its Sync Impact Report comment.*
 3. Extend the root `CLAUDE.md` and add one per lane (§8.2).
 4. Change the design package's wordmark from «مدار» to **Madar Sat / مدار سات**.
 5. Rename the default branch `master` → `main` (§5.1 assumes `main`) and protect it.
@@ -315,7 +316,7 @@ Madar Sat constitution
 |---|---|---|
 | Scrapers blocked on Oracle IPs, or source layouts change | High | Home-box worker over WireGuard from D2; Firestore bridge during the MVP; zero-items alarm; parsers tested against saved pages; admin manual entry |
 | Your review time is the bottleneck | High | Four lanes at most; you review contracts, migrations, auth and UI, and CI plus reviewer agents gate the rest; small PRs twice a day |
-| A day spec mixes unrelated work and gets vague | Medium | Every lane section is a self-contained user story with its own acceptance steps; `/speckit.analyze` before merging the spec |
+| A day spec mixes unrelated work and gets vague | Medium | Every lane section is a self-contained user story with its own acceptance steps; `/speckit-analyze` before merging the spec |
 | Carry-over snowballs | Medium | The quarter-day rule in §5.3; hardening days absorb overflow |
 | Agents drift from the design | Medium | Constitution rule 7; components built once on D1 with golden tests; PNG comparison in the definition of done |
 | Contract churn breaks the admin and app lanes | Medium | Contract frozen D1 13:00; changes through B1 only; generated clients checked in CI |
@@ -330,7 +331,7 @@ Madar Sat constitution
 
 ## Appendix A. Day specs
 
-### Prompt template for `/speckit.specify`
+### Prompt template for `/speckit-specify`
 
 Each day has exactly **one** spec. Its full brief (the four lane stories, what to read, lane acceptance, flags) is in Appendix B, so the prompt only names the day:
 

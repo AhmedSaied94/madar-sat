@@ -1,0 +1,87 @@
+installed:
+- feature-branch
+- review
+settings:
+  auto_execute_hooks: true
+hooks:
+  after_specify:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Create or check out the spec branch after specification
+    condition: null
+  before_clarify:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before clarification
+    condition: null
+  before_plan:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before planning
+    condition: null
+  before_tasks:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before task generation
+    condition: null
+  before_analyze:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before analysis
+    condition: null
+  before_checklist:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before checklist generation
+    condition: null
+  before_implement:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the lane branch before implementation
+    condition: null
+  before_converge:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before convergence
+    condition: null
+  before_taskstoissues:
+  - extension: feature-branch
+    command: speckit.feature-branch.ensure
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.feature-branch.ensure?
+    description: Check out the feature branch before syncing tasks to issues
+    condition: null

@@ -12,6 +12,8 @@ Madar Sat (مدار سات) is an Arabic-first, RTL guide for football fans who 
 - `docs/product-business.md`: screen specs S0–S20 (app) and A0–A17 (admin), notification copy (§11), data dictionary (§12), design-system requirements (§13), Arabic voice and glossary (§14).
 - `docs/delivery-plan.md`: phases (MVP, V1, V2, V3), one Spec Kit spec per working day (specs 001–030 = D1–D30), work per lane (B1, B2, A, M) inside each day, ownership rules, the daily loop and quality gates. A lane implements only its own section of the day's `tasks.md`.
 - `madar-design/`: the exported UI design package (tokens, 24 components, 46 app boards, 21 admin boards). Start with `madar-design/README.md`.
+- `.specify/`: Spec Kit. `.specify/memory/constitution.md` (principles I–IX, quality gates, fixed stack) is the highest authority and overrides this file.
+- `tools/speckit-extensions/`: source of the project's own Spec Kit extensions, `feature-branch` and `review` (see "Spec Kit workflow and lanes").
 
 Both docs cite each other by section number (for example "system-design §6.3", "product doc S3"). Follow those references instead of guessing. When docs and design disagree on data or behavior, the docs win; on visuals, the design package wins.
 
@@ -32,6 +34,18 @@ Once the code folders exist, CI (system-design §9) runs these per folder:
 | `backend/` | `ruff`, `mypy`, `pytest` (needs Postgres); exports `openapi.json`, regenerates the Dart and TS clients, and fails if they are stale |
 | `admin/` | `tsc`, `eslint`, `vitest` |
 | `app/` | `flutter analyze`, `flutter test`; builds use `--dart-define-from-file=env/<flavor>.json` (dev, staging, prod) |
+
+## Spec Kit workflow and lanes
+
+Work is one Spec Kit spec per working day (`specs/0NN-dNN-<name>`; delivery-plan §5 and Appendix B), built by four lanes in parallel.
+
+- Steps: `/speckit-specify` → `/speckit-clarify` → `/speckit-plan` (Constitution Check) → `/speckit-tasks` → `/speckit-analyze` → `/speckit-implement` → `/speckit-review-implementation`. Claude Code is the default integration (`.claude/skills/speckit-*`). opencode is installed too (`.opencode/commands/speckit.*`, invoked as `/speckit.<step>`), so a lane can implement there on another model and be reviewed here.
+- Lanes and ownership (delivery-plan §4): B1 `backend/` except `backend/app/adapters/`, plus Alembic and the OpenAPI contract; B2 `infra/`, `backend/app/adapters/` and CI; A `admin/`; M `app/`. A lane implements and ticks only its own `## Lane <X>` section of `tasks.md`, and never edits another lane's folder or a generated file (API clients, Orval schemas, token files).
+- Each lane runs in a sibling worktree (`../madar-b1`, `../madar-b2`, `../madar-a`, `../madar-m`) on branch `dNN-<lane>`, started as `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude`. `.specify/feature.json` is per checkout, and `SPECIFY_FEATURE` alone selects no spec.
+- **Branches are handled by the `feature-branch` hook** (`.specify/extensions.yml`), which runs after `/speckit-specify` and before every later step. In a lane session (`MADAR_LANE`, else the worktree folder name, else a current `dNN-<lane>` branch) it checks out `dNN-<lane>`, or creates it from `origin/main` (falling back to `main`, `origin/master`, `master`). In the planning checkout it checks out or creates the spec branch `0NN-dNN-<name>` from HEAD. If git refuses the switch, the step stops: don't stash, reset or discard to get past it; ask the user.
+- **Review:** `/speckit-review-implementation [lane=…] [base=…] [layers=…] [no-run] [fix]` reviews one lane against the merge base. It runs the CI checks the change triggers, checks every layer against the constitution, writes `specs/<spec>/reviews/<lane>-round-<K>.md`, and appends a `### Review fixes (round K)` block to the end of that lane's section. It never commits.
+- Tests are mandatory in every `tasks.md`, even though `tasks-template.md` calls them optional (constitution, Quality Gates).
+- To change an extension, edit `tools/speckit-extensions/<name>/`, never the installed copy in `.specify/extensions/`. Then run `specify extension add --dev tools/speckit-extensions/<name> --force`, then `specify integration use opencode && specify integration use claude` (an extension registers only for the default integration), then `chmod +x .specify/scripts/bash/*.sh` (the switch drops the bit). The Specify CLI generates and hash-tracks `.claude/skills/speckit-*`, `.opencode/commands/speckit.*`, `.specify/templates/` and `.specify/scripts/`; don't hand-edit them.
 
 ## Planned architecture (big picture)
 

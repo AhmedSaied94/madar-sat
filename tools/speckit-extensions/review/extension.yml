@@ -1,0 +1,31 @@
+schema_version: "1.0"
+
+extension:
+  id: review
+  name: "Implementation Review"
+  version: "1.0.0"
+  description: "Review one lane's implementation of the day's spec across every layer after /speckit-implement, verify each finding, and append the fixes to that lane's section of tasks.md"
+  author: madar-sat
+  repository: https://github.com/AhmedSaied94/madar-sat
+  license: MIT
+
+requires:
+  speckit_version: ">=1.2.0"
+  tools:
+    - name: git
+      required: true
+
+provides:
+  commands:
+    - name: speckit.review.implementation
+      file: commands/speckit.review.implementation.md
+      description: "Review one lane's implementation across spec, API, database, pipelines, app, UI, admin, security, tests and ops; write a review file and append fix tasks to the lane's section"
+
+# No after_implement hook on purpose: the review is meant to run in a different
+# agent (and often a different model) from the one that ran /speckit-implement,
+# so it is started by hand there.
+
+tags:
+  - "review"
+  - "quality"
+  - "workflow"
