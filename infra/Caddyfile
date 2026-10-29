@@ -14,13 +14,16 @@
 	}
 }
 
+# The security headers are set right away, so error responses (404, 502) carry them too. Removing
+# Server stays in its own directive: a header block that deletes a field is deferred, and deferred
+# headers are skipped on error responses.
 (public_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		-Server
 	}
+	header -Server
 }
 
 # Public API → api-public.
@@ -74,8 +77,9 @@ https://10.8.0.1 {
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
 		Content-Security-Policy "default-src 'self'"
-		-Server
 	}
+	# Separate, as in public_headers: a deletion would defer the whole block past error responses.
+	header -Server
 	encode zstd gzip
 
 	handle /admin/api/* {
