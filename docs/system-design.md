@@ -635,15 +635,15 @@ madar_sat/                    (git repository)
 
 The detailed plan is in [delivery-plan.md](delivery-plan.md): day-by-day lanes, gates, and the Spec Kit catalog. Where the two differ, that file wins. The table below is a summary.
 
-| Phase | Work | Done when |
-|---|---|---|
-| 0 · Accounts | Package ID (O1). New Firebase project. Play Console app. Apple enrollment (O5). Reserve OCI IPs. Create the repo | IDs fixed; console access works |
-| 1 · Foundation | FastAPI skeleton, both ASGI apps, Alembic `0001` + additions, snapshot load, media rehosting, admin auth, infra (Compose, Caddy, WireGuard, backups, Kuma), CI for backend | Snapshot served by `/v1`; admin can log in over WireGuard; a restore has been tested |
-| 2 · Admin + ingestion | Admin web for all entities and operations. Adapters (ysscores, LiveSoccerTV, sporteventz, YallaKora), entity resolution, source health, shadow-run diff reports | Two weeks of unattended imports with diffs explained |
-| 3 · App v1 | Flutter: parity screens + the v1 features chosen in O2. Devices/follows endpoints, notifications dispatcher, live poller, PWA delivery with mirror, Remote Config, ads (Android) | Internal track + PWA beta with 20+ testers; crash-free ≥ 99.5 % |
-| 4 · Launch | Store listing, privacy policy, data-safety form, UMP consent, Play production, public PWA link, install guide | Public |
-| 5 · v2 | Satellite finder, widget and ongoing live notification, commentator profiles, reports queue, TOTP; iOS native via Codemagic | Per the product roadmap |
-| 6 · v3 | Accounts, predictions and leaderboards, shareable match cards, add-to-calendar | Per the product roadmap |
+| Milestone | Days · specs | Work | Done when |
+|---|---|---|---|
+| M0 · Setup | D0 · none | Package ID (O1). New Firebase project. Play Console app. Apple enrollment (O5). VPSs and reserved IPs. Spec Kit + constitution | IDs fixed; console access works; spec 001 planned |
+| M1 · MVP | D1–D4 · 001–004 | Foundation (§6.2, §6.3, §7, §9, §10), admin auth and CRUD, ysscores + LiveSoccerTV adapters, devices + follows + reminders, core app screens, public PWA | MVP gate in delivery-plan Appendix A, spec 004 |
+| M2 · V1 | D5–D12 · 005–012 | Live poller and live center, all push types, remaining adapters, delta sync and search, ads + consent, PWA mirror, desktop two-pane, 80 % coverage | V1 gate, spec 012 |
+| M3 · V2 | D13–D20 · 013–020 | Satellite finder, reports, widgets and ongoing notification, commentator profiles, TOTP, viewing links, iOS native | V2 gate, spec 020 |
+| M4 · V3 | D21–D30 · 021–030 | Accounts, predictions and leaderboards, share cards, calendar, ad-free purchase, English UI, sponsorship | V3 gate, spec 030 |
+
+Each day is exactly one Spec Kit spec, and its scope is the day's brief in delivery-plan Appendix B.
 
 ---
 

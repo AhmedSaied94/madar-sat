@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | Draft 2, 2026-10-29 |
+| Status | Draft 3, 2026-10-29: day briefs added (Appendix B) |
 | Scope | Everything from setup to V3: MVP, V1, V2, V3 |
 | Inputs | [product-business.md](product-business.md) (what), [system-design.md](system-design.md) (how), [`madar-design/`](../madar-design/README.md) (look) |
 | Builders | AI agents: Claude Code sessions planned and driven with Spec Kit. One human (you) orchestrates, reviews, tests on devices and owns the accounts |
-| Unit of work | **One Spec Kit spec per working day.** Spec `0NN` is day `DNN`. All four lanes work from the same spec, each on its own section of tasks (§5) |
+| Unit of work | **One Spec Kit spec per working day, never more.** Spec `0NN` is day `DNN`. All four lanes work from the same spec, each on its own section of tasks (§5). Each day's scope is its brief in Appendix B |
 
 ---
 
@@ -30,7 +30,7 @@
 | A1 | The Play Console account is **personal and created after Nov 2023**, so it needs a closed test with 12 testers for 14 days before production | Older or organization account: Android production ships with V1 on D12 |
 | A2 | Both OCI Ampere VPSs are already running, with reserved public IPs | Ampere capacity is often unavailable. Provision now; D1 slips until the boxes exist |
 | A3 | Firebase moves to **Blaze with a $5 budget alert** for the launch, so the PWA mirror can wait until D9–D10 | If staying on Spark: move the mirror work into D3–D4. Lane M then needs about one extra day |
-| A4 | The MVP uses a **reduced test bar**. D11 restores your 80 % coverage rule (§7) | If 80 % is required from day 1: the MVP takes about 6 days |
+| A4 | The MVP uses a **reduced test bar**. D11 restores your 80 % coverage rule (§7). The ratified constitution (v1.0.0) requires 80 % on every PR, so this needs a constitution amendment on D0 | If 80 % is required from day 1: the MVP takes about 6 days |
 | A5 | Card-sharing labels and BISS keys are dropped (O3), as the design assumes | Keeping them changes the schema and the S3/S12 screens |
 | A6 | Package ID `com.madarsat.app` (O1) | Any other ID is fine; it must be fixed before the first Play upload on D2 |
 | A7 | The Apple account is active by D13 | Otherwise the iOS work on D13 and D16–D18 moves after D30, and those slots pull V3 work forward |
@@ -106,7 +106,7 @@ NewSatApp/
 
 | When | Who | Steps |
 |---|---|---|
-| **Day N−1, afternoon** | Planning session in `madar_sat/` + you | 1. `git switch main && git pull` · 2. `/speckit.specify` with the template in Appendix A for day N, plus carry-over (§5.3) · 3. `/speckit.clarify` only if questions remain · 4. `/speckit.plan` · 5. `/speckit.tasks` · 6. `/speckit.analyze` · 7. You review the spec and the lane sections · 8. Merge a docs-only PR to `main` |
+| **Day N−1, afternoon** | Planning session in `madar_sat/` + you | 1. `git switch main && git pull` · 2. `/speckit.specify` with the template in Appendix A for day N (its scope is the day's brief in Appendix B), plus carry-over (§5.3) · 3. `/speckit.clarify` only if questions remain · 4. `/speckit.plan` · 5. `/speckit.tasks` · 6. `/speckit.analyze` · 7. You review the spec and the lane sections · 8. Merge a docs-only PR to `main` |
 | **Day N, morning** | Each lane | `git fetch && git switch -C dNN-<lane> origin/main` → `SPECIFY_FEATURE=0NN-dNN-<name> claude` → `/speckit.implement Only the tasks under "Lane <X>" in tasks.md.` |
 | **Day N, midday and evening** | Each lane → you | Reviewer agents run; the lane opens a PR; you merge it. **At least two merges per lane per day.** Lanes rebase on `main` after each merge to pick up the others' work |
 | **Day N, evening** | You | Run the day's **done check** (Appendix A) on the deployed `main` and on devices. Anything that fails becomes carry-over |
@@ -146,6 +146,8 @@ Agents self-review everything else, with CI as the gate.
 
 Everything not ready ships **dark** behind Remote Config `features.*` (system-design §5.1). That way all lanes can merge to `main` every day without exposing half-built screens. Flags are removed one phase after a feature launches.
 
+The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `satellite_finder` (already in system-design §5.1) and `home_widget`, `commentators`, `ongoing_live`, `viewing_links`, `accounts`, `predictions`, `share_card`, `calendar`, `ad_free`, `english_ui` (new; B1 adds each one to the Remote Config defaults on the day that introduces it). Ads use the existing `ads.enabled` key.
+
 ---
 
 ## 6. Day-by-day plan
@@ -163,10 +165,11 @@ Everything not ready ships **dark** behind Remote Config `features.*` (system-de
 
 **Repo:**
 1. Install Spec Kit (`uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`) and run `specify init --here --ai claude`.
-2. Run `/speckit.constitution` with §8.1.
+2. Run `/speckit.constitution` with §8.1. *Done: v1.0.0 is in `.specify/memory/constitution.md`. Still to do: amend its Quality Gates for A4 (or drop A4), and delete its Sync Impact Report comment.*
 3. Extend the root `CLAUDE.md` and add one per lane (§8.2).
 4. Change the design package's wordmark from «مدار» to **Madar Sat / مدار سات**.
-5. **Plan spec 001** using the daily loop.
+5. Rename the default branch `master` → `main` (§5.1 assumes `main`) and protect it.
+6. **Plan spec 001** using the daily loop, from its brief in Appendix B.
 
 ### Phase 1: MVP (D1–D4)
 
@@ -239,7 +242,9 @@ Everything not ready ships **dark** behind Remote Config `features.*` (system-de
 
 ## 8. Agent guidance files
 
-### 8.1 Constitution (paste into `/speckit.constitution`)
+### 8.1 Constitution seed
+
+This seed was used on D0. The ratified text is `.specify/memory/constitution.md` (v1.0.0), and that file wins where they differ.
 
 ```text
 Madar Sat constitution
@@ -327,17 +332,23 @@ Madar Sat constitution
 
 ### Prompt template for `/speckit.specify`
 
+Each day has exactly **one** spec. Its full brief (the four lane stories, what to read, lane acceptance, flags) is in Appendix B, so the prompt only names the day:
+
 ```text
-Day <N> of docs/delivery-plan.md (spec <0NN>-d<NN>-<name>).
+Day <N> of docs/delivery-plan.md: spec <0NN>-d<NN>-<name>.
 [Carry-over: the unchecked tasks in specs/<previous spec>/tasks.md come first.]
-Scope: the "D<N> · <0NN>" row of docs/delivery-plan.md §6, one user story per lane:
-  Lane B1: <cell text>   Lane B2: <cell text>   Lane A: <cell text>   Lane M: <cell text>
-Use the referenced sections of docs/product-business.md and docs/system-design.md, and for UI the boards
-listed in madar-design/app-flutter/SCREENS.md or madar-design/admin-react/SCREENS.md.
-tasks.md must have the sections "Lane B1", "Lane B2", "Lane A", "Lane M" and "Done check".
-Done check for today: <done check from the table below>.
-Follow the constitution.
+Scope: exactly the brief "D<N> · <0NN>" in docs/delivery-plan.md Appendix B. Write one user story
+per lane (Lane B1, Lane B2, Lane A, Lane M) from its lane row, with that row's acceptance as the
+story's acceptance scenarios. Nothing outside the brief goes in this spec; anything extra waits for a
+later day.
+Read the sections and design boards each lane row lists (boards are in madar-design/app-flutter/SCREENS.md
+and madar-design/admin-react/SCREENS.md).
+tasks.md must have the sections "Lane B1", "Lane B2", "Lane A", "Lane M" and "Done check"; the Done check
+is the brief's done check, copied word for word.
+Follow .specify/memory/constitution.md.
 ```
+
+A lane row that says **none** still gets a `## Lane X` section with the single task "No work today: review and merge support". This keeps the `tasks.md` shape fixed.
 
 ### Catalog
 
@@ -373,3 +384,503 @@ Follow the constitution.
 | **028** | `028-d28-entitlements-and-english-data` | Purchase restores after reinstall; English names cover ≥ 90 % of prioritized competitions |
 | **029** | `029-d29-english-ui` | The whole app passes the screen QA list in English (LTR); Arabic unchanged |
 | **030** | `030-d30-sponsorship-v3-release` | **V3 gate:** a sponsor slot scheduled in the admin appears on S5.2; V3 released |
+
+---
+
+## Appendix B. Day briefs (one spec each)
+
+Each brief is the whole scope of one day's spec. The planning session turns it into `spec.md`, `plan.md` and `tasks.md` (Appendix A). Shorthand: **PB** = product-business.md, **SD** = system-design.md, **app:** / **admin:** = a board in `madar-design/app-flutter/SCREENS.md` / `madar-design/admin-react/SCREENS.md`.
+
+Rules for every brief:
+- **Starts from** lists what must already be on `main`. If it isn't, the missing part is carry-over and comes first (§5.3).
+- **Contract** lists the endpoint and schema changes B1 makes that day. Only these change the OpenAPI spec and Alembic. A lane that needs anything else asks B1, and the change moves to the next day.
+- **Flags** lists the Remote Config `features.*` keys the day's work hides behind until its launch day (§5.5).
+- The **done check** is the catalog's text in Appendix A.
+
+### Phase 1: MVP
+
+#### D1 · 001-d01-foundation
+
+**Goal:** all four codebases exist, deploy through CI, and talk to one frozen `/v1` contract backed by the real snapshot.
+**Starts from:** Day 0 done (accounts, VPSs, constitution). `schema.sql` and the snapshot available in `../old_app/migration/`.
+**Contract:** Alembic `0001` (`schema.sql` as-is) + `0002` with the MVP additions from SD §6.2.1: `satellites.orbital_position/slug`; match status columns, `time_tbd`, `locked_fields`; `channels.access/provider/package/locked_fields/frequency_changed_at`; `name_norm` + `pg_trgm`; `admin_users`, `admin_refresh_tokens`, `audit_log`; `devices`, `device_follows`, `notification_outbox`; `media_assets`; `import_runs`; `dataset_versions`. Read endpoints of SD §6.3.2: matches, match detail, live, satellites, satellite channels, channel, competitions, teams, rights holders, commentators. **Tagged `v1` at 13:00.**
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a client developer, I can call `/v1` and get real Sat Air data in the documented envelope and shapes | SD §6.1–6.3, §6.9 (rehosting), §10 steps 1–3; `../old_app/migration/README.md` | `load_snapshot.py` loads the snapshot with every README rule (frequency regex, NULL placeholders, Cairo → UTC, dedupe, orphans logged); media URLs rewritten to `media.<ip1>.sslip.io`; contract tests pass for every read endpoint; ETag + `304` works; deployed on VPS-1 |
+| B2 | As the owner, I can push to `main` and have each folder built, checked and deployed without touching a server | SD §7.1–7.2, §8 (ports, headers), §9 | `vps1.yml` and `vps2.yml` Compose files; Caddy with Let's Encrypt for `api.`, `media.`, `app.` and `tls internal` on `wg0`; WireGuard hub with peers for you and CI; iptables persisted; `backend.yml` builds `linux/arm64`, pushes to GHCR, deploys with health check and rollback; `app.yml` builds a debug APK artifact; `pwa.yml` deploys to a Firebase preview channel; gitleaks on every PR |
+| A | As an editor, I see the admin shell and log-in screen in the Madar look, wired to a generated client | PB §10 A0, A1; SD §5.4; admin: Login · error + lockout, Admin components · all states | Vite + TS strict + Tailwind reading `tokens.css`; Orval client + Zod from the `v1` admin spec served by Prism; `SidebarNav`, `DataTable`, `Field`, `StatusChip`, `Toast` built with Vitest tests; A1 renders error and lockout states against the mock |
+| M | As a user, I open the app and see today's real matches, in a shell built only from Madar tokens and components | SD §5.1; PB §13; app: Brand, color & type, Components · Matches/Channels/Core, S2 Matches | Flavors dev/staging/prod; go_router routes of PB §8.4 stubbed; Riverpod; drift schema for matches; Dio + generated Retrofit client; `madar_tokens.dart` + bundled fonts; `MatchRow`, `StatusBlock`, `FrequencyReadout`, `CarriageRow`, `AccessBadge`, `DateStrip`, `MadarBottomNav`, `MadarTopBar`, `EmptyState`, `Skeleton` with goldens (RTL, both themes, 1.3×); a gallery route; `/v1/matches` renders unstyled rows |
+
+**Flags:** none yet (the app isn't public).
+**Done check:** 001 in Appendix A.
+
+#### D2 · 002-d02-core-flows
+
+**Goal:** an editor's change reaches the phone, fixtures arrive without anyone clicking, and the four core screens work on real data.
+**Starts from:** 001. Contract `v1` frozen.
+**Contract:** admin app `/admin/api` (SD §6.4 CRUD for matches, teams, competitions, satellites, channels, commentators; media upload; `If-Match`; audit writes; `locked_fields`); auth endpoints (SD §6.5); `status_source = manual` override. No public changes.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As an editor, I log in and edit any MVP entity safely, and my edit is live within 60 s | SD §6.2.3, §6.4, §6.5, §6.9 uploads, §8 | argon2id; CLI creates the first admin; 15-min JWT + rotating refresh cookie + CSRF header; 5 attempts / 15 min lockout; roles in a dependency; every mutation writes `audit_log`, bumps `dataset_versions`, adds `locked_fields`, rejects a stale `If-Match` with `409`; clock estimate (`estimated: true`) and manual override in `/v1/live`; upload checks magic bytes, re-encodes to WebP / AAC |
+| B2 | As the owner, I get tomorrow's fixtures without opening a browser, even if ysscores blocks Oracle | SD §6.6 (contract, pipeline, safety), §7.2 home box; `../old_app/public/IMPORT.html` | `SourceAdapter` base with rate limit, host allowlist, size cap, raw page saved gzipped; `ysscores` adapter with `parse` tested on saved pages; upsert by `(source, external_id)`, never touching `locked_fields`; entity resolution v0 (exact alias + competition similarity); `import_runs` rows; Firestore bridge task (read-only export → same upsert) as fallback; `worker-scrape` runs on the home box over WireGuard |
+| A | As an editor, I fix the day's matches and their channels in one screen | PB §10 A3, A4; admin: A3 Matches, A4 Match editor, Conflict / typed confirm / unsaved guard / toasts | A3 day tabs, filters, grouped rows, bulk change competition / remove channels; A4 team picker with disambiguation, kickoff shown in admin zone, stage presets, status override + score, two manual broadcaster slots, channel picker with satellite and category filters, per-channel commentators 1 and 2, "hide from this match" and "hide always"; unsaved guard; conflict dialog on `409` |
+| M | As a fan, I find where today's match is on and which frequency to tune, on a real phone | PB S2, S3, S4, S5; SD §5.1 data flow; app: S2 Matches (+ Light, Loading), S3 Before kickoff, S3 130 channels, S3 No channels, S4, S5.1, S5.2 | S2 date strip, chips, competition groups, channel line, every `StatusBlock` variant, local-day grouping (P2); S3 hero, "where to watch" in three parts, virtualized long lists, commentator voice clip, stadium and Egyptian broadcaster cards; S4 multi-satellite list; S5.1 and S5.2 with the readout always visible; stale-while-revalidate from drift. **First AAB to the Play closed track; PWA on a preview channel** |
+
+**Flags:** none (closed testers only).
+**Done check:** 002 in Appendix A.
+
+#### D3 · 003-d03-follow-push-sources
+
+**Goal:** a fan follows a team and gets a reminder with the channel; channels arrive by themselves; every MVP entity is editable.
+**Starts from:** 002.
+**Contract:** `POST /v1/devices`, `PUT /v1/devices/me`, `PUT /v1/devices/me/follows`, `DELETE /v1/devices/me` (SD §6.3.2); outbox + dispatcher; Redis response cache keyed by dataset versions.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan who follows a team, I get exactly one reminder before its match, naming the channel | SD §6.3.2 devices, §6.8; PB §11 kickoff reminder | Device token (256 bits, stored hashed, `Authorization: Device`); follow set replaced atomically; reminder scheduler writes outbox rows with `dedupe_key`; dispatcher claims with `SKIP LOCKED`, resolves the audience with one `SELECT DISTINCT`, sends through FCM in batches of 500, deletes `UNREGISTERED` tokens; collapsing tag `match_<id>`; audience query reviewed by you; Redis cache + version keys; rate limits per device / IP |
+| B2 | As the owner, I trust the data pipeline to run and to tell me when it breaks | SD §6.6 LiveSoccerTV + safety, §7.3, §7.4; `../old_app/public/LVS.html` | `livesoccertv` adapter using `livesoccertv_teams`, every 2 h for 48 h and again at T−60; writes `match_channels` with `source`; per-source circuit breaker and zero-items alarm to Telegram; nightly `pg_dump` → restic → B2 and media → OCI bucket; Uptime Kuma checks API, media, both PWA origins, Celery and backup heartbeats |
+| A | As an editor, I can maintain every MVP entity and see at a glance what today is missing | PB §10 A2, A5–A8, A10, A13; admin: A2 Dashboard, A5 Teams, A6 Competitions, A7 Satellites, A8 Channels, A10 Commentators, A13 Sources | A5 table + editor (no merge yet); A6 drag priority; A7 drag order + best / worst frequency + video; A8 filters + editor drawer + "add on another satellite"; A10 photo and audio upload with player; A13 cards: status, last success, items, breaker, "run now", pause / resume; A2 basic: matches without channels, source tiles, recent changes |
+| M | As a new user, I set up my teams and dish once and start getting reminders | PB S0, S1, S9, S15 (core), S16, §7 push permission; SD §5.1 Remote Config, §5.2 iOS limits; app: Splash, S1.1–S1.5, S9, S15, S16, S0 boards, Push catalog | Onboarding with skip and resume; device registration on first launch; follows mirrored to the server (P1); FCM token on Android and on web (minimal `firebase-messaging-sw.js` for now); iOS install guide when not installed; S9 favorites; S15 time zone, 12/24 h, theme, font scale, satellites; S16 More; S0 forced update, no connection, load failed, offline banner, exit snackbar; Remote Config fetch with bundled defaults; Crashlytics on Android. **Test push on a real iPhone (iOS ≥ 16.4) today** |
+
+**Flags:** none.
+**Done check:** 003 in Appendix A.
+
+#### D4 · 004-d04-mvp-launch
+
+**Goal:** pass the MVP gate and make the PWA public. Hardening only: no new features.
+**Starts from:** 001–003, carry-over first.
+**Contract:** none, unless a fix needs one (B1 decides; non-breaking only).
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As the owner, I know the API holds the launch load and has no critical security hole | SD §8, §11 | Load test of `/v1/live` and `/v1/matches` at the MVP target (report in `docs/`); `/security-review` run; CRITICAL and HIGH fixed |
+| B2 | As the owner, imports have run unattended since D2 and I have a first runbook | SD §6.6, §7 | Two days of `import_runs` without manual help; parser fixes for saved edge pages; `docs/runbook.md` v0: deploy, rollback, restart a source, read Kuma alerts |
+| A | As an editor, the admin works end to end on the real WireGuard host | SD §5.4, §7.2 | Admin served on `https://10.8.0.1`; Playwright smoke: log in → edit a match → change visible in `/v1`; polish list from your D3 review closed |
+| M | As a fan, I can install the public PWA and the Android test build without hitting a crash | PB §17 launch gate; SD §5.2 | Bug-bash script run on Android + iPhone PWA + desktop; release builds; PWA deployed to the live Firebase channel; first load < 5 s on 4G, < 1.5 s afterwards; install guide reachable from More |
+
+**Flags:** none.
+**Done check:** 004 in Appendix A. **Decide O7 today** (§9).
+
+### Phase 2: V1
+
+#### D5 · 005-d05-live-and-discovery
+
+**Goal:** real live scores replace the clock estimate, and a fan can open a channel, a team and a competition.
+**Starts from:** MVP public; O7 decided (if not, B1 does manual live entry instead of the poller).
+**Contract:** `0003`: `match_events`, `match_lineups`, alias tables (`team_aliases`, `competition_aliases`, `channel_aliases`), `unresolved_names`. `MatchDetail.events/lineups`; `GET /v1/channels/{id}`, `/v1/teams/{id}`, `/v1/competitions/{id}` complete. Admin: unresolved-names queue endpoints, rights-holder CRUD.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, the score and minute I see come from a real feed, never from a guess | SD §6.2.3, §6.7 | `live_scheduler` every 60 s, no polling on quiet days; `poll_live` updates status, minute, score and diffs events, each write bumping the `live` version; manual status still wins; `/v1/live` rebuilt at most every 15 s |
+| B2 | As an editor, names the importers can't match wait in a queue instead of creating duplicates | SD §6.6 entity resolution, YallaKora row | `yallakora` adapter daily + every 6 h for today, with the Egyptian broadcaster; unmatched names written to `unresolved_names` with match context; existing aliases used first |
+| A | As an editor, I clear unmatched names and maintain broadcast rights | PB §10 A9, A13; admin: A13 Sources + unresolved names, A13 Run detail, A9 Rights holders | Unresolved queue: map to existing, create new, ignore; run detail with log, counts, errors and raw page; A9 editor with competitions, carriages and a primary frequency |
+| M | As a fan, I open a channel, a team or a competition and see what's on | PB S6, S7, S8; app: S6 Channel sheet, S7 Team, S8 Competition | S6 as a sheet (pane later on desktop) with other carriages, upcoming matches, frequency history; S7 upcoming / results tabs and follow; S8 matches by date and rights section; all reachable from S2 / S3 taps |
+
+**Flags:** `live_center` stays off until D6's UI lands.
+**Done check:** 005 in Appendix A.
+
+#### D6 · 006-d06-notifications-and-live-center
+
+**Goal:** every push type works and a live match has a timeline.
+**Starts from:** 005.
+**Contract:** `0004`: `channel_frequency_changes`; notification prefs in `devices.prefs`; outbox producers for all SD §6.8 types. Admin: outbox log, composer, test send, admin users, audit log + diff endpoints.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a follower, I get each kind of alert I asked for, once, with the right copy | SD §6.8 table; PB §11 | Producers for `match_started`, `goal`, `final_score`, `channels_updated`, `frequency_changed`, `announcement`; per-type prefs filter the audience; frequency-change detection on import and admin save writes history; bidi-safe copy templates with tests |
+| B2 | As the owner, other sports and fill-in fixtures arrive without hitting free-tier limits | SD §6.6 sporteventz and API-Football rows | `sporteventz` every 6 h writing `match_custom_broadcasts`; `apifootball` with a Redis daily request counter and a hard stop; both with saved-page tests |
+| A | As an admin, I can see what was sent, send an announcement, and see who changed what | PB §10 A15, A16, A17; admin: A15 Notifications, A16 Admin users, A17 Audit log + diff | Outbox log; composer (admin role) with deep link picker, audience, schedule, test send, Android + iOS previews; users create / role / deactivate / reset; audit filters and side-by-side diff |
+| M | As a fan watching a match, I see goals and cards as they happen | PB S3 live center; app: S3 Live match, S3 Live center — lineups | Events timeline (goal, own goal, penalty, missed penalty, red card); lineups tab only when data exists; score change highlight; estimated note when no feed; `live_center` flag on for testers |
+
+**Flags:** `live_center`, `lineups`.
+**Done check:** 006 in Appendix A.
+
+#### D7 · 007-d07-sync-search-sources
+
+**Goal:** the offline channel cache syncs by delta, search works across everything, and the old Firestore bridge is gone.
+**Starts from:** 006.
+**Contract:** `GET /v1/channels/sync`, `GET /v1/search`, `GET /v1/rights-holders*`, `sport` filter on `/v1/matches`. Admin: team / channel merge, lists (presets, hidden names), feeds CRUD.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, the app stays light: channels update by delta and search finds names however I spell them | SD §6.2.4, §6.3.2 sync + search | Cursor-based upserts + deleted IDs; `ar_normalize` tests (أ/إ/آ, ى, ة, tashkeel); trigram search across teams, competitions, channels, commentators, satellites; cache keys reviewed |
+| B2 | As the owner, I run on my own pipeline only, and alerts reach the right place | SD §10 step 5 shadow run | 3 days of clean diffs, then the bridge task is disabled (or the reason is logged); alert routing per severity |
+| A | As an editor, I can merge duplicates and maintain the lists the importers use | PB §10 A5 merge, A8, A11, A12; admin: A5 Teams + merge tool, A11 Lists, A12 Feeds | Merge: pick duplicates → survivor → preview affected matches → typed confirm; same for channels; A11 presets and hidden names; A12 feeds (if O8 keeps them) |
+| M | As a fan, I search everything, browse rights, and switch sports | PB S11, S13, S14; app: S14 Search, S11.1–3 Broadcast rights, S11.4 Rights holder | Search with recent queries, grouped results and follow shortcuts; S11 by satellite / by competition / holder detail; sport switcher on S2 hidden when only football; drift channel table fed from `/v1/channels/sync` |
+
+**Flags:** none new.
+**Done check:** 007 in Appendix A. **Decide O8 today.**
+
+#### D8 · 008-d08-preferences-and-ops
+
+**Goal:** fans control every alert, the owner can switch maintenance and updates remotely, and a restore has been proven.
+**Starts from:** 007.
+**Contract:** announcement send path; preference shape finalized. Remote Config keys unchanged.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As an admin, an announcement reaches exactly the audience I chose | SD §6.8 announcement; §5.1 Remote Config | Audience "all" and "followers of X" with a dry-run count; maintenance and soft-update keys documented end to end |
+| B2 | As the owner, I've seen a full restore work | SD §7.3 | Restore drill on a scratch container recorded in the runbook; `docs/runbook.md` v1 |
+| A | As an editor, the bugs I reported this week are fixed | Admin bug queue | Queue from your notes closed or moved to D11 |
+| M | As a fan, I choose exactly which alerts I get per team, competition, match and channel | PB S10, S12, S15, S0; app: S10 Follow sheet, S15 Settings, S12 Feeds, S0 Maintenance, S0 Offline / soft update | S10 sheet with lead time and per-type toggles plus platform-state footer; S15 competition order / hide and notification group; S12 (if kept); maintenance screen and soft-update banner from Remote Config |
+
+**Flags:** none new.
+**Done check:** 008 in Appendix A. **Decide O9 today.**
+
+#### D9 · 009-d09-ads-and-desktop
+
+**Goal:** Android earns with ads that never block the answer, and desktop web gets its two-pane layout.
+**Starts from:** 008.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As the owner, I know the API survives peak traffic | SD §11 scale assumption | Load test at 5k concurrent on `/v1/live`; Caddy cache-handler only if needed; report in `docs/` |
+| B2 | As an iPhone user, the app still loads if Firebase Hosting runs out of quota | SD §5.2 | Content-hashed web build in CI; rsync to `app.<ip1>.sslip.io`; CORS for the `web.app` origins; cache headers in `firebase.json` and Caddyfile |
+| A → M2 | As the owner, ads earn without breaking Google's interstitial policy | PB §5 revenue rules, §16; SD §5.1 `ads` key | `AdsService` (native) + web no-op; banner above the bottom nav that takes space only once loaded; interstitial on return from S3 only, ≥ 90 s apart, ≤ 4 per session, never in the first 60 s; UMP consent for EEA/UK |
+| M | As a desktop user, I browse the list and details side by side, with the keyboard | PB §7, §8.3; app: Desktop ≥1024, Desktop frequencies + channel pane | Nav rail on the right, list ≈ 420 px + detail pane ≥ 1024; hover and visible focus on every interactive component; width capped ≈ 1200 |
+
+**Flags:** `ads` (Remote Config `ads.enabled`).
+**Done check:** 009 in Appendix A.
+
+#### D10 · 010-d10-pwa-and-accessibility
+
+**Goal:** the PWA survives either origin being down, shared links open the right place, and the app passes accessibility.
+**Starts from:** 009.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a developer, integration bugs found this week are fixed | — | Bug list closed or moved to D11 |
+| B2 | As the owner, failover is tested, not hoped for | SD §5.2 failure modes | Automated test with Firebase blocked and with VPS-1 blocked; emergency install link prepared (unpublished) |
+| A → M2 | As an iPhone user, one service worker handles caching, failover and push | SD §5.2 service worker; PB §5 growth loops | Custom SW with own cache → mirror → Firebase; FCM logic merged into it; share links `/match/<id>` open the PWA or the app; install-guide polish |
+| M | As a user with large text or a screen reader, every screen still works | PB §13.3, §13.4, §13.8 | Every screen at 1.3× in-app scale; Arabic semantics labels for composite rows; bidi audit of readouts and scores; reduced motion honored |
+
+**Flags:** none new.
+**Done check:** 010 in Appendix A.
+
+#### D11 · 011-d11-v1-hardening
+
+**Goal:** bring all three codebases to the full quality bar. No features.
+**Starts from:** 010, plus anything moved here by the quarter-day rule.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As the owner, backend changes are safe to make | §7; constitution Quality Gates | Coverage ≥ 80 %; contract tests for every `/v1` and admin endpoint; `pip-audit` clean |
+| B2 | As the owner, nothing secret or vulnerable ships and backups are real | SD §7.3, §8 | Secret scan of history; dependency audit; backup restore verified again |
+| A | As the owner, the admin is covered by tests | §7 | Vitest ≥ 80 %; Playwright suite for A3, A4, A8, A13 |
+| M | As the owner, the app is covered by tests | §7 | `flutter test` ≥ 80 %; `integration_test`: onboarding → matches → detail → copy frequency, follow → push received; goldens refreshed |
+
+**Flags:** none.
+**Done check:** 011 in Appendix A.
+
+#### D12 · 012-d12-v1-release
+
+**Goal:** pass the V1 gate and release.
+**Starts from:** 011.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, the release has no known blocking bug | — | Release fixes only |
+| B2 | As the owner, production runs the release and monitoring covers it | SD §7.4 | Release deploy; Kuma and alert review |
+| A → M2 | As the owner, the Android release build carries ads correctly | PB §5 | Production AAB with ads and UMP; AdMob app linked |
+| M | As the owner, the store listing shows the real product | PB §5 ASO, §16, §17 | Screenshots from real screens; privacy policy, data safety, consent; PWA V1 released; Android production submitted when the Play gate clears |
+
+**Flags:** turn on everything [V1]; remove MVP-era flags that launched in phase 1.
+**Done check:** 012 in Appendix A.
+
+### Phase 3: V2
+
+#### D13 · 013-d13-finder-and-ios-pipeline
+
+**Goal:** the satellite finder math is right, iOS can be built, and reports have an admin queue.
+**Starts from:** V1 released; A7 (Apple account) checked.
+**Contract:** `0005`: `reports` table; `POST /v1/reports` (draft); `GET /v1/commentators/{id}`; orbital positions verified for all 32 satellites. Admin: report queue endpoints.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, the finder and profiles have correct data behind them | SD §6.2.1 satellites, §6.3.2 commentators, reports | Positions checked against a reference list; commentator profile + upcoming matches; reports API accepting and listing |
+| B2 | As the owner, iOS builds come out of CI signed | SD §9 `codemagic.yaml` | Codemagic workflow; signing; APNs key in Firebase. If A7 is false: domain move (O4) or cache tuning instead |
+| A | As an editor, reports wait in a queue I can work through | PB §10 A14; admin: A14 Reports | Queue with kind, channel, match, age; detail with current carriage data; accept → channel editor pre-filled; reject |
+| M | As a dish owner, the app tells me where to point my dish | PB S18; app: S18 Satellite finder | Satellite choice (mine first), location permission or city; azimuth (true + magnetic), elevation, LNB skew; unit tests against a reference calculator for 3 cities |
+
+**Flags:** `satellite_finder`, `reports`.
+**Done check:** 013 in Appendix A.
+
+#### D14 · 014-d14-widget-and-reports
+
+**Goal:** a report flows from fan to editor and back, and Android gets a home widget.
+**Starts from:** 013.
+**Contract:** `POST /v1/reports` final with rate limit; "report resolved" outbox type; widget summary endpoint if needed.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan who reported a problem, I hear back when it's fixed | SD §6.8; PB S19 | Rate limits per device; note ≤ 280 chars; resolved push to the reporter |
+| B2 | As the owner, the domain move (if bought) or cache tuning is done | O4 | Hosts switched in Remote Config with both names live, or Caddy cache tuned |
+| A → M2 | As a fan, my next followed match is on my home screen | PB S20; app: S20 Widgets | `HomeWidgetUpdater` (native) + web no-op; small and medium widgets |
+| M | As a dish owner, the compass guides me to the satellite | PB S18 | Compass dial with target needle; calibration hint; camera overlay native only |
+
+**Flags:** `satellite_finder`, `reports`, `home_widget`.
+**Done check:** 014 in Appendix A.
+
+#### D15 · 015-d15-commentators-and-live-notification
+
+**Goal:** fans follow commentators, see a live notification during a followed match, and can reach official viewing links.
+**Starts from:** 014.
+**Contract:** commentator as a follow target type; `viewing_links` on rights holders and matches (`0006`); ongoing-notification data messages.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, I'm alerted when my commentator has a match, and I can find a legal stream | PB §5 official-viewing links, S17 | Commentator-follow push; viewing-link field and API |
+| B2 | As the owner, logs and alerts are tuned for the new load | SD §7.4 | Alert dashboards; log retention reviewed |
+| A → M2 | As a fan, a followed live match stays in my notification shade | PB S20 | Android ongoing notification fed by FCM data messages, updated on goal and status |
+| M | As a fan, I open a commentator's profile and follow them | PB S17; app: S17 Commentator | Photo, name, clip, follow, upcoming matches with channel |
+
+**Flags:** `commentators`, `ongoing_live`.
+**Done check:** 015 in Appendix A.
+
+#### D16 · 016-d16-totp-reports-links
+
+**Goal:** admins use a second factor, and fans see report and viewing-link entry points.
+**Starts from:** 015.
+**Contract:** TOTP enrol / verify on the admin API.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As an admin, my account needs a second factor | SD §6.5 | TOTP enrol, verify, recovery codes; required for the `admin` role |
+| B2 | As the owner, testers can install the iOS app | — | TestFlight internal build (if A7) |
+| A | As an editor, I set up TOTP and enter viewing links | PB §10 A1 TOTP step, A9 | TOTP step in A1 and enrol screen; viewing-link fields in A9; commentator admin tweaks |
+| M | As a fan, I report a broken channel and open legal streams | PB S19, S3, S11.4; app: S19 Report a problem | Report sheet with kinds, note and thank-you state; viewing-link buttons in S3 and S11.4 |
+
+**Flags:** `reports`, `viewing_links`.
+**Done check:** 016 in Appendix A.
+
+#### D17 · 017-d17-ios-native-1
+
+**Goal:** the native iOS app gets push and local reminders.
+**Starts from:** 016; A7 true (otherwise swap in D21's work and move this brief after D30).
+**Contract:** APNs payload details through FCM (no new endpoints).
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As an iPhone user, pushes look right and collapse per match | SD §6.8 | APNs headers, `thread-id` per match, badge rules |
+| B2 | As the owner, iOS releases build from a tag | SD §9 | Codemagic release workflow; App Store Connect API key |
+| A → M2 | As an iPhone user, I grant permission at the right moment and get reminders | PB S1.4, §7; SD §5.3 | iOS permission flow matching the priming design; `LocalNotifier` native implementation |
+| M | As the owner, V2 issues from D13–D16 are closed | — | Polish and fixes |
+
+**Flags:** none new.
+**Done check:** 017 in Appendix A.
+
+#### D18 · 018-d18-ios-native-2
+
+**Goal:** iOS gets its widget and passes QA.
+**Starts from:** 017.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, the release is fast and stable | — | Bug fixes, performance |
+| B2 | As the owner, open bugs are fixed | — | Bug fixes |
+| A → M2 | As an iPhone user, my next match is on my home screen | PB S20 | WidgetKit widget; Live Activity as a stretch goal |
+| M | As an iPhone user, every screen fits the device | PB §13.7 | Safe areas, gestures and layout checked on a device; iOS QA list closed |
+
+**Flags:** none new.
+**Done check:** 018 in Appendix A.
+
+#### D19 · 019-d19-v2-hardening
+
+**Goal:** V2 code meets the quality bar and the iOS beta is public.
+**Starts from:** 018.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As the owner, V2 backend code is covered | §7 | ≥ 80 % on new code |
+| B2 | As the owner, external testers have the iOS beta | — | TestFlight external beta |
+| A | As the owner, the App Store listing is ready | PB §16 | App Store assets, privacy labels |
+| M | As the owner, finder and report flows are tested end to end | §7 | `integration_test` for finder and report |
+
+**Flags:** none.
+**Done check:** 019 in Appendix A.
+
+#### D20 · 020-d20-v2-release
+
+**Goal:** pass the V2 gate.
+**Starts from:** 019.
+**Contract:** none.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, the release has no known blocking bug | — | Release fixes |
+| B2 | As the owner, production runs V2 | SD §7.4 | Release deploy; monitoring |
+| A | As the owner, iOS is in review | PB §16 guideline 4.2 | Submitted to App Review |
+| M | As a fan on Android or the PWA, I have V2 | — | Android + PWA released with V2 flags on |
+
+**Flags:** turn on V2; remove V1 flags.
+**Done check:** 020 in Appendix A. V3 designs and the accounts provider decided (§9).
+
+### Phase 4: V3
+
+#### D21 · 021-d21-accounts
+
+**Goal:** a fan can sign in and keep their follows across devices.
+**Starts from:** V2 released; V3 designs ready (§3); accounts provider decided.
+**Contract:** `0007`: `users`, `devices.user_id`; Firebase ID-token verification; follows merge on sign-in; admin user lookup.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, signing in keeps everything I set up anonymously | SD §8 privacy | ID-token verification on the server; device → user link; follows merged without duplicates; tests for the merge |
+| B2 | As a fan, team and competition names exist in English | — | `name_en` columns; fill from LiveSoccerTV and API-Football |
+| A | As an editor, I can find an app user for support | V3 design board | App users lookup |
+| M | As a fan, I sign in with Google, Apple or an email link | V3 design board | Sign-in and profile screens; optional at every step |
+
+**Flags:** `accounts`.
+**Done check:** 021 in Appendix A.
+
+#### D22 · 022-d22-account-deletion-and-names
+
+**Goal:** account deletion meets store rules, and English names reach the prioritized competitions.
+**Starts from:** 021.
+**Contract:** `DELETE /v1/me` + a public web deletion page.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, I can delete my account in the app or on the web | PB §16 privacy | In-app deletion and web deletion URL; data removed; audit entry |
+| B2 | As the owner, I know how far English names cover | — | `name_en` backfill; coverage report |
+| A | As an editor, I can enter and fix English names | — | `name_en` fields on teams, competitions, channels |
+| M | As a fan, I delete my account and my anonymous data links correctly | V3 design board | Delete-account flow; anonymous data linking; settings integration |
+
+**Flags:** `accounts`.
+**Done check:** 022 in Appendix A.
+
+#### D23 · 023-d23-predictions
+
+**Goal:** a signed-in fan predicts a score before kickoff and gets it scored at full time.
+**Starts from:** 022.
+**Contract:** `0008`: `predictions`; create / update before kickoff, read mine; settlement task.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, my prediction locks at kickoff and is scored fairly | — | Lock at `kickoff_at`; settlement on `finished` only; scoring rules unit-tested, including postponed and abandoned |
+| B2 | As the owner, the new tables are backed up and Redis has room | SD §7.1, §7.3 | Backups include them; Redis memory checked |
+| A | As an editor, I can hide abusive display names | — | Display-name moderation |
+| M | As a fan, I enter a prediction on the match page | V3 design board | Prediction input on S3 before kickoff; my predictions list |
+
+**Flags:** `predictions`.
+**Done check:** 023 in Appendix A.
+
+#### D24 · 024-d24-leaderboards
+
+**Goal:** leaderboards rank fans correctly.
+**Starts from:** 023.
+**Contract:** leaderboard endpoints (weekly, season, per competition).
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, I see my rank this week, this season and per competition | — | Redis sorted sets rebuilt from `predictions`; API with my rank; tests on a fixture dataset |
+| B2 | As the owner, leaderboards hold under load | — | Load test report |
+| A | As an editor, I can override a wrong settlement | — | Predictions admin view with settlement override (audited) |
+| M | As a fan, I browse leaderboards | V3 design board | Leaderboard screens |
+
+**Flags:** `predictions`.
+**Done check:** 024 in Appendix A.
+
+#### D25 · 025-d25-prediction-results
+
+**Goal:** fans hear their results, and abuse is capped.
+**Starts from:** 024.
+**Contract:** `prediction_result` outbox type; abuse limits.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a fan, I'm told how my prediction did | SD §6.8 | Results push with dedupe; limits per device and account |
+| B2 | As the owner, open bugs are fixed | — | Bug fixes |
+| A | As an editor, my bug queue is clear | — | Bug queue |
+| M | As a fan, I see results and points clearly | V3 design board | Results UI; prediction polish |
+
+**Flags:** `predictions`.
+**Done check:** 025 in Appendix A.
+
+#### D26 · 026-d26-share-cards-calendar
+
+**Goal:** fans share a match card into WhatsApp and Telegram, and add matches to their calendar.
+**Starts from:** 025.
+**Contract:** optional Open Graph share page `/s/m/:id`.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As someone who receives a shared link, I see a proper preview | PB §5 growth loops | Share page with OG tags on VPS-1 (optional) |
+| B2 | As the owner, share pages are served safely | SD §8 headers | Caddy route for share pages |
+| A | As an editor, my bug queue is clear | — | Bug queue |
+| M | As a fan, I share a match card and add the match to my calendar | PB §5; V3 design board | Card rendered from a `RepaintBoundary` to PNG → share sheet; add to calendar on native; ICS on web |
+
+**Flags:** `share_card`, `calendar`.
+**Done check:** 026 in Appendix A.
+
+#### D27 · 027-d27-ad-free-purchase
+
+**Goal:** a fan can pay once to remove ads.
+**Starts from:** 026.
+**Contract:** `0009`: `entitlements`; purchase verification endpoint.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a buyer, my purchase is checked on the server and can't be faked | PB §5 ad-free upgrade | Google Play Developer API verification; entitlement stored per user or device |
+| B2 | As the owner, the Play service-account key is handled safely | SD §8 secrets | Service-account secret on the host only (mode 600), never in CI logs |
+| A | As an editor, I can look up an entitlement for support | — | Entitlement lookup |
+| M | As a fan, I buy ad-free and restore it | V3 design board | Paywall, purchase flow, restore |
+
+**Flags:** `ad_free`.
+**Done check:** 027 in Appendix A.
+
+#### D28 · 028-d28-entitlements-and-english-data
+
+**Goal:** ad-free actually turns ads off everywhere, and English data is ready for the English UI.
+**Starts from:** 027.
+**Contract:** entitlement flag on the device / user response.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a buyer, I never see an ad again on that account | SD §5.1 `ads` | Remote Config condition + API flag |
+| B2 | As the owner, English names cover the competitions that matter | — | `name_en` ≥ 90 % for prioritized competitions |
+| A | As an editor, I can check English names before release | — | English names QA view |
+| M | As a buyer, my entitlement survives reinstall; as a developer, strings are ready to translate | — | Entitlement handling and restore on reinstall; all strings extracted to ARB |
+
+**Flags:** `ad_free`.
+**Done check:** 028 in Appendix A.
+
+#### D29 · 029-d29-english-ui
+
+**Goal:** the app works fully in English, left to right.
+**Starts from:** 028.
+**Contract:** `lang` query parameter returns `name_en` with an Arabic fallback.
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As an English user, names come back in English where they exist | — | `lang` param; fallback tested |
+| B2 | As the owner, open bugs are fixed | — | Bug fixes |
+| A | As an editor, I see which names are still missing in English | — | Missing-translation report |
+| M | As an English user, the whole app reads naturally LTR | PB §13.4 | ARB `en`; language switch in S15; LTR mirroring QA on every screen |
+
+**Flags:** `english_ui`.
+**Done check:** 029 in Appendix A.
+
+#### D30 · 030-d30-sponsorship-v3-release
+
+**Goal:** pass the V3 gate, with one sponsor slot.
+**Starts from:** 029.
+**Contract:** sponsor-slot endpoint (scheduled, labelled).
+
+| Lane | Story | Read | Acceptance |
+|---|---|---|---|
+| B1 | As a sponsor, my slot shows only when scheduled and is clearly labelled | PB §5 sponsorship | Sponsor-slot API with schedule windows; release fixes |
+| B2 | As the owner, production runs V3 | SD §7.4 | Release deploy |
+| A | As an admin, I schedule a sponsor slot | — | Sponsor slots admin with scheduling and the «برعاية» label |
+| M | As a fan, I see the sponsor slot on satellite pages and V3 is released | PB §5 | Sponsor slot on S5.2; V3 release on all platforms |
+
+**Flags:** turn on V3; remove V2 flags.
+**Done check:** 030 in Appendix A.
