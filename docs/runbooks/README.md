@@ -63,7 +63,7 @@ Each `.env` names the other VM's private IP, so create both VMs before you boots
 
 1. **Merge Lane B2** (`infra/`) to `master`. `infra.yml`'s `sync` job starts Caddy, PostgreSQL and Redis on VPS-1 ([deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra)). If it ran before stage 3 and failed, re-run it ([ci-workflows.md "Re-running"](ci-workflows.md#re-running)).
 2. **Certificates:** [tls-certificates.md "First issuance"](tls-certificates.md#first-issuance). That completes T058.
-3. **Merge Lane B1** (`backend/`). `backend.yml` builds the image and deploys it ([deploy-and-rollback.md](deploy-and-rollback.md#how-a-release-reaches-vps-1)). Then give the repository access to the package: [deploy-and-rollback.md "Images in GHCR"](deploy-and-rollback.md#images-in-ghcr).
+3. **Merge Lane B1** (`backend/`). `backend.yml` builds the image and deploys it ([deploy-and-rollback.md](deploy-and-rollback.md#how-a-release-reaches-vps-1)). The infra sync in step 1 runs `deploy.sh --infra-only`, which never starts the API. So if `backend/` reached `master` before the stage 3 secrets existed (as on 2026-10-29), nothing triggers `backend.yml` again: start it by hand with `gh workflow run backend.yml --ref master`. Until then Caddy answers `api.` with 502 (`dial tcp 127.0.0.1:8000: connect: connection refused`). Then give the repository access to the package: [deploy-and-rollback.md "Images in GHCR"](deploy-and-rollback.md#images-in-ghcr).
 4. **The admin site:** the CA root on your device, then `https://10.8.0.1` ([private-network.md](private-network.md#the-admin-site)).
 5. **The snapshot:** [snapshot-load.md](snapshot-load.md) (B1's T048).
 6. **Exposure check:** [exposure-check.md](exposure-check.md) (T065).
