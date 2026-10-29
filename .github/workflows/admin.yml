@@ -1,0 +1,54 @@
+# admin/ checks (FR-026, research R14). No deploy on D1; the admin ships on wg0 on D4.
+name: admin
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "admin/**"
+      - "backend/openapi/admin.json"
+      - "madar-design/**"
+      - ".github/workflows/admin.yml"
+  pull_request:
+    paths:
+      - "admin/**"
+      - "backend/openapi/admin.json"
+      - "madar-design/**"
+      - ".github/workflows/admin.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: admin/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: admin/pnpm-lock.yaml
+      - name: Install ripgrep (the literal check uses rg)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ripgrep
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      - run: ./scripts/check-literals.sh
+      - run: ./scripts/check-token-copy.sh

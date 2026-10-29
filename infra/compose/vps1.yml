@@ -1,0 +1,146 @@
+# VPS-1 "app": Caddy, api-public, api-admin, PostgreSQL 16, Redis 7 (FR-020, SD §7.1, research R12).
+# Run on the host from the synced /srv/madar/infra by scripts/deploy.sh:
+#   docker compose --env-file /srv/madar/.env -f compose/vps1.yml ...
+# Every image is linux/arm64. Secrets come only from /srv/madar/.env (mode 600), through env_file.
+# Published ports are bound to one address each, because Docker-published ports skip the host's
+# INPUT chain: 127.0.0.1 (api-public), 10.8.0.1 on wg0 (api-admin) and the VCN IP (data stores).
+name: madar
+
+x-service: &service
+  platform: linux/arm64
+  restart: unless-stopped
+  # CI and dev point this at example.env through MADAR_ENV_FILE; hosts use the default.
+  env_file: ${MADAR_ENV_FILE:-/srv/madar/.env}
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-backend: &backend
+  <<: *service
+  image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend:${IMAGE_TAG:?set IMAGE_TAG}
+  environment:
+    # Only the rollback drill sets this (deploy.sh, backend.yml break_healthcheck).
+    HEALTHZ_FORCE_FAIL: ${HEALTHZ_FORCE_FAIL:-false}
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  # Host network, so it can serve the public sites and bind the wg0 address. It mounts the whole
+  # infra directory, never the single Caddyfile: rsync replaces files by rename, and a single-file
+  # bind mount would keep serving the old one.
+  caddy:
+    <<: *service
+    image: caddy:2.11.7
+    network_mode: host
+    command: ["caddy", "run", "--config", "/etc/madar/infra/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - /srv/madar/infra:/etc/madar/infra:ro
+      - /srv/media:/srv/media:ro
+      - /srv/app-mirror:/srv/app-mirror:ro
+      - /srv/admin:/srv/admin:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  api-public:
+    <<: *backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Bound to the wg0 address only (constitution V); Caddy's wg0 site proxies /admin/api to it.
+  api-admin:
+    <<: *backend
+    command: ["gunicorn", "app.admin:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "1", "-b", "0.0.0.0:8001"]
+    ports:
+      - "10.8.0.1:8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/admin/api/healthz', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # One-off: `docker compose run --rm migrate` (deploy.sh step 4).
+  migrate:
+    <<: *backend
+    profiles: [tools]
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    healthcheck:
+      disable: true
+
+  # One-off backend CLI, for the snapshot load and media rehost (Lane B1), for example:
+  #   docker compose run --rm cli load-snapshot --snapshot-dir /srv/snapshot --report-dir /srv/reports
+  cli:
+    <<: *backend
+    profiles: [tools]
+    restart: "no"
+    entrypoint: ["python", "-m", "app.cli"]
+    command: ["--help"]
+    volumes:
+      - /srv/media:/srv/media
+      - /srv/snapshot:/srv/snapshot:ro
+      - /srv/reports:/srv/reports
+    healthcheck:
+      disable: true
+
+  postgres:
+    <<: *service
+    image: postgres:16.15
+    command: ["postgres", "-c", "shared_buffers=1536MB"]
+    shm_size: 256mb
+    ports:
+      - "${VCN_IP:?set VCN_IP}:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # The password is expanded inside the container from env_file, so it never appears in this file.
+  # volatile-lru evicts only keys with a TTL (cache), never the Celery queues.
+  redis:
+    <<: *service
+    image: redis:7.4.12
+    command:
+      - sh
+      - -c
+      - exec docker-entrypoint.sh redis-server --requirepass "$$REDIS_PASSWORD" --maxmemory 512mb --maxmemory-policy volatile-lru --appendonly yes
+    ports:
+      - "${VCN_IP:?set VCN_IP}:6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:

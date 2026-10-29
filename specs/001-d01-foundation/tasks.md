@@ -410,7 +410,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Setup (B2)
 
-- [ ] T050 [US2] Create `infra/README.md`. It lists:
+- [x] T050 [US2] Create `infra/README.md`. It lists:
   - each host's role (SD §7.1);
   - the hostnames and ports (SD §7.2);
   - the required GitHub secrets (`WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `FIREBASE_SERVICE_ACCOUNT`) and variables (`VPS1_IP`, `VPS2_IP`, `ARM_RUNNER` optional);
@@ -419,20 +419,20 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Tests first (B2): write them and see them fail
 
-- [ ] T051 [P] [US2] Create `.github/workflows/infra.yml`, triggered on `infra/**` and `.github/workflows/**`:
+- [x] T051 [P] [US2] Create `.github/workflows/infra.yml`, triggered on `infra/**` and `.github/workflows/**`:
   - `docker compose -f infra/compose/{vps1,vps2,dev}.yml --env-file infra/compose/example.env config -q`;
   - `docker run caddy:2 caddy validate --config infra/Caddyfile` (with example env);
   - shellcheck on `infra/scripts/*.sh`;
   - actionlint on `.github/workflows/*.yml`.
-- [ ] T052 [P] [US2] Create `.github/workflows/gitleaks.yml`, which runs on every PR and push: the gitleaks CLI container (`zricethezav/gitleaks`) with `git --redact`, failing on findings ([R14](research.md#r14-ci-layout)). Add a `.gitleaks.toml` that extends the defaults and allowlists only `backend/tests/fixtures/` false positives, if any.
-- [ ] T053 [P] [US2] Create `infra/compose/dev.yml` for local development:
+- [x] T052 [P] [US2] Create `.github/workflows/gitleaks.yml`, which runs on every PR and push: the gitleaks CLI container (`zricethezav/gitleaks`) with `git --redact`, failing on findings ([R14](research.md#r14-ci-layout)). Add a `.gitleaks.toml` that extends the defaults and allowlists only `backend/tests/fixtures/` false positives, if any.
+- [x] T053 [P] [US2] Create `infra/compose/dev.yml` for local development:
   - `postgres:16` and `redis:7` on `127.0.0.1` with dev-only passwords from `infra/compose/example.env`;
   - a local Caddy with `tls internal` at `https://localhost:8443`, proxying to the host API at `host.docker.internal:8000` for the app's `dev` flavor ([R16](research.md#r16-flavors-hosts-and-https)).
-- [ ] T054 [P] [US2] Create `infra/compose/example.env`: every variable name used by `vps1.yml`, `vps2.yml` and `dev.yml`, with obviously fake placeholder values and a header saying real values live only on the hosts.
+- [x] T054 [P] [US2] Create `infra/compose/example.env`: every variable name used by `vps1.yml`, `vps2.yml` and `dev.yml`, with obviously fake placeholder values and a header saying real values live only on the hosts.
 
 ### Hosts and network (B2)
 
-- [ ] T055 [US2] Write the firewall rules in `infra/firewall/`, applied with `iptables-restore` and persisted by `netfilter-persistent`, with the ACCEPT rules placed before OCI's default REJECT (SD §7.2, R12):
+- [x] T055 [US2] Write the firewall rules in `infra/firewall/`, applied with `iptables-restore` and persisted by `netfilter-persistent`, with the ACCEPT rules placed before OCI's default REJECT (SD §7.2, R12):
   - **`infra/firewall/vps1.rules`:**
     - public 80/tcp, 443/tcp and 51820/udp;
     - 22/tcp only on `wg0`;
@@ -440,7 +440,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **`infra/firewall/vps2.rules`:** 22/tcp only from VPS-1's VCN IP, everything else closed.
 
   Also write `infra/scripts/check-firewall.sh`, which prints the active and persisted rules and fails if they differ.
-- [ ] T056 [US2] Set up WireGuard and host bootstrap in `infra/wireguard/` and `infra/scripts/`:
+- [x] T056 [US2] Set up WireGuard and host bootstrap in `infra/wireguard/` and `infra/scripts/`:
   - **`infra/wireguard/wg0.conf.tmpl`:** hub `Address = 10.8.0.1/24`, `ListenPort = 51820`, key placeholders, one `[Peer]` block per peer with an `AllowedIPs` `/32`.
   - **`infra/wireguard/peer.conf.tmpl`.**
   - **`infra/scripts/wg-add-peer.sh`:** generates keys on the host, never in the repo, and appends the peer.
@@ -451,7 +451,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - applies T055's rules;
     - installs `/etc/systemd/system/docker.service.d/10-after-wg0.conf` (`Wants=` and `After=wg-quick@wg0.service`), so `api-admin`'s `10.8.0.1` binding exists when Docker starts ([R12](research.md#r12-hosts-networking-and-docker));
     - **refuses to close port 22 to the public until the operator confirms the OCI serial console was tested** (FR-023).
-- [ ] T057 [US2] Write `infra/Caddyfile` (FR-021):
+- [x] T057 [US2] Write `infra/Caddyfile` (FR-021):
   - **Global:** ACME email from env.
   - **`api.{$VPS1_IP}.sslip.io`:** `encode zstd gzip`, `reverse_proxy 127.0.0.1:8000`.
   - **`media.{$VPS1_IP}.sslip.io`:** `file_server` on `/srv/media`, `Cache-Control: public, max-age=31536000, immutable`, `X-Content-Type-Options: nosniff`.
@@ -477,7 +477,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Pipelines (B2)
 
-- [ ] T059 [US2] Write `infra/scripts/deploy.sh <image-tag> | --infra-only`, run as `deploy` on VPS-1 from the synced `/srv/madar/infra/` ([R13](research.md#r13-image-build-deploy-and-rollback)):
+- [x] T059 [US2] Write `infra/scripts/deploy.sh <image-tag> | --infra-only`, run as `deploy` on VPS-1 from the synced `/srv/madar/infra/` ([R13](research.md#r13-image-build-deploy-and-rollback)):
   1. apply the synced infra: `docker compose up -d caddy postgres redis` (Compose recreates only services whose definition changed), then `docker compose exec caddy caddy reload --config <mount>/Caddyfile`. With `--infra-only`, stop here; no token is read;
   2. record the running tag in `/srv/madar/previous_tag`;
   3. read a GHCR token from stdin, `docker login ghcr.io --password-stdin`, `docker compose pull`, and `docker logout ghcr.io` in an `EXIT` trap, so no registry credential stays on the host;
@@ -485,7 +485,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   5. `IMAGE_TAG=<tag> docker compose up -d api-public api-admin`;
   6. poll `http://127.0.0.1:8000/healthz` for 60 s;
   7. on failure, `IMAGE_TAG=<previous> docker compose up -d api-public api-admin`, re-check health and exit non-zero.
-- [ ] T060 [US2] Write `.github/workflows/backend.yml`, triggered on `backend/**`, plus `workflow_dispatch` with an input `break_healthcheck`:
+- [x] T060 [US2] Write `.github/workflows/backend.yml`, triggered on `backend/**`, plus `workflow_dispatch` with an input `break_healthcheck`:
   - **`test`:** `sudo apt-get install -y ffmpeg` (T015 transcodes audio), then ruff, `mypy --strict` and `pytest --cov` with `postgres:16` and `redis:7` services (`TEST_DATABASE_URL`).
   - **`openapi`:** `uv run python -m app.cli export-openapi && git diff --exit-code backend/openapi/`. Once the `contract-v1` tag exists, it also runs the [quickstart](quickstart.md#lane-b1-data-and-contract) `oasdiff breaking` check (a pinned `tufin/oasdiff` image, `--fail-on ERR`) for both specs against the tag (FR-014, SC-001).
   - **`clients`:** runs only if `admin/orval.config.ts` and `app/swagger_parser.yaml` exist. Node 22 + pnpm `orval`, Flutter (pinned) `swagger_parser` + `build_runner`, then `git diff --exit-code admin/src/api/generated app/lib/core/network/generated`.
@@ -500,17 +500,17 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **`retention`:** `actions/delete-package-versions` keeping the newest 3 `madar-backend` versions.
 
   Also add a `sync` job to `.github/workflows/infra.yml`: on pushes to `master` only, after its checks pass, in the same `deploy-vps1` concurrency group. It runs steps 1–3 above, then SSH `deploy.sh --infra-only`, so a Caddyfile or Compose change reaches VPS-1 without a backend change.
-- [ ] T061 [P] [US2] Write `.github/workflows/app.yml`, triggered on `app/**` and `backend/openapi/public.json`:
+- [x] T061 [P] [US2] Write `.github/workflows/app.yml`, triggered on `app/**` and `backend/openapi/public.json`:
   - `flutter analyze`;
   - `flutter test` (goldens) inside `ghcr.io/cirruslabs/flutter:<app/.flutter-version>`;
   - `app/tool/check_token_copy.sh` and `app/tool/check_literals.sh`;
   - `flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json`;
   - upload `app-prod-debug.apk` as an artifact (FR-025).
-- [ ] T062 [P] [US2] Create `infra/firebase/firebase.json` and `infra/firebase/.firebaserc` (Hosting: `public` = `../../app/build/web`; `no-cache` on `index.html`, `flutter_bootstrap.js` and the service workers; `immutable` on hashed files, SD §5.2). Then write `.github/workflows/pwa.yml`, triggered on `app/**` pushes to `master` and `workflow_dispatch`:
+- [x] T062 [P] [US2] Create `infra/firebase/firebase.json` and `infra/firebase/.firebaserc` (Hosting: `public` = `../../app/build/web`; `no-cache` on `index.html`, `flutter_bootstrap.js` and the service workers; `immutable` on hashed files, SD §5.2). Then write `.github/workflows/pwa.yml`, triggered on `app/**` pushes to `master` and `workflow_dispatch`:
   - `flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json`;
   - deploy to Firebase Hosting preview channel `master` (`expires: 30d`) with `FirebaseExtended/action-hosting-deploy` and `FIREBASE_SERVICE_ACCOUNT`;
   - print the channel URL.
-- [ ] T063 [P] [US2] Write `.github/workflows/admin.yml`, triggered on `admin/**` and `backend/openapi/admin.json`: pnpm install (frozen lockfile), `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `admin/scripts/check-literals.sh`, `admin/scripts/check-token-copy.sh`. No deploy on D1.
+- [x] T063 [P] [US2] Write `.github/workflows/admin.yml`, triggered on `admin/**` and `backend/openapi/admin.json`: pnpm install (frozen lockfile), `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `admin/scripts/check-literals.sh`, `admin/scripts/check-token-copy.sh`. No deploy on D1.
 
 ### Validation (B2)
 

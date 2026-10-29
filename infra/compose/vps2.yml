@@ -1,0 +1,82 @@
+# VPS-2 "workers": the Celery processes of SD §6.1, exactly one beat, and Flower (FR-020).
+# Everything is under the `workers` profile, so nothing starts until the worker code exists (D3):
+#   IMAGE_TAG=<sha> docker compose --env-file /srv/madar/.env -f compose/vps2.yml --profile workers up -d
+# Every image is linux/arm64. Secrets come only from /srv/madar/.env (mode 600). The workers reach
+# PostgreSQL and Redis on VPS-1's VCN IP (DATABASE_URL, REDIS_URL, CELERY_BROKER_URL).
+name: madar
+
+x-service: &service
+  platform: linux/arm64
+  restart: unless-stopped
+  profiles: [workers]
+  # CI points this at example.env through MADAR_ENV_FILE; hosts use the default.
+  env_file: ${MADAR_ENV_FILE:-/srv/madar/.env}
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-worker: &worker
+  <<: *service
+  image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend:${IMAGE_TAG:?set IMAGE_TAG}
+  cap_drop:
+    - ALL
+  healthcheck:
+    test: ["CMD-SHELL", "celery -A app.workers inspect ping --destination \"worker@$$HOSTNAME\" --timeout 10 >/dev/null"]
+    interval: 60s
+    timeout: 20s
+    retries: 3
+    start_period: 30s
+
+services:
+  # Normalize, upsert, entity resolution, media rehosting.
+  worker-imports:
+    <<: *worker
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "imports", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+
+  # Fetch and parse only. Can move to the home box if OCI IPs get blocked.
+  worker-scrape:
+    <<: *worker
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+
+  worker-live:
+    <<: *worker
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+
+  worker-notify:
+    <<: *worker
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "notifications", "-n", "worker@%h", "-c", "2", "--without-gossip", "--without-mingle"]
+
+  # Cleanup, media copy, dataset versions.
+  worker-maintenance:
+    <<: *worker
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "maintenance", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+
+  # Exactly one beat, ever (SD §6.1). The fixed container_name makes `--scale beat=2` fail.
+  beat:
+    <<: *worker
+    container_name: madar-beat
+    command: ["celery", "-A", "app.workers", "beat", "--schedule", "/tmp/celerybeat-schedule", "--pidfile", "/tmp/celerybeat.pid"]
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 \"$$(cat /tmp/celerybeat.pid)\""]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Queue dashboard, on localhost only until Caddy proxies it over wg0 (SD §7.2). Basic auth
+  # from FLOWER_BASIC_AUTH; the broker from CELERY_BROKER_URL.
+  flower:
+    <<: *service
+    image: mher/flower:2.2.0
+    command: ["celery", "flower", "--port=5555"]
+    ports:
+      - "127.0.0.1:5555:5555"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5555/healthcheck', timeout=4)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3

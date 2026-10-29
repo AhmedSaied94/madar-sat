@@ -1,0 +1,13 @@
+# WireGuard client config for one peer of the VPS-1 hub. TEMPLATE ONLY: no key is ever committed.
+# infra/scripts/wg-add-peer.sh fills it on the host. The peer reaches only the hub (10.8.0.1):
+# SSH, the admin site https://10.8.0.1, and Redis for the home box.
+[Interface]
+PrivateKey = ${PEER_PRIVATE_KEY}
+Address = ${PEER_ADDRESS}/32
+
+[Peer]
+PublicKey = ${HUB_PUBLIC_KEY}
+PresharedKey = ${PEER_PRESHARED_KEY}
+Endpoint = ${HUB_ENDPOINT}:51820
+AllowedIPs = 10.8.0.1/32
+PersistentKeepalive = 25

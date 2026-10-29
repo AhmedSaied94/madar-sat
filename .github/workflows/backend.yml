@@ -1,0 +1,279 @@
+# backend/ CI and CD (FR-024, SD §9, research R13 and R14):
+#   test → openapi → clients on every PR and push; on master, build linux/arm64 → GHCR → deploy to
+#   VPS-1 over WireGuard (migrate, roll out, /healthz, automatic rollback) → keep 3 image versions.
+# The rollback drill (SC-005): run this workflow on master with break_healthcheck ticked.
+name: backend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+    inputs:
+      break_healthcheck:
+        description: "Rollback drill: deploy with HEALTHZ_FORCE_FAIL=true. The job must fail and the previous tag must be running again."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  UV_VERSION: "0.12.23" # keep in step with the uv image in backend/Dockerfile
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # CI-only throwaway credentials; the tests create and drop their own database.
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7.4.12
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      TEST_REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install ffmpeg (the media tests transcode audio)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --frozen
+      - name: ruff
+        run: uv run ruff check .
+      - name: mypy
+        run: uv run mypy --strict app
+      - name: pytest
+        run: uv run pytest --cov --cov-report=term-missing
+
+  openapi:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    # export-openapi reads the settings but connects to nothing, so placeholders are enough.
+    env:
+      DATABASE_URL: postgresql+asyncpg://ci:ci@localhost:5432/ci
+      DATABASE_URL_SYNC: postgresql+psycopg://ci:ci@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379/0
+      MEDIA_BASE_URL: https://media.example.com
+      MEDIA_ROOT: /tmp/madar-media
+      MEDIA_REHOST_ALLOWED_HOSTS: media.example.com
+      CORS_ORIGINS: https://example.web.app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --frozen
+      - name: The committed OpenAPI documents are current
+        run: |
+          uv run python -m app.cli export-openapi
+          git diff --exit-code -- openapi/
+      - name: No breaking change against contract-v1 (FR-014, SC-001)
+        run: |
+          if ! git rev-parse -q --verify refs/tags/contract-v1 >/dev/null; then
+            echo "::notice::contract-v1 isn't tagged yet; skipping the breaking-change check"
+            exit 0
+          fi
+          for f in public admin; do
+            git show "contract-v1:backend/openapi/$f.json" > "$RUNNER_TEMP/$f-v1.json"
+            docker run --rm -v "$RUNNER_TEMP:/base:ro" -v "$PWD/openapi:/head:ro" tufin/oasdiff:v1.35.0 \
+              breaking "/base/$f-v1.json" "/head/$f.json" --fail-on ERR
+          done
+
+  # The generated TS and Dart clients match the committed OpenAPI documents. Skipped until both
+  # generator configs exist (admin T082, app T121).
+  clients:
+    needs: openapi
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Are both generators configured?
+        id: gate
+        run: |
+          if [[ -f admin/orval.config.ts && -f app/swagger_parser.yaml ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::admin/orval.config.ts or app/swagger_parser.yaml is missing; skipping the client check"
+          fi
+      - if: steps.gate.outputs.run == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: admin/package.json
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: admin/pnpm-lock.yaml
+      - if: steps.gate.outputs.run == 'true'
+        id: flutter
+        name: Read the pinned Flutter version
+        run: |
+          version=$(tr -d '[:space:]' < app/.flutter-version)
+          [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error file=app/.flutter-version::expected a version like 3.38.1, got '$version'"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - if: steps.gate.outputs.run == 'true'
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          cache: true
+      - if: steps.gate.outputs.run == 'true'
+        name: Regenerate the admin client (Orval)
+        working-directory: admin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm orval
+      - if: steps.gate.outputs.run == 'true'
+        name: Regenerate the app client (swagger_parser)
+        working-directory: app
+        run: |
+          flutter pub get
+          dart run swagger_parser
+          dart run build_runner build -d
+      - if: steps.gate.outputs.run == 'true'
+        name: The committed clients are current
+        run: |
+          paths=(admin/src/api/generated app/lib/core/network/generated)
+          if [[ -n $(git status --porcelain -- "${paths[@]}") ]]; then
+            git status --short -- "${paths[@]}"
+            git diff -- "${paths[@]}"
+            echo "::error::The generated clients are stale. Regenerate them and commit the result."
+            exit 1
+          fi
+
+  build:
+    needs: [test, openapi, clients]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ${{ vars.ARM_RUNNER || 'ubuntu-24.04' }}
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: image
+        name: Image name (GHCR needs a lowercase owner)
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/madar-backend:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - if: vars.ARM_RUNNER == ''
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # One plain manifest per push (no provenance or SBOM attestations), so the retention job
+      # counts exactly one package version per image.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.image.outputs.ref }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=madar-backend
+          cache-to: type=gha,mode=max,scope=madar-backend
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: deploy-vps1
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: sync
+        uses: ./.github/actions/vps1-sync
+        with:
+          wg-config: ${{ secrets.WG_CI_CONFIG }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      # The registry token goes to deploy.sh on stdin, never as an argument.
+      - name: Deploy ${{ github.sha }}
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_FAIL: ${{ inputs.break_healthcheck && 'true' || 'false' }}
+        run: |
+          read -ra ssh <<<"$SSH_COMMAND"
+          printf '%s\n' "$GHCR_TOKEN" \
+            | "${ssh[@]}" deploy@10.8.0.1 "HEALTHZ_FORCE_FAIL=$FORCE_FAIL /srv/madar/infra/scripts/deploy.sh $GITHUB_SHA"
+      - name: Leave WireGuard
+        if: always()
+        run: |
+          sudo wg-quick down wg0 || true
+          rm -rf "$RUNNER_TEMP/madar-ssh"
+
+  # Keep the newest 3 versions (current, previous for rollback, one spare) inside GHCR's free
+  # private storage (R13). Needs the repo to have the Admin role on the package (infra/README.md).
+  retention:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          package-name: madar-backend
+          package-type: container
+          min-versions-to-keep: 3

@@ -1,0 +1,82 @@
+# infra/ checks on every PR and push that touches infra/ or CI (research R14), and on master
+# the sync job that applies infra/ to VPS-1 without a backend change (R13).
+name: infra
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "infra/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate the Compose files
+        run: |
+          for f in vps1 vps2 dev; do
+            echo "::group::infra/compose/$f.yml"
+            docker compose -f "infra/compose/$f.yml" --env-file infra/compose/example.env config -q
+            echo "::endgroup::"
+          done
+
+      - name: Validate the Caddyfile
+        run: |
+          docker run --rm --env-file infra/compose/example.env \
+            -v "$PWD/infra:/etc/madar/infra:ro" \
+            caddy:2.11.7 caddy validate --config /etc/madar/infra/Caddyfile --adapter caddyfile
+
+      - name: shellcheck
+        run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources infra/scripts/*.sh
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.12 -color
+
+  # Applies infra/ to VPS-1 (Compose services and Caddy) without a backend change. Shares the
+  # deploy-vps1 group with backend.yml's deploy, so the two never overlap.
+  sync:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: deploy-vps1
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: sync
+        uses: ./.github/actions/vps1-sync
+        with:
+          wg-config: ${{ secrets.WG_CI_CONFIG }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: Apply infra on VPS-1
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+        run: |
+          read -ra ssh <<<"$SSH_COMMAND"
+          "${ssh[@]}" deploy@10.8.0.1 /srv/madar/infra/scripts/deploy.sh --infra-only < /dev/null
+      - name: Leave WireGuard
+        if: always()
+        run: |
+          sudo wg-quick down wg0 || true
+          rm -rf "$RUNNER_TEMP/madar-ssh"

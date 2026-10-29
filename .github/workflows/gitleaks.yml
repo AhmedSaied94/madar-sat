@@ -1,0 +1,26 @@
+# Secret scan on every PR and push (FR-027, research R14). Uses the gitleaks CLI container, not the
+# GitHub Action, which needs a license for organization accounts. Findings are redacted in the log.
+name: gitleaks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Runs as the runner's uid so git doesn't reject the mounted repo as "dubious ownership".
+      - name: Scan the full history
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" \
+            zricethezav/gitleaks:v8.30.1 \
+            git /repo --config /repo/.gitleaks.toml --redact --verbose --exit-code 1

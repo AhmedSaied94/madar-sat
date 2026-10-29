@@ -1,0 +1,14 @@
+# gitleaks config: the default rules, unchanged (gitleaks.yml).
+#
+# An allowlist entry is added only for a confirmed false positive under backend/tests/fixtures/,
+# never for a whole folder, and never outside it. Example:
+#
+# [[allowlists]]
+# description = "Synthetic fixture value, not a credential"
+# paths = ['''^backend/tests/fixtures/snapshot/<file>$''']
+# regexes = ['''<the exact false-positive value>''']
+
+title = "Madar Sat"
+
+[extend]
+useDefault = true

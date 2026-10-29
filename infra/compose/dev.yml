@@ -1,0 +1,71 @@
+# Local development only: PostgreSQL 16, Redis 7 and a `tls internal` Caddy for the app's dev
+# flavor (research R16). Everything listens on 127.0.0.1, with the dev-only values from
+# example.env. Works from any folder, for example from backend/:
+#   docker compose -f ../infra/compose/dev.yml up -d postgres redis
+# No platform is forced here: the official images are multi-arch, and dev machines are amd64.
+name: madar-dev
+
+services:
+  postgres:
+    image: postgres:16.15
+    env_file: example.env
+    ports:
+      - "127.0.0.1:${DEV_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4.12
+    env_file: example.env
+    # The password is expanded inside the container, from the env file, never on the command line.
+    command: ["sh", "-c", "exec docker-entrypoint.sh redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    ports:
+      - "127.0.0.1:${DEV_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # https://localhost:8443 → the API running on the host at port 8000. From a phone, use
+  # `adb reverse tcp:8443 tcp:8443`. The debug build trusts this Caddy's local root CA
+  # (/data/caddy/pki/authorities/local/root.crt in the caddy_data volume).
+  caddy:
+    image: caddy:2.11.7
+    command: ["caddy", "run", "--config", "/etc/caddy/dev.Caddyfile", "--adapter", "caddyfile"]
+    configs:
+      - source: dev_caddyfile
+        target: /etc/caddy/dev.Caddyfile
+    ports:
+      - "127.0.0.1:8443:8443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - caddy_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+configs:
+  dev_caddyfile:
+    content: |
+      {
+        skip_install_trust
+        auto_https disable_redirects
+      }
+
+      https://localhost:8443 {
+        tls internal
+        reverse_proxy host.docker.internal:8000
+      }
+
+volumes:
+  pgdata:
+  caddy_data:

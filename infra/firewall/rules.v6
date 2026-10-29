@@ -1,0 +1,16 @@
+# Both hosts: IPv6 filter rules, installed as /etc/iptables/rules.v6 by bootstrap-vps.sh.
+# Nothing is served over IPv6 (the sslip.io names are IPv4), so all inbound IPv6 is closed. This
+# keeps SSH and every other port shut if the VCN ever hands the host an IPv6 address.
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+# Docker creates DOCKER-USER for IPv6 too; declaring it keeps check-firewall.sh's comparison exact.
+:DOCKER-USER - [0:0]
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+# Neighbour discovery and path MTU need ICMPv6; DHCPv6 replies keep an assigned address.
+-A INPUT -p ipv6-icmp -j ACCEPT
+-A INPUT -p udp -m udp --sport 547 --dport 546 -j ACCEPT
+-A DOCKER-USER -j RETURN
+COMMIT

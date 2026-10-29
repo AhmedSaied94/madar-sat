@@ -1,0 +1,89 @@
+# VPS-1 Caddy (FR-021, SD §7.2, §8, research R12). OWNER REVIEW REQUIRED for the admin site.
+#
+# Caddy runs with network_mode: host and reads this file from the mounted /srv/madar/infra
+# directory. {$VAR} values come from /srv/madar/.env: VPS1_IP, ACME_EMAIL, FIREBASE_PROJECT_ID.
+# The public sites get Let's Encrypt certificates; the admin site exists only on wg0.
+
+{
+	email {$ACME_EMAIL}
+	# The internal CA (admin site) is trusted by the peers' devices, not by this container.
+	skip_install_trust
+	# The firewall opens 443/tcp only, so don't advertise HTTP/3 (UDP).
+	servers {
+		protocols h1 h2
+	}
+}
+
+(public_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Public API → api-public.
+api.{$VPS1_IP}.sslip.io {
+	import public_headers
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8000
+}
+
+# Media: content-addressed files, so they never change (SD §6.9).
+media.{$VPS1_IP}.sslip.io {
+	import public_headers
+	root * /srv/media
+	header Cache-Control "public, max-age=31536000, immutable"
+	file_server
+}
+
+# PWA file mirror (SD §5.2). Content-hashed files are immutable; everything else revalidates.
+# Only the two PWA origins may read it cross-origin, and only with GET (SD §8).
+app.{$VPS1_IP}.sslip.io {
+	import public_headers
+	encode zstd gzip
+	root * /srv/app-mirror
+
+	@hashed path_regexp \.[0-9a-f]{8,}\.[A-Za-z0-9]+$
+	@unhashed not path_regexp \.[0-9a-f]{8,}\.[A-Za-z0-9]+$
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	header @unhashed Cache-Control "no-cache"
+
+	header Vary Origin
+	# Repeated header lines are OR-ed: either origin matches.
+	@pwa_origin {
+		method GET HEAD
+		header Origin https://{$FIREBASE_PROJECT_ID}.web.app
+		header Origin https://{$FIREBASE_PROJECT_ID}.firebaseapp.com
+	}
+	header @pwa_origin Access-Control-Allow-Origin "{http.request.header.Origin}"
+
+	file_server
+}
+
+# Admin, reachable only over WireGuard: Caddy listens on the wg0 address alone, with its own CA.
+# /admin/api goes to api-admin (bound to 10.8.0.1:8001); the rest is the admin SPA (a placeholder
+# until D4).
+https://10.8.0.1 {
+	bind 10.8.0.1
+	tls internal
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Content-Security-Policy "default-src 'self'"
+		-Server
+	}
+	encode zstd gzip
+
+	handle /admin/api/* {
+		reverse_proxy 10.8.0.1:8001
+	}
+	handle {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+}

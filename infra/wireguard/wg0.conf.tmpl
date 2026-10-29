@@ -1,0 +1,19 @@
+# WireGuard hub on VPS-1 (SD §7.2, FR-022). TEMPLATE ONLY: no key is ever committed.
+#
+# bootstrap-vps.sh renders it once into /etc/wireguard/wg0.conf (mode 600), with the private key
+# it generated on the host in /etc/wireguard/wg0.key. It never overwrites an existing wg0.conf,
+# so the peers added since are kept.
+[Interface]
+Address = 10.8.0.1/24
+ListenPort = 51820
+PrivateKey = ${HUB_PRIVATE_KEY}
+
+# infra/scripts/wg-add-peer.sh appends one block per peer, each with its own /32:
+#
+# [Peer]
+# # peer: <name>
+# PublicKey = <peer public key>
+# PresharedKey = <preshared key>
+# AllowedIPs = 10.8.0.<n>/32
+#
+# Revoking a peer means deleting its block here and running `wg set wg0 peer <public key> remove`.
