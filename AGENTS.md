@@ -13,7 +13,7 @@
   python3 madar-design/design-system/code/generate_tokens.py
   ```
   It rewrites `tokens.css`, `code/flutter/madar_tokens.dart`, and `code/react/tokens.ts` from `tokens.json`. Edit `tokens.json`, never the generated files.
-- Verify the base branch before branching: the plan assumes `main`, but this clone currently defaults to `master`.
+- The default branch is `master`, and it stays `master` (never renamed to `main`). Cut every branch from it.
 
 ## Spec Kit workflow
 - One spec per working day (`specs/001-d01-foundation` … `030-d30-...`), never more. The default integration is Claude Code (`.claude/skills/speckit-<step>/SKILL.md`): `/speckit-specify` → `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-analyze` → `/speckit-implement` → `/speckit-review-implementation`. opencode is installed too (`.opencode/commands/speckit.<step>.md`, invoked as `/speckit.<step>`), so a lane can implement there on another model and be reviewed in Claude Code.
@@ -21,7 +21,7 @@
 - Lane ownership: B1 `backend/` (except `app/adapters/`) + Alembic + OpenAPI contract; B2 `infra/`, `backend/app/adapters/`, CI; A `admin/`; M `app/`. Never edit another lane's folder.
 - Branch names do not match spec folders. This Spec Kit version resolves the active spec from `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name>` or `.specify/feature.json`; `SPECIFY_FEATURE` alone (as in delivery-plan §5.1) is not enough.
 - Worktrees must be siblings of this repo (`../madar-b1`, etc.) so `../old_app/` resolves the same way everywhere. Cut `dNN-<lane>` from the base branch.
-- Branches are handled by the project's `feature-branch` hook (`.specify/extensions.yml`), which runs after specify and before clarify, plan, tasks, analyze, checklist, implement, converge and taskstoissues. In a lane session (`MADAR_LANE`, else a `madar-<lane>` worktree folder, else a current `dNN-<lane>` branch) it checks out `dNN-<lane>`, or creates it from `origin/main` (falling back to `main`, `origin/master`, `master`); in the planning checkout it checks out or creates the spec branch `0NN-dNN-<name>` from HEAD. It never stashes, resets or discards; if git refuses the switch, the step stops. Don't force past it; ask the user.
+- Branches are handled by the project's `feature-branch` hook (`.specify/extensions.yml`), which runs after specify and before clarify, plan, tasks, analyze, checklist, implement, converge and taskstoissues. In a lane session (`MADAR_LANE`, else a `madar-<lane>` worktree folder, else a current `dNN-<lane>` branch) it checks out `dNN-<lane>`, or creates it from `origin/master` (falling back to `master`); in the planning checkout it checks out or creates the spec branch `0NN-dNN-<name>` from HEAD. It never stashes, resets or discards; if git refuses the switch, the step stops. Don't force past it; ask the user.
 - `/speckit-review-implementation` reviews one lane (`lane=<b1|b2|a|m>`, else detected like the hook) against the merge base: it runs the CI checks the change triggers, reviews each layer against the constitution, writes `specs/<spec>/reviews/<lane>-round-<K>.md`, and appends a `### Review fixes (round K)` block to the end of that lane's section in `tasks.md`. Arguments: `lane=`, `base=`, `layers=`, `no-run`, `fix`.
 - The extension sources are `tools/speckit-extensions/{feature-branch,review}/`; never edit the installed copies under `.specify/extensions/`. After a change, run `specify extension add --dev tools/speckit-extensions/<name> --force` (it registers for the default integration only), then `specify integration use opencode`, `specify integration use claude`, and `chmod +x .specify/scripts/bash/*.sh` (the switch drops the bit).
 
@@ -36,6 +36,7 @@
 ## UI work
 - Start at `madar-design/README.md`. Hierarchy: `tokens.json` > component READMEs > screen HTML > PNG.
 - Before building a screen, open its row in `madar-design/app-flutter/SCREENS.md` or `admin-react/SCREENS.md`, view the PNG, and read the HTML for structure, Arabic copy, and states. Rebuild it; never paste mockup HTML.
+- The wordmark is «مدار», as drawn in the design package. Madar Sat / مدار سات is the product, app and store name; don't change the wordmark to it.
 - Hard rules: RTL first; Latin channel/satellite names and frequencies are isolated LTR; Western tabular digits; `live` red only for live (use `error` for errors, red cards, deletes); one `accent` per screen; `FrequencyReadout` stays dark and LTR in both themes; touch targets ≥ 48 dp.
 - Path traps: design docs' `new_app/docs/...` means this repo's `docs/`; `old_app/` means sibling `../old_app/`; `components/bundle.css` does not exist—use `madar-design/design-system/components.css`.
 

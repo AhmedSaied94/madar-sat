@@ -600,7 +600,7 @@ madar_sat/                    (git repository)
 
 | Workflow | Runs when | Steps |
 |---|---|---|
-| `backend.yml` | `backend/**` changes | ruff, mypy, pytest with a Postgres service → export `openapi.json` → regenerate the Dart and TS clients (fails if they're stale) → on `main`, build `linux/arm64` (native arm64 runner if the plan has one, otherwise buildx + QEMU) → push to GHCR → deploy |
+| `backend.yml` | `backend/**` changes | ruff, mypy, pytest with a Postgres service → export `openapi.json` → regenerate the Dart and TS clients (fails if they're stale) → on `master`, build `linux/arm64` (native arm64 runner if the plan has one, otherwise buildx + QEMU) → push to GHCR → deploy |
 | `admin.yml` | `admin/**` | tsc, eslint, vitest → build → image → deploy |
 | `app.yml` | `app/**` | PR: `flutter analyze`, `flutter test`. Tag `app-v*`: `flutter build appbundle --release --flavor prod` → upload to the Play internal track (Play App Signing; upload keystore as a base64 secret; `versionCode = github.run_number`) |
 | `pwa.yml` | `app/**` on tag `web-v*` | `flutter build web` → deploy the shell + full copy to Firebase Hosting → rsync hashed files to the VPS-1 mirror |

@@ -30,7 +30,7 @@
 | A1 | The Play Console account is **personal and created after Nov 2023**, so it needs a closed test with 12 testers for 14 days before production | Older or organization account: Android production ships with V1 on D12 |
 | A2 | Both OCI Ampere VPSs are already running, with reserved public IPs | Ampere capacity is often unavailable. Provision now; D1 slips until the boxes exist |
 | A3 | Firebase moves to **Blaze with a $5 budget alert** for the launch, so the PWA mirror can wait until D9–D10 | If staying on Spark: move the mirror work into D3–D4. Lane M then needs about one extra day |
-| A4 | The MVP uses a **reduced test bar**. D11 restores your 80 % coverage rule (§7). The ratified constitution (v1.0.0) requires 80 % on every PR, so this needs a constitution amendment on D0 | If 80 % is required from day 1: the MVP takes about 6 days |
+| A4 | The MVP uses a **reduced test bar**. D11 restores your 80 % coverage rule (§7). Constitution v1.1.0 encodes this phased bar | If 80 % is required from day 1: the MVP takes about 6 days |
 | A5 | Card-sharing labels and BISS keys are dropped (O3), as the design assumes | Keeping them changes the schema and the S3/S12 screens |
 | A6 | Package ID `com.madarsat.app` (O1) | Any other ID is fine; it must be fixed before the first Play upload on D2 |
 | A7 | The Apple account is active by D13 | Otherwise the iOS work on D13 and D16–D18 moves after D30, and those slots pull V3 work forward |
@@ -90,7 +90,7 @@
 ```
 NewSatApp/
 ├── old_app/        recovered Sat Air source (outside the repo; agents read it as ../old_app/)
-├── madar_sat/      main checkout: planning session, merges          branch main
+├── madar_sat/      main checkout: planning session, merges          branch master
 ├── madar-b1/       worktree, lane B1                                 branch dNN-b1
 ├── madar-b2/       worktree, lane B2                                 branch dNN-b2
 ├── madar-a/        worktree, lane A                                  branch dNN-a
@@ -98,19 +98,19 @@ NewSatApp/
 ```
 
 - Worktrees must be **siblings** of `madar_sat/`, so `../old_app/` resolves the same way in every lane.
-- Git can't check out one branch in two worktrees. So the day's spec lives on `main`, and each lane works on its own branch `dNN-<lane>`, cut from `main` each morning.
+- Git can't check out one branch in two worktrees. So the day's spec lives on `master`, and each lane works on its own branch `dNN-<lane>`, cut from `master` each morning.
 - **`SPECIFY_FEATURE_DIRECTORY` tells Spec Kit which spec is active**, because the lane branch names don't match the spec folder and `.specify/feature.json` is per checkout (git-ignored): start each lane session as `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude`. `SPECIFY_FEATURE` alone doesn't select a spec in this Spec Kit version.
-- **The `feature-branch` hook switches branches** before every Spec Kit step (and right after `/speckit-specify`). In a lane worktree it checks out `dNN-<lane>`, creating it from `origin/main` if it doesn't exist. In the planning checkout it checks out the spec branch `0NN-dNN-<name>`, creating it from the current HEAD. It never stashes, resets or discards: if the switch is blocked, the step stops and you decide.
-- `main` is protected: PRs only, CI required, squash merge.
+- **The `feature-branch` hook switches branches** before every Spec Kit step (and right after `/speckit-specify`). In a lane worktree it checks out `dNN-<lane>`, creating it from `origin/master` if it doesn't exist. In the planning checkout it checks out the spec branch `0NN-dNN-<name>`, creating it from the current HEAD. It never stashes, resets or discards: if the switch is blocked, the step stops and you decide.
+- **The default branch is `master`**, and it stays `master` (it is not renamed to `main`). It is protected: PRs only, CI required, squash merge.
 
 ### 5.2 The daily loop
 
 | When | Who | Steps |
 |---|---|---|
-| **Day N−1, afternoon** | Planning session in `madar_sat/` + you | 1. `git switch main && git pull` · 2. `/speckit-specify` with the template in Appendix A for day N (its scope is the day's brief in Appendix B), plus carry-over (§5.3); the hook then creates the spec branch `0NN-dNN-<name>` · 3. `/speckit-clarify` only if questions remain · 4. `/speckit-plan` · 5. `/speckit-tasks` · 6. `/speckit-analyze` · 7. You review the spec and the lane sections · 8. Merge the spec branch to `main` as a docs-only PR |
-| **Day N, morning** | Each lane | `git fetch && git switch -C dNN-<lane> origin/main` → `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude` → `/speckit-implement Only the tasks under "Lane <X>" in tasks.md.` |
-| **Day N, midday and evening** | Each lane → you | `/speckit-review-implementation`, ideally on a different model from the implementer, reviews the lane and appends its fix tasks to the lane's section; the lane fixes them with `/speckit-implement` and reviews again until there is no CRITICAL or HIGH finding. Then the lane opens a PR, and you merge it after reading the review's "Owner must review" files. **At least two merges per lane per day.** Lanes rebase on `main` after each merge to pick up the others' work |
-| **Day N, evening** | You | Run the day's **done check** (Appendix A) on the deployed `main` and on devices. Anything that fails becomes carry-over |
+| **Day N−1, afternoon** | Planning session in `madar_sat/` + you | 1. `git switch master && git pull` · 2. `/speckit-specify` with the template in Appendix A for day N (its scope is the day's brief in Appendix B), plus carry-over (§5.3); the hook then creates the spec branch `0NN-dNN-<name>` · 3. `/speckit-clarify` only if questions remain · 4. `/speckit-plan` · 5. `/speckit-tasks` · 6. `/speckit-analyze` · 7. You review the spec and the lane sections · 8. Merge the spec branch to `master` as a docs-only PR |
+| **Day N, morning** | Each lane | `git fetch && git switch -C dNN-<lane> origin/master` → `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude` → `/speckit-implement Only the tasks under "Lane <X>" in tasks.md.` |
+| **Day N, midday and evening** | Each lane → you | `/speckit-review-implementation`, ideally on a different model from the implementer, reviews the lane and appends its fix tasks to the lane's section; the lane fixes them with `/speckit-implement` and reviews again until there is no CRITICAL or HIGH finding. Then the lane opens a PR, and you merge it after reading the review's "Owner must review" files. **At least two merges per lane per day.** Lanes rebase on `master` after each merge to pick up the others' work |
+| **Day N, evening** | You | Run the day's **done check** (Appendix A) on the deployed `master` and on devices. Anything that fails becomes carry-over |
 
 **Required shape of every `tasks.md`**, which the template asks for:
 - one section per lane (`## Lane B1`, `## Lane B2`, `## Lane A`, `## Lane M`), each written as an independently testable user story;
@@ -118,7 +118,7 @@ NewSatApp/
 
 Lanes tick checkboxes only in their own section, so four PRs touching the same `tasks.md` never conflict.
 
-Planning only one day ahead means each spec is written against the **real** state of `main`: the frozen API contract, what actually merged, and what slipped.
+Planning only one day ahead means each spec is written against the **real** state of `master`: the frozen API contract, what actually merged, and what slipped.
 
 ### 5.3 Carry-over
 
@@ -130,7 +130,7 @@ Planning only one day ahead means each spec is written against the **real** stat
 | Time | You | Agents |
 |---|---|---|
 | Morning (1 h) | Review and merge overnight PRs. Check any **contract diff** and **migration** line by line. Start the lane sessions | Implement |
-| Midday (30 min) | Merge; deploy `main` to production (from D1 the API is live, with unfinished features behind flags) | Continue |
+| Midday (30 min) | Merge; deploy `master` to production (from D1 the API is live, with unfinished features behind flags) | Continue |
 | Afternoon (1–2 h) | Plan tomorrow's spec with the planning session. Accounts, store work, testers, decisions | Continue |
 | Evening (1 h) | Done check on devices (Android + iPhone PWA); write carry-over notes | Fix issues overnight, if run unattended |
 
@@ -145,7 +145,7 @@ Agents self-review everything else, with CI as the gate.
 
 ### 5.5 Feature flags
 
-Everything not ready ships **dark** behind Remote Config `features.*` (system-design §5.1). That way all lanes can merge to `main` every day without exposing half-built screens. Flags are removed one phase after a feature launches.
+Everything not ready ships **dark** behind Remote Config `features.*` (system-design §5.1). That way all lanes can merge to `master` every day without exposing half-built screens. Flags are removed one phase after a feature launches.
 
 The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `satellite_finder` (already in system-design §5.1) and `home_widget`, `commentators`, `ongoing_live`, `viewing_links`, `accounts`, `predictions`, `share_card`, `calendar`, `ad_free`, `english_ui` (new; B1 adds each one to the Remote Config defaults on the day that introduces it). Ads use the existing `ads.enabled` key.
 
@@ -166,11 +166,10 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 
 **Repo:**
 1. Install Spec Kit (`uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`) and run `specify init --here --ai claude`.
-2. Run `/speckit-constitution` with §8.1. *Done: v1.0.0 is in `.specify/memory/constitution.md`. Still to do: amend its Quality Gates for A4 (or drop A4), and delete its Sync Impact Report comment.*
+2. Run `/speckit-constitution` with §8.1. *Done: v1.0.0 ratified; v1.1.0 (2026-10-29) adds the phased test bar for A4 and drops the Sync Impact Report.*
 3. Extend the root `CLAUDE.md` and add one per lane (§8.2).
-4. Change the design package's wordmark from «مدار» to **Madar Sat / مدار سات**.
-5. Rename the default branch `master` → `main` (§5.1 assumes `main`) and protect it.
-6. **Plan spec 001** using the daily loop, from its brief in Appendix B.
+4. Protect `master` (§5.1). It stays the default branch.
+5. **Plan spec 001** using the daily loop, from its brief in Appendix B.
 
 ### Phase 1: MVP (D1–D4)
 
@@ -232,7 +231,7 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 
 ## 7. Quality bar and CI gates
 
-| | MVP (D1–D4) | From D11 on |
+| | MVP and V1 build-out (D1–D10) | From D11 on |
 |---|---|---|
 | Backend | Tests first for domain logic, time and frequency parsing, auth, and scraper parsers (against saved HTML fixtures). Contract tests on `/v1`. Coverage ≥ 70 % on `domain/`, `adapters/`, `services/` | ≥ 80 % overall; integration tests against Postgres and Redis containers |
 | Admin | Zod schemas for every response; Playwright smoke (login → edit match → see the change) | ≥ 80 % (Vitest); Playwright suite for A3/A4/A8/A13 |
@@ -245,7 +244,7 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 
 ### 8.1 Constitution seed
 
-This seed was used on D0. The ratified text is `.specify/memory/constitution.md` (v1.0.0), and that file wins where they differ.
+This seed was used on D0. The ratified text is `.specify/memory/constitution.md` (v1.1.0), and that file wins where they differ.
 
 ```text
 Madar Sat constitution
@@ -393,7 +392,7 @@ A lane row that says **none** still gets a `## Lane X` section with the single t
 Each brief is the whole scope of one day's spec. The planning session turns it into `spec.md`, `plan.md` and `tasks.md` (Appendix A). Shorthand: **PB** = product-business.md, **SD** = system-design.md, **app:** / **admin:** = a board in `madar-design/app-flutter/SCREENS.md` / `madar-design/admin-react/SCREENS.md`.
 
 Rules for every brief:
-- **Starts from** lists what must already be on `main`. If it isn't, the missing part is carry-over and comes first (§5.3).
+- **Starts from** lists what must already be on `master`. If it isn't, the missing part is carry-over and comes first (§5.3).
 - **Contract** lists the endpoint and schema changes B1 makes that day. Only these change the OpenAPI spec and Alembic. A lane that needs anything else asks B1, and the change moves to the next day.
 - **Flags** lists the Remote Config `features.*` keys the day's work hides behind until its launch day (§5.5).
 - The **done check** is the catalog's text in Appendix A.
@@ -409,7 +408,7 @@ Rules for every brief:
 | Lane | Story | Read | Acceptance |
 |---|---|---|---|
 | B1 | As a client developer, I can call `/v1` and get real Sat Air data in the documented envelope and shapes | SD §6.1–6.3, §6.9 (rehosting), §10 steps 1–3; `../old_app/migration/README.md` | `load_snapshot.py` loads the snapshot with every README rule (frequency regex, NULL placeholders, Cairo → UTC, channel kinds, dedupe, external ids, orphans logged, no card-sharing labels); media rehosted into `media_assets` and served from `media.<ip1>.sslip.io`; contract tests pass for every read endpoint; ETag + `304` works; deployed on VPS-1 |
-| B2 | As the owner, I can push to `main` and have each folder built, checked and deployed without touching a server | SD §7.1–7.2, §8 (ports, headers), §9 | `vps1.yml` and `vps2.yml` Compose files; Caddy with Let's Encrypt for `api.`, `media.`, `app.` and `tls internal` on `wg0`; WireGuard hub with peers for you and CI; iptables persisted; `backend.yml` builds `linux/arm64`, pushes to GHCR, deploys with health check and rollback; `app.yml` builds a debug APK artifact; `pwa.yml` deploys to a Firebase preview channel; gitleaks on every PR |
+| B2 | As the owner, I can push to `master` and have each folder built, checked and deployed without touching a server | SD §7.1–7.2, §8 (ports, headers), §9 | `vps1.yml` and `vps2.yml` Compose files; Caddy with Let's Encrypt for `api.`, `media.`, `app.` and `tls internal` on `wg0`; WireGuard hub with peers for you and CI; iptables persisted; `backend.yml` builds `linux/arm64`, pushes to GHCR, deploys with health check and rollback; `app.yml` builds a debug APK artifact; `pwa.yml` deploys to a Firebase preview channel; gitleaks on every PR |
 | A | As an editor, I see the admin shell and log-in screen in the Madar look, wired to a generated client | PB §10 A0, A1; SD §5.4; admin: Login · error + lockout, Admin components · all states | Vite + TS strict + Tailwind reading `tokens.css`; Orval client + Zod from the `v1` admin spec served by Prism; `SidebarNav`, `DataTable`, `Field`, `StatusChip`, `Toast` built with Vitest tests; A1 renders error and lockout states against the mock |
 | M | As a user, I open the app and see today's real matches, in a shell built only from Madar tokens and components | SD §5.1; PB §13; app: Brand, color & type, Components · Matches/Channels/Core, S2 Matches | Flavors dev/staging/prod; go_router routes of PB §8.4 stubbed; Riverpod; drift schema for matches; Dio + generated Retrofit client; `madar_tokens.dart` + bundled fonts; `MatchRow`, `StatusBlock`, `FrequencyReadout`, `CarriageRow`, `AccessBadge`, `DateStrip`, `MadarBottomNav`, `MadarTopBar`, `EmptyState`, `Skeleton` with goldens (RTL, both themes, 1.3×); a gallery route; `/v1/matches` renders unstyled rows |
 

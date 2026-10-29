@@ -1,43 +1,3 @@
-<!--
-Sync Impact Report (scratch material for review; remove before committing)
-==========================================================================
-Version change: unratified template → 1.0.0
-Bump rationale: first ratification. Every template placeholder is replaced with project rules
-derived from docs/system-design.md, docs/product-business.md and madar-design/.
-
-Principles (template slot → new title):
-- PRINCIPLE_1 → I. The Answer First
-- PRINCIPLE_2 → II. Honest Data (NON-NEGOTIABLE)
-- PRINCIPLE_3 → III. Arabic-Native, RTL First
-- PRINCIPLE_4 → IV. Tokens and Components Own the Visuals
-- PRINCIPLE_5 → V. Trust Lives on the Server (NON-NEGOTIABLE)
-- added → VI. Contract-First API
-- added → VII. Idempotent, Observable Pipelines
-- added → VIII. Offline-Tolerant, Lean Clients
-- added → IX. Zero-Cost, Boring Operations
-
-Sections:
-- SECTION_2 → Platform, Stack and Content Constraints
-- SECTION_3 → Development Workflow and Quality Gates
-- Governance → filled, with a Constitution Check gate list for /speckit-plan
-Removed sections: none
-
-Templates: not modified by this command (they read the constitution at runtime).
-- .specify/templates/plan-template.md: "Constitution Check" takes its gates from Governance.
-- .specify/templates/tasks-template.md: it says test tasks are optional. Quality Gates makes them
-  mandatory for this project, and the constitution wins.
-
-Deferred items and follow-ups:
-- P1–P6 (system-design §3.2) are still "proposed". This constitution encodes them as rules
-  (P1 in VII, P2 in II, P3 in VI, P4 in II, P5 in I, P6 in VIII). If the owner rejects one,
-  amend the affected principle.
-- O3 (card-sharing labels, BISS keys) is open. Section 2 applies the recommended "drop" until
-  it is decided.
-- O6 (Spark vs Blaze) and O4 (domain) are cost decisions. Principle IX requires them to be
-  recorded in system-design §3 before any spend.
-- The ≥ 80 % coverage gate comes from the owner's standing engineering rules, not from the docs.
--->
-
 # Madar Sat (مدار سات) Constitution
 
 ## Core Principles
@@ -351,7 +311,17 @@ Test tasks are mandatory in `tasks.md`.
 - Database tests run against a real PostgreSQL 16 service, never SQLite.
 - Flutter widget tests for `MatchRow`, `StatusBlock` and the bottom nav run RTL, at 1.3× text
   scale, in both themes.
-- Line coverage MUST be ≥ 80 % in each of `backend/`, `admin/` and `app/`.
+- Coverage follows the phased bar of delivery-plan §7 (assumption A4):
+  - **MVP and V1 build-out (D1–D10):**
+    - backend: line coverage ≥ 70 % on `domain/`, `adapters/` and `services/`, plus contract
+      tests on `/v1`;
+    - admin: Zod schemas for every response, plus a Playwright smoke test (log in → edit a
+      match → see the change) once those flows exist;
+    - app: unit tests for formatters (time, digits, frequency, bidi) and repositories, plus
+      golden tests for the signature components in both themes at 1.3× text scale.
+  - **From D11 on:** line coverage MUST be ≥ 80 % in each of `backend/`, `admin/` and `app/` on
+    every PR.
+  - The reduced bar never relaxes test-first or the test list above.
 
 **CI gates** (system-design §9). A PR merges only when its folder's checks pass.
 
@@ -417,4 +387,4 @@ constitution is re-read at each delivery-phase boundary (system-design §12).
 **Runtime guidance.** `CLAUDE.md`, `madar-design/README.md` and the component READMEs give the
 day-to-day detail. They MUST stay consistent with this document.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-10-29
+**Version**: 1.1.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-10-29
