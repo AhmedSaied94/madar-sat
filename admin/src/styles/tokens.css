@@ -1,0 +1,150 @@
+/* GENERATED from design-system/tokens.json (Madar Design System). Do not edit by hand: change tokens.json and regenerate. */
+
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #07090c;
+  --surface-1: #0f1318;
+  --surface-2: #161b22;
+  --surface-3: #1f262f;
+  --elevated: #1a2029;
+  --segmented-on: #2a323d;
+  --overlay: rgba(2,4,6,0.68);
+  --divider: rgba(255,255,255,0.07);
+  --divider-strong: rgba(255,255,255,0.14);
+  --focus-ring: #c8f542;
+  --text-primary: #f1f4f7;
+  --text-secondary: #a9b2bf;
+  --text-tertiary: #848e9b;
+  --text-disabled: #56606b;
+  --text-on-inverse: #07090c;
+  --accent: #c8f542;
+  --accent-container: rgba(200,245,66,0.12);
+  --accent-text: #c8f542;
+  --on-accent: #0a0d0f;
+  --snackbar-action: #3f6a06;
+  --live: #ff4d5e;
+  --live-container: rgba(255,77,94,0.15);
+  --halftime: #ff9e58;
+  --halftime-container: rgba(255,158,88,0.15);
+  --postponed: #ffb627;
+  --postponed-container: rgba(255,182,39,0.14);
+  --cancelled: #8b949f;
+  --estimated: #e58a94;
+  --free: #3ee0a1;
+  --free-container: rgba(62,224,161,0.12);
+  --encrypted: #a9b2bf;
+  --encrypted-container: rgba(255,255,255,0.07);
+  --sports: #7cc7ff;
+  --sports-container: rgba(124,199,255,0.13);
+  --entertainment: #e3a1ff;
+  --entertainment-container: rgba(227,161,255,0.13);
+  --readout-bg: #020406;
+  --readout: #8fe7ff;
+  --readout-dim: #6f93a1;
+  --readout-line: rgba(143,231,255,0.18);
+  --changed: #b9a2ff;
+  --changed-container: rgba(185,162,255,0.15);
+  --success: #3ee0a1;
+  --warning: #ffb627;
+  --error: #ff6b6b;
+  --error-container: rgba(255,107,107,0.13);
+  --info: #7cc7ff;
+  --shadow-raised: 0 18px 40px rgba(0,0,0,0.55);
+  --shadow-subtle: 0 2px 6px rgba(0,0,0,0.4);
+  --readout-glow: 0 0 10px rgba(143,231,255,0.35);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f3ef;
+  --surface-1: #ffffff;
+  --surface-2: #eceee9;
+  --surface-3: #e1e4de;
+  --elevated: #ffffff;
+  --segmented-on: #ffffff;
+  --overlay: rgba(10,13,16,0.42);
+  --divider: rgba(12,16,20,0.08);
+  --divider-strong: rgba(12,16,20,0.16);
+  --focus-ring: #0a0d0f;
+  --text-primary: #0b0f13;
+  --text-secondary: #475160;
+  --text-tertiary: #5e6876;
+  --text-disabled: #9aa2ac;
+  --text-on-inverse: #f2f3ef;
+  --accent-container: #eaf8c4;
+  --accent-text: #3f6a06;
+  --snackbar-action: #c8f542;
+  --live: #c81b33;
+  --live-container: #fde6e9;
+  --halftime: #a64a0c;
+  --halftime-container: #fdebdd;
+  --postponed: #955200;
+  --postponed-container: #fdf0d2;
+  --cancelled: #6b7480;
+  --estimated: #b23a4a;
+  --free: #047a55;
+  --free-container: #ddf4ea;
+  --encrypted: #475160;
+  --encrypted-container: #e8eae5;
+  --sports: #0b5fad;
+  --sports-container: #e2eefa;
+  --entertainment: #8a2bb0;
+  --entertainment-container: #f5e6fb;
+  --readout-bg: #0b0f13;
+  --readout-dim: #7fa4b2;
+  --readout-line: rgba(143,231,255,0.16);
+  --changed: #5b3cc4;
+  --changed-container: #ece6ff;
+  --success: #047a55;
+  --warning: #955200;
+  --error: #c62828;
+  --error-container: #fde8e8;
+  --info: #0b5fad;
+  --shadow-raised: 0 18px 40px rgba(16,24,32,0.16);
+  --shadow-subtle: 0 1px 3px rgba(16,24,32,0.12);
+  --readout-glow: 0 0 10px rgba(143,231,255,0.3);
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-xs: 5px;
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 26px;
+  --radius-pill: 999px;
+  --phone-width: 360px;
+  --touch-min: 48px;
+  --bottom-nav-height: 66px;
+  --ad-slot-height: 58px;
+  --nav-rail-width: 92px;
+  --list-pane-width: 420px;
+  --admin-sidebar-width: 248px;
+  --font-display: Changa, "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans Arabic", "Noto Sans Arabic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+.score { font-family: var(--font-display); font-size: 46px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums lining-nums; }  /* Match hero score. Tabular figures; each number sits beside its own team. */
+.kickoff { font-family: var(--font-display); font-size: 34px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }  /* Kickoff time in the match hero before the match. */
+.heading-1 { font-family: var(--font-display); font-size: 28px; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums lining-nums; }  /* Screen and page titles (24–28px). */
+.heading-2 { font-family: var(--font-display); font-size: 18px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }  /* Section headers, sheet titles, team names in the hero (15–18px). */
+.row-time { font-family: var(--font-display); font-size: 19px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }  /* Kickoff time in a match row; ص/م follows in text-caption. */
+.row-score { font-family: var(--font-display); font-size: 22px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums lining-nums; }  /* Live or final score in a match row. */
+.text-body { font-family: var(--font-sans); font-size: 14px; line-height: 1.6; font-weight: 400; }  /* Body copy and descriptions. */
+.text-strong { font-family: var(--font-sans); font-size: 14px; line-height: 1.45; font-weight: 600; }  /* Channel names, list titles. */
+.text-label { font-family: var(--font-sans); font-size: 13px; line-height: 1.4; font-weight: 500; }  /* Team names in rows (two lines allowed), chips, buttons-small. */
+.text-caption { font-family: var(--font-sans); font-size: 12px; line-height: 1.4; font-weight: 400; }  /* Metadata, hints, stale hints. */
+.text-micro { font-family: var(--font-sans); font-size: 11px; line-height: 1.3; font-weight: 600; }  /* Badges, pills, nav labels, counts. Minimum size. */
+.readout { font-family: var(--font-mono); font-size: 13px; line-height: 1; font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums lining-nums; }  /* Frequency readout in rows. Always LTR, tabular. */
+.readout-lg { font-family: var(--font-mono); font-size: 19px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }  /* Channel sheet and satellite header readouts. */
+.readout-xl { font-family: var(--font-mono); font-size: 26px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }  /* Desktop channel pane, satellite finder values. */
+.mono-code { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.75; font-weight: 500; font-variant-numeric: tabular-nums lining-nums; }  /* Admin logs, field diffs, source IDs. */
