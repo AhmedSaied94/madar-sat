@@ -133,7 +133,7 @@ Then put every changed file in one or more layers. Security and tests apply to e
 | `admin` | `admin/` | 4.G |
 | `security` | every file | 4.H |
 | `tests` | every test file, goldens, saved raw pages, coverage and lint config | 4.I |
-| `ops` | `infra/`, `.github/`, Dockerfiles, `codemagic.yaml`, `docs/`, `specs/`, `CLAUDE.md`, `AGENTS.md` | 4.J |
+| `ops` | `infra/`, `.github/`, Dockerfiles, `codemagic.yaml`, `docs/`, `specs/`, `CLAUDE.md`, `AGENTS.md`; its runbook and owner-actions checks run for every lane | 4.J |
 
 Then build two maps (keep them internal; they feed steps 4 and 6):
 
@@ -386,6 +386,14 @@ that touches the layer is a check too.
 - Monitoring: new jobs have heartbeats; `/healthz` covers the database and Redis; logs are
   structured JSON.
 - A new `features.*` key is in the Remote Config defaults on the day that introduces it.
+- Runbooks: each part this change adds or changes that someone sets up, deploys, rolls back,
+  recovers, rotates or checks by hand (a host step, a service, a job, an environment variable, a
+  secret, a CI job) has its runbook in `docs/runbooks/` updated in the same change. Every command,
+  flag, path and variable in it matches the code, and `docs/runbooks/README.md`'s setup order and
+  "After setup" table point to it. A missing or stale runbook is a finding.
+- `docs/owner-actions.md` has this day's section for the lane: each owner-only item (accounts,
+  consoles, secrets, devices, live checks) under "Before merge" or "After merge", with its task ID
+  and its runbook or quickstart link, and the "Open now" table is current.
 - `CLAUDE.md` (root and the lane folder's) lists new commands, files and rules. If a decision
   (D*, P*, O*) changed, system-design §3 or product doc §18 changed with it. Nothing open was
   resolved by guessing.
