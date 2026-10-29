@@ -15,6 +15,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 ns="madar-fwcheck-$$"
+# shellcheck disable=SC2329 # called by the EXIT trap below, which SC2329 doesn't count
 cleanup() { ip netns delete "$ns" 2>/dev/null || true; }
 trap cleanup EXIT
 ip netns add "$ns"

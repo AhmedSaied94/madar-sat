@@ -8,25 +8,25 @@ This is stage 2 of the first-time setup. [README.md](README.md#first-time-setup)
 
 ## The two VMs
 
-The commands below use `<role>`, `<ip>` and `<vcn>` for the VM you're working on.
+The commands below use `<role>`, `<ip>` and `<private-ip>` for the VM you're working on.
 
 | | VPS-1 "app" | VPS-2 "workers" |
 | --- | --- | --- |
 | `<role>` (`bootstrap-vps.sh` argument) | `vps1` | `vps2` |
 | Shape | `VM.Standard.A1.Flex`, 1 OCPU / 6 GB | `VM.Standard.A1.Flex`, 1 OCPU / 6 GB |
 | Boot volume | 100 GB | 47 GB |
-| `<ip>`, the reserved public IP | `<ip1>` | `<ip2>` |
-| `<vcn>`, the VCN private IP (`VCN_IP` in its `.env`) | `<vcn1>` | `<vcn2>` |
-| `PEER_VCN_IP` in its `.env` | `<vcn2>` | `<vcn1>` |
+| `<ip>`, the reserved public IP | `130.110.117.215` | `130.110.97.25` |
+| `<private-ip>`, the VCN private IP (`VCN_IP` in its `.env`) | `10.1.0.97` | `10.1.0.118` |
+| `PEER_VCN_IP` in its `.env` | `10.1.0.118` | `10.1.0.97` |
 | WireGuard | Hub `10.8.0.1/24`, UDP 51820 | None |
-| SSH after step 6 | `ssh ubuntu@10.8.0.1`, over WireGuard | `ssh -J ubuntu@10.8.0.1 ubuntu@<vcn2>`, through VPS-1 |
+| SSH after step 6 | `ssh ubuntu@10.8.0.1`, over WireGuard | `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118`, through VPS-1 |
 | Public ports after step 6 | 80/tcp, 443/tcp, 51820/udp | None |
 | Runs | Caddy, `api-public`, `api-admin`, PostgreSQL 16, Redis 7 | Celery workers, `beat`, Flower: profile `workers`, off until the worker code exists (D3) |
 | Deploy peer and key | `ci`, the `deploy` user | None yet: nothing deploys to VPS-2 before D3 |
 
-- Both VMs sit in **one** VCN and subnet, and talk over their private IPs: VPS-2 reaches PostgreSQL and Redis on `<vcn1>`, and VPS-1 reaches VPS-2's SSH.
+- Both VMs sit in **one** VCN and subnet, and talk over their private IPs: VPS-2 reaches PostgreSQL and Redis on `10.1.0.97`, and VPS-1 reaches VPS-2's SSH.
 - Each `.env` names the other VM's private IP, so do step 1 for **both** VMs before step 3 on either. Then do steps 2–9 on VPS-1 first: once VPS-2's public SSH closes, you reach it through VPS-1's WireGuard.
-- A rebuilt VM keeps its reserved IP, so the hostnames stay the same. Its private IP can change: read it in step 1 and update **both** `.env` files, then re-run the script on both VMs (the firewall rules use `PEER_VCN_IP`).
+- A rebuilt VM keeps its reserved IP, so the hostnames stay the same. Its private IP can change: read it in step 1, update **both** `.env` files, the security list's `/32` rules and the runbooks (step 10), then re-run the script on both VMs (the firewall rules use `PEER_VCN_IP`).
 
 ## Before you start
 
@@ -50,10 +50,10 @@ The console labels below are the ones in use when this was written. If a label h
    - Shape: **`VM.Standard.A1.Flex`, 1 OCPU, 6 GB**.
    - Networking: VCN `madar`, its public subnet, and **no** public IPv4 address. You attach the reserved one next.
    - SSH key: paste your public key.
-   - Boot volume: **100 GB** for VPS-1, **47 GB** for VPS-2.
+   - Boot volume: **100 GB** for VPS-1, **47 GB** for VPS-2. Boot volume performance: **Balanced (10 VPUs/GB)**, the default, on both, with auto-tune off. Higher Performance and Ultra High add a per-GB VPU charge outside Always Free, and auto-tune can raise the VPUs on its own. Lower Cost saves nothing here and slows PostgreSQL. Check that the cost estimate on the create page shows no charge.
 4. On **"Out of host capacity"**, retry later, or pick another availability domain if the region has more than one.
 5. Once the instance runs, open **Attached VNICs → the VNIC → IPv4 addresses → Edit**, and pick **Reserved public IP** with this VM's address.
-6. Note the VM's **private IP** (`<vcn>`) from the instance page. On the VM, `ip route get 1.1.1.1` shows it as `src`.
+6. Note the VM's **private IP** (`<private-ip>`) from the instance page. On the VM, `ip route get 1.1.1.1` shows it as `src`.
 7. **The security list.** The public subnet's security list applies to both VMs, so set it up once both exist. Each VM's own firewall (step 3) then allows only its own ports. Ingress rules, all stateful:
 
    | Source | Protocol and port | For | Keep |
@@ -61,8 +61,8 @@ The console labels below are the ones in use when this was written. If a label h
    | `0.0.0.0/0` | TCP 80, TCP 443 | Caddy: Let's Encrypt and HTTPS on VPS-1 | Always |
    | `0.0.0.0/0` | UDP 51820 | The WireGuard hub on VPS-1 | Always |
    | `<your public ip>/32` | TCP 22 | Your first SSH sessions | Until step 7 |
-   | `<vcn1>/32` | TCP 22 | VPS-1 → VPS-2, the SSH jump | Always |
-   | `<vcn2>/32` | TCP 5432, TCP 6379 | VPS-2's workers → PostgreSQL and Redis on VPS-1 | Always |
+   | `10.1.0.97/32` | TCP 22 | VPS-1 → VPS-2, the SSH jump | Always |
+   | `10.1.0.118/32` | TCP 5432, TCP 6379 | VPS-2's workers → PostgreSQL and Redis on VPS-1 | Always |
 
    The wizard's default list allows TCP 22 from anywhere. Narrow that rule to `<your public ip>/32`. Leave the default ICMP rules and the egress rule as they are.
 
@@ -115,48 +115,125 @@ Keep `~/madar-infra` on the VM. Break-glass and firewall changes run the script 
 sudoedit /srv/madar/.env
 ```
 
-Write one `KEY=value` per line, with no quotes and no trailing comments (Docker reads the values verbatim). Generate passwords on the VM and paste them straight into the editor. Never put them in chat, email or the repository. They are part of connection URLs, so use URL-safe ones:
+Write one `KEY=value` per line, with no quotes and no trailing comments (Docker reads the values verbatim). Passwords are generated on the VM and never shown: not in chat, email, the repository or your scrollback. They are part of connection URLs, so they are hex (`openssl rand -hex 32`), which is URL-safe.
+
+The two blocks below write the whole file in one go: they check they're on the right VM, generate or copy the passwords into shell variables inside a subshell, and write the file with `sudo tee`, which keeps its `deploy` owner and mode `600`. Use `sudoedit /srv/madar/.env` only for later changes.
+
+**VPS-1.** Set `ACME` on the first line to your email, then paste the block on VPS-1:
 
 ```bash
-openssl rand -hex 32
+(
+set -eu
+ACME='your-email-here'
+ip -4 -o addr show | grep -q 'inet 10.1.0.97/' || { echo "STOP: this is not VPS-1"; exit 1; }
+PG=$(openssl rand -hex 32)
+RD=$(openssl rand -hex 32)
+sudo tee /srv/madar/.env >/dev/null <<EOF
+GHCR_OWNER=ahmedsaied94
+VCN_IP=10.1.0.97
+PEER_VCN_IP=10.1.0.118
+VPS1_IP=130.110.117.215
+ACME_EMAIL=$ACME
+FIREBASE_PROJECT_ID=madar-sat
+DEPLOY_SSH_PUBLIC_KEY=
+POSTGRES_USER=madar
+POSTGRES_PASSWORD=$PG
+POSTGRES_DB=madar
+REDIS_PASSWORD=$RD
+DATABASE_URL=postgresql+asyncpg://madar:$PG@postgres:5432/madar
+DATABASE_URL_SYNC=postgresql+psycopg://madar:$PG@postgres:5432/madar
+REDIS_URL=redis://:$RD@redis:6379/0
+MEDIA_BASE_URL=https://media.130.110.117.215.sslip.io
+MEDIA_ROOT=/srv/media
+MEDIA_REHOST_ALLOWED_HOSTS=pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev,imgs.ysscores.com
+CORS_ORIGINS=https://madar-sat.web.app,https://madar-sat.firebaseapp.com
+CONTRACT_VERSION=1.0.0
+CELERY_BROKER_URL=redis://:$RD@redis:6379/0
+EOF
+sudo ls -l /srv/madar/.env
+sudo grep -cE '^[A-Z_]+=' /srv/madar/.env
+)
 ```
 
-Close the terminal tab afterwards, since `clear` keeps the scrollback.
-
-**VPS-1:**
+It prints `-rw------- 1 deploy deploy … /srv/madar/.env` and `20`. What each value is:
 
 | Key | Value |
 | --- | --- |
 | `GHCR_OWNER` | `ahmedsaied94` (the repository owner, lowercase) |
-| `VCN_IP`, `PEER_VCN_IP` | `<vcn1>`, `<vcn2>` |
-| `VPS1_IP` | `<ip1>` |
+| `VCN_IP`, `PEER_VCN_IP` | `10.1.0.97`, `10.1.0.118` |
+| `VPS1_IP` | `130.110.117.215` |
 | `ACME_EMAIL` | Your email, for Let's Encrypt |
-| `FIREBASE_PROJECT_ID` | `<project>` |
+| `FIREBASE_PROJECT_ID` | `madar-sat` (as in `infra/firebase/.firebaserc`) |
 | `DEPLOY_SSH_PUBLIC_KEY` | Leave it empty for now (`DEPLOY_SSH_PUBLIC_KEY=`). Step 8 fills it. |
 | `POSTGRES_USER`, `POSTGRES_DB` | `madar`, `madar` |
-| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | Two new passwords |
+| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | Two new passwords, generated by the block |
 | `DATABASE_URL` | `postgresql+asyncpg://madar:<POSTGRES_PASSWORD>@postgres:5432/madar` |
 | `DATABASE_URL_SYNC` | `postgresql+psycopg://madar:<POSTGRES_PASSWORD>@postgres:5432/madar` |
 | `REDIS_URL` | `redis://:<REDIS_PASSWORD>@redis:6379/0` |
-| `MEDIA_BASE_URL` | `https://media.<ip1>.sslip.io` |
+| `MEDIA_BASE_URL` | `https://media.130.110.117.215.sslip.io` |
 | `MEDIA_ROOT` | `/srv/media` |
-| `MEDIA_REHOST_ALLOWED_HOSTS` | The old app's media hosts, comma-separated ([snapshot-load.md](snapshot-load.md)) |
-| `CORS_ORIGINS` | `https://<project>.web.app,https://<project>.firebaseapp.com` ([firebase-hosting.md §3](firebase-hosting.md#3-firebaserc-and-the-hosts)) |
+| `MEDIA_REHOST_ALLOWED_HOSTS` | The old app's media hosts, comma-separated. A scan of every URL in `../old_app/migration/data/` (the 2026-10-28 snapshot) finds two: the old R2 bucket (5,973 logos, commentator images and audio) and `imgs.ysscores.com` (6 team logos). Its other hosts, `www.livesoccertv.com` (match links) and `www.youtube.com` (reception videos), aren't media. A new host after a re-export shows up as `host_not_allowed` ([snapshot-load.md](snapshot-load.md)) |
+| `CORS_ORIGINS` | `https://madar-sat.web.app,https://madar-sat.firebaseapp.com` ([firebase-hosting.md §3](firebase-hosting.md#3-firebaserc-and-the-hosts)) |
 | `CONTRACT_VERSION` | `1.0.0` |
 | `CELERY_BROKER_URL` | `redis://:<REDIS_PASSWORD>@redis:6379/0` (unused until the workers exist, D3) |
 
-Delete the lines VPS-1 doesn't use: `IMAGE_TAG` and `HEALTHZ_FORCE_FAIL` (`deploy.sh` sets them), `FLOWER_BASIC_AUTH` (VPS-2's), and `DEV_POSTGRES_PORT` and `DEV_REDIS_PORT` (local only).
+The block leaves out the keys VPS-1 doesn't use: `IMAGE_TAG` and `HEALTHZ_FORCE_FAIL` (`deploy.sh` sets them), `FLOWER_BASIC_AUTH` (VPS-2's), and `DEV_POSTGRES_PORT` and `DEV_REDIS_PORT` (local only). Add the Firebase preview channel's origin to `CORS_ORIGINS` once `pwa.yml` has printed it ([firebase-hosting.md](firebase-hosting.md)).
 
-**VPS-2:** the same backend values, with these differences:
+**VPS-2** uses VPS-1's database and Redis passwords. First copy them from your machine, VPS-1 to VPS-2, without printing them. In the order above, VPS-1 has finished steps 2–9 before this: its step 4 re-run started the WireGuard hub (`wg0`, `10.8.0.1`), step 5 connected your device, and step 6 closed its public SSH. So VPS-1 is reached over WireGuard (`madar-vps1`), and VPS-2 still by its public IP:
+
+```bash
+ssh madar-vps1 "sudo grep -E '^(POSTGRES_PASSWORD|REDIS_PASSWORD)=' /srv/madar/.env" \
+  | ssh madar-vps2-public "sudo sh -c 'umask 077; cat > /root/madar-shared.env'"
+```
+
+If you're setting up VPS-2 before VPS-1 reached step 6, VPS-1's public SSH is still open and WireGuard may not be up yet: use `madar-vps1-public` in place of `madar-vps1`.
+
+Then paste this on VPS-2. It also generates Flower's password and deletes the copied file:
+
+```bash
+(
+set -eu
+ip -4 -o addr show | grep -q 'inet 10.1.0.118/' || { echo "STOP: this is not VPS-2"; exit 1; }
+PG=$(sudo sed -n 's/^POSTGRES_PASSWORD=//p' /root/madar-shared.env)
+RD=$(sudo sed -n 's/^REDIS_PASSWORD=//p' /root/madar-shared.env)
+[ -n "$PG" ] && [ -n "$RD" ] || { echo "STOP: copy the passwords from VPS-1 first"; exit 1; }
+FL=$(openssl rand -hex 16)
+sudo tee /srv/madar/.env >/dev/null <<EOF
+GHCR_OWNER=ahmedsaied94
+VCN_IP=10.1.0.118
+PEER_VCN_IP=10.1.0.97
+VPS1_IP=130.110.117.215
+POSTGRES_USER=madar
+POSTGRES_PASSWORD=$PG
+POSTGRES_DB=madar
+REDIS_PASSWORD=$RD
+DATABASE_URL=postgresql+asyncpg://madar:$PG@10.1.0.97:5432/madar
+DATABASE_URL_SYNC=postgresql+psycopg://madar:$PG@10.1.0.97:5432/madar
+REDIS_URL=redis://:$RD@10.1.0.97:6379/0
+MEDIA_BASE_URL=https://media.130.110.117.215.sslip.io
+MEDIA_ROOT=/srv/media
+MEDIA_REHOST_ALLOWED_HOSTS=pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev,imgs.ysscores.com
+CORS_ORIGINS=https://madar-sat.web.app,https://madar-sat.firebaseapp.com
+CONTRACT_VERSION=1.0.0
+CELERY_BROKER_URL=redis://:$RD@10.1.0.97:6379/0
+FLOWER_BASIC_AUTH=admin:$FL
+EOF
+sudo shred -u /root/madar-shared.env
+sudo ls -l /srv/madar/.env
+sudo grep -cE '^[A-Z_]+=' /srv/madar/.env
+)
+```
+
+It prints the same owner and mode, and `18`. The differences from VPS-1:
 
 | Key | Value |
 | --- | --- |
-| `VCN_IP`, `PEER_VCN_IP` | `<vcn2>`, `<vcn1>` |
-| `DATABASE_URL`, `DATABASE_URL_SYNC` | As on VPS-1, with host `<vcn1>` instead of `postgres` |
-| `REDIS_URL`, `CELERY_BROKER_URL` | `redis://:<REDIS_PASSWORD>@<vcn1>:6379/0` |
+| `VCN_IP`, `PEER_VCN_IP` | `10.1.0.118`, `10.1.0.97` |
+| `DATABASE_URL`, `DATABASE_URL_SYNC` | As on VPS-1, with host `10.1.0.97` instead of `postgres` |
+| `REDIS_URL`, `CELERY_BROKER_URL` | `redis://:<REDIS_PASSWORD>@10.1.0.97:6379/0` |
 | `FLOWER_BASIC_AUTH` | `admin:<a new password>` |
 
-On VPS-2, also delete `ACME_EMAIL`, `FIREBASE_PROJECT_ID`, `DEPLOY_SSH_PUBLIC_KEY`, `IMAGE_TAG`, `HEALTHZ_FORCE_FAIL` and the `DEV_` lines. The script then warns `DEPLOY_SSH_PUBLIC_KEY is missing or invalid`, which is expected: nothing deploys to VPS-2 yet. VPS-2 holds the same database and Redis passwords as VPS-1: rotate them together ([secrets.md](secrets.md)).
+VPS-2's block leaves out `ACME_EMAIL`, `FIREBASE_PROJECT_ID`, `DEPLOY_SSH_PUBLIC_KEY`, `IMAGE_TAG`, `HEALTHZ_FORCE_FAIL` and the `DEV_` lines. The script then warns `DEPLOY_SSH_PUBLIC_KEY is missing or invalid`, which is expected: nothing deploys to VPS-2 yet. VPS-2 holds the same database and Redis passwords as VPS-1: rotate them together ([secrets.md](secrets.md)).
 
 **Check `VCN_IP` and `PEER_VCN_IP` twice.** The script refuses the obvious placeholders (`example`, `changeme`, `192.0.2.`), but `example.env`'s `10.0.0.10` and `10.0.0.20` look like real VCN addresses and pass. A wrong `PEER_VCN_IP` opens PostgreSQL and Redis to whichever VM holds that address.
 
@@ -177,8 +254,8 @@ Press Enter. Public SSH closes in step 6, once you have a way in over WireGuard.
 Check what it did:
 
 ```bash
-ls -l /srv/madar/.env                              # -rw------- deploy deploy
-sudo iptables -S INPUT | grep -- '--dport 22'      # VPS-1: the wg0 rule and the public rule; VPS-2: -s <vcn1>/32 and the public rule
+sudo ls -l /srv/madar/.env                         # -rw------- deploy deploy (/srv/madar is 750, so sudo)
+sudo iptables -S INPUT | grep -- '--dport 22'      # VPS-1: the wg0 rule and the public rule; VPS-2: -s 10.1.0.97/32 and the public rule
 ip -4 -o addr show wg0                             # VPS-1 only: 10.8.0.1/24
 systemctl show docker -p After | grep -o 'wg-quick@wg0.service'   # VPS-1 only
 ```
@@ -205,10 +282,10 @@ sudo wg show wg0          # your peer shows a "latest handshake"
 **On VPS-2**, there is no peer to add. Instead, check that the jump through VPS-1 works before step 6 closes VPS-2's public SSH:
 
 ```bash
-ssh -J ubuntu@10.8.0.1 ubuntu@<vcn2> true && echo jump works
+ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118 true && echo jump works
 ```
 
-It needs VPS-1 through step 5, your tunnel up, and the `<vcn1>/32` TCP 22 rule from step 1.
+It needs VPS-1 through step 5, your tunnel up, and the `10.1.0.97/32` TCP 22 rule from step 1.
 
 ## 6. SSH over WireGuard only
 
@@ -221,7 +298,7 @@ sudo ./madar-infra/scripts/bootstrap-vps.sh vps1 --serial-console-tested
 On VPS-2, through the jump:
 
 ```bash
-ssh -J ubuntu@10.8.0.1 ubuntu@<vcn2>
+ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118
 sudo ./madar-infra/scripts/bootstrap-vps.sh vps2 --serial-console-tested
 ```
 
@@ -232,18 +309,18 @@ sudo ./madar-infra/scripts/bootstrap-vps.sh vps2 --serial-console-tested
 Check:
 
 ```bash
-sudo iptables -S INPUT | grep -- '--dport 22'   # VPS-1: only "-i wg0"; VPS-2: only "-s <vcn1>/32"
+sudo iptables -S INPUT | grep -- '--dport 22'   # VPS-1: only "-i wg0"; VPS-2: only "-s 10.1.0.97/32"
 ```
 
 The script makes this decision again on **every** run. On VPS-1, a run when no peer has a handshake (right after a reboot, or from the serial console with nobody connected) opens public SSH again. Step 7 is what keeps it shut then.
 
 ## 7. Close TCP 22 in the security list
 
-Once both VMs are through step 6, remove the `<your public ip>/32` TCP 22 rule from the security list. Keep the `<vcn1>/32` TCP 22 rule: it is the jump to VPS-2. Then, **off** WireGuard:
+Once both VMs are through step 6, remove the `<your public ip>/32` TCP 22 rule from the security list. Keep the `10.1.0.97/32` TCP 22 rule: it is the jump to VPS-2. Then, **off** WireGuard:
 
 ```bash
-nc -vz -w 5 <ip1> 22     # times out
-nc -vz -w 5 <ip2> 22     # times out
+nc -vz -w 5 130.110.117.215 22     # times out
+nc -vz -w 5 130.110.97.25 22     # times out
 ```
 
 ## 8. Deploy peer and keys
@@ -282,7 +359,7 @@ gh secret list -R "$R"                       # the three secrets, plus FIREBASE_
 ```
 
 - `gh secret set … < file` reads the value from the file, so it never shows on screen.
-- The `ci` config's `Endpoint` is `<ip1>:51820` and its `AllowedIPs` is `10.8.0.1/32`.
+- The `ci` config's `Endpoint` is `130.110.117.215:51820` and its `AllowedIPs` is `10.8.0.1/32`.
 - `bootstrap-vps.sh` only ever **adds** keys to `authorized_keys`. Replacing a key: [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key).
 - The deploy key has no forced command: whoever holds it and the `ci` config gets a shell as `deploy`, which is in the docker group. Keep both only in GitHub.
 
@@ -309,7 +386,7 @@ sudo wg show wg0                                # VPS-1 only: your peer, with a 
 
 For each VM:
 
-- **Values:** put the reserved IP and the private IP in the hosts table in [README.md](README.md) and in "The two VMs" above, in place of `<ip1>`, `<vcn1>` and the others. IPs and hostnames aren't secrets. Keys and passwords never go in the repository.
+- **Values:** the reserved and private IPs are recorded (2026-10-29) in the hosts table in [README.md](README.md), in "The two VMs" above, and in every runbook command. If one changes, replace it everywhere (`git grep -n '<old ip>' -- docs infra`). IPs and hostnames aren't secrets. Keys and passwords never go in the repository.
 - **Setup time:** from step 1 until step 6 closed public SSH.
 - **Firewall:** paste the output of these into research.md R12, under this VM:
 

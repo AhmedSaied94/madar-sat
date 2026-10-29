@@ -93,8 +93,17 @@ ensure_deploy_user() {
   local sshd_dropin=/etc/ssh/sshd_config.d/05-madar.conf
   local want=$'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin no'
   if [[ ! -f $sshd_dropin || $(<"$sshd_dropin") != "$want" ]]; then
+    local previous=
+    [[ -f $sshd_dropin ]] && previous=$(<"$sshd_dropin")
     printf '%s\n' "$want" > "$sshd_dropin"
-    sshd -t || die "sshd rejected $sshd_dropin"
+    # sshd -t needs /run/sshd, which only exists while ssh.service runs. Ubuntu 24.04 starts sshd
+    # from ssh.socket, so the directory is often missing.
+    install -d -m 755 /run/sshd
+    if ! sshd -t; then
+      # Never leave a config sshd rejects: a socket-activated sshd reads it on the next connection.
+      if [[ -n $previous ]]; then printf '%s\n' "$previous" > "$sshd_dropin"; else rm -f "$sshd_dropin"; fi
+      die "sshd rejected $sshd_dropin, so it was put back as it was"
+    fi
     # Reloads a running sshd; a socket-activated one reads the config on the next connection.
     systemctl try-reload-or-restart ssh.service || true
   fi

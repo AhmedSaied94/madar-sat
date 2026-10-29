@@ -285,7 +285,7 @@ As an editor, I see the admin shell and log-in screen in the Madar look, wired t
 
   Anything missing is a blocker for B2 and is resolved first.
 - **The MVP test bar applies** (owner decision, 2026-10-29). D1–D10 use delivery-plan A4 and §7, and 80 % returns on D11. Constitution v1.1.0 amended its Quality Gates to match.
-- **The default branch is `master`.** It is never renamed to `main` (delivery-plan §5.1). The pipelines deploy from `master`, which is protected before the first D1 merge.
+- **The default branch is `master`.** It is never renamed to `main` (delivery-plan §5.1). The pipelines deploy from `master`. It isn't protected (delivery-plan §5.1): by convention, changes reach it only through a PR with every check green.
 - **The A1 auth shapes are part of the D1 contract.** The brief has A1 render error and lockout states against the mock of the `v1` admin spec, and the constitution forbids hand-written API types. So the admin spec tagged at 13:00 declares the auth endpoints' requests, responses and error codes (FR-013). D2 implements them without changing those shapes.
 - **The clock status rule moves to D1 on the read side** (FR-011). Constitution II (non-negotiable) forbids showing a finished match as `scheduled`, and the constitution outranks the delivery plan. D2 keeps the admin manual override and the shared `/v1/live` cache.
 - **The snapshot is refreshed before the D1 load**, so it covers the current week, using the README's refresh command. It is copied to VPS-1 out of band and never committed.
