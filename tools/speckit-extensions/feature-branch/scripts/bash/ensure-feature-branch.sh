@@ -115,10 +115,10 @@ resolve_lane() {
     fi
 }
 
-# The branch a new lane branch is cut from: main once the D0 rename is done, master until then.
+# The branch a new lane branch is cut from: the default branch, master (delivery-plan §5.1).
 find_base() {
     local ref
-    for ref in origin/main main origin/master master; do
+    for ref in origin/master master; do
         if git rev-parse --verify -q "$ref^{commit}" >/dev/null; then
             printf '%s\n' "$ref"
             return 0
@@ -199,7 +199,7 @@ else
     if [ -n "$LANE" ]; then
         # Lanes cut their branch from the base each morning (delivery-plan §5.2), never from HEAD.
         CREATED_FROM="$(find_base)" || {
-            echo "Error: no base branch (origin/main, main, origin/master or master) to cut lane branch '$TARGET' from." >&2
+            echo "Error: no base branch (origin/master or master) to cut lane branch '$TARGET' from." >&2
             exit 1
         }
         switch_or_fail git checkout -q --no-track -b "$TARGET" "$CREATED_FROM"

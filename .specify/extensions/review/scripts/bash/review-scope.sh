@@ -44,7 +44,7 @@ while [ $# -gt 0 ]; do
             ;;
         --help|-h)
             echo "Usage: $0 [--json] [--base <ref>] [--lane <b1|b2|a|m>]"
-            echo "List one lane's change set against the merge base with <ref> (default: origin/main, main, origin/master, then master)."
+            echo "List one lane's change set against the merge base with <ref> (default: origin/master, then master)."
             exit 0
             ;;
         *)
@@ -157,7 +157,7 @@ else
 fi
 
 if [ -z "$BASE" ]; then
-    for candidate in origin/main main origin/master master; do
+    for candidate in origin/master master; do
         if git rev-parse --verify -q "$candidate^{commit}" >/dev/null; then
             BASE="$candidate"
             break

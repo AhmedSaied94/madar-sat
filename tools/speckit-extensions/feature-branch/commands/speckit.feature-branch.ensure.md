@@ -10,12 +10,12 @@ command does any work. The active spec is the one recorded in `.specify/feature.
 
 ## Which branch
 
-The day's spec lives on `main`, and each lane works on its own branch (`docs/delivery-plan.md`
+The day's spec lives on `master` (the default branch), and each lane works on its own branch (`docs/delivery-plan.md`
 §5.1), so the branch depends on the session:
 
 | Session | Detected by | Branch | Created from |
 | --- | --- | --- | --- |
-| Lane B1, B2, A or M | `MADAR_LANE`, else the worktree folder (`madar-b1`, `madar-b2`, `madar-a`, `madar-m`), else a current branch named `dNN-<lane>` | `dNN-<lane>`, e.g. `d01-b1` for spec `001-d01-foundation` | the base: `origin/main`, `main`, `origin/master` or `master`, the first that exists |
+| Lane B1, B2, A or M | `MADAR_LANE`, else the worktree folder (`madar-b1`, `madar-b2`, `madar-a`, `madar-m`), else a current branch named `dNN-<lane>` | `dNN-<lane>`, e.g. `d01-b1` for spec `001-d01-foundation` | the base: `origin/master`, else `master` |
 | Planning (no lane) | none of the above | the spec folder name, e.g. `001-d01-foundation` | the current HEAD |
 
 `SPECIFY_FEATURE` never names the branch here: in this repo it holds the spec name, not a branch.
