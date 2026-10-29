@@ -1,0 +1,33 @@
+[
+ {
+  "id": "الأهلي",
+  "ar": "الأهلي",
+  "en": "Fixture Ahly",
+  "slug": "fixture-ahly",
+  "country": "egypt",
+  "savedAt": "2026-10-27T10:35:11.712Z"
+ },
+ {
+  "id": "الزمالك",
+  "ar": "الزمالك",
+  "en": "Fixture Zamalek",
+  "slug": "fixture-zamalek",
+  "country": "egypt",
+  "savedAt": "2026-10-27T10:36:00.000Z"
+ },
+ {
+  "id": "زمالك",
+  "ar": "زمالك",
+  "en": "Fixture Zamalek",
+  "slug": "fixture-zamalek",
+  "country": "egypt",
+  "savedAt": "2026-10-27T10:37:00.000Z"
+ },
+ {
+  "id": "منتخب تجريبي",
+  "ar": "منتخب تجريبي",
+  "en": "Fixture National",
+  "slug": "fixture-national",
+  "savedAt": "2026-10-27T10:38:00.000Z"
+ }
+]

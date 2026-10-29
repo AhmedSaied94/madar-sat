@@ -1,0 +1,67 @@
+[
+ {
+  "id": "right-1",
+  "frequencies": [
+   {
+    "bundle": "عامة",
+    "frequency": "11278 V 27500",
+    "satellite": "Hotbird 13.0E",
+    "free": false,
+    "encryption": "Mega Share",
+    "frequencies": [
+     "11278 V 27500",
+     "11278 V 27500",
+     "11488 H 27500"
+    ]
+   }
+  ],
+  "channel": "CANAL+SPORT",
+  "satellite": [
+   "Hotbird 13.0E"
+  ],
+  "channelLogo": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/right-1.png",
+  "competitions": [
+   "الدوري المصري الممتاز"
+  ],
+  "updatedAt": "2026-08-19T13:52:56.128Z"
+ },
+ {
+  "id": "right-2",
+  "frequencies": [
+   {
+    "bundle": "ضيقة",
+    "frequency": "11938 Н 27500",
+    "satellite": [
+     "Nilesat 7.0W",
+     "Badr 26.0E"
+    ],
+    "free": true,
+    "encryption": "",
+    "frequencies": [
+     "12054 H",
+     "11938 V 27500"
+    ]
+   },
+   {
+    "bundle": "",
+    "frequency": "",
+    "satellite": "Eutel 16.0E",
+    "free": false,
+    "encryption": "VIP",
+    "frequencies": [
+     "11555 V 30000"
+    ]
+   }
+  ],
+  "channel": "قناة الحقوق",
+  "satellite": [
+   "Nilesat 7.0W"
+  ],
+  "channelLogo": "",
+  "competitions": [
+   "الدوري الإنجليزي الممتاز",
+   "بطولة غير موجودة"
+  ],
+  "updatedAt": "2026-09-01T10:00:00.000Z"
+ }
+]

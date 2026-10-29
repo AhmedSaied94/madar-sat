@@ -79,16 +79,16 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Setup (B1)
 
-- [ ] T001 [US1] Create `backend/pyproject.toml` (Python 3.13, managed by `uv`) and `backend/uv.lock`.
+- [x] T001 [US1] Create `backend/pyproject.toml` (Python 3.13, managed by `uv`) and `backend/uv.lock`.
   - **Runtime deps:** fastapi, uvicorn[standard], gunicorn, sqlalchemy[asyncio] ≥ 2, asyncpg, psycopg[binary] ≥ 3, alembic, pydantic ≥ 2, pydantic-settings, redis, httpx, pillow.
   - **Dev deps:** pytest, pytest-asyncio, pytest-cov, schemathesis, ruff, mypy.
   - **Config:** ruff (pyflakes, isort, bugbear, bandit `S` rules) and `mypy --strict` in `pyproject.toml`.
   - **Coverage:** `[tool.coverage]` measures `app/domain`, `app/services` and `app/adapters`, with `fail_under = 70` (FR-054).
-- [ ] T002 [P] [US1] Create `backend/Dockerfile`:
+- [x] T002 [P] [US1] Create `backend/Dockerfile`:
   - multi-stage on `python:3.13-slim`, buildable for `linux/arm64`;
   - final stage: Debian `ffmpeg`, the virtualenv from `uv sync --frozen --no-dev`, a non-root user, and no compilers;
   - default command: `gunicorn app.public:app -k uvicorn.workers.UvicornWorker -w 2 -b 0.0.0.0:8000`. Compose overrides it for `api-admin` with `app.admin:app -w 1 -b 0.0.0.0:8001`.
-- [ ] T003 [P] [US1] Create `backend/app/settings.py` with pydantic-settings, failing fast on missing required values:
+- [x] T003 [P] [US1] Create `backend/app/settings.py` with pydantic-settings, failing fast on missing required values:
   - **Database:** `DATABASE_URL` (asyncpg), `DATABASE_URL_SYNC` (psycopg).
   - **Services:** `REDIS_URL`.
   - **Media:** `MEDIA_BASE_URL`, `MEDIA_ROOT`, and `MEDIA_REHOST_ALLOWED_HOSTS` (comma list, no default).
@@ -96,14 +96,14 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **Drill only:** `HEALTHZ_FORCE_FAIL` (bool, default false; used only by the rollback drill).
 
   No secret has a default value.
-- [ ] T004 [P] [US1] Write `backend/CLAUDE.md` (delivery-plan §8.2). It covers:
+- [x] T004 [P] [US1] Write `backend/CLAUDE.md` (delivery-plan §8.2). It covers:
   - running with `infra/compose/dev.yml`, `uv run alembic upgrade head` and `uv run pytest`;
   - the module layout of plan.md;
   - that B1 owns migrations and the contract;
   - that `0001` is never edited;
   - the CLI commands;
   - that generated clients are regenerated, never edited.
-- [ ] T005 [US1] Create `backend/tests/conftest.py`:
+- [x] T005 [US1] Create `backend/tests/conftest.py`:
   - PostgreSQL 16 from `TEST_DATABASE_URL`; never SQLite (constitution, Test-first);
   - create a fresh database per test session and run `alembic upgrade head`;
   - per-test transactions rolled back;
@@ -112,7 +112,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Tests first (B1): write them and see them fail
 
-- [ ] T006 [P] [US1] Write `backend/tests/unit/test_clock_status.py` for `app.domain.status.derive_status` (data-model "Match status"):
+- [x] T006 [P] [US1] Write `backend/tests/unit/test_clock_status.py` for `app.domain.status.derive_status` (data-model "Match status"):
 
   | Case | Expected |
   | --- | --- |
@@ -124,41 +124,41 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
   - Test both boundaries exactly.
   - Clock results never carry `score`, `minute` or `period`.
-- [ ] T007 [P] [US1] Write `backend/tests/unit/test_time.py` for `app.domain.time`:
+- [x] T007 [P] [US1] Write `backend/tests/unit/test_time.py` for `app.domain.time`:
   - **Cairo wall clock:** `"10:00 م"` → 22:00 and `ص` → AM; an hour 1–11 with no marker → PM; `"--:--"` → `None`.
   - **Conversion:** to UTC across both 2026 Africa/Cairo DST changes.
   - **Window:** `from < to` and `to − from ≤ 8 days`.
   - **TBD anchor:** a TBD match is in `[from, to)` when `match_date 12:00 Africa/Cairo` is, tested for Riyadh, Paris and Casablanca windows ([R5](research.md#r5-matches-whose-kickoff-time-is-unknown)).
-- [ ] T008 [P] [US1] Write `backend/tests/unit/test_frequency.py` for `app.domain.frequency`:
+- [x] T008 [P] [US1] Write `backend/tests/unit/test_frequency.py` for `app.domain.frequency`:
   - parse with `^(\d{4,5})\s+([HVLR])\s+(\d{4,5})$` after replacing Cyrillic `Н` with `H`;
   - `"12054 H"`, `"UHF 32"` and `"كازاخستان"` → `frequency_note` (the last is dropped on platform rows);
   - MHz outside 2000–13000 or symbol rate outside 500–60000 → rejected;
   - a satellite `bestFreq`/`worstFreq` with no polarization (`"12166 29700"`) → NULL tuning plus a warning;
   - a repeated frequency in one rights carriage → deduplicated.
-- [ ] T009 [P] [US1] Write `backend/tests/unit/test_regions.py` for `app.domain.regions` ([R7](research.md#r7-platform-regions)):
+- [x] T009 [P] [US1] Write `backend/tests/unit/test_regions.py` for `app.domain.regions` ([R7](research.md#r7-platform-regions)):
   - «البرايزل», «إندونسيا», «هونع كونغ», "United States", "Australia" → their regions;
   - region words («الشرق الأوسط», «أوروبا», «أمريكا الجنوبية») map to their region;
   - «عالمي», empty and unknown values → «أخرى»;
   - `REGION_ORDER` = الشرق الأوسط، أوروبا، آسيا، الأمريكتان، أفريقيا، أوقيانوسيا، أخرى.
-- [ ] T010 [P] [US1] Write `backend/tests/unit/test_ranking.py` for `app.domain.ranking.headline` ([R2](research.md#r2-personal-channel-line-on-match-rows)):
+- [x] T010 [P] [US1] Write `backend/tests/unit/test_ranking.py` for `app.domain.ranking.headline` ([R2](research.md#r2-personal-channel-line-on-match-rows)):
   - at most 2 entries;
   - on `my_satellite_ids` (or the `satellite_ids` filter) first;
   - otherwise the default satellites `nilesat-7-0w`, `badr-26-0e` or `show_in_match`;
   - then free before encrypted, then `sort_order`, then `id`;
   - hidden or deleted links never appear;
   - platform entries have `satellite` and `frequency` null.
-- [ ] T011 [P] [US1] Write `backend/tests/unit/test_etag.py` for `app.api.etag` ([R4](research.md#r4-etags-304-and-time)):
+- [x] T011 [P] [US1] Write `backend/tests/unit/test_etag.py` for `app.api.etag` ([R4](research.md#r4-etags-304-and-time)):
   - format `W/"<16 hex>"`;
   - changes with any listed dataset version, the normalized query (parameter order doesn't matter), `MEDIA_BASE_URL`, `CONTRACT_VERSION` and the time bucket (60 s / 15 s);
   - stable within a bucket.
-- [ ] T012 [P] [US1] Write `backend/tests/db/test_migrations.py`:
+- [x] T012 [P] [US1] Write `backend/tests/db/test_migrations.py`:
   - `backend/alembic/sql/0001_base_schema.sql` has a recorded SHA-256 equal to `../old_app/migration/schema.sql`'s (compare to the sibling file only when it exists);
   - `upgrade head` works on an empty database;
   - every `0002` object in [data-model.md](data-model.md) exists;
   - these CHECKs reject bad rows: `ck_matches_clock_no_score` (a clock row with a score), `ck_matches_time_tbd`, `ck_matches_locked_fields` (an unknown column name), `ck_channels_locked_fields`, `ck_device_follows_one_target` (two targets set), `ck_notification_outbox_status`, `ck_dataset_versions_name`;
   - `dataset_versions` is seeded with the 8 names;
   - `0002` downgrades cleanly.
-- [ ] T013 [P] [US1] Create the synthetic fixture snapshot in `backend/tests/fixtures/snapshot/hosting/*.json` and `backend/tests/fixtures/snapshot/firestore/*.json`. It uses the real file shapes and contains no real data ([R11](research.md#r11-test-data-without-committing-the-snapshot)). Include at least one row for each case:
+- [x] T013 [P] [US1] Create the synthetic fixture snapshot in `backend/tests/fixtures/snapshot/hosting/*.json` and `backend/tests/fixtures/snapshot/firestore/*.json`. It uses the real file shapes and contains no real data ([R11](research.md#r11-test-data-without-committing-the-snapshot)). Include at least one row for each case:
   - Cyrillic `Н`; `"12054 H"`; `UHF 32`; `"كازاخستان"`;
   - `""`, `"⚽"` and «غير مدرج»; `"--:--"`; `ص`, `م` and an unmarked hour;
   - one `ysMatchId` on two days; orphan channel ids in `channelIds`, `channelOrder` and `rightsOrder`;
@@ -168,7 +168,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - a `carriage_key` duplicate and a `platform_key` duplicate;
   - a hidden channel, both per match and by name;
   - `is_live: true`.
-- [ ] T014 [P] [US1] Write `backend/tests/db/test_load_snapshot.py`, which loads T013 and asserts:
+- [x] T014 [P] [US1] Write `backend/tests/db/test_load_snapshot.py`, which loads T013 and asserts:
   - the report reconciles ([contracts/load-report.md](contracts/load-report.md));
   - every README rule 1–17 has an assertion;
   - **idempotency:** a second run reports identical counts and row counts don't change (FR-004);
@@ -176,7 +176,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - `is_live` rows load with `status_source = 'clock'` and `status = 'scheduled'`;
   - every dataset version is bumped;
   - the details JSONL lists each merge and skip.
-- [ ] T015 [P] [US1] Write `backend/tests/db/test_rehost_media.py` with an `httpx.MockTransport`:
+- [x] T015 [P] [US1] Write `backend/tests/db/test_rehost_media.py` with an `httpx.MockTransport`:
   - an allowlisted host is fetched;
   - any other host → `host_not_allowed`, and no request is made;
   - a redirect to another host is refused;
@@ -186,7 +186,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - the same bytes under two URLs → one `media_assets` row;
   - a re-run skips an `original_url` already present;
   - a failure leaves the `*_asset_id` NULL.
-- [ ] T016 [P] [US1] Write `backend/tests/contract/test_public_contract.py`:
+- [x] T016 [P] [US1] Write `backend/tests/contract/test_public_contract.py`:
   - **Schema:** schemathesis `from_asgi` over `backend/openapi/public.json` with the `not_a_server_error` and `response_schema_conformance` checks.
   - **Envelope:** every FR-008 route returns it.
   - **ETag:** present, plus `Cache-Control: no-cache`; `If-None-Match` → `304` with an empty body ≤ 1 KB; a dataset version bump → `200`.
@@ -195,7 +195,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **Validation (`validation_error`):** a window > 8 days, more than 32 ids in a list, `q` longer than 64 characters.
   - **Not found:** each `<entity>_not_found` code; an unknown route → `not_found`; 405 → `method_not_allowed`.
   - **Errors:** no response body ever contains a traceback.
-- [ ] T017 [P] [US1] Write `backend/tests/contract/test_matches_semantics.py`:
+- [x] T017 [P] [US1] Write `backend/tests/contract/test_matches_semantics.py`:
   - **List:**
     - the window and TBD anchor; order by `kickoff_at`, then `id`, with TBD last;
     - `satellite_ids` filters, and `my_satellite_ids` only reorders `broadcast.headline`;
@@ -209,7 +209,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - `local_broadcaster_eg` is null, `events` is `[]`, `lineups` is null.
   - **Estimated rows:** null `score`, `minute` and `period`.
   - **Size:** one full fixture day of `/v1/matches` gzips to ≤ 60 KB (SC-003).
-- [ ] T018 [P] [US1] Write `backend/tests/contract/test_admin_auth_contract.py`:
+- [x] T018 [P] [US1] Write `backend/tests/contract/test_admin_auth_contract.py`:
   - **Routes:** `app.admin:app` exposes only `/admin/api/auth/login`, `/admin/api/auth/refresh`, `/admin/api/auth/logout`, `/admin/api/auth/me` and `/admin/api/healthz`.
   - **D1 behaviour:** each auth route returns `501` with `error.code = "not_implemented"`.
   - **OpenAPI:** declares the request and response shapes of [contracts/admin-auth-v1.md](contracts/admin-auth-v1.md), with the named examples `login_ok`, `invalid_credentials` (`meta.attempts_remaining: 3`), `account_locked` (`meta.retry_after_s: 872`) and `validation_error`.
@@ -217,13 +217,13 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Contract (B1, before 13:00)
 
-- [ ] T019 [US1] Implement `backend/app/api/envelope.py` and `backend/app/api/errors.py`:
+- [x] T019 [US1] Implement `backend/app/api/envelope.py` and `backend/app/api/errors.py`:
   - a generic `Envelope[T]` model;
   - exception handlers for `HTTPException`, `RequestValidationError`, 404, 405 and unhandled errors, producing the codes in the [contract error table](contracts/public-api-v1.md#errors);
   - `meta.errors = [{loc, type}]` for `validation_error`;
   - `meta.generated_at` on every success;
   - the error is logged with a request id; the body has no traceback.
-- [ ] T020 [P] [US1] Implement the Pydantic response models in `backend/app/schemas/public.py`, exactly as [contracts/public-api-v1.md](contracts/public-api-v1.md):
+- [x] T020 [P] [US1] Implement the Pydantic response models in `backend/app/schemas/public.py`, exactly as [contracts/public-api-v1.md](contracts/public-api-v1.md):
   - **Shared parts:** `Frequency`, `SatelliteRef`, `TeamRef`, `CompetitionRef`, `Score`, `CommentatorRef`.
   - **Matches:** `MatchSummary` (with `match_date` and `broadcast.headline` ≤ 2), `MatchDetail` (`local_broadcaster_eg` nullable; `events: []`; `lineups: null`), `LiveState`.
   - **Channels and satellites:** `Satellite`, `ChannelCarriage`, `ChannelDetail`.
@@ -239,18 +239,18 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - kind: `satellite`, `terrestrial`, `platform`.
 
   Optional fields are present and `null`, never omitted.
-- [ ] T021 [P] [US1] Implement `backend/app/schemas/admin.py`:
+- [x] T021 [P] [US1] Implement `backend/app/schemas/admin.py`:
   - `AdminUser` (role `editor` | `admin`);
   - `Session` (`access_token`, `token_type: "Bearer"`, `expires_in: 900`, `admin`);
   - `LoginRequest`: email in email format, "≤ 254 characters"; password, "1–256" characters;
   - the named OpenAPI examples from [contracts/admin-auth-v1.md](contracts/admin-auth-v1.md).
-- [ ] T022 [US1] Create the routers in `backend/app/api/` with full signatures and query validation, returning stubs. Each route validates its inputs per [contracts/public-api-v1.md](contracts/public-api-v1.md): the window ≤ 8 days, id lists ≤ 32, `q` ≤ 64, `limit` 1–50 and the enums.
+- [x] T022 [US1] Create the routers in `backend/app/api/` with full signatures and query validation, returning stubs. Each route validates its inputs per [contracts/public-api-v1.md](contracts/public-api-v1.md): the window ≤ 8 days, id lists ≤ 32, `q` ≤ 64, `limit` 1–50 and the enums.
   - **Public routers:** `backend/app/api/public/{matches,live,satellites,channels,competitions,teams,rights_holders,commentators,health}.py`.
   - **`backend/app/public.py`:** builds the FastAPI app with the envelope handlers and CORS from `CORS_ORIGINS` (method `GET`, request header `If-None-Match`, exposed header `ETag`).
   - **Admin:** `backend/app/api/admin/auth.py` (login, refresh, logout, me) and `backend/app/admin.py`. Every auth route returns `501 not_implemented`, and the OpenAPI documents the cookies `madar_refresh`/`madar_csrf` and the `X-CSRF-Token` header.
 
   `app/public.py` never imports `app.api.admin`.
-- [ ] T023 [US1] Add the `export-openapi` command to `backend/app/cli.py` (stdlib argparse). It writes `backend/openapi/public.json` and `backend/openapi/admin.json` deterministically (sorted keys, 2-space indent, `info.version = CONTRACT_VERSION`). Commit both files.
+- [x] T023 [US1] Add the `export-openapi` command to `backend/app/cli.py` (stdlib argparse). It writes `backend/openapi/public.json` and `backend/openapi/admin.json` deterministically (sorted keys, 2-space indent, `info.version = CONTRACT_VERSION`). Commit both files.
 - [ ] T024 [US1] Freeze the contract in `backend/openapi/` by 13:00:
   1. open a PR with `backend/openapi/*.json`;
   2. the owner reviews `git diff` against `specs/001-d01-foundation/contracts/`;
@@ -261,11 +261,11 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Data and queries (B1, afternoon)
 
-- [ ] T025 [US1] Create the Alembic base in `backend/alembic/`:
+- [x] T025 [US1] Create the Alembic base in `backend/alembic/`:
   - `backend/alembic.ini` and `backend/alembic/env.py`: sync psycopg URL from `DATABASE_URL_SYNC`, with a SQLAlchemy naming convention giving `ck_<table>_<rule>` and PostgreSQL's default names otherwise;
   - `backend/alembic/sql/0001_base_schema.sql`: a byte-for-byte copy of `../old_app/migration/schema.sql`, the only file copied from `old_app` (FR-001);
   - `backend/alembic/versions/0001_base_schema.py`: runs the file with `op.get_bind().exec_driver_sql(sql)`; its downgrade raises.
-- [ ] T026 [US1] Write `backend/alembic/versions/0002_mvp_additions.py`, part 1, per [data-model.md](data-model.md):
+- [x] T026 [US1] Write `backend/alembic/versions/0002_mvp_additions.py`, part 1, per [data-model.md](data-model.md):
   - **`matches`:**
     - `status text NOT NULL DEFAULT 'scheduled'` with `ck_matches_status` (`scheduled`, `live`, `halftime`, `extra_time`, `penalties`, `finished`, `postponed`, `cancelled`, `abandoned`);
     - `period` with `ck_matches_period` (`1H`, `2H`, `ET1`, `ET2` or NULL);
@@ -281,7 +281,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **Search:** `CREATE EXTENSION IF NOT EXISTS pg_trgm`, plus GIN `(name_norm gin_trgm_ops)` on `teams`, `competitions`, `channels` and `commentators`.
 
   Keep `matches.is_live`.
-- [ ] T027 [US1] Write `backend/alembic/versions/0002_mvp_additions.py`, part 2 (same file, after T026), per [data-model.md](data-model.md):
+- [x] T027 [US1] Write `backend/alembic/versions/0002_mvp_additions.py`, part 2 (same file, after T026), per [data-model.md](data-model.md):
   - **`admin_users`:** email unique on `lower(email)`, "≤ 254 characters"; name "≤ 80 characters"; `ck_admin_users_role` (`editor`, `admin`); argon2id `password_hash`; `is_active`; `last_login_at`; `set_updated_at` trigger.
   - **`admin_refresh_tokens`:** `token_hash char(64) NOT NULL UNIQUE`, `family_id uuid`, `expires_at`, `revoked_at`, `replaced_by_id`.
   - **`audit_log`:** `ck_audit_log_action` (`create`, `update`, `delete`, `merge`, `bulk`); `diff jsonb`; the two indexes; a `forbid_delete` trigger.
@@ -299,25 +299,25 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **`import_runs`:** `items_found`, `items_upserted`, `http_errors`, `status` with `ck_import_runs_status` (`running`, `succeeded`, `partial`, `failed`), and `raw_path`.
   - **`dataset_versions`:** `ck_dataset_versions_name` (`matches`, `live`, `channels`, `satellites`, `competitions`, `teams`, `commentators`, `rights_holders`), seeded with version 0.
   - **Downgrade:** drops everything `0002` added, in reverse order.
-- [ ] T028 [P] [US1] Create the SQLAlchemy 2 mapped classes for every table the API and loader read in `backend/app/db/models.py`, using the same naming convention, and the engines in `backend/app/db/session.py` (async asyncpg for the API, sync psycopg for the CLI).
-- [ ] T029 [P] [US1] Implement `derive_status(row, now) -> DerivedStatus` in `backend/app/domain/status.py` until T006 passes.
-- [ ] T030 [P] [US1] Implement Cairo wall-clock parsing, UTC conversion, window validation and the TBD anchor in `backend/app/domain/time.py` until T007 passes.
-- [ ] T031 [P] [US1] Implement frequency parsing and domain checks in `backend/app/domain/frequency.py` until T008 passes.
-- [ ] T032 [P] [US1] Implement the curated country → region map and `REGION_ORDER` in `backend/app/domain/regions.py` until T009 passes:
+- [x] T028 [P] [US1] Create the SQLAlchemy 2 mapped classes for every table the API and loader read in `backend/app/db/models.py`, using the same naming convention, and the engines in `backend/app/db/session.py` (async asyncpg for the API, sync psycopg for the CLI).
+- [x] T029 [P] [US1] Implement `derive_status(row, now) -> DerivedStatus` in `backend/app/domain/status.py` until T006 passes.
+- [x] T030 [P] [US1] Implement Cairo wall-clock parsing, UTC conversion, window validation and the TBD anchor in `backend/app/domain/time.py` until T007 passes.
+- [x] T031 [P] [US1] Implement frequency parsing and domain checks in `backend/app/domain/frequency.py` until T008 passes.
+- [x] T032 [P] [US1] Implement the curated country → region map and `REGION_ORDER` in `backend/app/domain/regions.py` until T009 passes:
   - keys are `ar_normalize`d;
   - it covers all 201 platform country values in the snapshot;
   - unmapped values → «أخرى».
-- [ ] T033 [P] [US1] Implement headline ranking and the preferred-carriage rule in `backend/app/domain/ranking.py` until T010 passes. Default satellite slugs: `nilesat-7-0w`, `badr-26-0e`.
-- [ ] T034 [US1] Implement the report and the load orchestrator in `backend/app/etl/`:
+- [x] T033 [P] [US1] Implement headline ranking and the preferred-carriage rule in `backend/app/domain/ranking.py` until T010 passes. Default satellite slugs: `nilesat-7-0w`, `badr-26-0e`.
+- [x] T034 [US1] Implement the report and the load orchestrator in `backend/app/etl/`:
   - `backend/app/etl/report.py`: the load-report JSON and details JSONL of [contracts/load-report.md](contracts/load-report.md);
   - `backend/app/etl/snapshot.py`: one psycopg transaction calling the steps in T035–T037, then bumping every dataset version last;
   - `load-snapshot --snapshot-dir --report-dir` in `backend/app/cli.py`: exits non-zero unless `reconciled` is true.
-- [ ] T035 [P] [US1] Implement the reference data in `backend/app/etl/reference.py` (README rules 12–15, 4):
+- [x] T035 [P] [US1] Implement the reference data in `backend/app/etl/reference.py` (README rules 12–15, 4):
   - **Satellites:** trim names; `" Eutel 16.0E"` → `"Eutel 16.0E Africa"`; `DVB T2` → `terrestrial`; `orbital_position` from the name; `slug`; best and worst tuning.
   - **Competitions** and **teams:** with `ysId` → `team_external_ids`, `ysId` 10089 → first team plus a warning; `team_competitions`.
   - **Commentators:** upsert by `name_norm`, including those found only on matches.
   - **Others:** broadcast presets; `hidden_channel_names` normalized; `livesoccertv_teams` with a unique `team_id` match.
-- [ ] T036 [P] [US1] Implement channels and rights holders in `backend/app/etl/channels.py` (README rules 5, 9, 10):
+- [x] T036 [P] [US1] Implement channels and rights holders in `backend/app/etl/channels.py` (README rules 5, 9, 10):
   - `kind`: no `satelliteEn` → `platform`; `DVB T2` → `terrestrial`; otherwise `satellite`;
   - `access` rules per kind, with platform → `free` or NULL;
   - `beam` from `bundle`;
@@ -325,7 +325,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - merge `channels_carriage_key`/`channels_platform_key` duplicates, keeping the lowest `channelOrder`, moving their links and logging the merge;
   - `sort_order` from `channelOrder`;
   - rights holders: carriages, satellites and frequencies with one primary, dropping `satellite[]`.
-- [ ] T037 [US1] Implement matches in `backend/app/etl/matches.py` (README rules 3, 4, 6–8, 11), after T035 and T036:
+- [x] T037 [US1] Implement matches in `backend/app/etl/matches.py` (README rules 3, 4, 6–8, 11), after T035 and T036:
   - **Kickoff:** Cairo → UTC; `"--:--"` → `kickoff_at` NULL and `time_tbd` true.
   - **Teams:** ties broken by competition, otherwise `*_team_id` NULL with the name kept.
   - **Match fields:** placeholders → NULL; `source = 'legacy'`; `status_source = 'clock'`, `status = 'scheduled'`; `is_live` ignored.
@@ -337,41 +337,41 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - commentators 1 and 2 come per channel;
     - orphans are skipped and logged.
   - **Other links:** `match_custom_broadcasts` slots 1–2; `feeds` with `match_id`.
-- [ ] T038 [US1] Implement media rehosting in `backend/app/etl/media.py` and `rehost-media --report-dir` in `backend/app/cli.py`, per [R10](research.md#r10-snapshot-loader-and-media-rehosting), until T015 passes:
+- [x] T038 [US1] Implement media rehosting in `backend/app/etl/media.py` and `rehost-media --report-dir` in `backend/app/cli.py`, per [R10](research.md#r10-snapshot-loader-and-media-rehosting), until T015 passes:
   - httpx with `follow_redirects=False`, 10 s timeout, 5 MB cap, 4 concurrent downloads;
   - only hosts in `MEDIA_REHOST_ALLOWED_HOSTS`;
   - Pillow → WebP ≤ 512 px with metadata stripped; `ffmpeg -t 30` → AAC in MP4;
   - stored at `MEDIA_ROOT/<kind>/<sha[:2]>/<sha>.<ext>`, one row per SHA-256 with `original_url`;
   - sets every `*_asset_id` from README rule 16;
   - adds the `media` block to the report.
-- [ ] T039 [US1] Implement `backend/app/api/etag.py` until T011 passes:
+- [x] T039 [US1] Implement `backend/app/api/etag.py` until T011 passes:
   - `compute_etag(route_id, query, datasets, bucket_s)`;
   - a FastAPI dependency that reads `dataset_versions` once, answers `304` on a matching `If-None-Match`, and sets `ETag`, `Cache-Control: no-cache` and `Vary: Accept-Encoding`;
   - the per-endpoint inputs from the [ETag table](contracts/public-api-v1.md#etag-inputs-per-endpoint-research-r4).
-- [ ] T040 [US1] Implement the `/v1/matches` query in `backend/app/services/matches.py`:
+- [x] T040 [US1] Implement the `/v1/matches` query in `backend/app/services/matches.py`:
   - the window and TBD anchor; the filters `sport`, `competition_id`, `team_id`, `satellite_ids`;
   - derived `status` and the `status` filter;
   - `broadcast.channel_count`, `has_free` and `headline` (≤ 2) from T033, excluding hidden and deleted links;
   - media URLs from `MEDIA_BASE_URL + "/" + path`;
   - the logo fallback;
   - no N+1 queries: one query per section, batched by match ids.
-- [ ] T041 [US1] Implement match detail in `backend/app/services/match_detail.py`:
+- [x] T041 [US1] Implement match detail in `backend/app/services/match_detail.py`:
   - `broadcasts` (custom slots, then preferred carriages, free first);
   - `carriages` (satellite + terrestrial, by satellite priority, free first, then `sort_order`) with per-channel commentators 1 and 2;
   - `platforms` grouped by region with T032;
   - `feed_id`;
   - `local_broadcaster_eg: null`, `events: []`, `lineups: null`;
   - `404 match_not_found`.
-- [ ] T042 [US1] Implement `/v1/live` in `backend/app/services/live.py`: matches with `kickoff_at ∈ [now − 150 min, now + 10 min]` using `matches_live_window_idx`, returning `LiveState` with the derived status.
-- [ ] T043 [P] [US1] Implement satellites in `backend/app/services/satellites.py`:
+- [x] T042 [US1] Implement `/v1/live` in `backend/app/services/live.py`: matches with `kickoff_at ∈ [now − 150 min, now + 10 min]` using `matches_live_window_idx`, returning `LiveState` with the derived status.
+- [x] T043 [P] [US1] Implement satellites in `backend/app/services/satellites.py`:
   - `/v1/satellites`: ordered by `priority` (nulls last), then `orbital_position`; `channel_count` counts visible carriages.
   - `/v1/satellites/{id}/channels`: `category`, and `q` matching `ar_normalize(q)` in `name_norm` or a frequency digit prefix; ordered by `sort_order` (nulls last), then `name`; `404 satellite_not_found`.
-- [ ] T044 [P] [US1] Implement `/v1/channels/{id}` in `backend/app/services/channels.py`: `other_carriages` (same `name_norm`, not deleted), `upcoming_matches` (≤ 20, `kickoff_at ≥ now − 150 min`), `recent_frequency_changes: []`, and `404 channel_not_found`.
-- [ ] T045 [P] [US1] Implement competitions and rights holders in `backend/app/services/catalog.py`:
+- [x] T044 [P] [US1] Implement `/v1/channels/{id}` in `backend/app/services/channels.py`: `other_carriages` (same `name_norm`, not deleted), `upcoming_matches` (≤ 20, `kickoff_at ≥ now − 150 min`), `recent_frequency_changes: []`, and `404 channel_not_found`.
+- [x] T045 [P] [US1] Implement competitions and rights holders in `backend/app/services/catalog.py`:
   - `/v1/competitions[/{id}]`, with `rights_holders` on the detail;
   - `/v1/rights-holders[/{id}]`, with the `satellite_id` and `competition_id` filters through the link tables, and carriages with `frequencies[].is_primary` on the detail;
   - the `404` codes.
-- [ ] T046 [P] [US1] Implement teams and commentators in `backend/app/services/`:
+- [x] T046 [P] [US1] Implement teams and commentators in `backend/app/services/`:
   - `backend/app/services/teams.py`:
     - `/v1/teams?q`: `limit` 1–50, default 20; order exact `name_norm`, then prefix, then trigram similarity, then `id`; an opaque `next_cursor`;
     - `/v1/teams/{id}`: `competitions`, `upcoming` ≤ 10, `recent` ≤ 10.

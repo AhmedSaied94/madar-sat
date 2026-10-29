@@ -1,0 +1,12 @@
+# The image needs only pyproject.toml, uv.lock, alembic*, app/ and openapi/.
+.venv
+**/__pycache__
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.hypothesis
+.coverage*
+htmlcov
+tests
+.env
+CLAUDE.md

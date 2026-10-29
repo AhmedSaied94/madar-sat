@@ -1,0 +1,91 @@
+[
+ {
+  "id": "app",
+  "minVersion": "9.9"
+ },
+ {
+  "id": "autoHiddenChannels",
+  "names": [
+   "beIN SPORTS EN 1"
+  ]
+ },
+ {
+  "id": "autoImport",
+  "lastImport": "2026-10-28T06:00:00.000Z",
+  "matchesImported": 4
+ },
+ {
+  "id": "broadcasts",
+  "list": [
+   {
+    "name": "ON Sport 1",
+    "logo": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/broadcast-1.png"
+   },
+   {
+    "name": "قناة مخصصة",
+    "logo": ""
+   }
+  ]
+ },
+ {
+  "id": "commentators",
+  "list": [
+   {
+    "name": "معلق تجريبي",
+    "image": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/commentator-1.png",
+    "audio": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/audio-1.mp3"
+   }
+  ]
+ },
+ {
+  "id": "channelOrder",
+  "order": [
+   "ch-cyr",
+   "ch-nosr",
+   "ch-terr",
+   "ch-platform-kz",
+   "ch-platform-mega",
+   "ch-carriage-dup-a",
+   "ch-carriage-dup-b",
+   "orphan-channel-order-1",
+   "ch-platform-dup-a",
+   "ch-platform-dup-b",
+   "ch-hidden",
+   "ch-nilesat-free",
+   "ch-badr-enc",
+   "ch-bundle-mega"
+  ]
+ },
+ {
+  "id": "compPriority",
+  "order": [
+   "الدوري المصري الممتاز",
+   "الدوري الإنجليزي الممتاز"
+  ]
+ },
+ {
+  "id": "rightsOrder",
+  "order": [
+   "right-1",
+   "orphan-right-1",
+   "right-2"
+  ]
+ },
+ {
+  "id": "satPriority",
+  "order": [
+   "Nilesat 7.0W",
+   "Badr 26.0E",
+   "Eutel 16.0E",
+   " Eutel 16.0E",
+   "Astra 19.2E",
+   "DVB T2",
+   "Hotbird 13.0E",
+   "Türksat 42.0E"
+  ]
+ },
+ {
+  "id": "extraPlatforms",
+  "names": []
+ }
+]

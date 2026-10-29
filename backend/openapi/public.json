@@ -1,0 +1,3519 @@
+{
+  "components": {
+    "schemas": {
+      "Access": {
+        "enum": [
+          "free",
+          "encrypted"
+        ],
+        "title": "Access",
+        "type": "string"
+      },
+      "Beam": {
+        "enum": [
+          "wide",
+          "narrow"
+        ],
+        "title": "Beam",
+        "type": "string"
+      },
+      "Broadcast": {
+        "properties": {
+          "channel_count": {
+            "title": "Channel Count",
+            "type": "integer"
+          },
+          "has_free": {
+            "title": "Has Free",
+            "type": "boolean"
+          },
+          "headline": {
+            "items": {
+              "$ref": "#/components/schemas/HeadlineEntry"
+            },
+            "maxItems": 2,
+            "title": "Headline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "channel_count",
+          "has_free",
+          "headline"
+        ],
+        "title": "Broadcast",
+        "type": "object"
+      },
+      "BroadcastEntry": {
+        "properties": {
+          "access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Access"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
+          },
+          "commentators": {
+            "items": {
+              "$ref": "#/components/schemas/CommentatorRef"
+            },
+            "title": "Commentators",
+            "type": "array"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "custom",
+              "channel"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "satellite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SatelliteRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "channel_id",
+          "label",
+          "logo",
+          "access",
+          "satellite",
+          "frequency",
+          "commentators"
+        ],
+        "title": "BroadcastEntry",
+        "type": "object"
+      },
+      "CarriageEntry": {
+        "properties": {
+          "access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Access"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "beam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Beam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commentators": {
+            "items": {
+              "$ref": "#/components/schemas/CommentatorRef"
+            },
+            "title": "Commentators",
+            "type": "array"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequency_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Changed At"
+          },
+          "frequency_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Note"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "satellite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SatelliteRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "display_name",
+          "logo",
+          "category",
+          "satellite",
+          "frequency",
+          "frequency_note",
+          "access",
+          "provider",
+          "package",
+          "beam",
+          "country",
+          "frequency_changed_at",
+          "commentators"
+        ],
+        "title": "CarriageEntry",
+        "type": "object"
+      },
+      "Category": {
+        "enum": [
+          "sports",
+          "entertainment"
+        ],
+        "title": "Category",
+        "type": "string"
+      },
+      "ChannelCarriage": {
+        "properties": {
+          "access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Access"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "beam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Beam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequency_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Changed At"
+          },
+          "frequency_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Note"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "satellite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SatelliteRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "display_name",
+          "logo",
+          "category",
+          "satellite",
+          "frequency",
+          "frequency_note",
+          "access",
+          "provider",
+          "package",
+          "beam",
+          "country",
+          "frequency_changed_at"
+        ],
+        "title": "ChannelCarriage",
+        "type": "object"
+      },
+      "ChannelDetail": {
+        "properties": {
+          "access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Access"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "beam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Beam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequency_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Changed At"
+          },
+          "frequency_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Note"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "other_carriages": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelCarriage"
+            },
+            "title": "Other Carriages",
+            "type": "array"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "recent_frequency_changes": {
+            "items": {},
+            "title": "Recent Frequency Changes",
+            "type": "array"
+          },
+          "satellite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SatelliteRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upcoming_matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSummary"
+            },
+            "title": "Upcoming Matches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "display_name",
+          "logo",
+          "category",
+          "satellite",
+          "frequency",
+          "frequency_note",
+          "access",
+          "provider",
+          "package",
+          "beam",
+          "country",
+          "frequency_changed_at",
+          "other_carriages",
+          "upcoming_matches",
+          "recent_frequency_changes"
+        ],
+        "title": "ChannelDetail",
+        "type": "object"
+      },
+      "CommentatorDetail": {
+        "properties": {
+          "audio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSummary"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "image",
+          "audio",
+          "upcoming"
+        ],
+        "title": "CommentatorDetail",
+        "type": "object"
+      },
+      "CommentatorRef": {
+        "properties": {
+          "audio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "image",
+          "audio"
+        ],
+        "title": "CommentatorRef",
+        "type": "object"
+      },
+      "Competition": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          }
+        },
+        "required": [
+          "id",
+          "sport",
+          "name",
+          "logo",
+          "priority"
+        ],
+        "title": "Competition",
+        "type": "object"
+      },
+      "CompetitionDetail": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "rights_holders": {
+            "items": {
+              "$ref": "#/components/schemas/NamedRef"
+            },
+            "title": "Rights Holders",
+            "type": "array"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          }
+        },
+        "required": [
+          "id",
+          "sport",
+          "name",
+          "logo",
+          "priority",
+          "rights_holders"
+        ],
+        "title": "CompetitionDetail",
+        "type": "object"
+      },
+      "CompetitionRef": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo",
+          "stage",
+          "priority"
+        ],
+        "title": "CompetitionRef",
+        "type": "object"
+      },
+      "Envelope_ChannelDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChannelDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[ChannelDetail]",
+        "type": "object"
+      },
+      "Envelope_CommentatorDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommentatorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[CommentatorDetail]",
+        "type": "object"
+      },
+      "Envelope_CompetitionDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompetitionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[CompetitionDetail]",
+        "type": "object"
+      },
+      "Envelope_HealthStatus_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HealthStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[HealthStatus]",
+        "type": "object"
+      },
+      "Envelope_MatchDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[MatchDetail]",
+        "type": "object"
+      },
+      "Envelope_RightsHolderDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RightsHolderDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[RightsHolderDetail]",
+        "type": "object"
+      },
+      "Envelope_TeamDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[TeamDetail]",
+        "type": "object"
+      },
+      "Envelope_list_ChannelCarriage__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChannelCarriage"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[ChannelCarriage]]",
+        "type": "object"
+      },
+      "Envelope_list_Competition__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Competition"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[Competition]]",
+        "type": "object"
+      },
+      "Envelope_list_LiveState__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LiveState"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[LiveState]]",
+        "type": "object"
+      },
+      "Envelope_list_MatchSummary__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MatchSummary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[MatchSummary]]",
+        "type": "object"
+      },
+      "Envelope_list_RightsHolder__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RightsHolder"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[RightsHolder]]",
+        "type": "object"
+      },
+      "Envelope_list_Satellite__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Satellite"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[Satellite]]",
+        "type": "object"
+      },
+      "Envelope_list_TeamSearchItem__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TeamSearchItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[TeamSearchItem]]",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "Frequency": {
+        "properties": {
+          "mhz": {
+            "title": "Mhz",
+            "type": "integer"
+          },
+          "pol": {
+            "$ref": "#/components/schemas/Polarization"
+          },
+          "sr": {
+            "title": "Sr",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mhz",
+          "pol",
+          "sr"
+        ],
+        "title": "Frequency",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeadlineEntry": {
+        "properties": {
+          "access": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Access"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "channel_id": {
+            "title": "Channel Id",
+            "type": "integer"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "satellite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SatelliteRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "channel_id",
+          "name",
+          "access",
+          "satellite",
+          "frequency"
+        ],
+        "title": "HeadlineEntry",
+        "type": "object"
+      },
+      "HealthStatus": {
+        "properties": {
+          "db": {
+            "const": "ok",
+            "title": "Db",
+            "type": "string"
+          },
+          "redis": {
+            "const": "ok",
+            "title": "Redis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "db",
+          "redis"
+        ],
+        "title": "HealthStatus",
+        "type": "object"
+      },
+      "Kind": {
+        "enum": [
+          "satellite",
+          "terrestrial",
+          "platform"
+        ],
+        "title": "Kind",
+        "type": "string"
+      },
+      "LiveState": {
+        "properties": {
+          "estimated": {
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "integer"
+          },
+          "minute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minute"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Score"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Label"
+          },
+          "status_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Updated At"
+          }
+        },
+        "required": [
+          "match_id",
+          "status",
+          "estimated",
+          "period",
+          "minute",
+          "score",
+          "status_label",
+          "status_updated_at"
+        ],
+        "title": "LiveState",
+        "type": "object"
+      },
+      "MatchDetail": {
+        "properties": {
+          "away": {
+            "$ref": "#/components/schemas/TeamRef"
+          },
+          "broadcast": {
+            "$ref": "#/components/schemas/Broadcast"
+          },
+          "broadcasts": {
+            "items": {
+              "$ref": "#/components/schemas/BroadcastEntry"
+            },
+            "title": "Broadcasts",
+            "type": "array"
+          },
+          "carriages": {
+            "items": {
+              "$ref": "#/components/schemas/CarriageEntry"
+            },
+            "title": "Carriages",
+            "type": "array"
+          },
+          "commentator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommentatorRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "competition": {
+            "$ref": "#/components/schemas/CompetitionRef"
+          },
+          "estimated": {
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "events": {
+            "items": {},
+            "title": "Events",
+            "type": "array"
+          },
+          "feed_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feed Id"
+          },
+          "home": {
+            "$ref": "#/components/schemas/TeamRef"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kickoff_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kickoff At"
+          },
+          "lineups": {
+            "title": "Lineups",
+            "type": "null"
+          },
+          "local_broadcaster_eg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Broadcaster Eg"
+          },
+          "match_date": {
+            "format": "date",
+            "title": "Match Date",
+            "type": "string"
+          },
+          "minute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minute"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformGroup"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Score"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "stadium": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stadium"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Label"
+          },
+          "time_tbd": {
+            "title": "Time Tbd",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sport",
+          "kickoff_at",
+          "time_tbd",
+          "match_date",
+          "status",
+          "estimated",
+          "period",
+          "minute",
+          "score",
+          "status_label",
+          "competition",
+          "home",
+          "away",
+          "broadcast",
+          "commentator",
+          "updated_at",
+          "stadium",
+          "local_broadcaster_eg",
+          "broadcasts",
+          "carriages",
+          "platforms",
+          "events",
+          "lineups",
+          "feed_id"
+        ],
+        "title": "MatchDetail",
+        "type": "object"
+      },
+      "MatchSummary": {
+        "properties": {
+          "away": {
+            "$ref": "#/components/schemas/TeamRef"
+          },
+          "broadcast": {
+            "$ref": "#/components/schemas/Broadcast"
+          },
+          "commentator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommentatorRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "competition": {
+            "$ref": "#/components/schemas/CompetitionRef"
+          },
+          "estimated": {
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "home": {
+            "$ref": "#/components/schemas/TeamRef"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kickoff_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kickoff At"
+          },
+          "match_date": {
+            "format": "date",
+            "title": "Match Date",
+            "type": "string"
+          },
+          "minute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minute"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Score"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Label"
+          },
+          "time_tbd": {
+            "title": "Time Tbd",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sport",
+          "kickoff_at",
+          "time_tbd",
+          "match_date",
+          "status",
+          "estimated",
+          "period",
+          "minute",
+          "score",
+          "status_label",
+          "competition",
+          "home",
+          "away",
+          "broadcast",
+          "commentator",
+          "updated_at"
+        ],
+        "title": "MatchSummary",
+        "type": "object"
+      },
+      "NamedRef": {
+        "description": "A minimal named entity reference: ``{id, name, logo}``.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo"
+        ],
+        "title": "NamedRef",
+        "type": "object"
+      },
+      "Period": {
+        "enum": [
+          "1H",
+          "2H",
+          "ET1",
+          "ET2"
+        ],
+        "title": "Period",
+        "type": "string"
+      },
+      "PlatformEntry": {
+        "properties": {
+          "channel_id": {
+            "title": "Channel Id",
+            "type": "integer"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "name",
+          "country",
+          "logo"
+        ],
+        "title": "PlatformEntry",
+        "type": "object"
+      },
+      "PlatformGroup": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          }
+        },
+        "required": [
+          "region",
+          "items"
+        ],
+        "title": "PlatformGroup",
+        "type": "object"
+      },
+      "Polarization": {
+        "enum": [
+          "H",
+          "V",
+          "L",
+          "R"
+        ],
+        "title": "Polarization",
+        "type": "string"
+      },
+      "PrimaryCompetitionRef": {
+        "description": "``{id, name}`` \u2014 a team's primary competition in search results.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PrimaryCompetitionRef",
+        "type": "object"
+      },
+      "RightsHolder": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo",
+          "sort_order"
+        ],
+        "title": "RightsHolder",
+        "type": "object"
+      },
+      "RightsHolderCarriage": {
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/Access"
+          },
+          "beam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Beam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequencies": {
+            "items": {
+              "$ref": "#/components/schemas/RightsHolderFrequency"
+            },
+            "title": "Frequencies",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "satellites": {
+            "items": {
+              "$ref": "#/components/schemas/SatelliteRef"
+            },
+            "title": "Satellites",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "access",
+          "beam",
+          "satellites",
+          "frequencies"
+        ],
+        "title": "RightsHolderCarriage",
+        "type": "object"
+      },
+      "RightsHolderDetail": {
+        "properties": {
+          "carriages": {
+            "items": {
+              "$ref": "#/components/schemas/RightsHolderCarriage"
+            },
+            "title": "Carriages",
+            "type": "array"
+          },
+          "competitions": {
+            "items": {
+              "$ref": "#/components/schemas/NamedRef"
+            },
+            "title": "Competitions",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo",
+          "sort_order",
+          "competitions",
+          "carriages"
+        ],
+        "title": "RightsHolderDetail",
+        "type": "object"
+      },
+      "RightsHolderFrequency": {
+        "properties": {
+          "is_primary": {
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "mhz": {
+            "title": "Mhz",
+            "type": "integer"
+          },
+          "pol": {
+            "$ref": "#/components/schemas/Polarization"
+          },
+          "sr": {
+            "title": "Sr",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mhz",
+          "pol",
+          "sr",
+          "is_primary"
+        ],
+        "title": "RightsHolderFrequency",
+        "type": "object"
+      },
+      "Satellite": {
+        "properties": {
+          "best_frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "channel_count": {
+            "title": "Channel Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name_ar": {
+            "title": "Name Ar",
+            "type": "string"
+          },
+          "name_en": {
+            "title": "Name En",
+            "type": "string"
+          },
+          "orbital_position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orbital Position"
+          },
+          "reception_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reception Url"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "worst_frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Frequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name_ar",
+          "name_en",
+          "orbital_position",
+          "kind",
+          "logo",
+          "channel_count",
+          "best_frequency",
+          "worst_frequency",
+          "reception_url"
+        ],
+        "title": "Satellite",
+        "type": "object"
+      },
+      "SatelliteRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name_ar": {
+            "title": "Name Ar",
+            "type": "string"
+          },
+          "name_en": {
+            "title": "Name En",
+            "type": "string"
+          },
+          "orbital_position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orbital Position"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name_ar",
+          "name_en",
+          "orbital_position"
+        ],
+        "title": "SatelliteRef",
+        "type": "object"
+      },
+      "Score": {
+        "properties": {
+          "away": {
+            "title": "Away",
+            "type": "integer"
+          },
+          "away_pen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Pen"
+          },
+          "home": {
+            "title": "Home",
+            "type": "integer"
+          },
+          "home_pen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Pen"
+          }
+        },
+        "required": [
+          "home",
+          "away",
+          "home_pen",
+          "away_pen"
+        ],
+        "title": "Score",
+        "type": "object"
+      },
+      "Sport": {
+        "enum": [
+          "football",
+          "basketball",
+          "handball",
+          "volleyball",
+          "tennis"
+        ],
+        "title": "Sport",
+        "type": "string"
+      },
+      "Status": {
+        "enum": [
+          "scheduled",
+          "live",
+          "halftime",
+          "extra_time",
+          "penalties",
+          "finished",
+          "postponed",
+          "cancelled",
+          "abandoned"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "TeamDetail": {
+        "properties": {
+          "competitions": {
+            "items": {
+              "$ref": "#/components/schemas/NamedRef"
+            },
+            "title": "Competitions",
+            "type": "array"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary_competition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrimaryCompetitionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSummary"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "stadium": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stadium"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSummary"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "sport",
+          "name",
+          "country",
+          "logo",
+          "primary_competition",
+          "stadium",
+          "competitions",
+          "upcoming",
+          "recent"
+        ],
+        "title": "TeamDetail",
+        "type": "object"
+      },
+      "TeamRef": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo"
+        ],
+        "title": "TeamRef",
+        "type": "object"
+      },
+      "TeamSearchItem": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary_competition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrimaryCompetitionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          }
+        },
+        "required": [
+          "id",
+          "sport",
+          "name",
+          "country",
+          "logo",
+          "primary_competition"
+        ],
+        "title": "TeamSearchItem",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Read-only /v1 endpoints for the Madar Sat app.",
+    "title": "Madar Sat Public API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "health_endpoint_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_HealthStatus_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Endpoint",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/channels/{channel_id}": {
+      "get": {
+        "operationId": "get_channel_v1_channels__channel_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Channel Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ChannelDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Channel",
+        "tags": [
+          "channels"
+        ]
+      }
+    },
+    "/v1/commentators/{commentator_id}": {
+      "get": {
+        "operationId": "get_commentator_v1_commentators__commentator_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "commentator_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Commentator Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommentatorDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Commentator",
+        "tags": [
+          "commentators"
+        ]
+      }
+    },
+    "/v1/competitions": {
+      "get": {
+        "operationId": "list_competitions_v1_competitions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Competition__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Competitions",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/v1/competitions/{competition_id}": {
+      "get": {
+        "operationId": "get_competition_v1_competitions__competition_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "competition_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Competition Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CompetitionDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Competition",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/v1/live": {
+      "get": {
+        "operationId": "get_live_v1_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_LiveState__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Live",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/v1/matches": {
+      "get": {
+        "operationId": "list_matches_v1_matches_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sport",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Sport"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sport"
+            }
+          },
+          {
+            "in": "query",
+            "name": "competition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Competition Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "satellite_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Satellite Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "my_satellite_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "My Satellite Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Status"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_MatchSummary__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Matches",
+        "tags": [
+          "matches"
+        ]
+      }
+    },
+    "/v1/matches/{match_id}": {
+      "get": {
+        "operationId": "get_match_v1_matches__match_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Match Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MatchDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Match",
+        "tags": [
+          "matches"
+        ]
+      }
+    },
+    "/v1/rights-holders": {
+      "get": {
+        "operationId": "list_rights_holders_v1_rights_holders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "satellite_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Satellite Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "competition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Competition Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_RightsHolder__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Rights Holders",
+        "tags": [
+          "rights-holders"
+        ]
+      }
+    },
+    "/v1/rights-holders/{rights_holder_id}": {
+      "get": {
+        "operationId": "get_rights_holder_v1_rights_holders__rights_holder_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rights_holder_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Rights Holder Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RightsHolderDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Rights Holder",
+        "tags": [
+          "rights-holders"
+        ]
+      }
+    },
+    "/v1/satellites": {
+      "get": {
+        "operationId": "list_satellites_v1_satellites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Satellite__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Satellites",
+        "tags": [
+          "satellites"
+        ]
+      }
+    },
+    "/v1/satellites/{satellite_id}/channels": {
+      "get": {
+        "operationId": "list_satellite_channels_v1_satellites__satellite_id__channels_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "satellite_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Satellite Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Category"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ChannelCarriage__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Satellite Channels",
+        "tags": [
+          "satellites"
+        ]
+      }
+    },
+    "/v1/teams": {
+      "get": {
+        "operationId": "search_teams_v1_teams_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_TeamSearchItem__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Teams",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/teams/{team_id}": {
+      "get": {
+        "operationId": "get_team_v1_teams__team_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Team Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TeamDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Team",
+        "tags": [
+          "teams"
+        ]
+      }
+    }
+  }
+}
