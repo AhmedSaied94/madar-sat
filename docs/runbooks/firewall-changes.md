@@ -41,8 +41,8 @@ ssh ubuntu@10.8.0.1 sudo ./madar-infra/scripts/bootstrap-vps.sh vps1
 **VPS-2**, through VPS-1:
 
 ```bash
-rsync -a --delete -e 'ssh -J ubuntu@10.8.0.1' infra/ ubuntu@<vcn2>:madar-infra/
-ssh -J ubuntu@10.8.0.1 ubuntu@<vcn2> sudo ./madar-infra/scripts/bootstrap-vps.sh vps2
+rsync -a --delete -e 'ssh -J ubuntu@10.8.0.1' infra/ ubuntu@10.1.0.118:madar-infra/
+ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118 sudo ./madar-infra/scripts/bootstrap-vps.sh vps2
 ```
 
 - If the rendered rules equal the installed ones and `check-firewall.sh` passes, it prints `firewall already up to date` and changes nothing.

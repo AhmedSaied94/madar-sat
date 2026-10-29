@@ -11,9 +11,9 @@ Checks what the internet can reach on both VMs, and that the public sites carry 
 ## 1. Ports
 
 ```bash
-nmap -Pn -p 22,80,443,5432,6379,8000,8001 <ip1>     # 80 and 443 open; everything else filtered
-sudo nmap -Pn -sU -p 51820 <ip1>                       # open|filtered
-nmap -Pn -p 22,80,443,5432,6379,5555,8000 <ip2>       # everything filtered
+nmap -Pn -p 22,80,443,5432,6379,8000,8001 130.110.117.215     # 80 and 443 open; everything else filtered
+sudo nmap -Pn -sU -p 51820 130.110.117.215                       # open|filtered
+nmap -Pn -p 22,80,443,5432,6379,5555,8000 130.110.97.25       # everything filtered
 ```
 
 - `filtered` is right for a closed port: the security list drops it, or iptables rejects it.
@@ -22,9 +22,9 @@ nmap -Pn -p 22,80,443,5432,6379,5555,8000 <ip2>       # everything filtered
 ## 2. Certificates and headers
 
 ```bash
-curl -sSI https://api.<ip1>.sslip.io/healthz
-curl -sSI https://media.<ip1>.sslip.io/
-curl -sSI https://app.<ip1>.sslip.io/
+curl -sSI https://api.130.110.117.215.sslip.io/healthz
+curl -sSI https://media.130.110.117.215.sslip.io/
+curl -sSI https://app.130.110.117.215.sslip.io/
 ```
 
 Each response must carry:
@@ -39,10 +39,10 @@ Each response must carry:
 `media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable`.
 
 ```bash
-curl -s https://api.<ip1>.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}
-curl -sI http://api.<ip1>.sslip.io/healthz | head -1          # a 308 redirect to https
+curl -s https://api.130.110.117.215.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}
+curl -sI http://api.130.110.117.215.sslip.io/healthz | head -1          # a 308 redirect to https
 for h in api media app; do
-  echo | openssl s_client -connect "$h.<ip1>.sslip.io:443" -servername "$h.<ip1>.sslip.io" 2>/dev/null \
+  echo | openssl s_client -connect "$h.130.110.117.215.sslip.io:443" -servername "$h.130.110.117.215.sslip.io" 2>/dev/null \
     | openssl x509 -noout -subject -issuer -enddate
 done
 ```
@@ -52,8 +52,8 @@ The issuer is Let's Encrypt (or ZeroSSL, Caddy's fallback), and the end date is 
 The PWA mirror allows only the two PWA origins:
 
 ```bash
-curl -sI -H 'Origin: https://<project>.web.app' https://app.<ip1>.sslip.io/ | grep -i access-control-allow-origin   # echoes the origin
-curl -sI -H 'Origin: https://example.org' https://app.<ip1>.sslip.io/ | grep -i access-control-allow-origin        # nothing
+curl -sI -H 'Origin: https://<project>.web.app' https://app.130.110.117.215.sslip.io/ | grep -i access-control-allow-origin   # echoes the origin
+curl -sI -H 'Origin: https://example.org' https://app.130.110.117.215.sslip.io/ | grep -i access-control-allow-origin        # nothing
 ```
 
 ## 3. The admin isn't public
@@ -62,7 +62,7 @@ Off WireGuard:
 
 ```bash
 curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' https://10.8.0.1/                      # 000: no route
-curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' -H 'Host: 10.8.0.1' https://<ip1>/     # 000: the public listener has no site for it
+curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' -H 'Host: 10.8.0.1' https://130.110.117.215/     # 000: the public listener has no site for it
 ```
 
 Then connect the tunnel and check that it does answer:

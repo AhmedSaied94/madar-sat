@@ -6,10 +6,10 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN. VPS-1 is public; 
 
 | | VPS-1 "app" | VPS-2 "workers" |
 | --- | --- | --- |
-| Reserved public IP | `<ip1>` | `<ip2>` |
-| VCN private IP | `<vcn1>` | `<vcn2>` |
-| WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@<vcn2>` |
-| Public hostnames | `api.<ip1>.sslip.io`, `media.<ip1>.sslip.io`, `app.<ip1>.sslip.io` | None |
+| Reserved public IP | `130.110.117.215` | `130.110.97.25` |
+| VCN private IP | `10.1.0.97` | `10.1.0.118` |
+| WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` |
+| Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None |
 | Admin | `https://10.8.0.1`, over WireGuard only | None |
 | Runs | Caddy, `api-public`, `api-admin`, PostgreSQL 16, Redis 7 | Celery workers, `beat`, Flower: off until D3. Uptime Kuma and backups later. |
 

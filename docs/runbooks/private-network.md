@@ -1,16 +1,56 @@
 # Private network (WireGuard)
 
-SSH and the admin are reachable only over WireGuard. VPS-1 runs the hub on `wg0`, at `10.8.0.1/24` on UDP port 51820 of `<ip1>`. A WireGuard server never answers packets from unknown keys, so to a port scan it looks closed. VPS-2 isn't on WireGuard: you reach it by jumping through VPS-1. Background: SD §7.2, FR-022, and `infra/wireguard/`.
+SSH and the admin are reachable only over WireGuard. VPS-1 runs the hub on `wg0`, at `10.8.0.1/24` on UDP port 51820 of `130.110.117.215`. A WireGuard server never answers packets from unknown keys, so to a port scan it looks closed. VPS-2 isn't on WireGuard: you reach it by jumping through VPS-1. Background: SD §7.2, FR-022, and `infra/wireguard/`.
 
 | | |
 | --- | --- |
-| Hub | `10.8.0.1/24`, endpoint `<ip1>:51820` |
+| Hub | `10.8.0.1/24`, endpoint `130.110.117.215:51820` |
 | Peer addresses | `10.8.0.2`–`10.8.0.254`, one `/32` each. `wg-add-peer.sh` takes the lowest free one unless you pass one. |
 | Peers | Your devices; `ci`, the deploy peer ([provision-host.md §8](provision-host.md#8-deploy-peer-and-keys)); the home scrape box later (D2) |
 | What a peer reaches | Only `10.8.0.1`: SSH (TCP 22) and the admin site (TCP 443). Each peer config routes `10.8.0.1/32` through the tunnel and nothing else. |
-| VPS-2 | `ssh -J ubuntu@10.8.0.1 ubuntu@<vcn2>` |
+| VPS-2 | `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` |
 
 There are no peer roles. Any peer can reach SSH, but only someone whose key is in an `authorized_keys` file logs in.
+
+## Your SSH config
+
+On your machine, `~/.ssh/config` names the four ways in. The keys are the ones you gave each VM when you created it (`~/.ssh/madar-vps1.key`, `~/.ssh/madar-vps2.key`, mode 600):
+
+| Alias | Goes to | Works |
+| --- | --- | --- |
+| `madar-vps1-public` | `ubuntu@130.110.117.215` | Until public SSH closes on VPS-1 ([provision-host.md §6–7](provision-host.md#6-ssh-over-wireguard-only)) |
+| `madar-vps2-public` | `ubuntu@130.110.97.25` | Until public SSH closes on VPS-2 |
+| `madar-vps1` | `ubuntu@10.8.0.1`, over WireGuard | Once your peer is up ([provision-host.md §5](provision-host.md#5-your-wireguard-peer)) |
+| `madar-vps2` | `ubuntu@10.1.0.118`, with `ProxyJump madar-vps1` | Once `madar-vps1` works and the `10.1.0.97/32` TCP 22 rule is in the security list |
+
+```sshconfig
+Host madar-vps1-public
+    HostName 130.110.117.215
+    User ubuntu
+    IdentityFile ~/.ssh/madar-vps1.key
+    IdentitiesOnly yes
+
+Host madar-vps2-public
+    HostName 130.110.97.25
+    User ubuntu
+    IdentityFile ~/.ssh/madar-vps2.key
+    IdentitiesOnly yes
+
+Host madar-vps1
+    HostName 10.8.0.1
+    User ubuntu
+    IdentityFile ~/.ssh/madar-vps1.key
+    IdentitiesOnly yes
+
+Host madar-vps2
+    HostName 10.1.0.118
+    User ubuntu
+    IdentityFile ~/.ssh/madar-vps2.key
+    IdentitiesOnly yes
+    ProxyJump madar-vps1
+```
+
+The jump to VPS-2 authenticates to VPS-1 with VPS-1's key, then to VPS-2 with VPS-2's, both from your machine. No key is copied to VPS-1.
 
 ## Peers
 
@@ -28,11 +68,11 @@ It adds the peer to `/etc/wireguard/wg0.conf` and to the running `wg0`, and writ
 - **Linux laptop**, from your machine:
 
   ```bash
-  ssh ubuntu@<ip1-or-10.8.0.1> sudo cat /root/wireguard-peers/<name>.conf | sudo sh -c 'umask 077 && cat > /etc/wireguard/madar.conf'
+  ssh madar-vps1-public sudo cat /root/wireguard-peers/<name>.conf | sudo sh -c 'umask 077 && cat > /etc/wireguard/madar.conf'
   sudo wg-quick up madar
   ```
 
-  Use `<ip1>` only for your very first peer, while public SSH is still open (provision-host.md §5). After that, use `10.8.0.1` from a device that is already connected.
+  Use `madar-vps1-public` (`130.110.117.215`) only for your very first peer, while public SSH is still open (provision-host.md §5). After that, use `madar-vps1` (`10.8.0.1`) from a device that is already connected ([Your SSH config](#your-ssh-config)). The tunnel routes only `10.8.0.1/32`, so it sits beside other WireGuard tunnels without clashing.
 - **Other desktops:** copy the file the same way to `madar.conf`, use "Import tunnel(s) from file" in the WireGuard app, then delete the file.
 - **Phone:** show it as a QR code on VPS-1 and scan it in the app. Never send the file by chat or email.
 

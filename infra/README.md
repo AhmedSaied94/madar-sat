@@ -12,7 +12,7 @@ Two OCI Always Free Ampere A1 hosts (arm64), Docker Compose, Caddy and WireGuard
 | `compose/vps2.yml` | VPS-2: the Celery workers, the single `beat` and `flower`, all under profile `workers` (no worker code before D3) |
 | `compose/dev.yml` | Local development: PostgreSQL 16, Redis 7 and a `tls internal` Caddy at `https://localhost:8443` |
 | `compose/example.env` | Every variable name the Compose files, Caddyfile and scripts use, with fake values |
-| `Caddyfile` | The public sites `api.`, `media.` and `app.<ip1>.sslip.io`, and the admin site `https://10.8.0.1` on `wg0` |
+| `Caddyfile` | The public sites `api.`, `media.` and `app.130.110.117.215.sslip.io`, and the admin site `https://10.8.0.1` on `wg0` |
 | `firewall/vps1.rules`, `vps2.rules`, `rules.v6` | iptables templates, rendered into `/etc/iptables/rules.v4` and `rules.v6` |
 | `wireguard/wg0.conf.tmpl`, `peer.conf.tmpl` | The hub and peer configs, with key placeholders only |
 | `scripts/bootstrap-vps.sh` | Idempotent host setup (Docker, WireGuard, the `deploy` user, `/srv` folders, firewall) |
@@ -34,9 +34,9 @@ Two OCI Always Free Ampere A1 hosts (arm64), Docker Compose, Caddy and WireGuard
 
 | Name | Served by | Upstream |
 | --- | --- | --- |
-| `api.<ip1>.sslip.io` | Caddy, Let's Encrypt | `api-public` on `127.0.0.1:8000` |
-| `media.<ip1>.sslip.io` | Caddy, Let's Encrypt | `/srv/media`, `immutable` |
-| `app.<ip1>.sslip.io` | Caddy, Let's Encrypt | `/srv/app-mirror` (PWA file mirror), CORS `GET` from the two PWA origins |
+| `api.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `api-public` on `127.0.0.1:8000` |
+| `media.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `/srv/media`, `immutable` |
+| `app.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `/srv/app-mirror` (PWA file mirror), CORS `GET` from the two PWA origins |
 | `<project>.web.app` | Firebase Hosting | The PWA shell (`pwa.yml`) |
 | `https://10.8.0.1` (`wg0` only) | Caddy, `tls internal` | `/admin/api/*` → `api-admin` on `10.8.0.1:8001`; everything else → `/srv/admin` |
 

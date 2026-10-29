@@ -1,6 +1,6 @@
 # Firebase Hosting (PWA preview)
 
-`pwa.yml` builds the Flutter web app and deploys it to the Firebase Hosting preview channel `master`, which expires 30 days after each deploy. This runbook sets up the project, the deploy key and the origins the API allows. It touches no server, except for one `.env` change on VPS-1. The public release (`web-v*` tags, and the VPS-1 mirror at `app.<ip1>.sslip.io`) arrives on D4. Background: SD §5.2, research R14, and `infra/firebase/`.
+`pwa.yml` builds the Flutter web app and deploys it to the Firebase Hosting preview channel `master`, which expires 30 days after each deploy. This runbook sets up the project, the deploy key and the origins the API allows. It touches no server, except for one `.env` change on VPS-1. The public release (`web-v*` tags, and the VPS-1 mirror at `app.130.110.117.215.sslip.io`) arrives on D4. Background: SD §5.2, research R14, and `infra/firebase/`.
 
 The rest of the Firebase project (the Android and web apps, the FCM web-push key, Remote Config defaults) is Day 0 work in delivery-plan §6 ([../owner-actions.md](../owner-actions.md)).
 
@@ -44,7 +44,7 @@ If key creation is refused because of the organization policy `iam.disableServic
    CORS_ORIGINS=https://<project>.web.app,https://<project>.firebaseapp.com
    ```
 
-   - `FIREBASE_PROJECT_ID` sets the two origins that may read the PWA mirror (`app.<ip1>.sslip.io`) in the Caddyfile.
+   - `FIREBASE_PROJECT_ID` sets the two origins that may read the PWA mirror (`app.130.110.117.215.sslip.io`) in the Caddyfile.
    - `CORS_ORIGINS` is the API's list of allowed browser origins, matched exactly.
 3. If VPS-1 is already running, recreate what reads them ([deploy-and-rollback.md "Working on VPS-1"](deploy-and-rollback.md#working-on-vps-1)):
 

@@ -122,7 +122,7 @@ gh run watch -R "$R" "$(gh run list -R "$R" --workflow backend.yml -L 1 --json d
 Poll the public API from another terminal during the run. It must answer `200` throughout, apart from a few seconds while the containers swap:
 
 ```bash
-while sleep 1; do curl -s -o /dev/null -w '%{http_code}\n' https://api.<ip1>.sslip.io/healthz; done
+while sleep 1; do curl -s -o /dev/null -w '%{http_code}\n' https://api.130.110.117.215.sslip.io/healthz; done
 ```
 
 Expect:
@@ -174,8 +174,8 @@ Do these before the first merge of Lanes B1 and B2.
    ```bash
    R=AhmedSaied94/madar-sat
    gh secret set <NAME> -R "$R" < <file>
-   gh variable set VPS1_IP -R "$R" --body <ip1>
-   gh variable set VPS2_IP -R "$R" --body <ip2>
+   gh variable set VPS1_IP -R "$R" --body 130.110.117.215
+   gh variable set VPS2_IP -R "$R" --body 130.110.97.25
    ```
 
 2. **Actions minutes.** The repository is private (checked 2026-10-29). The free plan caps Actions minutes for private repositories, and GitHub's free arm64 runners serve public repositories only, so every backend build runs under QEMU and takes many minutes. Watch Settings → Billing → Actions. If the minutes run out, the options are making the repository public or a self-hosted arm64 runner (`ARM_RUNNER`); either is an owner decision under constitution IX.
