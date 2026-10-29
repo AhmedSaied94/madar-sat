@@ -294,26 +294,34 @@ The code is one Python package (`backend/app`) with two ASGI entry points, `app.
 
 ### 6.2 Data model
 
-**6.2.1 Base.** `old_app/migration/schema.sql` becomes Alembic revision `0001` unchanged, together with the ETL rules in `old_app/migration/README.md`. Later revisions add:
+**6.2.1 Base.** `old_app/migration/schema.sql` becomes Alembic revision `0001` unchanged, together with the ETL rules in `old_app/migration/README.md`. Run it as one script through psycopg; SQLAlchemy on asyncpg rejects several statements in one call. Besides the Sat Air data, the base already holds:
+
+- `sources`, which every provenance column, external id and import run references;
+- `media_assets`: every logo, photo and voice clip is an `*_asset_id`, never a URL, so the API builds absolute URLs from `media_base_url`;
+- `match_external_ids`, `team_external_ids` and `competition_external_ids`, keyed by `(source, external_id)`, for importer upserts;
+- `channels.kind` (`satellite`, `terrestrial` or `platform`), `access` (`free` / `encrypted`), `provider`, `package`, `beam` (`wide` / `narrow`), and soft delete (`deleted_at`); `encryption` is not loaded (O3);
+- `satellites.slug`, `kind` and `orbital_position numeric(4,1)` (east positive);
+- `ar_normalize` (6.2.4), with generated `name_norm` columns on teams, competitions, channels and commentators;
+- a `set_updated_at` trigger that moves `updated_at` only on a real change, and a trigger that refuses to delete matches.
+
+Later revisions add:
 
 | Table / change | Purpose |
 |---|---|
-| `satellites.orbital_position numeric(5,1)` (east positive), `slug` | Display ("7.0°W"), sorting, satellite finder (v2) |
-| `matches`: `status`, `period`, `minute`, `home_score`, `away_score`, `home_pen`, `away_pen`, `status_source`, `status_label`, `status_updated_at`, `time_tbd`, `locked_fields text[]` | Live model (6.2.3); protects admin edits from importers |
-| `match_events (id, match_id, side, type, minute, player_name, source, external_id)` | Goals, own goals, penalties, red cards (live center) |
+| `matches`: `status`, `period`, `minute`, `home_score`, `away_score`, `home_pen`, `away_pen`, `status_source`, `status_label`, `status_updated_at`, `time_tbd`, `locked_fields text[]` (CHECK against the lockable columns; drop `is_live` once status is backfilled) | Live model (6.2.3); protects admin edits from importers |
+| `match_events (id, match_id, side, type, minute, player_name, source, external_id)`, unique `(match_id, source, external_id)` | Goals, own goals, penalties, red cards (live center). The unique key stops the live diff inserting a goal twice |
 | `match_lineups (match_id, side, formation, players jsonb, source)` | Lineups, where the source has them (O7) |
-| `channels`: `access text CHECK (access IN ('free','encrypted'))`, `provider`, `package`, `locked_fields`, `frequency_changed_at` | Neutral access model (O3). Replaces `is_free`/`encryption` in the API |
+| `channels`: `locked_fields` (CHECK as on matches), `frequency_changed_at` | Protects admin edits; the "changed recently" badge |
 | `channel_frequency_changes (id, channel_id, old_*, new_*, source, detected_at)` | Frequency-change alerts and the "changed recently" badge |
 | `team_aliases`, `competition_aliases`, `channel_aliases (source, alias_norm, target_id)`, `unresolved_names` | Entity resolution and the admin mapping queue |
-| `name_norm` generated columns + `pg_trgm` GIN indexes on teams, competitions, channels, commentators | Arabic-insensitive search (6.2.4) |
+| `pg_trgm` GIN indexes on the `name_norm` columns | Arabic-insensitive search (6.2.4) |
 | `admin_users`, `admin_refresh_tokens`, `audit_log` | Server-side admin auth and accountability |
-| `devices (id, install_id uuid, token_hash, platform, push_token, app_version, locale, tz, prefs jsonb, created_at, last_seen_at)` | Anonymous device registration |
-| `device_follows (device_id, target_type, target_id, created_at)` | Follows: team, competition, match, channel, commentator |
-| `notification_outbox (id, type, dedupe_key UNIQUE, payload jsonb, audience jsonb, due_at, status, sent, failed)` | Reliable, deduplicated push |
+| `devices (id, install_id uuid, token_hash UNIQUE, platform, push_token UNIQUE, app_version, locale, tz, prefs jsonb, created_at, last_seen_at)` | Anonymous device registration. A push token belongs to one device row, so a re-registered token can't receive the same push twice |
+| `device_follows (device_id, team_id, competition_id, match_id, channel_id, commentator_id, created_at)`: one nullable FK per target type, with a CHECK that exactly one is set | Follows. Real foreign keys keep follows valid through merges and deletes, unlike a `(target_type, target_id)` pair |
+| `notification_outbox (id, type, dedupe_key UNIQUE, payload jsonb, audience jsonb, due_at, status, sent, failed)`, partial index on `due_at` where `status = 'pending'` | Reliable, deduplicated push; the index serves the dispatcher's `SKIP LOCKED` claim |
 | `reports (id, device_id, match_id, channel_id, kind, note, status, resolved_by, created_at)` | "Channel not working / wrong frequency" (v2) |
-| `media_assets (id, sha256, kind, path, mime, bytes, width, height, original_url)` | Content-addressed media, rehosting |
 | `import_runs` + `items_found`, `items_upserted`, `http_errors`, `status`, `raw_path` | Source health |
-| `dataset_versions (name, version bigint, updated_at)` | Cheap ETags and cache invalidation |
+| `dataset_versions (name, version bigint, updated_at)`. Bump a version as the last statement of a write transaction, or use one sequence per dataset, so a long import doesn't hold the row lock that admin saves wait on | Cheap ETags and cache invalidation |
 
 **6.2.2 Time.** `kickoff_at timestamptz` holds UTC. Importers read source wall-clock times in their real zone: Cairo for the Arabic sources, converted with `AT TIME ZONE 'Africa/Cairo'` so DST is handled. `match_date` keeps the legacy listing day for ingestion only. `time_tbd = true` when the kickoff time is unknown; clients put those matches in a "time to be confirmed" group for their `match_date`.
 
@@ -328,7 +336,7 @@ scheduled ─▶ postponed | cancelled          live ─▶ abandoned
 - The clock fallback applies only when no feed covers a match: from kickoff to kickoff + 120 min it's `live`, after that `finished`. These carry `estimated: true` in the API, and the UI shows "live" without a score or minute.
 - `minute` is text (`"45+2"`). `status_label` carries a source label for unusual states, such as the reason for a postponement.
 
-**6.2.4 Search.** An immutable SQL function `ar_normalize(text)` strips tashkeel and tatweel, maps أ/إ/آ → ا, ى → ي and ة → ه, and lowercases Latin text, matching the old app's `normalizeArabic`. Generated `name_norm` columns plus `pg_trgm` serve `/v1/search` and the admin pickers.
+**6.2.4 Search.** An immutable SQL function `ar_normalize(text)`, defined in the base schema, strips tashkeel and tatweel, maps أ/إ/آ/ٱ → ا, ى/ئ → ي, ؤ → و and ة → ه, turns punctuation into spaces and lowercases Latin text. It gives the same result as the old app's `normalizeArabic` on all 4,786 distinct names in the snapshot. Unique keys use it too: competitions per `(sport, name_norm)`, commentators per `name_norm`, channel carriages and platforms. Generated `name_norm` columns plus `pg_trgm` serve `/v1/search` and the admin pickers.
 
 **6.2.5 History.** Matches are never deleted. That's about 25k rows a year, which needs no partitioning. Raw scraped HTML is kept for 5 days. Outbox rows are kept for 30 days.
 
@@ -390,10 +398,10 @@ The device token is 256 random bits, generated by the server and stored there as
   "lineups": null, "feed_id": null, "updated_at": "2026-10-28T17:59:10Z" }
 
 // ChannelCarriage
-{ "id": 5512, "name": "beIN SPORTS 1 HD", "display_name": "beIN SPORTS 1", "logo": "…", "category": "sports",
+{ "id": 5512, "kind": "satellite", "name": "beIN SPORTS 1 HD", "display_name": "beIN SPORTS 1", "logo": "…", "category": "sports",
   "satellite": {"id": 2, "name_ar": "نايل سات", "name_en": "Nilesat 7.0W", "orbital_position": -7.0},
   "frequency": {"mhz": 11843, "pol": "H", "sr": 27500}, "frequency_note": null,
-  "access": "encrypted", "provider": "beIN", "package": null, "country": null,
+  "access": "encrypted", "provider": "beIN", "package": null, "beam": "wide", "country": null,
   "frequency_changed_at": "2026-10-20T09:00:00Z" }
 ```
 
@@ -434,7 +442,7 @@ class SourceAdapter(Protocol):
     def normalize(self, item: ParsedItem) -> NormalizedRecord: ...  # UTC times, normalized names, parsed frequencies
 ```
 
-Pipeline: fetch (`scrape` queue) → parse → normalize → resolve entities → upsert by `(source, external_id)` → merge cross-source duplicates → record `import_runs` → bump dataset versions → write outbox events (channel added or removed, frequency changed).
+Pipeline: fetch (`scrape` queue) → parse → normalize → resolve entities → upsert by `(source, external_id)` through the `*_external_ids` tables → merge cross-source duplicates → record `import_runs` → bump dataset versions → write outbox events (channel added or removed, frequency changed).
 
 | Source | Provides | Schedule (beat) | Notes |
 |---|---|---|---|
@@ -497,7 +505,7 @@ Copy templates are in the product doc, §11.
   3. Normalize audio to AAC, ≤ 30 s (ffmpeg, on a worker).
   4. Store at `/srv/media/<kind>/<sha256[:2]>/<sha256>.<ext>`.
 - **Serving:** Caddy serves media at `https://media.<ip>.sslip.io/…` with `immutable` cache headers. A nightly `rclone` copy goes to the OCI bucket.
-- **Rehosting:** the data load downloads every existing logo and audio URL (old R2 bucket, `imgs.ysscores.com`) and rewrites the URLs. Importer-found logos are rehosted the same way, from allowlisted hosts only.
+- **Rehosting:** the data load downloads every existing logo and audio URL (old R2 bucket, `imgs.ysscores.com`) into a `media_assets` row, with the source in `original_url`. Content rows reference the asset by id, and the API builds absolute URLs from `media_base_url`, so moving the media host (O4) needs no data change. Importer-found logos are rehosted the same way, from allowlisted hosts only.
 
 ---
 
@@ -606,9 +614,9 @@ madar_sat/                    (git repository)
 
 ## 10. Data load from Sat Air
 
-1. Copy `schema.sql` into Alembic `0001`. Write `scripts/load_snapshot.py`, which implements every rule in `old_app/migration/README.md`: frequency parsing, NULL placeholders, Cairo → UTC times, deduplication, orphans logged and skipped, `legacy_id` kept.
-2. Rehost media (§6.9) and rewrite the URLs.
-3. Map the old fields `is_free`/`encryption` to `access`/`provider` according to O3.
+1. Copy `schema.sql` into Alembic `0001`, run as one script through psycopg. Write `scripts/load_snapshot.py`, which implements every rule in `old_app/migration/README.md`: frequency parsing, NULL placeholders, Cairo → UTC times, channel kinds, deduplication, external ids, orphans logged and skipped, `legacy_id` kept.
+2. Rehost media (§6.9) into `media_assets` and set the `*_asset_id` columns.
+3. Load `free` as `access`, and leave `encryption` out (O3); `provider` and `package` start empty for admins to fill.
 4. Seed admin users from the CLI, since Firebase Auth users can't be exported.
 5. **Shadow run (1–2 weeks):** run the importers next to the old system and produce a daily diff report against a fresh Firestore export: matches found, channels per match, missing teams. Go live when the gaps are understood.
 6. The old app keeps running on its own. Without owner access to `satair-6983b`, it can't be force-updated or pointed at the new app. If access is obtained, raise `minVersion` and point the update screen at the new listing.
