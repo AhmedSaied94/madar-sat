@@ -462,7 +462,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - `/admin/api/*` → `reverse_proxy 10.8.0.1:8001`;
     - everything else → `file_server` on `/srv/admin`, with a placeholder `index.html` until D4;
     - `X-Frame-Options: DENY` and `Content-Security-Policy: default-src 'self'`.
-- [ ] T058 [US2] Write the Compose files in `infra/compose/`. Every image runs on `linux/arm64`, and logging uses the `local` driver with rotation (FR-020, R12).
+- [x] T058 [US2] Write the Compose files in `infra/compose/`. Every image runs on `linux/arm64`, and logging uses the `local` driver with rotation (FR-020, R12).
   - **`infra/compose/vps1.yml`:**
     - `caddy` (`network_mode: host`; mounts the directory `/srv/madar/infra:ro` and runs `caddy run --config <mount>/Caddyfile`, never a single-file mount, because `rsync` replaces the file by rename; plus `/srv/media:ro`, `/srv/app-mirror:ro`, `/srv/admin:ro` and a Caddy data volume);
     - `api-public` (`ghcr.io/<owner>/madar-backend:${IMAGE_TAG}`, `127.0.0.1:8000`);
