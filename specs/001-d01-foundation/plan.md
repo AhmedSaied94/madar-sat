@@ -80,7 +80,7 @@ New dependencies are justified under [Complexity Tracking](#complexity-tracking)
 
 - the 2026-10-28 snapshot has 32 satellites, 2,418 channel rows, 1,513 teams, 134 competitions, 75 rights holders, about 470 matches and 5,979 media URLs;
 - 11 public read routes, 4 admin auth routes and 2 health routes;
-- 10 app and 5 admin components.
+- 11 app components (10 plus Logo) and 5 admin components.
 
 ## Constitution Check
 
@@ -94,8 +94,8 @@ Checked against constitution v1.1.0, before research and again after design.
 | 2 | No guessed or stale-as-live data; UTC storage; local-day grouping (II) | PASS | Clock status derived on read with `estimated` and a DB CHECK that forbids clock scores ([R3](research.md#r3-clock-status-and-the-estimated-flag), data-model); UTC `kickoff_at`; local-day windows and the TBD anchor ([R5](research.md#r5-matches-whose-kickoff-time-is-unknown)); placeholders NULL; matches never deleted |
 | 3 | RTL, isolated LTR islands, Western digits, externalized Arabic copy (III) | PASS | RTL roots in the app and admin; `MadarFormat` and LTR islands, tested first ([R19](research.md#r19-western-digits-and-time-formatting)); ARB and `error.code` → copy maps |
 | 4 | Token-only values, shared components with every state, screens vs PNG (IV) | PASS | Verbatim token and font copies with CI checks; literal checks ([R20](research.md#r20-detecting-hard-coded-visual-values)); each component built once; goldens RTL × 2 themes × 2 scales |
-| 5 | Admin only on `wg0`, no client secrets, server-side authz, validated input, bound SQL (V) | PASS with one recorded deviation | Separate admin app bound to localhost and published only via `bind 10.8.0.1` ([R12](research.md#r12-hosts-networking-and-docker)); env JSON holds public values only; Pydantic caps ([R8](research.md#r8-error-codes-and-validation)); SQLAlchemy only; CORS allowlist; SSRF guard in rehosting ([R10](research.md#r10-snapshot-loader-and-media-rehosting)). **Rate limits wait for D3** (Complexity Tracking) |
-| 6 | Envelope, ETags, generated clients, `If-Match` + audit + version bump on admin writes (VI) | PASS | Envelope on every route; ETags from `dataset_versions` plus a time bucket ([R4](research.md#r4-etags-304-and-time)); Orval and swagger_parser clients with a staleness check in `backend.yml` ([R14](research.md#r14-ci-layout)); no admin writes on D1 |
+| 5 | Admin only on `wg0`, no client secrets, server-side authz, validated input, bound SQL (V) | PASS with one recorded deviation | Separate admin app published only on the `wg0` address `10.8.0.1:8001`, behind a Caddy site with `bind 10.8.0.1` ([R12](research.md#r12-hosts-networking-and-docker)); env JSON holds public values only; Pydantic caps ([R8](research.md#r8-error-codes-and-validation)); SQLAlchemy only; CORS allowlist; SSRF guard in rehosting ([R10](research.md#r10-snapshot-loader-and-media-rehosting)). **Rate limits wait for D3** (Complexity Tracking) |
+| 6 | Envelope, ETags, generated clients, `If-Match` + audit + version bump on admin writes (VI) | PASS | Envelope on every route; ETags from `dataset_versions` plus a time bucket, and on `/healthz` from the check result ([R4](research.md#r4-etags-304-and-time)); Orval and swagger_parser clients with a staleness check in `backend.yml` ([R14](research.md#r14-ci-layout)); no admin writes on D1 |
 | 7 | Idempotent upserts, `locked_fields` respected, retrying tasks, outbox-only push (VII) | PASS | Loader and rehost are idempotent ([R10](research.md#r10-snapshot-loader-and-media-rehosting)); `locked_fields` columns created; no adapters, Celery tasks or push on D1 |
 | 8 | drift stale-while-revalidate, platform adapters, budgets, Remote Config (VIII) | PASS with one recorded deviation | drift schema + ETag interceptor; budgets in SC-003; hosts from bundled flavor defaults (Remote Config D3). **The D1 matches route reads the API without the SWR repository** (Complexity Tracking) |
 | 9 | $0/month, arm64 images, Compose + Caddy only, health-checked deploys (IX) | PASS | buildx arm64 build; GHCR retention of 3 versions ([R13](research.md#r13-image-build-deploy-and-rollback)); deploy with migration-first abort and `/healthz` rollback |
@@ -167,7 +167,8 @@ app/                                      # Lane M
 │   ├── core/config/ · network/ (dio, etag interceptor, generated/) · db/ (drift) · theme/ (madar_tokens.dart copy)
 │   │   · format/ (digits, time, bidi) · router/ (PB §8.4 stubs + debug-only /gallery)
 │   ├── design/components/                # MatchRow, StatusBlock, FrequencyReadout, CarriageRow, AccessBadge,
-│   │                                     # DateStrip, MadarBottomNav, MadarTopBar, EmptyState, Skeleton
+│   │                                     # DateStrip, MadarBottomNav, MadarTopBar, EmptyState, Skeleton,
+│   │                                     # Logo (BrandMark, TeamCrest, LogoTile)
 │   └── features/matches/ (data, domain, presentation) · gallery/
 └── test/ (flutter_test_config.dart, goldens/, core/format/, core/db/)
 
@@ -202,9 +203,16 @@ Tests are written first within each block (FR-053).
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 | --- | --- | --- |
 | V: `/v1` public without rate limits on D1–D2 | Owner decision (spec Clarifications). The done check needs a phone to reach VPS-1 over HTTPS, and the brief schedules the limiter for D3 | A per-IP limiter on D1 pulls D3 work into the busiest day. The data is already public, the host isn't published, and nothing is announced before D4 |
-| VIII: the D1 matches route reads `/v1/matches` without the stale-while-revalidate repository | The brief puts SWR from drift on D2. D1 only proves the generated client, the drift schema and the ETag interceptor | Building SWR on D1 duplicates D2's S2 work on the lane already carrying 10 components with goldens. The route is replaced by the real S2 repository on D2, before any tester sees it |
-| New dependency: schemathesis (backend, test only) | Checks every route against the exported OpenAPI, including that no input produces a 500 (FR-015) | Hand-written per-route schema assertions miss generated edge inputs and drift from the spec |
-| New dependency: MSW (admin, dev/test only) | Orval generates handlers from the same spec, so tests use spec-true responses for A1's states | Hand-written fetch mocks are exactly the hand-written API types the constitution forbids |
-| New dependency: eslint-plugin-tailwindcss (admin, dev only) | Enforces "no arbitrary values" (constitution IV) at lint time | A grep alone misses class strings built with `clsx`/`cva` |
+| VIII: the D1 matches route reads `/v1/matches` without the stale-while-revalidate repository | The brief puts SWR from drift on D2. D1 only proves the generated client, the drift schema and the ETag interceptor | Building SWR on D1 duplicates D2's S2 work on the lane already carrying 11 components with goldens. The route is replaced by the real S2 repository on D2, before any tester sees it |
 
-Prism is named in the brief, and every other dependency is in SD §5.1, §5.4 or §6, so none of them is new.
+### Tools beyond the system design
+
+The constitution fixes the stack but doesn't restrict supporting libraries, so these aren't deviations. They are listed so a reviewer sees each one and why it's there:
+
+- **schemathesis** (backend, test only): checks every route against the exported OpenAPI, including that no input produces a 500 (FR-015). Hand-written per-route assertions miss generated edge inputs and drift from the spec.
+- **MSW** (admin, dev and test only): Orval generates handlers from the same spec, so tests use spec-true responses for A1's states instead of hand-written fetch mocks.
+- **eslint-plugin-tailwindcss** (admin, dev only): enforces "no arbitrary values" (constitution IV) at lint time. A grep alone misses class strings built with `clsx` or `cva`.
+- **oasdiff** (CI container only): reports breaking changes against the `contract-v1` tag (FR-014, SC-001).
+- **Prism** is named in the brief.
+
+The rest (for example pydantic-settings, pytest-cov, `@hookform/resolvers` and Testing Library) are the usual companions of the fixed stack.

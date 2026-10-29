@@ -8,7 +8,7 @@ These are the runnable checks that prove each lane's story and the day's done ch
   - both VPSs, with reserved IPs;
   - the Firebase project and web app;
   - GHCR access;
-  - the GitHub secrets `WG_CI_CONFIG`, `DEPLOY_SSH_KEY` and `FIREBASE_SERVICE_ACCOUNT`, and the repo variable `VPS1_IP`.
+  - the GitHub secrets `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` (VPS-1's host key line for `10.8.0.1`) and `FIREBASE_SERVICE_ACCOUNT`, and the repo variable `VPS1_IP`.
 - **A local machine** with:
   - Docker with Compose v2;
   - `uv` (Python 3.13);
@@ -57,6 +57,16 @@ curl -s localhost:8000/v1/matches/999999999 | jq .error.code                    
 git tag -a contract-v1 -m "D1 contract freeze" && git push origin contract-v1
 ```
 
+**After the tag**, every contract change must be non-breaking as FR-014 defines it. This check must exit `0` (run it from the repo root):
+
+```sh
+for f in public admin; do
+  git show contract-v1:backend/openapi/$f.json > /tmp/$f-v1.json
+  docker run --rm -v /tmp:/base:ro -v "$PWD/backend/openapi":/head:ro tufin/oasdiff \
+    breaking /base/$f-v1.json /head/$f.json --fail-on ERR
+done
+```
+
 ## Lane B2: servers and CI
 
 ```sh
@@ -70,7 +80,7 @@ sudo infra/scripts/check-firewall.sh          # prints the persisted rules
 ```sh
 nmap -Pn -p 22,80,443,5432,6379,8000,8001 <ip1>    # only 80, 443 open
 nmap -Pn -sU -p 51820 <ip1>                        # open|filtered (WireGuard)
-curl -sI https://api.<ip1>.sslip.io/healthz | grep -Ei 'strict-transport|nosniff|referrer-policy'
+curl -sI https://api.<ip1>.sslip.io/healthz | grep -Ei 'strict-transport|nosniff|referrer-policy|etag'
 curl -s https://api.<ip1>.sslip.io/healthz | jq .data           # {"db":"ok","redis":"ok"}
 ```
 
@@ -116,10 +126,12 @@ flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from
 **Expected:**
 
 - **Tests:**
-  - golden tests pass for 10 components × their states × RTL × {light, dark} × {1.0, 1.3};
+  - golden tests pass for 11 components (FR-043, Logo included) × their states × RTL × {light, dark} × {1.0, 1.3};
+  - `MatchRow` and `CarriageRow` each expose one Arabic screen-reader label;
   - `test/core/format/` covers Western digits, `ص`/`م` and the LTR frequency island;
   - the drift round-trip test passes.
 - **On a phone:** install the `prod` debug APK. The matches route lists today's local-day matches from VPS-1, or shows `EmptyState`. `/gallery` opens in this debug build, and a release build has no `/gallery` route.
+- **On the web:** `flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json`, serve `build/web`, and open `/gallery` and the matches route in Chrome with DevTools → Network. No request goes to `fonts.gstatic.com` or `fonts.googleapis.com` (FR-042). If one does, a glyph is missing from the bundled fonts: add it to the bundle rather than allowing the fetch.
 
 ## Done check (spec SC-010)
 

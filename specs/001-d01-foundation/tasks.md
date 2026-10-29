@@ -32,12 +32,12 @@ description: "D1 · Foundation: tasks per lane"
 ### Between lanes
 
 - **Contract tag at 13:00:**
-  - T024 (B1, tag `contract-v1`) blocks Lane A's T082 and Lane M's T120 (client generation).
+  - T024 (B1, tag `contract-v1`) blocks Lane A's T082 and Lane M's T121 (client generation).
   - Before the tag, A and M work on scaffolds, tokens, components and tests.
 - **Deploy pipeline:**
   - T048 (B1, load on VPS-1) needs B2's T058 (VPS-1 Compose and Caddy) and T060 (`backend.yml` deploy).
   - Until then, B1 verifies locally with `infra/compose/dev.yml` (T053). B1 can start that file's Postgres service by hand if T053 isn't merged yet.
-- **Generated-client check:** `backend.yml`'s `clients` job (T060) runs only when `admin/orval.config.ts` (T082) and `app/swagger_parser.yaml` (T120) exist. It is skipped before then.
+- **Generated-client check:** `backend.yml`'s `clients` job (T060) runs only when `admin/orval.config.ts` (T082) and `app/swagger_parser.yaml` (T121) exist. It is skipped before then.
 - **Done check:** all four lanes.
 
 ### Inside each lane
@@ -55,7 +55,7 @@ B1 tests:   T006, T007, T008, T009, T010, T011 (unit) together; T012–T018 (db/
 B1 domain:  T029, T030, T031, T032, T033 together
 B2:         T051, T052, T053, T054 together after T050
 A:          T075, T076, T077, T078, T079 (component tests) together
-M:          T107–T116 (goldens) together after T106; T122–T131 (components) together
+M:          T107–T117 (goldens) together after T106; T123 (Logo) first, then T124–T133 (components) together
 ```
 
 ## Implementation strategy
@@ -190,6 +190,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **Schema:** schemathesis `from_asgi` over `backend/openapi/public.json` with the `not_a_server_error` and `response_schema_conformance` checks.
   - **Envelope:** every FR-008 route returns it.
   - **ETag:** present, plus `Cache-Control: no-cache`; `If-None-Match` → `304` with an empty body ≤ 1 KB; a dataset version bump → `200`.
+  - **Health:** `/healthz` returns `200` with an `ETag` and answers a matching `If-None-Match` with `304`; with `HEALTHZ_FORCE_FAIL` set it returns `503 unhealthy` with no `ETag` (constitution VI).
   - **CORS:** only `CORS_ORIGINS` are allowed, and `ETag` is exposed.
   - **Validation (`validation_error`):** a window > 8 days, more than 32 ids in a list, `q` longer than 64 characters.
   - **Not found:** each `<entity>_not_found` code; an unknown route → `not_found`; 405 → `method_not_allowed`.
@@ -256,7 +257,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   3. merge, then `git tag -a contract-v1 -m "D1 contract freeze" && git push origin contract-v1`;
   4. tell Lanes A and M.
 
-  After this, changes to `backend/openapi/*.json` must be additive (`git diff contract-v1 -- backend/openapi/`).
+  After this, changes to `backend/openapi/*.json` must be non-breaking as FR-014 defines it. `backend.yml`'s `openapi` job (T060) enforces that with `oasdiff breaking`.
 
 ### Data and queries (B1, afternoon)
 
@@ -377,11 +378,11 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - `backend/app/services/commentators.py`: `/v1/commentators/{id}` with `upcoming` ≤ 20.
   - Both return their `404` codes.
 - [ ] T047 [US1] Connect T040–T046 to the routers from T022 through the T039 ETag dependency, then finish `/healthz` in `backend/app/api/public/health.py` and `backend/app/admin.py`:
-  - `SELECT 1` plus a Redis `PING`;
+  - `SELECT 1` plus a Redis `PING`, checked live on every request;
   - `503 unhealthy` on failure, or when `HEALTHZ_FORCE_FAIL` is set;
-  - not ETagged.
+  - a `200` carries `ETag: W/"<16 hex>"` hashed from `data` and honors `If-None-Match`; a `503` carries no `ETag` ([contract](contracts/public-api-v1.md), constitution VI).
 
-  Then re-run `export-openapi`, check that `git diff contract-v1 -- backend/openapi/` is additive only, and get T016–T018 green.
+  Then re-run `export-openapi`, run the `oasdiff breaking` check from [quickstart.md](quickstart.md#lane-b1-data-and-contract) against `contract-v1` (it must exit `0`: FR-014 defines non-breaking), and get T016–T018 green.
 
 ### Validation (B1)
 
@@ -412,7 +413,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 - [ ] T050 [US2] Create `infra/README.md`. It lists:
   - each host's role (SD §7.1);
   - the hostnames and ports (SD §7.2);
-  - the required GitHub secrets (`WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `FIREBASE_SERVICE_ACCOUNT`) and variables (`VPS1_IP`, `VPS2_IP`, `ARM_RUNNER` optional);
+  - the required GitHub secrets (`WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `FIREBASE_SERVICE_ACCOUNT`) and variables (`VPS1_IP`, `VPS2_IP`, `ARM_RUNNER` optional);
   - the host `.env` variables (names only; files live at `/srv/madar/.env`, mode 600);
   - the rule that no key or secret is ever committed.
 
@@ -448,6 +449,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - creates the `deploy` user (docker group, SSH key only);
     - creates `/srv/madar`, `/srv/media`, `/srv/snapshot`, `/srv/reports` and `/srv/app-mirror`;
     - applies T055's rules;
+    - installs `/etc/systemd/system/docker.service.d/10-after-wg0.conf` (`Wants=` and `After=wg-quick@wg0.service`), so `api-admin`'s `10.8.0.1` binding exists when Docker starts ([R12](research.md#r12-hosts-networking-and-docker));
     - **refuses to close port 22 to the public until the operator confirms the OCI serial console was tested** (FR-023).
 - [ ] T057 [US2] Write `infra/Caddyfile` (FR-021):
   - **Global:** ACME email from env.
@@ -457,14 +459,14 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   - **Every public site:** HSTS, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
   - **`https://10.8.0.1`:**
     - `bind 10.8.0.1` and `tls internal`;
-    - `/admin/api/*` → `reverse_proxy 127.0.0.1:8001`;
+    - `/admin/api/*` → `reverse_proxy 10.8.0.1:8001`;
     - everything else → `file_server` on `/srv/admin`, with a placeholder `index.html` until D4;
     - `X-Frame-Options: DENY` and `Content-Security-Policy: default-src 'self'`.
 - [ ] T058 [US2] Write the Compose files in `infra/compose/`. Every image runs on `linux/arm64`, and logging uses the `local` driver with rotation (FR-020, R12).
   - **`infra/compose/vps1.yml`:**
-    - `caddy` (`network_mode: host`; mounts the Caddyfile, `/srv/media:ro`, `/srv/app-mirror:ro`, `/srv/admin:ro`, and a Caddy data volume);
+    - `caddy` (`network_mode: host`; mounts the directory `/srv/madar/infra:ro` and runs `caddy run --config <mount>/Caddyfile`, never a single-file mount, because `rsync` replaces the file by rename; plus `/srv/media:ro`, `/srv/app-mirror:ro`, `/srv/admin:ro` and a Caddy data volume);
     - `api-public` (`ghcr.io/<owner>/madar-backend:${IMAGE_TAG}`, `127.0.0.1:8000`);
-    - `api-admin` (same image, command `app.admin:app`, `127.0.0.1:8001`);
+    - `api-admin` (same image, command `app.admin:app`, published only on `10.8.0.1:8001`, the `wg0` address: constitution V);
     - `migrate` (profile `tools`, `alembic upgrade head`);
     - `postgres:16` (`${VCN_IP}:5432`, volume, password from env, `shared_buffers=1536MB`);
     - `redis:7` (`${VCN_IP}:6379`, `requirepass`, `maxmemory 512mb`);
@@ -475,20 +477,29 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Pipelines (B2)
 
-- [ ] T059 [US2] Write `infra/scripts/deploy.sh <image-tag>`, run as `deploy` on VPS-1 ([R13](research.md#r13-image-build-deploy-and-rollback)):
-  1. record the running tag in `/srv/madar/previous_tag`;
-  2. `docker compose pull`;
-  3. `docker compose run --rm migrate`, aborting with non-zero **before** touching any running container if it fails;
-  4. `IMAGE_TAG=<tag> docker compose up -d api-public api-admin`;
-  5. poll `http://127.0.0.1:8000/healthz` for 60 s;
-  6. on failure, `IMAGE_TAG=<previous> docker compose up -d api-public api-admin`, re-check health and exit non-zero.
+- [ ] T059 [US2] Write `infra/scripts/deploy.sh <image-tag> | --infra-only`, run as `deploy` on VPS-1 from the synced `/srv/madar/infra/` ([R13](research.md#r13-image-build-deploy-and-rollback)):
+  1. apply the synced infra: `docker compose up -d caddy postgres redis` (Compose recreates only services whose definition changed), then `docker compose exec caddy caddy reload --config <mount>/Caddyfile`. With `--infra-only`, stop here; no token is read;
+  2. record the running tag in `/srv/madar/previous_tag`;
+  3. read a GHCR token from stdin, `docker login ghcr.io --password-stdin`, `docker compose pull`, and `docker logout ghcr.io` in an `EXIT` trap, so no registry credential stays on the host;
+  4. `docker compose run --rm migrate`, aborting with non-zero **before** touching any running API container if it fails;
+  5. `IMAGE_TAG=<tag> docker compose up -d api-public api-admin`;
+  6. poll `http://127.0.0.1:8000/healthz` for 60 s;
+  7. on failure, `IMAGE_TAG=<previous> docker compose up -d api-public api-admin`, re-check health and exit non-zero.
 - [ ] T060 [US2] Write `.github/workflows/backend.yml`, triggered on `backend/**`, plus `workflow_dispatch` with an input `break_healthcheck`:
-  - **`test`:** ruff, `mypy --strict` and `pytest --cov` with `postgres:16` and `redis:7` services (`TEST_DATABASE_URL`).
-  - **`openapi`:** `uv run python -m app.cli export-openapi && git diff --exit-code backend/openapi/`.
+  - **`test`:** `sudo apt-get install -y ffmpeg` (T015 transcodes audio), then ruff, `mypy --strict` and `pytest --cov` with `postgres:16` and `redis:7` services (`TEST_DATABASE_URL`).
+  - **`openapi`:** `uv run python -m app.cli export-openapi && git diff --exit-code backend/openapi/`. Once the `contract-v1` tag exists, it also runs the [quickstart](quickstart.md#lane-b1-data-and-contract) `oasdiff breaking` check (a pinned `tufin/oasdiff` image, `--fail-on ERR`) for both specs against the tag (FR-014, SC-001).
   - **`clients`:** runs only if `admin/orval.config.ts` and `app/swagger_parser.yaml` exist. Node 22 + pnpm `orval`, Flutter (pinned) `swagger_parser` + `build_runner`, then `git diff --exit-code admin/src/api/generated app/lib/core/network/generated`.
   - **`build`** (on `master`): buildx + QEMU `linux/arm64` (or `vars.ARM_RUNNER`) with the GHA cache, pushed to `ghcr.io/<owner>/madar-backend:${{ github.sha }}`.
-  - **`deploy`** (on `master`, `concurrency: deploy-vps1`): `wg-quick up` from `WG_CI_CONFIG`, then SSH `deploy@10.8.0.1 infra/scripts/deploy.sh <sha>`. With `break_healthcheck=true` it deploys with `HEALTHZ_FORCE_FAIL=1` for the drill.
+  - **`deploy`** (on `master`, `concurrency: deploy-vps1`, `permissions: packages: read`):
+    1. `wg-quick up` from `WG_CI_CONFIG`;
+    2. write `DEPLOY_KNOWN_HOSTS` to a known-hosts file, and connect only with `-o StrictHostKeyChecking=yes -o UserKnownHostsFile=<file>` (SSH and `rsync -e`);
+    3. `rsync -a --delete infra/ deploy@10.8.0.1:/srv/madar/infra/`;
+    4. pipe `${{ secrets.GITHUB_TOKEN }}` to SSH `deploy@10.8.0.1 /srv/madar/infra/scripts/deploy.sh <sha>` on stdin, never as an argument.
+
+    With `break_healthcheck=true` it deploys with `HEALTHZ_FORCE_FAIL=1` for the drill.
   - **`retention`:** `actions/delete-package-versions` keeping the newest 3 `madar-backend` versions.
+
+  Also add a `sync` job to `.github/workflows/infra.yml`: on pushes to `master` only, after its checks pass, in the same `deploy-vps1` concurrency group. It runs steps 1–3 above, then SSH `deploy.sh --infra-only`, so a Caddyfile or Compose change reaches VPS-1 without a backend change.
 - [ ] T061 [P] [US2] Write `.github/workflows/app.yml`, triggered on `app/**` and `backend/openapi/public.json`:
   - `flutter analyze`;
   - `flutter test` (goldens) inside `ghcr.io/cirruslabs/flutter:<app/.flutter-version>`;
@@ -700,21 +711,22 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 - [ ] T106 [US3] Create the golden harness in `app/test/`:
   - `app/test/flutter_test_config.dart` loads the bundled TTFs with `FontLoader`;
   - `app/test/goldens/golden_harness.dart` provides `goldenVariants(name, builder)`, which renders each case in RTL × {light, dark} × text scale {1.0, 1.3} on a 360-dp-wide surface ([R18](research.md#r18-golden-tests)).
-- [ ] T107 [P] [US3] Write `app/test/goldens/match_row_test.dart`: `MatchRow` in every state from `madar-design/design-system/components/MatchRow/README.md`, including long Arabic names over two lines, a followed star, a channel line with `+N` and «مجانية», and no channel line.
+- [ ] T107 [P] [US3] Write `app/test/goldens/match_row_test.dart`: `MatchRow` in every state from `madar-design/design-system/components/MatchRow/README.md`, including long Arabic names over two lines, a followed star, a channel line with `+N` and «مجانية», and no channel line. Add a `find.bySemanticsLabel` test: the row is one merged node whose Arabic label reads home, away, status, score and minute when shown, and the headline channel, in the PB §13.8 form «الأهلي ضد الزمالك، مباشر، الدقيقة 67، النتيجة 1 مقابل 0، على أون سبورت 1». An estimated-live row's label has no score or minute.
 - [ ] T108 [P] [US3] Write `app/test/goldens/status_block_test.dart`: `StatusBlock` in every PB S2 variant:
   - scheduled; imminent `بعد 25 د`; live score + minute; halftime; extra time; penalties `(4-3)`; finished;
   - postponed, cancelled, abandoned;
   - **estimated live: «مباشر» with no score and the quieter treatment**;
   - time unknown «لم يُحدد».
 - [ ] T109 [P] [US3] Write `app/test/goldens/frequency_readout_test.dart`: `FrequencyReadout` at its sizes and in its states (`ok`, `dim`, `note`, good, bad) from its README. It stays a dark well with cyan IBM Plex Mono digits, LTR, in **both** themes.
-- [ ] T110 [P] [US3] Write `app/test/goldens/carriage_row_test.dart`: `CarriageRow` collapsed (logo, name, access badge, satellite, readout visible) and expanded, with free and encrypted variants and the long-name truncation from its README.
+- [ ] T110 [P] [US3] Write `app/test/goldens/carriage_row_test.dart`: `CarriageRow` collapsed (logo, name, access badge, satellite, readout visible) and expanded, with free and encrypted variants and the long-name truncation from its README. Add a `find.bySemanticsLabel` test: the collapsed row is one merged node whose Arabic label gives the channel, free or encrypted, the satellite and the frequency (PB §13.8).
 - [ ] T111 [P] [US3] Write `app/test/goldens/access_badge_test.dart`: `AccessBadge` free and encrypted (neutral with a lock, never the error color), plus `SatelliteBadge` and `ChangedBadge`, per `madar-design/design-system/components/Badges/README.md`.
 - [ ] T112 [P] [US3] Write `app/test/goldens/date_strip_test.dart`: `DateStrip` with today marked, a selected day and RTL order, per its README.
 - [ ] T113 [P] [US3] Write `app/test/goldens/bottom_nav_test.dart`: `MadarBottomNav` with each of the 5 destinations current, a badge, RTL order (المباريات first on the right), and touch targets ≥ 48 dp.
 - [ ] T114 [P] [US3] Write `app/test/goldens/top_bar_test.dart`: `MadarTopBar.root()` (the wordmark «مدار» at the start (right) and search at the end) and the detail variant (back arrow pointing right, title, up to 2 actions).
 - [ ] T115 [P] [US3] Write `app/test/goldens/empty_state_test.dart`: `EmptyState` with the orbit-ring illustration, title, help line and at most one action, covering the empty-day and load-failed copy.
 - [ ] T116 [P] [US3] Write `app/test/goldens/skeleton_test.dart`: `Skeleton` for the S2 first load (3 groups × 3 rows), static when reduced motion is on.
-- [ ] T117 [P] [US3] Write `app/test/features/matches/matches_page_test.dart` with a fake generated API client:
+- [ ] T117 [P] [US3] Write `app/test/goldens/logo_test.dart` per `madar-design/design-system/components/Logo/README.md`: `BrandMark` at 28, 40 and 64 (ink tile, bare ring, single-ink) and with the «مدار» wordmark; `TeamCrest` with a logo and with the first-letter shield fallback; `LogoTile` with a logo and with each entity fallback in the README, always on the neutral tile. Logos come from a test asset image, never the network.
+- [ ] T118 [P] [US3] Write `app/test/features/matches/matches_page_test.dart` with a fake generated API client:
   - rows render teams and local kickoff in Western digits;
   - an empty response shows `EmptyState` «لا توجد مباريات في هذا اليوم»;
   - an `error.code` failure shows the mapped Arabic error;
@@ -722,41 +734,43 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Implementation (M)
 
-- [ ] T118 [P] [US3] Implement `MadarFormat` in `app/lib/core/format/` (`digits.dart`, `time.dart`, `bidi.dart`) until T101–T103 pass.
-- [ ] T119 [US3] Implement the router in `app/lib/core/router/app_router.dart` until T105 passes:
+- [ ] T119 [P] [US3] Implement `MadarFormat` in `app/lib/core/format/` (`digits.dart`, `time.dart`, `bidi.dart`) until T101–T103 pass.
+- [ ] T120 [US3] Implement the router in `app/lib/core/router/app_router.dart` until T105 passes:
   - go_router with every PB §8.4 route as a stub screen;
   - a `/gallery` route added only when `kDebugMode` is true.
-- [ ] T120 [US3] Generate the API client in `app/lib/core/network/generated/` after B1's T024 tag:
+- [ ] T121 [US3] Generate the API client in `app/lib/core/network/generated/` after B1's T024 tag:
   - `app/swagger_parser.yaml`: input `../backend/openapi/public.json` at tag `contract-v1`, output `app/lib/core/network/generated/`, retrofit + freezed;
   - run `dart run swagger_parser && dart run build_runner build -d` and commit the output, which is never hand-edited.
-- [ ] T121 [US3] Implement the network and database core in `app/lib/core/`:
+- [ ] T122 [US3] Implement the network and database core in `app/lib/core/`:
   - `app/lib/core/network/dio_provider.dart`: one Dio with the base URL from `AppConfig`, timeouts, and an `EtagInterceptor` (`app/lib/core/network/etag_interceptor.dart`) that stores ETags per URL in memory and sends `If-None-Match`;
   - `app/lib/core/db/app_database.dart`: the drift `Matches` table with `MatchSummary` fields and nested parts as JSON columns, `drift_flutter` for native and web;
   - run until T104 passes.
-- [ ] T122 [P] [US3] Implement `app/lib/design/components/match_row.dart` (`MatchRow(match:, onTap:, onLongPress:)`) until T107 passes.
-- [ ] T123 [P] [US3] Implement `app/lib/design/components/status_block.dart` (`StatusBlock(status:, kickoff:, score:, minute:)`) until T108 passes.
-- [ ] T124 [P] [US3] Implement `app/lib/design/components/frequency_readout.dart` (`FrequencyReadout(mhz:, polarization:, symbolRate:, size:)`) until T109 passes.
-- [ ] T125 [P] [US3] Implement `app/lib/design/components/carriage_row.dart` until T110 passes.
-- [ ] T126 [P] [US3] Implement `app/lib/design/components/badges.dart` (`AccessBadge`, `SatelliteBadge`, `ChangedBadge`) until T111 passes.
-- [ ] T127 [P] [US3] Implement `app/lib/design/components/date_strip.dart` until T112 passes.
-- [ ] T128 [P] [US3] Implement `app/lib/design/components/bottom_nav.dart` (`MadarBottomNav(current:)`) until T113 passes.
-- [ ] T129 [P] [US3] Implement `app/lib/design/components/top_bar.dart` (`MadarTopBar.root()`, `MadarTopBar.detail(...)`) until T114 passes.
-- [ ] T130 [P] [US3] Implement `app/lib/design/components/empty_state.dart` until T115 passes.
-- [ ] T131 [P] [US3] Implement `app/lib/design/components/skeleton.dart` until T116 passes.
-- [ ] T132 [US3] Implement the gallery in `app/lib/features/gallery/presentation/gallery_page.dart`: every FR-043 component in every state, with theme and text-scale toggles. Register it only when `kDebugMode` is true (FR-045).
-- [ ] T133 [US3] Implement the matches route in `app/lib/features/matches/`, until T117 passes:
+- [ ] T123 [P] [US3] Implement `app/lib/design/components/logo.dart` (`BrandMark`, `TeamCrest`, `LogoTile`) until T117 passes. Finish it before T124, T127 and T131, which use it.
+- [ ] T124 [P] [US3] Implement `app/lib/design/components/match_row.dart` (`MatchRow(match:, onTap:, onLongPress:)`) until T107 passes. Wrap it in `MergeSemantics` with the Arabic label built from `MadarFormat` and ARB strings, never string literals in the widget.
+- [ ] T125 [P] [US3] Implement `app/lib/design/components/status_block.dart` (`StatusBlock(status:, kickoff:, score:, minute:)`) until T108 passes.
+- [ ] T126 [P] [US3] Implement `app/lib/design/components/frequency_readout.dart` (`FrequencyReadout(mhz:, polarization:, symbolRate:, size:)`) until T109 passes.
+- [ ] T127 [P] [US3] Implement `app/lib/design/components/carriage_row.dart` until T110 passes, with the same `MergeSemantics` label approach as `MatchRow`.
+- [ ] T128 [P] [US3] Implement `app/lib/design/components/badges.dart` (`AccessBadge`, `SatelliteBadge`, `ChangedBadge`) until T111 passes.
+- [ ] T129 [P] [US3] Implement `app/lib/design/components/date_strip.dart` until T112 passes.
+- [ ] T130 [P] [US3] Implement `app/lib/design/components/bottom_nav.dart` (`MadarBottomNav(current:)`) until T113 passes.
+- [ ] T131 [P] [US3] Implement `app/lib/design/components/top_bar.dart` (`MadarTopBar.root()`, `MadarTopBar.detail(...)`) until T114 passes.
+- [ ] T132 [P] [US3] Implement `app/lib/design/components/empty_state.dart` until T115 passes.
+- [ ] T133 [P] [US3] Implement `app/lib/design/components/skeleton.dart` until T116 passes.
+- [ ] T134 [US3] Implement the gallery in `app/lib/features/gallery/presentation/gallery_page.dart`: every FR-043 component in every state, with theme and text-scale toggles. Register it only when `kDebugMode` is true (FR-045).
+- [ ] T135 [US3] Implement the matches route in `app/lib/features/matches/`, until T118 passes:
   - `app/lib/features/matches/data/matches_api.dart`: wraps the generated client and computes today's local-day `from`/`to` in UTC;
   - `app/lib/features/matches/presentation/matches_page.dart`: a Riverpod provider and unstyled rows with `ListView.builder`, `EmptyState`, and error copy by `error.code`;
   - add a code comment pointing to the plan.md deviation (SWR repository on D2).
 
 ### Validation (M)
 
-- [ ] T134 [US3] Validate the lane in `app/`:
+- [ ] T136 [US3] Validate the lane in `app/`:
   1. run `flutter analyze`, `./tool/check_token_copy.sh` and `./tool/check_literals.sh`;
   2. run `flutter test` inside `ghcr.io/cirruslabs/flutter:<pin>` (all goldens pass);
   3. install the CI `app-prod-debug.apk` on an Android phone and confirm the matches route lists today's matches from VPS-1 (or `EmptyState`) and that `/gallery` opens;
   4. take screenshots of the gallery in both themes and compare them with the four design-system PNGs and `Matches.png`;
-  5. attach them to the PR.
+  5. build and serve the web app, and confirm in Chrome DevTools → Network that `/gallery` and the matches route make no request to `fonts.gstatic.com` or `fonts.googleapis.com` ([quickstart.md](quickstart.md#lane-m-app), FR-042). Fix a hit by bundling the missing glyphs, never by allowing the fetch;
+  6. attach the screenshots and the Network result to the PR.
 
 ---
 

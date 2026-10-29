@@ -227,7 +227,7 @@ The clock rule is in [data-model.md](../data-model.md#match-status-sd-623). On D
 
 - `200 { success: true, data: { db: "ok", redis: "ok" } }`.
 - `503` with `error.code = "unhealthy"` when either dependency fails.
-- Not cached and not ETagged.
+- Checked live on every request, never from a cache. A `200` carries the usual headers, with `ETag: W/"<16 hex>"` hashed from the `data` object, so a matching `If-None-Match` returns `304` only while the status is unchanged. A `503` carries no `ETag`.
 
 ## Errors
 

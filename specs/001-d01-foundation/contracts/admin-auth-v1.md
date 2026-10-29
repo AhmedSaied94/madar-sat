@@ -7,7 +7,7 @@ On D1 these routes exist only to fix their shapes:
 - every handler answers `501` with `error.code = "not_implemented"` in the envelope;
 - D2 implements them without changing any request, response, header or error code (spec FR-013).
 
-The admin API is reachable only through the `wg0` Caddy site at `https://10.8.0.1/admin/api` (constitution V). It uses the same envelope and error conventions as [public-api-v1.md](public-api-v1.md).
+The admin API is reachable only over WireGuard (constitution V): its container is published on the `wg0` address `10.8.0.1:8001`, and clients use the `wg0` Caddy site at `https://10.8.0.1/admin/api`. It uses the same envelope and error conventions as [public-api-v1.md](public-api-v1.md).
 
 Sources: SD §5.4, §6.5, PB §10 A1, the admin Login board, constitution V.
 

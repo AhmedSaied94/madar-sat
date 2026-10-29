@@ -45,6 +45,8 @@ Phase 0 of [plan.md](plan.md). Each entry is a decision the lanes build on. The 
   - for endpoints whose payload carries clock-derived status, a time bucket: `floor(now / 60 s)` for matches, channel, team and commentator detail, and `floor(now / 15 s)` for match detail and live.
 
   The ETag is computed before the main query, so a `304` costs one small read of `dataset_versions`. Every GET sends `Cache-Control: no-cache`, so clients always revalidate.
+
+  `/healthz` is the one exception. It reads no dataset, so its ETag hashes the live check result (`{db, redis}`). The body is a few bytes, so the cost objection to body hashes below doesn't apply, and constitution VI still holds: every GET returns an `ETag`.
 - **Rationale:** Constitution VI requires version-built ETags. Clock statuses change with time, not data, so a version-only ETag would serve a stale "scheduled" with a `304`. Weak ETags survive Caddy's response compression. The time bucket changes the ETag only on the freshness cadence SD §6.3.2 already sets.
 - **Alternatives:** A body-hash ETag (rejected: it builds the full response for every `304`). `max-age` caching (rejected: freshness targets need revalidation, and `304`s are ≤ 1 KB).
 
@@ -113,26 +115,27 @@ Phase 0 of [plan.md](plan.md). Each entry is a decision the lanes build on. The 
 
 - **Decision:**
   - **Caddy** runs with `network_mode: host`. It serves `api.`, `media.` and `app.<ip1>.sslip.io` on the public interface, and a `https://10.8.0.1` site with `bind 10.8.0.1` and `tls internal`.
-  - **APIs:** `api-public` publishes to `127.0.0.1:8000` and `api-admin` to `127.0.0.1:8001`. Only the `wg0` site proxies `/admin/api` to the admin API.
+  - **APIs:** `api-public` publishes to `127.0.0.1:8000`. `api-admin` publishes to `10.8.0.1:8001`, the `wg0` address, so it is bound to WireGuard as constitution V requires. Only the `wg0` Caddy site proxies `/admin/api` to it.
+  - **Boot order:** a binding to `10.8.0.1` fails if Docker starts before the interface exists, so `bootstrap-vps.sh` installs a systemd drop-in that starts `docker.service` after `wg-quick@wg0.service` (`Wants=` and `After=`).
   - **Data stores:** PostgreSQL and Redis publish only on the VCN private IP (`${VCN_IP}:5432`, `${VCN_IP}:6379`), with passwords from `.env`.
   - **Host setup:** `infra/scripts/bootstrap-vps.sh` is idempotent. It installs Docker and WireGuard, creates the `deploy` user, makes the `/srv` directories, and applies `infra/firewall/vps<N>.rules` via `netfilter-persistent`, inserting ACCEPT rules before OCI's default REJECT.
 - **Rationale:** Docker-published ports bypass the host's INPUT chain, so the only safe exposure control is binding each published port to a specific address. Binding the admin site to `10.8.0.1` keeps it off the public listener entirely (constitution V, D10).
-- **Alternatives:** Ports published on `0.0.0.0` behind a firewall (rejected: Docker's DNAT skips INPUT rules). Caddy in bridge mode (rejected: it can't bind the `wg0` address).
+- **Alternatives:** Ports published on `0.0.0.0` behind a firewall (rejected: Docker's DNAT skips INPUT rules). Caddy in bridge mode (rejected: it can't bind the `wg0` address). `api-admin` on `127.0.0.1` behind the `wg0` site (rejected: constitution V requires the admin API itself to be bound to `wg0`).
 
 ### R13. Image build, deploy and rollback
 
 - **Decision:**
   - **Build:** `backend.yml` builds `linux/arm64` with buildx and QEMU on `ubuntu-24.04`, with the GHA layer cache. A repository variable `ARM_RUNNER` switches to a native arm64 runner when one is available.
   - **Push:** images go to `ghcr.io/<owner>/madar-backend:<git-sha>`.
-  - **Deploy:** the runner joins WireGuard (secret `WG_CI_CONFIG`), SSHes as `deploy` (secret `DEPLOY_SSH_KEY`), and runs `infra/scripts/deploy.sh <sha>`. That script:
+  - **Deploy:** the runner joins WireGuard (secret `WG_CI_CONFIG`) and connects as `deploy` (secret `DEPLOY_SSH_KEY`), checking the host key against secret `DEPLOY_KNOWN_HOSTS` with `StrictHostKeyChecking=yes`. It copies the repo's `infra/` to `/srv/madar/infra/` with `rsync --delete`, so the Compose files, Caddyfile and scripts on the host always match `master`. Then it runs `/srv/madar/infra/scripts/deploy.sh <sha>`, passing the job's `GITHUB_TOKEN` (`packages: read`) on stdin. That script:
     1. records the current tag;
-    2. pulls the new image;
+    2. logs in to GHCR with the token from stdin, pulls the new image, and logs out on exit, so no registry credential stays on the host;
     3. runs `alembic upgrade head` in a one-off container, aborting before any container changes if it fails;
     4. runs `compose up -d`;
     5. polls `http://127.0.0.1:8000/healthz` for 60 s;
     6. on failure, restores the previous tag, runs `up -d` again and exits non-zero.
 
-    A `concurrency: deploy-vps1` group stops two deploys from overlapping.
+    Each run also reloads Caddy (`caddy reload`, a no-op when the config is unchanged). Caddy mounts the `infra/` directory rather than the single Caddyfile, because `rsync` replaces files by rename and a single-file bind mount would keep the old file. An `infra/`-only change on `master` runs the same sync from `infra.yml` with `deploy.sh --infra-only`, which skips the image steps. A `concurrency: deploy-vps1` group, shared by both workflows, stops two deploys from overlapping.
   - **Retention:** after a successful deploy, `actions/delete-package-versions` keeps only the newest 3 image versions: current, previous for rollback, and one spare. The image is `python:3.13-slim` plus Debian `ffmpeg`, multi-stage, with no build tools in the final stage.
 - **Rationale:** SD §9 and constitution IX. GitHub's free arm64 runners cover only public repositories, and QEMU works anywhere. GHCR is free for public packages, but private packages on the free plan get only 500 MB of storage. Retention keeps a private repo inside that at $0.
 
@@ -149,7 +152,7 @@ Phase 0 of [plan.md](plan.md). Each entry is a decision the lanes build on. The 
     - analyze, test (goldens included), the token-copy and literal checks;
     - a `prod`-flavor debug APK artifact.
   - **`pwa.yml`:** `flutter build web` for `prod` → Firebase Hosting preview channel `master` (expires in 30 days) via `FirebaseExtended/action-hosting-deploy`, using secret `FIREBASE_SERVICE_ACCOUNT`.
-  - **`infra.yml`:** `docker compose config -q` with `infra/compose/example.env`, `caddy validate`, shellcheck.
+  - **`infra.yml`:** `docker compose config -q` with `infra/compose/example.env`, `caddy validate`, shellcheck; on `master`, a `sync` job that applies `infra/` to VPS-1 ([R13](#r13-image-build-deploy-and-rollback)).
   - **`gitleaks.yml`:** the gitleaks CLI container on every PR.
 - **Rationale:** These are the constitution's CI gates, with client regeneration inside `backend.yml` as the table requires. The gitleaks CLI avoids the GitHub Action's license requirement for organization accounts.
 - **Contract-change PRs:** generated client folders are written only by the generators. A B1 PR that changes the contract carries the regenerated clients, which is the one sanctioned cross-folder write (D14).
@@ -194,7 +197,7 @@ Phase 0 of [plan.md](plan.md). Each entry is a decision the lanes build on. The 
   - **Harness:** Flutter's built-in `matchesGoldenFile`, with the bundled fonts loaded through `FontLoader` in `test/flutter_test_config.dart`. A helper renders each component state in four variants: RTL × {light, dark} × text scale {1.0, 1.3}.
   - **Where goldens are made:** goldens are generated and checked in one pinned Linux container image (`ghcr.io/cirruslabs/flutter:<pinned>`), locally and in CI, so font rasterization is identical.
 - **Rationale:** No new dependency is needed, and one rendering environment avoids per-machine golden drift.
-- **Alternatives:** `alchemist` (rejected: the built-in API covers this, and constitution "Simplicity" asks for justification of new dependencies).
+- **Alternatives:** `alchemist` (rejected: the built-in API covers this, so the extra dependency buys nothing).
 
 ### R19. Western digits and time formatting
 
