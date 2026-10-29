@@ -213,17 +213,34 @@
         "title": "ErrorBody",
         "type": "object"
       },
-      "HTTPValidationError": {
+      "ErrorEnvelope": {
+        "description": "The body of every 4xx/5xx response.",
         "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
+          "data": {
+            "title": "Data",
+            "type": "null"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "const": false,
+            "title": "Success",
+            "type": "boolean"
           }
         },
-        "title": "HTTPValidationError",
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "ErrorEnvelope",
         "type": "object"
       },
       "HealthStatus": {
@@ -310,46 +327,6 @@
         ],
         "title": "Session",
         "type": "object"
-      },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
       }
     }
   },
@@ -391,6 +368,7 @@
                         "expires_in": 900,
                         "token_type": "Bearer"
                       },
+                      "error": null,
                       "meta": {
                         "generated_at": "2026-10-29T13:00:00Z"
                       },
@@ -419,6 +397,7 @@
                 "examples": {
                   "invalid_credentials": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "invalid_credentials",
                         "message": "invalid credentials"
@@ -429,6 +408,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -440,6 +422,7 @@
                 "examples": {
                   "validation_error": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "validation_error",
                         "message": "invalid request"
@@ -458,6 +441,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -469,6 +455,7 @@
                 "examples": {
                   "account_locked": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "account_locked",
                         "message": "account locked"
@@ -479,6 +466,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -575,6 +565,7 @@
                 "examples": {
                   "csrf_failed": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "csrf_failed",
                         "message": "csrf failed"
@@ -583,6 +574,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -592,7 +586,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -621,6 +615,7 @@
                         "name": "\u0645\u062d\u0631\u0631",
                         "role": "editor"
                       },
+                      "error": null,
                       "meta": {
                         "generated_at": "2026-10-29T13:00:00Z"
                       },
@@ -641,6 +636,7 @@
                 "examples": {
                   "unauthenticated": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "unauthenticated",
                         "message": "unauthenticated"
@@ -649,6 +645,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -738,6 +737,7 @@
                         "expires_in": 900,
                         "token_type": "Bearer"
                       },
+                      "error": null,
                       "meta": {
                         "generated_at": "2026-10-29T13:00:00Z"
                       },
@@ -766,6 +766,7 @@
                 "examples": {
                   "refresh_invalid": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "refresh_invalid",
                         "message": "refresh invalid"
@@ -774,6 +775,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -785,6 +789,7 @@
                 "examples": {
                   "csrf_failed": {
                     "value": {
+                      "data": null,
                       "error": {
                         "code": "csrf_failed",
                         "message": "csrf failed"
@@ -793,6 +798,9 @@
                       "success": false
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
@@ -802,7 +810,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },

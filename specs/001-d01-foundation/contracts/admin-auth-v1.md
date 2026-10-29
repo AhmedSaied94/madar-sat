@@ -81,8 +81,12 @@ Same shape as the public `/healthz`.
 
 ```sh
 npx @stoplight/prism-cli mock backend/openapi/admin.json --port 4010
-curl -s -X POST localhost:4010/admin/api/auth/login -H 'Prefer: example=account_locked' \
+curl -s -X POST localhost:4010/admin/api/auth/login -H 'Prefer: code=429, example=account_locked' \
      -H 'Content-Type: application/json' -d '{"email":"a@b.co","password":"x"}'
 ```
 
-In dev builds, the admin app adds `Prefer: example=<name>` when the page URL has `?mock=<name>` ([research R15](../research.md#r15-tokens-fonts-and-the-generated-client)).
+Prism looks for a named example only among the 2xx responses unless `Prefer` also names the status, so an error example needs `code=<status>` (the status column of the table above).
+
+In dev builds, the admin app adds `Prefer: code=<status>, example=<name>` when the page URL has `?mock=<name>`, taking the status from the spec ([research R15](../research.md#r15-tokens-fonts-and-the-generated-client)).
+
+Every error response's schema is `ErrorEnvelope` (`success: false`, `data: null`, `error: ErrorBody`, `meta`), and every example validates against its response's schema (`backend/tests/contract/test_openapi_envelope.py`).

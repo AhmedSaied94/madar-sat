@@ -7,7 +7,7 @@ Every non-304 response uses it. ``error`` carries a stable ``code`` and a
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel
 
@@ -27,6 +27,15 @@ class Envelope(BaseModel, Generic[T]):
     success: bool
     data: T | None
     error: ErrorBody | None
+    meta: dict[str, Any]
+
+
+class ErrorEnvelope(BaseModel):
+    """The body of every 4xx/5xx response."""
+
+    success: Literal[False]
+    data: None
+    error: ErrorBody
     meta: dict[str, Any]
 
 
