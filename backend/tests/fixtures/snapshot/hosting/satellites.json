@@ -1,0 +1,74 @@
+[
+ {
+  "id": "sat-nilesat",
+  "en": "Nilesat 7.0W",
+  "ar": "نايل سات",
+  "logo": "",
+  "bestFreq": "12054 V 27500",
+  "worstFreq": "11373 H 27500",
+  "receptionUrl": "https://www.youtube.com/watch?v=x"
+ },
+ {
+  "id": "sat-badr",
+  "en": "Badr 26.0E",
+  "ar": "بدر",
+  "logo": "",
+  "bestFreq": "11996 V 27500",
+  "worstFreq": "12149 H 30000",
+  "receptionUrl": ""
+ },
+ {
+  "id": "sat-eutel",
+  "en": "Eutel 16.0E",
+  "ar": "يوتل 16",
+  "logo": "",
+  "bestFreq": "",
+  "worstFreq": "",
+  "receptionUrl": ""
+ },
+ {
+  "id": "sat-eutel-africa",
+  "en": " Eutel 16.0E",
+  "ar": "يوتل 16 (إفريقيا)",
+  "logo": "",
+  "bestFreq": "",
+  "worstFreq": "",
+  "receptionUrl": ""
+ },
+ {
+  "id": "sat-astra",
+  "en": "Astra 19.2E",
+  "ar": "استرا 19",
+  "logo": "",
+  "bestFreq": "12166 29700",
+  "worstFreq": "",
+  "receptionUrl": ""
+ },
+ {
+  "id": "sat-dvbt2",
+  "en": "DVB T2",
+  "ar": "بث أرضي",
+  "logo": "",
+  "bestFreq": "",
+  "worstFreq": "",
+  "receptionUrl": ""
+ },
+ {
+  "id": "sat-hotbird",
+  "en": "Hotbird 13.0E",
+  "ar": "هوت بيرد",
+  "logo": "",
+  "bestFreq": "",
+  "worstFreq": "",
+  "receptionUrl": ""
+ },
+ {
+  "id": "sat-turksat",
+  "en": "Türksat 42.0E",
+  "ar": "ترك سات",
+  "logo": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/sat-turksat.png",
+  "bestFreq": "",
+  "worstFreq": "",
+  "receptionUrl": ""
+ }
+]

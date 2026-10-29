@@ -1,0 +1,293 @@
+[
+ {
+  "id": "2026-10-27",
+  "date": "2026-10-27",
+  "updatedAt": "2026-10-27T09:00:00.000Z",
+  "matches": [
+   {
+    "id": "m-1b",
+    "competition": "الدوري المصري الممتاز",
+    "competitionStage": "الجولة 9",
+    "team1": "الأهلي",
+    "team2": "الزمالك",
+    "time": "--:--",
+    "ysMatchId": "9000001",
+    "channelIds": [
+     "ch-badr-enc",
+     "ch-cyr",
+     "ch-terr"
+    ],
+    "importedChannelIds": [],
+    "hiddenChannels": [
+     "ch-cyr",
+     "ch-terr"
+    ],
+    "channelCommentators": {
+     "ch-badr-enc": {
+      "name": "معلق القائمة المكررة",
+      "image": "",
+      "audio": ""
+     }
+    },
+    "commentator": "",
+    "commentatorImage": "",
+    "commentatorAudio": "",
+    "logo1": "",
+    "logo2": "",
+    "lstUrl": "https://www.livesoccertv.com/match/fixture/m-1b-listing/",
+    "stadium": "استاد القاهرة",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": false
+   }
+  ]
+ },
+ {
+  "id": "2026-10-28",
+  "date": "2026-10-28",
+  "updatedAt": "2026-10-28T09:00:00.000Z",
+  "matches": [
+   {
+    "id": "m-1",
+    "competition": "الدوري المصري الممتاز",
+    "competitionStage": "الجولة 9",
+    "team1": "الأهلي",
+    "team2": "الزمالك",
+    "time": "10:00 م",
+    "ysMatchId": "9000001",
+    "channelIds": [
+     "ch-cyr",
+     "ch-nilesat-free",
+     "ch-hidden",
+     "orphan-channel-1"
+    ],
+    "importedChannelIds": [
+     "ch-cyr",
+     "orphan-imported-1"
+    ],
+    "hiddenChannels": [
+     "ch-hidden"
+    ],
+    "channelCommentators": {
+     "ch-cyr": {
+      "name": "معلق على القناة فقط",
+      "image": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/cc-photo.png",
+      "audio": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/cc-audio.mp3"
+     },
+     "ch-nilesat-free": {
+      "name": "معلق تجريبي",
+      "image": "",
+      "audio": "",
+      "name2": "معلق تجريبي"
+     },
+     "orphan-commentator-1": {
+      "name": "معلق قناة محذوفة",
+      "image": "",
+      "audio": ""
+     }
+    },
+    "commentator": "معلق تجريبي",
+    "commentatorImage": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/commentator-1.png",
+    "commentatorAudio": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/audio-1.mp3",
+    "commentator2": "معلق ثان على المباراة",
+    "commentatorImage2": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/commentator-2.png",
+    "commentatorAudio2": "",
+    "logo1": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/m1-logo1.png",
+    "logo2": "⚽",
+    "lstUrl": "https://www.livesoccertv.com/match/fixture/m-1-listing/",
+    "stadium": "استاد القاهرة",
+    "broadcastOn": "قناة مخصصة",
+    "broadcastLogo": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/custom-1.png",
+    "broadcastOn2": "قناة مخصصة ثانية",
+    "broadcastLogo2": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/custom-2.png",
+    "live": false
+   },
+   {
+    "id": "m-tbd",
+    "competition": "الدوري المصري الممتاز",
+    "competitionStage": "",
+    "team1": "الأهلي",
+    "team2": "الزمالك",
+    "time": "--:--",
+    "ysMatchId": "9000002",
+    "channelIds": [
+     "ch-nilesat-free"
+    ],
+    "importedChannelIds": [],
+    "hiddenChannels": [],
+    "channelCommentators": {
+     "ch-nilesat-free": {
+      "name": "",
+      "image": "",
+      "audio": "",
+      "name2": "معلق ثان فقط"
+     }
+    },
+    "commentator": "غير مدرج",
+    "commentatorImage": "",
+    "commentatorAudio": "",
+    "logo1": "",
+    "logo2": "",
+    "lstUrl": "",
+    "stadium": "",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": true
+   },
+   {
+    "id": "m-amb",
+    "competition": "الدوري السعودي للمحترفين",
+    "competitionStage": "",
+    "team1": "الأهلي",
+    "team2": "فريق غير موجود",
+    "time": "02:30 ص",
+    "ysMatchId": "9000003",
+    "seId": "se-fixture-1",
+    "channelIds": [],
+    "importedChannelIds": [],
+    "hiddenChannels": [],
+    "channelCommentators": {},
+    "commentator": "",
+    "commentatorImage": "",
+    "commentatorAudio": "",
+    "logo1": "",
+    "logo2": "",
+    "lstUrl": "",
+    "stadium": "",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": false
+   },
+   {
+    "id": "m-unmarked",
+    "competition": "الدوري الإنجليزي الممتاز",
+    "competitionStage": "",
+    "team1": "مان سيتي",
+    "team2": "أستون فيلا",
+    "time": "02:30",
+    "ysMatchId": "9000004",
+    "channelIds": [
+     "ch-badr-enc",
+     "ch-platform-mega",
+     "ch-carriage-dup-a",
+     "ch-carriage-dup-b"
+    ],
+    "importedChannelIds": [
+     "ch-badr-enc"
+    ],
+    "hiddenChannels": [
+     "ch-carriage-dup-a"
+    ],
+    "channelCommentators": {
+     "ch-carriage-dup-b": {
+      "name": "معلق تجريبي",
+      "image": "",
+      "audio": ""
+     }
+    },
+    "commentator": "معلق تجريبي",
+    "commentatorImage": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/commentator-1.png",
+    "commentatorAudio": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/audio-1.mp3",
+    "logo1": "",
+    "logo2": "",
+    "lstUrl": "",
+    "stadium": "",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": false
+   }
+  ]
+ },
+ {
+  "id": "2026-10-29",
+  "date": "2026-10-29",
+  "updatedAt": "2026-10-29T09:00:00.000Z",
+  "matches": [
+   {
+    "id": "m-today",
+    "competition": "الدوري المصري الممتاز",
+    "competitionStage": "",
+    "team1": "الأهلي",
+    "team2": "الزمالك",
+    "time": "08:00 م",
+    "ysMatchId": "9000005",
+    "channelIds": [
+     "ch-nilesat-free",
+     "ch-platform-dup-a",
+     "ch-platform-dup-b"
+    ],
+    "importedChannelIds": [],
+    "hiddenChannels": [
+     "ch-platform-dup-a",
+     "ch-platform-dup-b"
+    ],
+    "channelCommentators": {},
+    "commentator": "",
+    "commentatorImage": "",
+    "commentatorAudio": "",
+    "logo1": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/team-ahly-eg.png",
+    "logo2": "",
+    "lstUrl": "",
+    "stadium": "",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": false
+   },
+   {
+    "id": "m-dup2-a",
+    "competition": "الدوري الإنجليزي الممتاز",
+    "competitionStage": "",
+    "team1": "مان سيتي",
+    "team2": "أستون فيلا",
+    "time": "03:30 م",
+    "ysMatchId": "9000006",
+    "channelIds": [],
+    "importedChannelIds": [],
+    "hiddenChannels": [],
+    "channelCommentators": {},
+    "commentator": "",
+    "commentatorImage": "",
+    "commentatorAudio": "",
+    "logo1": "",
+    "logo2": "",
+    "lstUrl": "",
+    "stadium": "",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": false
+   }
+  ]
+ },
+ {
+  "id": "2026-10-30",
+  "date": "2026-10-30",
+  "updatedAt": "2026-10-30T09:00:00.000Z",
+  "matches": [
+   {
+    "id": "m-dup2-b",
+    "competition": "الدوري الإنجليزي الممتاز",
+    "competitionStage": "",
+    "team1": "مان سيتي",
+    "team2": "أستون فيلا",
+    "time": "02:30 م",
+    "ysMatchId": "9000006",
+    "channelIds": [
+     "ch-nilesat-free"
+    ],
+    "importedChannelIds": [],
+    "hiddenChannels": [],
+    "channelCommentators": {},
+    "commentator": "",
+    "commentatorImage": "",
+    "commentatorAudio": "",
+    "logo1": "",
+    "logo2": "",
+    "lstUrl": "",
+    "stadium": "",
+    "broadcastOn": "",
+    "broadcastLogo": "",
+    "live": false
+   }
+  ]
+ }
+]

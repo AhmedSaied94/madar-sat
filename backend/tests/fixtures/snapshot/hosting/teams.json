@@ -1,0 +1,55 @@
+[
+ {
+  "id": "team-ahly-eg",
+  "name": "الأهلي",
+  "logo": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/team-ahly-eg.png",
+  "league": "الدوري المصري الممتاز",
+  "stadium": "استاد القاهرة",
+  "leagues": [
+   "الدوري المصري الممتاز"
+  ],
+  "ysId": "990001"
+ },
+ {
+  "id": "team-ahly-sa",
+  "name": "الأهلي",
+  "logo": "",
+  "league": "الدوري السعودي للمحترفين",
+  "stadium": "",
+  "leagues": [
+   "الدوري السعودي للمحترفين"
+  ],
+  "ysId": "990001"
+ },
+ {
+  "id": "team-zamalek",
+  "name": "الزمالك",
+  "logo": "https://pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev/fixture/team-zamalek.png",
+  "league": "الدوري المصري الممتاز",
+  "stadium": "",
+  "leagues": [
+   "الدوري المصري الممتاز"
+  ],
+  "ysId": "990002"
+ },
+ {
+  "id": "team-city",
+  "name": "مان سيتي",
+  "logo": "",
+  "league": "الدوري الإنجليزي الممتاز",
+  "stadium": "",
+  "leagues": [
+   "الدوري الإنجليزي الممتاز"
+  ]
+ },
+ {
+  "id": "team-villa",
+  "name": "أستون فيلا",
+  "logo": "",
+  "league": "الدوري الإنجليزي الممتاز",
+  "stadium": "",
+  "leagues": [
+   "الدوري الإنجليزي الممتاز"
+  ]
+ }
+]

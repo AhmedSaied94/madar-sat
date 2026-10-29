@@ -44,7 +44,8 @@ The counts above are illustrative. Real values depend on the snapshot being load
   - `channel_not_published`, `rights_order_unknown_id`;
   - `team_name_unresolved`, `team_name_ambiguous` (the row is loaded with `*_team_id` NULL and counted as a warning, not a skip);
   - `frequency_unparseable` (kept as `frequency_note`, also a warning);
-  - `duplicate_listing`, `duplicate_carriage`.
+  - `duplicate_listing`, `duplicate_carriage`;
+  - `card_sharing_label_stripped` (a channel `name` or `displayName` that carried a card-sharing label is stored without it, for example «CCTV Sports VIP» → «CCTV Sports»; a warning, not a skip), and `name_is_card_sharing_label` (a skip: nothing is left once the label is removed).
 - **Idempotency:** a second run on the same snapshot reports the same counts, and the database row counts don't change (spec FR-004).
 
 ## `media` (rehost-media)

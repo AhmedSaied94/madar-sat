@@ -1,0 +1,19 @@
+# Local environment and tool caches
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Never commit snapshot data, load reports or rehosted media (D15, R11)
+/snapshot/
+/reports/
+/media/
+load-report-*.json
+load-report-*.details.jsonl
+.env
