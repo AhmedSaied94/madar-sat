@@ -45,3 +45,10 @@
 - Adapter `parse` is pure and tested against saved raw pages. Flutter widget tests run RTL at 1.3× text scale in both themes.
 - From `../old_app/`, copy only `migration/schema.sql`; never commit `migration/data/` or the old Firebase web config (D15). No secrets in the repo.
 - Commits use Conventional Commits. A new recurring cost or stack substitution needs a decision in `docs/system-design.md` §3, plus a constitution amendment if it changes a rule.
+
+<!-- lean-ctx -->
+## lean-ctx
+
+lean-ctx is active — the MCP tools replace native equivalents.
+Full rules: LEAN-CTX.md (open on demand — do not auto-load).
+<!-- /lean-ctx -->
