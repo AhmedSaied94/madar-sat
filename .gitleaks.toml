@@ -11,14 +11,16 @@ title = "Madar Sat"
 useDefault = true
 
 [[allowlists]]
-description = """The documented example access token in Lane B1's admin login schema and its \
-OpenAPI export. It decodes to the header {"alg":"HS256"}, the payload {"sub":"3"} and the \
-literal word "signature", so it isn't a signed token."""
+description = """The documented example access token in Lane B1's admin login schema, its \
+OpenAPI export, and the MSW handlers Orval generates from that export for the admin tests. It \
+decodes to the header {"alg":"HS256"}, the payload {"sub":"3"} and the literal word \
+"signature", so it isn't a signed token."""
 condition = "AND"
 regexTarget = "match"
 paths = [
   '''^backend/app/api/admin/auth\.py$''',
   '''^backend/app/schemas/admin\.py$''',
   '''^backend/openapi/admin\.json$''',
+  '''^admin/src/api/generated/admin\.msw\.ts$''',
 ]
 regexes = ['''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIzIn0\.signature''']
