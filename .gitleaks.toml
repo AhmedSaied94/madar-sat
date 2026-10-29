@@ -1,14 +1,24 @@
-# gitleaks config: the default rules, unchanged (gitleaks.yml).
+# gitleaks config: the default rules, plus allowlist entries for confirmed false positives only
+# (gitleaks.yml).
 #
-# An allowlist entry is added only for a confirmed false positive under backend/tests/fixtures/,
-# never for a whole folder, and never outside it. Example:
-#
-# [[allowlists]]
-# description = "Synthetic fixture value, not a credential"
-# paths = ['''^backend/tests/fixtures/snapshot/<file>$''']
-# regexes = ['''<the exact false-positive value>''']
+# Each entry names the exact false-positive value and the exact files it appears in, with
+# condition = "AND" so that both must match. Without it, gitleaks allows a finding when either
+# matches, and the paths alone would exempt whole files. Never allowlist a folder or a rule.
 
 title = "Madar Sat"
 
 [extend]
 useDefault = true
+
+[[allowlists]]
+description = """The documented example access token in Lane B1's admin login schema and its \
+OpenAPI export. It decodes to the header {"alg":"HS256"}, the payload {"sub":"3"} and the \
+literal word "signature", so it isn't a signed token."""
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''^backend/app/api/admin/auth\.py$''',
+  '''^backend/app/schemas/admin\.py$''',
+  '''^backend/openapi/admin\.json$''',
+]
+regexes = ['''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIzIn0\.signature''']
