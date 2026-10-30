@@ -10,6 +10,7 @@ One workflow per folder, each filtered to its own paths, plus `gitleaks` on ever
 | `infra.yml` | Pushes to `master` and PRs that change `infra/**`, `.github/workflows/**` or `.github/actions/**` | `check`: `docker compose config` for the three Compose files, `caddy validate`, shellcheck, actionlint. On a `master` push also `sync`. | The same three, for `sync` |
 | `gitleaks.yml` | Every push to any branch, and every PR | `scan`: the full history, redacted | None |
 | `app.yml` | Pushes to `master` and PRs that change `app/**`, `backend/openapi/public.json`, `madar-design/**` or the workflow | `check`: `flutter analyze`, the token-copy and literal checks, `flutter test` (goldens), the `prod` debug APK as the artifact `app-prod-debug.apk` | None |
+| `app-release.yml` | A pushed tag `app-v<major>.<minor>.<patch>` | `aab`: writes the upload keystore from the secrets, builds the signed `prod` AAB (`--build-name` from the tag, `--build-number` = run number), checks it is signed by the `Madar Sat` upload key and not the debug key, uploads `app-prod-release.aab`. Play upload is not wired. | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` |
 | `pwa.yml` | Pushes to `master` that change `app/**`, `infra/firebase/**` or the workflow; by hand | `build` (web), `deploy` to the preview channel `master` | `FIREBASE_SERVICE_ACCOUNT` |
 | `admin.yml` | Pushes to `master` and PRs that change `admin/**`, `backend/openapi/admin.json`, `madar-design/**` or the workflow | `check`: typecheck, lint, test, build, the literal and token-copy checks | None |
 
@@ -38,30 +39,39 @@ Some failures are expected while the lanes merge for the first time:
 | `infra` `check`, Caddy | `adapting config using caddyfile: …` | Fix `infra/Caddyfile`. The check runs with `example.env`'s values. |
 | `infra` `check`, shellcheck or actionlint | Findings | Fix the script or workflow |
 | `gitleaks` | A finding | [secrets.md "When gitleaks fails"](secrets.md#when-gitleaks-fails) |
-| `app` | Goldens differ | Regenerate them in the pinned image `ghcr.io/cirruslabs/flutter:<app/.flutter-version>`, never on your machine (research R18). No image exists for the current pin: see "The golden image is not published" below. |
+| `app` | Goldens differ | Regenerate them only with the Flutter version in `app/.flutter-version`, on Linux x64. If only the runner differs, take them from the runner: see "Goldens and the Flutter pin" below (research R18). |
 | `admin` | `pnpm install --frozen-lockfile` fails | Run `pnpm install` in `admin/` and commit `pnpm-lock.yaml` |
 | `pwa` | Anything | [firebase-hosting.md "If it fails"](firebase-hosting.md#if-it-fails) |
 
-## The golden image is not published
+## Goldens and the Flutter pin
 
-`app/.flutter-version` pins Flutter 3.47.7, and `app.yml` and `pwa.yml` use it as the image
-tag, which is how the goldens stay host-independent (R18). `ghcr.io/cirruslabs/flutter` has
-no `3.47.7` tag — its newest is `3.44.0`, which ships Dart 3.12.0 and cannot resolve
-`app/pubspec.yaml` (`sdk: ^3.13.5`):
+`app/.flutter-version` (one stable `x.y.z`, now 3.47.7) is the only Flutter pin. `app.yml`'s
+`check` job and `backend.yml`'s `clients` job read it, check it against
+`^[0-9]+\.[0-9]+\.[0-9]+$`, and install that version with `subosito/flutter-action` (SDK
+cached) on `ubuntu-24.04`. That pinned version on that pinned OS, with the fonts bundled
+through `FontLoader`, renders the goldens, so the `app.yml` run is the reference (R18).
 
-```bash
-docker manifest inspect ghcr.io/cirruslabs/flutter:3.47.7     # no such manifest
-docker run --rm ghcr.io/cirruslabs/flutter:3.44.0 flutter --version   # Dart 3.12.0
-docker run --rm -v "$PWD/app":/app -w /app ghcr.io/cirruslabs/flutter:3.44.0 flutter pub get
-```
+`app.yml` used to run in `ghcr.io/cirruslabs/flutter:<pin>`. That image has no `3.47.7` tag
+(its newest, `3.44.0`, ships Dart 3.12.0, below `app/pubspec.yaml`'s `sdk: ^3.13.5`), so on
+2026-10-30 the owner approved dropping the container (review finding M-R1-7). `pwa.yml`'s
+`build` job had the same container and got the same change: it installs the pin with
+`subosito/flutter-action` on `ubuntu-24.04`.
 
-Until the owner picks one of these, both workflows fail at the image pull and the `app`
-gates can only be run on a host with Flutter 3.47.7:
+**When goldens differ in CI.** The committed goldens were rendered with Flutter 3.47.7 on a
+Linux x64 host, not on the runner. If `flutter test (goldens included)` fails on pixel diffs:
 
-- wait for the `3.47.7` image, then push any commit to re-run;
-- publish the image from this repo (a one-stage job on `python`/`debian` plus the SDK);
-- approve moving the app to Flutter 3.44.0: lower `sdk:` in `app/pubspec.yaml`, re-resolve
-  `app/pubspec.lock`, then regenerate every golden in that image.
+1. Run the same on your machine with the pinned version:
+   `cd app && flutter --version && flutter test`. If it fails there too, the change moved
+   pixels: review it, run `flutter test --update-goldens`, and commit the PNGs.
+2. If your machine passes and the runner doesn't, the two rasterize differently. Take the
+   goldens from the runner: on a throwaway branch, change the step to
+   `flutter test --update-goldens` and upload `app/test/goldens/` with
+   `actions/upload-artifact`. Download the artifact, copy its PNGs into `app/test/goldens/`
+   on the real branch, review the diffs and commit them. Lane M can make the throwaway change.
+
+**Bumping Flutter.** Put the new stable version in `app/.flutter-version`. In `app/`, with
+that version installed, run `flutter pub get`, `flutter analyze` and `flutter test`;
+regenerate the goldens as above if they differ, and commit them with the pin.
 
 ## Re-running
 

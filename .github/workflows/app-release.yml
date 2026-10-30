@@ -1,0 +1,82 @@
+# The signed prod AAB on an `app-v<major>.<minor>.<patch>` tag (system-design §9, FR-025). It is
+# a workflow of its own so the upload keystore secrets reach only tag runs, never a PR. Play
+# upload is not wired yet: the AAB is the artifact `app-prod-release.aab`.
+name: app-release
+
+on:
+  push:
+    tags: ["app-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  aab:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          name="${TAG#app-v}"
+          [[ $name =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::tag must look like app-v1.2.3, got '$TAG'"; exit 1; }
+          flutter=$(tr -d '[:space:]' < .flutter-version)
+          [[ $flutter =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error file=app/.flutter-version::expected a version like 3.38.1, got '$flutter'"; exit 1; }
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "flutter=$flutter" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ steps.version.outputs.flutter }}
+          cache: true
+      - name: Write the upload keystore (never echoed)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          umask 077
+          for v in KEYSTORE_BASE64 STORE_PASSWORD KEY_PASSWORD KEY_ALIAS; do
+            [[ -n ${!v} ]] || { echo "::error::secret for $v is empty or missing"; exit 1; }
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/upload-keystore.jks"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/key.properties
+      - run: flutter pub get
+      - name: Build the signed prod AAB (versionCode = run number)
+        env:
+          BUILD_NAME: ${{ steps.version.outputs.name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: >
+          flutter build appbundle --release --flavor prod -t lib/main_prod.dart
+          --dart-define-from-file=env/prod.json
+          --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+      - name: Check the AAB is signed with the upload key, not the debug key
+        run: |
+          cert=$(keytool -printcert -jarfile build/app/outputs/bundle/prodRelease/app-prod-release.aab)
+          grep -q 'Owner: CN=Madar Sat' <<< "$cert" || { echo "::error::the AAB is not signed with the Madar Sat upload key"; exit 1; }
+          sha=$(grep 'SHA256:' <<< "$cert" | head -1 | sed 's/^ *//')
+          echo "Upload key $sha"
+          echo "Upload key $sha" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove the keystore
+        if: always()
+        run: rm -f android/key.properties "$RUNNER_TEMP/upload-keystore.jks"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-prod-release.aab
+          path: app/build/app/outputs/bundle/prodRelease/app-prod-release.aab
+          if-no-files-found: error

@@ -20,6 +20,7 @@ The rules:
 | WireGuard device keys | Each device; its peer in `wg0.conf` | You | [private-network.md "Remove a peer"](private-network.md#remove-a-peer), then add it again |
 | WireGuard hub key | `/etc/wireguard/wg0.key` on VPS-1 | `wg0` | [break-glass.md "Re-key the hub"](break-glass.md#re-key-the-hub-key-lost-or-exposed) |
 | `FIREBASE_SERVICE_ACCOUNT` | GitHub secret | `pwa.yml` | [Below](#rotate-the-firebase-service-account-key) |
+| Android upload keystore | `~/.config/madar-sat/upload-keystore.jks` and `keystore-password` on the owner's machine (mode 600), **backed up in the owner's password manager**. GitHub secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`), `ANDROID_KEY_PASSWORD`. | `app-release.yml` (tag `app-v*`) | [Below](#rotate-the-android-upload-key) |
 | `ubuntu` console passwords | Your password manager, one per VM | The serial console | `sudo passwd ubuntu`, then test the console again ([provision-host.md §2](provision-host.md#2-console-password-then-test-the-serial-console)) |
 | Caddy's internal CA key | VPS-1's `madar_caddy_data` volume | The admin site's certificates | Only by letting Caddy make a new CA, which means a new root on every admin device |
 | `GITHUB_TOKEN` | Created per job, expires when the job ends | GHCR push and pull | Nothing to rotate. `deploy.sh` logs out of GHCR on exit. |
@@ -71,6 +72,38 @@ Redis reads `requirepass` when it starts, so it and every client restart togethe
 1. Add a new JSON key to the service account, and store it ([firebase-hosting.md §2](firebase-hosting.md#2-service-account-and-key)).
 2. Prove it works: `gh workflow run pwa.yml -R AhmedSaied94/madar-sat --ref master`.
 3. In the Google Cloud console, delete the **old** key under the service account's Keys.
+
+## Rotate the Android upload key
+
+The upload key signs the AAB you give Google Play. It is not the app's signing key once Play App Signing is on, so a lost or leaked upload key is replaced through Play, and users are not affected. Without Play App Signing, losing it means no more updates, so keep the backup.
+
+How it was made (2026-10-30), for reference. It is a PKCS12 keystore, RSA 4096, alias `upload`, valid 10,000 days, one random password for store and key:
+
+```bash
+umask 077; d=~/.config/madar-sat; mkdir -p "$d"
+export KS_PASS="$(head -c 32 /dev/urandom | base64 | tr -d '/+=\n' | head -c 32)"
+printf '%s' "$KS_PASS" > "$d/keystore-password"
+keytool -genkeypair -keystore "$d/upload-keystore.jks" -storetype PKCS12 -alias upload \
+  -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Madar Sat, O=Madar Sat" \
+  -storepass:env KS_PASS -keypass:env KS_PASS
+```
+
+To replace it:
+
+1. In Play Console, **Setup → App signing → Request upload key reset** and give Google the new certificate (`keytool -export -rfc -alias upload -keystore <jks> -file upload_cert.pem`).
+2. Make the new keystore as above, in a new folder, and back it up.
+3. Update the four secrets from files, never from the command line:
+
+   ```bash
+   R=AhmedSaied94/madar-sat; d=<new folder>
+   base64 -w0 "$d/upload-keystore.jks" | gh secret set ANDROID_KEYSTORE_BASE64 -R "$R"
+   gh secret set ANDROID_KEYSTORE_PASSWORD -R "$R" < "$d/keystore-password"
+   gh secret set ANDROID_KEY_PASSWORD -R "$R" < "$d/keystore-password"
+   ```
+
+4. Prove it: push a throwaway tag such as `app-v0.0.1` and check that `app-release.yml` is green. Its "Check the AAB is signed with the upload key" step prints the key's SHA-256, which must match the new certificate. Delete the tag afterwards (`git push --delete origin app-v0.0.1`).
+
+To build a signed AAB on your machine, write `app/android/key.properties` (git-ignored) with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`, then run the `flutter build appbundle` command from `app-release.yml`. Without that file, `release` falls back to the debug key.
 
 ## When gitleaks fails
 
