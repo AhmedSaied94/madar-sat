@@ -131,7 +131,7 @@ flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from
   - `test/core/format/` covers Western digits, `ص`/`م` and the LTR frequency island;
   - the drift round-trip test passes.
 - **On a phone:** install the `prod` debug APK. The matches route lists today's local-day matches from VPS-1, or shows `EmptyState`. `/gallery` opens in this debug build, and a release build has no `/gallery` route.
-- **On the web:** `flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json`, serve `build/web`, and open `/gallery` and the matches route in Chrome with DevTools → Network. No request goes to `fonts.gstatic.com` or `fonts.googleapis.com` (FR-042). If one does, a glyph is missing from the bundled fonts: add it to the bundle rather than allowing the fetch.
+- **On the web:** `flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json`, serve `build/web`, and open `/gallery` and the matches route in Chrome with DevTools → Network. No request goes to `fonts.gstatic.com` or `fonts.googleapis.com` (FR-042). If one does, a glyph is missing from the bundled fonts: add it to the bundle rather than allowing the fetch.
 
 ## Done check (spec SC-010)
 

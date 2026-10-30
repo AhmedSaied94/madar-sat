@@ -51,7 +51,8 @@ jobs:
           flutter-version: ${{ needs.flutter-version.outputs.version }}
           cache: true
       - run: flutter pub get
-      - run: flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+      # --no-web-resources-cdn bundles CanvasKit instead of loading it from www.gstatic.com (FR-042).
+      - run: flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pwa-web
