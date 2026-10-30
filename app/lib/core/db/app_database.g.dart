@@ -962,15 +962,592 @@ class MatchesCompanion extends UpdateCompanion<StoredMatch> {
   }
 }
 
+class $MatchWindowsTable extends MatchWindows
+    with TableInfo<$MatchWindowsTable, StoredWindow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MatchWindowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dayMeta = const VerificationMeta('day');
+  @override
+  late final GeneratedColumn<String> day = GeneratedColumn<String>(
+    'day',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [day, etag, fetchedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'match_windows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredWindow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('day')) {
+      context.handle(
+        _dayMeta,
+        day.isAcceptableOrUnknown(data['day']!, _dayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayMeta);
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {day};
+  @override
+  StoredWindow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredWindow(
+      day: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}day'],
+      )!,
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MatchWindowsTable createAlias(String alias) {
+    return $MatchWindowsTable(attachedDatabase, alias);
+  }
+}
+
+class StoredWindow extends DataClass implements Insertable<StoredWindow> {
+  /// `yyyy-MM-dd`, the device's local day.
+  final String day;
+  final String? etag;
+  final DateTime fetchedAt;
+  const StoredWindow({required this.day, this.etag, required this.fetchedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['day'] = Variable<String>(day);
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    return map;
+  }
+
+  MatchWindowsCompanion toCompanion(bool nullToAbsent) {
+    return MatchWindowsCompanion(
+      day: Value(day),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory StoredWindow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredWindow(
+      day: serializer.fromJson<String>(json['day']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'day': serializer.toJson<String>(day),
+      'etag': serializer.toJson<String?>(etag),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+    };
+  }
+
+  StoredWindow copyWith({
+    String? day,
+    Value<String?> etag = const Value.absent(),
+    DateTime? fetchedAt,
+  }) => StoredWindow(
+    day: day ?? this.day,
+    etag: etag.present ? etag.value : this.etag,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+  );
+  StoredWindow copyWithCompanion(MatchWindowsCompanion data) {
+    return StoredWindow(
+      day: data.day.present ? data.day.value : this.day,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredWindow(')
+          ..write('day: $day, ')
+          ..write('etag: $etag, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(day, etag, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredWindow &&
+          other.day == this.day &&
+          other.etag == this.etag &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class MatchWindowsCompanion extends UpdateCompanion<StoredWindow> {
+  final Value<String> day;
+  final Value<String?> etag;
+  final Value<DateTime> fetchedAt;
+  final Value<int> rowid;
+  const MatchWindowsCompanion({
+    this.day = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MatchWindowsCompanion.insert({
+    required String day,
+    this.etag = const Value.absent(),
+    required DateTime fetchedAt,
+    this.rowid = const Value.absent(),
+  }) : day = Value(day),
+       fetchedAt = Value(fetchedAt);
+  static Insertable<StoredWindow> custom({
+    Expression<String>? day,
+    Expression<String>? etag,
+    Expression<DateTime>? fetchedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (day != null) 'day': day,
+      if (etag != null) 'etag': etag,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MatchWindowsCompanion copyWith({
+    Value<String>? day,
+    Value<String?>? etag,
+    Value<DateTime>? fetchedAt,
+    Value<int>? rowid,
+  }) {
+    return MatchWindowsCompanion(
+      day: day ?? this.day,
+      etag: etag ?? this.etag,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (day.present) {
+      map['day'] = Variable<String>(day.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MatchWindowsCompanion(')
+          ..write('day: $day, ')
+          ..write('etag: $etag, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CachedDocumentsTable extends CachedDocuments
+    with TableInfo<$CachedDocumentsTable, StoredDocument> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CachedDocumentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, etag, body, fetchedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cached_documents';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredDocument> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  StoredDocument map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredDocument(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CachedDocumentsTable createAlias(String alias) {
+    return $CachedDocumentsTable(attachedDatabase, alias);
+  }
+}
+
+class StoredDocument extends DataClass implements Insertable<StoredDocument> {
+  final String key;
+  final String? etag;
+  final String body;
+  final DateTime fetchedAt;
+  const StoredDocument({
+    required this.key,
+    this.etag,
+    required this.body,
+    required this.fetchedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    map['body'] = Variable<String>(body);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    return map;
+  }
+
+  CachedDocumentsCompanion toCompanion(bool nullToAbsent) {
+    return CachedDocumentsCompanion(
+      key: Value(key),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      body: Value(body),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory StoredDocument.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredDocument(
+      key: serializer.fromJson<String>(json['key']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      body: serializer.fromJson<String>(json['body']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'etag': serializer.toJson<String?>(etag),
+      'body': serializer.toJson<String>(body),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+    };
+  }
+
+  StoredDocument copyWith({
+    String? key,
+    Value<String?> etag = const Value.absent(),
+    String? body,
+    DateTime? fetchedAt,
+  }) => StoredDocument(
+    key: key ?? this.key,
+    etag: etag.present ? etag.value : this.etag,
+    body: body ?? this.body,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+  );
+  StoredDocument copyWithCompanion(CachedDocumentsCompanion data) {
+    return StoredDocument(
+      key: data.key.present ? data.key.value : this.key,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      body: data.body.present ? data.body.value : this.body,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredDocument(')
+          ..write('key: $key, ')
+          ..write('etag: $etag, ')
+          ..write('body: $body, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, etag, body, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredDocument &&
+          other.key == this.key &&
+          other.etag == this.etag &&
+          other.body == this.body &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class CachedDocumentsCompanion extends UpdateCompanion<StoredDocument> {
+  final Value<String> key;
+  final Value<String?> etag;
+  final Value<String> body;
+  final Value<DateTime> fetchedAt;
+  final Value<int> rowid;
+  const CachedDocumentsCompanion({
+    this.key = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.body = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CachedDocumentsCompanion.insert({
+    required String key,
+    this.etag = const Value.absent(),
+    required String body,
+    required DateTime fetchedAt,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       body = Value(body),
+       fetchedAt = Value(fetchedAt);
+  static Insertable<StoredDocument> custom({
+    Expression<String>? key,
+    Expression<String>? etag,
+    Expression<String>? body,
+    Expression<DateTime>? fetchedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (etag != null) 'etag': etag,
+      if (body != null) 'body': body,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CachedDocumentsCompanion copyWith({
+    Value<String>? key,
+    Value<String?>? etag,
+    Value<String>? body,
+    Value<DateTime>? fetchedAt,
+    Value<int>? rowid,
+  }) {
+    return CachedDocumentsCompanion(
+      key: key ?? this.key,
+      etag: etag ?? this.etag,
+      body: body ?? this.body,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedDocumentsCompanion(')
+          ..write('key: $key, ')
+          ..write('etag: $etag, ')
+          ..write('body: $body, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $MatchesTable matches = $MatchesTable(this);
+  late final $MatchWindowsTable matchWindows = $MatchWindowsTable(this);
+  late final $CachedDocumentsTable cachedDocuments = $CachedDocumentsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [matches];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    matches,
+    matchWindows,
+    cachedDocuments,
+  ];
 }
 
 typedef $$MatchesTableCreateCompanionBuilder = MatchesCompanion Function({
@@ -1407,10 +1984,381 @@ typedef $$MatchesTableProcessedTableManager =
       StoredMatch,
       PrefetchHooks Function()
     >;
+typedef $$MatchWindowsTableCreateCompanionBuilder =
+    MatchWindowsCompanion Function({
+      required String day,
+      Value<String?> etag,
+      required DateTime fetchedAt,
+      Value<int> rowid,
+    });
+typedef $$MatchWindowsTableUpdateCompanionBuilder =
+    MatchWindowsCompanion Function({
+      Value<String> day,
+      Value<String?> etag,
+      Value<DateTime> fetchedAt,
+      Value<int> rowid,
+    });
+
+class $$MatchWindowsTableFilterComposer
+    extends Composer<_$AppDatabase, $MatchWindowsTable> {
+  $$MatchWindowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MatchWindowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MatchWindowsTable> {
+  $$MatchWindowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MatchWindowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MatchWindowsTable> {
+  $$MatchWindowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get day =>
+      $composableBuilder(column: $table.day, builder: (column) => column);
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+}
+
+class $$MatchWindowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MatchWindowsTable,
+          StoredWindow,
+          $$MatchWindowsTableFilterComposer,
+          $$MatchWindowsTableOrderingComposer,
+          $$MatchWindowsTableAnnotationComposer,
+          $$MatchWindowsTableCreateCompanionBuilder,
+          $$MatchWindowsTableUpdateCompanionBuilder,
+          (
+            StoredWindow,
+            BaseReferences<_$AppDatabase, $MatchWindowsTable, StoredWindow>,
+          ),
+          StoredWindow,
+          PrefetchHooks Function()
+        > {
+  $$MatchWindowsTableTableManager(_$AppDatabase db, $MatchWindowsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MatchWindowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MatchWindowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MatchWindowsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> day = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<DateTime> fetchedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MatchWindowsCompanion(
+                day: day,
+                etag: etag,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String day,
+                Value<String?> etag = const Value.absent(),
+                required DateTime fetchedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MatchWindowsCompanion.insert(
+                day: day,
+                etag: etag,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MatchWindowsTable, StoredWindow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $MatchWindowsTable,
+                    StoredWindow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MatchWindowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MatchWindowsTable,
+      StoredWindow,
+      $$MatchWindowsTableFilterComposer,
+      $$MatchWindowsTableOrderingComposer,
+      $$MatchWindowsTableAnnotationComposer,
+      $$MatchWindowsTableCreateCompanionBuilder,
+      $$MatchWindowsTableUpdateCompanionBuilder,
+      (
+        StoredWindow,
+        BaseReferences<_$AppDatabase, $MatchWindowsTable, StoredWindow>,
+      ),
+      StoredWindow,
+      PrefetchHooks Function()
+    >;
+typedef $$CachedDocumentsTableCreateCompanionBuilder =
+    CachedDocumentsCompanion Function({
+      required String key,
+      Value<String?> etag,
+      required String body,
+      required DateTime fetchedAt,
+      Value<int> rowid,
+    });
+typedef $$CachedDocumentsTableUpdateCompanionBuilder =
+    CachedDocumentsCompanion Function({
+      Value<String> key,
+      Value<String?> etag,
+      Value<String> body,
+      Value<DateTime> fetchedAt,
+      Value<int> rowid,
+    });
+
+class $$CachedDocumentsTableFilterComposer
+    extends Composer<_$AppDatabase, $CachedDocumentsTable> {
+  $$CachedDocumentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CachedDocumentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CachedDocumentsTable> {
+  $$CachedDocumentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CachedDocumentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CachedDocumentsTable> {
+  $$CachedDocumentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+}
+
+class $$CachedDocumentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CachedDocumentsTable,
+          StoredDocument,
+          $$CachedDocumentsTableFilterComposer,
+          $$CachedDocumentsTableOrderingComposer,
+          $$CachedDocumentsTableAnnotationComposer,
+          $$CachedDocumentsTableCreateCompanionBuilder,
+          $$CachedDocumentsTableUpdateCompanionBuilder,
+          (
+            StoredDocument,
+            BaseReferences<
+              _$AppDatabase,
+              $CachedDocumentsTable,
+              StoredDocument
+            >,
+          ),
+          StoredDocument,
+          PrefetchHooks Function()
+        > {
+  $$CachedDocumentsTableTableManager(
+    _$AppDatabase db,
+    $CachedDocumentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CachedDocumentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CachedDocumentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CachedDocumentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> key = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> fetchedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CachedDocumentsCompanion(
+                key: key,
+                etag: etag,
+                body: body,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String key,
+                Value<String?> etag = const Value.absent(),
+                required String body,
+                required DateTime fetchedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CachedDocumentsCompanion.insert(
+                key: key,
+                etag: etag,
+                body: body,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CachedDocumentsTable, StoredDocument>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CachedDocumentsTable,
+                    StoredDocument
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CachedDocumentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CachedDocumentsTable,
+      StoredDocument,
+      $$CachedDocumentsTableFilterComposer,
+      $$CachedDocumentsTableOrderingComposer,
+      $$CachedDocumentsTableAnnotationComposer,
+      $$CachedDocumentsTableCreateCompanionBuilder,
+      $$CachedDocumentsTableUpdateCompanionBuilder,
+      (
+        StoredDocument,
+        BaseReferences<_$AppDatabase, $CachedDocumentsTable, StoredDocument>,
+      ),
+      StoredDocument,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$MatchesTableTableManager get matches =>
       $$MatchesTableTableManager(_db, _db.matches);
+  $$MatchWindowsTableTableManager get matchWindows =>
+      $$MatchWindowsTableTableManager(_db, _db.matchWindows);
+  $$CachedDocumentsTableTableManager get cachedDocuments =>
+      $$CachedDocumentsTableTableManager(_db, _db.cachedDocuments);
 }

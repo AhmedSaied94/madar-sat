@@ -1,4 +1,5 @@
 import '../../l10n/app_localizations.dart';
+import '../network/api_failure.dart';
 
 /// Stable API `error.code` → Arabic copy (constitution III). `error.message` is never shown.
 extension ErrorCopy on AppLocalizations {
@@ -17,4 +18,11 @@ extension ErrorCopy on AppLocalizations {
         'internal_error' => errorInternal,
         _ => errorNetwork,
       };
+
+  /// The title of an error state: offline has its own, everything else is one sentence.
+  String failureTitle(ApiFailure failure) => failure.isOffline ? noConnectionTitle : loadFailedTitle;
+
+  /// The body of an error state: the words for being offline, or the API's `error.code`.
+  String failureCopy(ApiFailure failure) =>
+      failure.isOffline ? noConnectionBody : errorCopy(failure.code);
 }

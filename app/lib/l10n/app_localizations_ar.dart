@@ -324,4 +324,244 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get textScale => 'حجم الخط';
+
+  @override
+  String get filterAll => 'الكل';
+
+  @override
+  String get clearSearch => 'مسح البحث';
+
+  @override
+  String staleHint(Object age) {
+    return 'آخر تحديث $age';
+  }
+
+  @override
+  String get ageJustNow => 'الآن';
+
+  @override
+  String ageMinutes(Object count) {
+    return 'منذ $count د';
+  }
+
+  @override
+  String ageHours(Object count) {
+    return 'منذ $count س';
+  }
+
+  @override
+  String ageDays(Object count) {
+    return 'منذ $count يوم';
+  }
+
+  @override
+  String get commentator => 'المعلّق';
+
+  @override
+  String commentatorPlay(Object name) {
+    return 'تشغيل مقطع صوتي لـ $name';
+  }
+
+  @override
+  String get commentatorPause => 'إيقاف المقطع';
+
+  @override
+  String get commentatorLoading => 'جارٍ تحميل المقطع';
+
+  @override
+  String get commentatorPlaying => 'يُشغَّل الآن';
+
+  @override
+  String get commentatorError => 'تعذّر تشغيل المقطع';
+
+  @override
+  String get receptionVideo => 'فيديو الاستقبال';
+
+  @override
+  String get s2TbdGroup => 'موعد لم يُحدد';
+
+  @override
+  String get s2ShowAllMatches => 'عرض كل المباريات';
+
+  @override
+  String get s3Title => 'تفاصيل المباراة';
+
+  @override
+  String get s3WhereToWatch => 'أين تشاهد';
+
+  @override
+  String s3ChannelsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count قناة',
+      few: '$count قنوات',
+      two: 'قناتان',
+      one: 'قناة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String s3SatellitesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count قمرًا',
+      few: '$count أقمار',
+      two: 'قمرين',
+      one: 'قمر واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String s3PlatformsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count منصة',
+      few: '$count منصات',
+      two: 'منصتان',
+      one: 'منصة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String s3ChannelsOnSatellites(Object channels, Object satellites) {
+    return '$channels على $satellites';
+  }
+
+  @override
+  String get s3FreeOnly => 'المجانية فقط';
+
+  @override
+  String get s3SearchHint => 'ابحث عن قمر أو قناة...';
+
+  @override
+  String get s3OtherSatellites => 'أقمار أخرى';
+
+  @override
+  String get s3OtherPlatforms => 'منصات وقنوات أخرى';
+
+  @override
+  String get s3NoSatellite => 'بدون قمر';
+
+  @override
+  String get s3NothingOnMySatellites =>
+      'لا توجد قنوات على أقمارك لهذه المباراة';
+
+  @override
+  String get s3NoResults => 'لا توجد قنوات مطابقة لبحثك';
+
+  @override
+  String get s3BackToTop => 'العودة لأعلى القنوات';
+
+  @override
+  String get s3BroadcastOn => 'يعرض على';
+
+  @override
+  String get s3BroadcastAlsoOn => 'يعرض أيضاً على';
+
+  @override
+  String get s3MatchInfo => 'معلومات المباراة';
+
+  @override
+  String get s3Stadium => 'الملعب';
+
+  @override
+  String get s3LocalBroadcasterEg => 'القناة الناقلة في مصر';
+
+  @override
+  String get s3NoChannelsTitle => 'لم تُضف القنوات الناقلة بعد';
+
+  @override
+  String get s3NoChannelsBody => 'ستظهر القنوات والترددات هنا فور إضافتها.';
+
+  @override
+  String get s3Refresh => 'تحديث';
+
+  @override
+  String get s3OpenFailed => 'تعذّر فتح الرابط';
+
+  @override
+  String s3DateTime(Object date, Object time) {
+    return '$date · $time';
+  }
+
+  @override
+  String s4NoMatchesTitle(Object satellites) {
+    return 'لا توجد مباريات على $satellites لهذا اليوم';
+  }
+
+  @override
+  String get s4NoMatchesBody => 'اسحب القائمة لتحديثها.';
+
+  @override
+  String get s4NoSatellitesTitle => 'لم تختر أقماراً بعد';
+
+  @override
+  String get s4NoSatellitesBody =>
+      'اختر قمراً واحداً على الأقل لتظهر المباريات المنقولة عليه.';
+
+  @override
+  String get s4ChooseSatellites => 'اختر أقمارك';
+
+  @override
+  String get s5SearchSatellites => 'ابحث عن قمر...';
+
+  @override
+  String s5SatelliteCount(Object count) {
+    return '$count قمراً';
+  }
+
+  @override
+  String get s5SectionAll => 'كل الأقمار';
+
+  @override
+  String get s5MineMarker => 'طبقي';
+
+  @override
+  String s5ChannelCount(Object count) {
+    return '$count قناة';
+  }
+
+  @override
+  String get s5NoSatellitesTitle => 'لا توجد أقمار مطابقة';
+
+  @override
+  String get s5NoSatellitesBody => 'جرّب اسماً أو موقعاً آخر.';
+
+  @override
+  String get s5ReceptionHowTo => 'طريقة استقبال القمر';
+
+  @override
+  String get s5ReceptionOpenFailed => 'تعذّر فتح الفيديو';
+
+  @override
+  String get s5StrongestFrequency => 'أقوى تردد';
+
+  @override
+  String get s5WeakestFrequency => 'أضعف تردد';
+
+  @override
+  String get s5SearchChannels => 'بحث في القنوات...';
+
+  @override
+  String s5CategoryTab(Object count, Object label) {
+    return '$label $count';
+  }
+
+  @override
+  String get s5NoSportsTitle => 'لا توجد قنوات رياضة على هذا القمر';
+
+  @override
+  String get s5NoEntertainmentTitle => 'لا توجد قنوات ترفيه على هذا القمر';
+
+  @override
+  String get s5NoResultsTitle => 'لا توجد قنوات مطابقة';
+
+  @override
+  String get s5NoResultsBody => 'جرّب اسم قناة أو أرقاماً من التردد.';
 }

@@ -253,7 +253,7 @@ class _StatusPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (live) ...[
-            const _PulseDot(),
+            const LiveDot(),
             const SizedBox(width: MadarSpace.s1),
           ],
           content ??
@@ -270,15 +270,16 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-/// The live dot; static when the OS asks for reduced motion.
-class _PulseDot extends StatefulWidget {
-  const _PulseDot();
+/// The live dot (the status pill and the «مباشر» filter chip); static when the OS asks for
+/// reduced motion.
+class LiveDot extends StatefulWidget {
+  const LiveDot({super.key});
 
   @override
-  State<_PulseDot> createState() => _PulseDotState();
+  State<LiveDot> createState() => _LiveDotState();
 }
 
-class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1200),

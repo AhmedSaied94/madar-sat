@@ -6,6 +6,7 @@ import '../../core/theme/madar_tokens.dart';
 import '../../core/network/generated/models/access.dart';
 import '../../core/network/generated/models/category.dart';
 import '../../core/network/generated/models/channel_carriage.dart';
+import '../../core/network/generated/models/frequency.dart';
 import '../../core/network/generated/models/polarization.dart';
 import '../../l10n/app_localizations.dart';
 import 'badges.dart';
@@ -25,6 +26,7 @@ class CarriageRow extends StatelessWidget {
     this.onTap,
     this.onFollow,
     this.onOpenChannel,
+    this.onWatchReception,
   });
 
   final ChannelCarriage carriage;
@@ -33,6 +35,9 @@ class CarriageRow extends StatelessWidget {
   final VoidCallback? onFollow;
   final VoidCallback? onOpenChannel;
 
+  /// Opens the satellite's reception video; the action shows only when this is given.
+  final VoidCallback? onWatchReception;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -40,104 +45,140 @@ class CarriageRow extends StatelessWidget {
     final satellite = carriage.satellite;
     final frequency = carriage.frequency;
 
-    return Semantics(
-      label: _semantics(l),
-      button: onTap != null,
-      expanded: expanded,
-      excludeSemantics: true,
-      child: Material(
-        color: expanded ? colors.surface2 : colors.surface1,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: MadarSpace.s3,
-              vertical: MadarSpace.s2,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    LogoTile(
-                      kind: LogoTileKind.channel,
-                      fallbackText: carriage.name,
-                      size: MadarSpace.s5 * 2,
-                    ),
-                    const SizedBox(width: MadarSpace.s2),
-                    Expanded(
-                      child: EntityName(
-                        carriage.displayName ?? carriage.name,
-                        style: MadarText.textStrong.copyWith(color: colors.textPrimary),
+    return Material(
+      color: expanded ? colors.surface2 : colors.surface1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // The row is one merged label and one tap target. The actions sit below it, outside
+          // `excludeSemantics`, so a screen reader can still reach each of them.
+          Semantics(
+            label: _semantics(l),
+            button: onTap != null,
+            expanded: expanded,
+            onTap: onTap,
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: expanded
+                    ? const EdgeInsetsDirectional.only(
+                        start: MadarSpace.s3,
+                        end: MadarSpace.s3,
+                        top: MadarSpace.s2,
+                      )
+                    : const EdgeInsetsDirectional.symmetric(
+                        horizontal: MadarSpace.s3,
+                        vertical: MadarSpace.s2,
                       ),
-                    ),
-                    const SizedBox(width: MadarSpace.s1),
-                    AccessBadge(
-                      access: carriage.access ?? Access.$unknown,
-                      provider: carriage.provider,
-                    ),
-                    const SizedBox(width: MadarSpace.s1),
-                    Icon(
-                      expanded ? Icons.expand_less : Icons.expand_more,
-                      size: MadarText.textBody.fontSize,
-                      color: colors.textTertiary,
-                    ),
-                  ],
-                ),
-                if (!expanded && (satellite != null || frequency != null)) ...[
-                  const SizedBox(height: MadarSpace.s1),
-                  Row(
-                    children: [
-                      if (satellite != null) SatelliteBadge(name: satellite.nameAr),
-                      const Spacer(),
-                      if (frequency != null)
-                        FrequencyReadout(
-                          mhz: frequency.mhz,
-                          polarization: frequency.pol,
-                          symbolRate: frequency.sr,
-                        )
-                      else if (carriage.frequencyNote != null)
-                        FrequencyReadout(
-                          note: carriage.frequencyNote,
-                          state: FrequencyReadoutState.note,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        LogoTile(
+                          kind: LogoTileKind.channel,
+                          fallbackText: carriage.name,
+                          size: MadarSpace.s5 * 2,
                         ),
-                    ],
-                  ),
-                ],
-                if (expanded) ...[
-                  const SizedBox(height: MadarSpace.s3),
-                  _DetailsGrid(carriage: carriage),
-                  const SizedBox(height: MadarSpace.s3),
-                  Wrap(
-                    spacing: MadarSpace.s2,
-                    runSpacing: MadarSpace.s1,
-                    children: [
-                      if (frequency != null)
-                        _Action(
-                          icon: Icons.copy_outlined,
-                          label: l.copyFrequency,
-                          onTap: () => Clipboard.setData(
-                            ClipboardData(
-                              text: [
-                                MadarDigits.plain(frequency.mhz),
-                                frequency.pol.json ?? '',
-                                MadarDigits.plain(frequency.sr),
-                              ].join(' '),
-                            ),
+                        const SizedBox(width: MadarSpace.s2),
+                        Expanded(
+                          child: EntityName(
+                            carriage.displayName ?? carriage.name,
+                            style: MadarText.textStrong.copyWith(color: colors.textPrimary),
                           ),
                         ),
-                      _Action(icon: Icons.notifications_outlined, label: l.follow, onTap: onFollow),
-                      if (onOpenChannel != null)
-                        _Action(icon: Icons.open_in_new, label: l.details, onTap: onOpenChannel),
+                        const SizedBox(width: MadarSpace.s1),
+                        AccessBadge(
+                          access: carriage.access ?? Access.$unknown,
+                          provider: carriage.provider,
+                        ),
+                        const SizedBox(width: MadarSpace.s1),
+                        Icon(
+                          expanded ? Icons.expand_less : Icons.expand_more,
+                          size: MadarText.textBody.fontSize,
+                          color: colors.textTertiary,
+                        ),
+                      ],
+                    ),
+                    if (!expanded && (satellite != null || frequency != null)) ...[
+                      const SizedBox(height: MadarSpace.s1),
+                      Row(
+                        children: [
+                          if (satellite != null) SatelliteBadge(name: satellite.nameAr),
+                          const Spacer(),
+                          if (frequency != null)
+                            FrequencyReadout(
+                              mhz: frequency.mhz,
+                              polarization: frequency.pol,
+                              symbolRate: frequency.sr,
+                            )
+                          else if (carriage.frequencyNote != null)
+                            FrequencyReadout(
+                              note: carriage.frequencyNote,
+                              state: FrequencyReadoutState.note,
+                            ),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
-              ],
+                    if (expanded) ...[
+                      const SizedBox(height: MadarSpace.s3),
+                      _DetailsGrid(carriage: carriage),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: MadarSpace.s3,
+                end: MadarSpace.s3,
+                top: MadarSpace.s3,
+                bottom: MadarSpace.s2,
+              ),
+              child: Wrap(
+                spacing: MadarSpace.s2,
+                runSpacing: MadarSpace.s1,
+                children: [
+                  if (frequency != null)
+                    _Action(
+                      icon: Icons.copy_outlined,
+                      label: l.copyFrequency,
+                      onTap: () => _copyFrequency(context, frequency),
+                    ),
+                  if (onWatchReception != null)
+                    _Action(
+                      icon: Icons.ondemand_video_outlined,
+                      label: l.receptionVideo,
+                      onTap: onWatchReception,
+                    ),
+                  _Action(icon: Icons.notifications_outlined, label: l.follow, onTap: onFollow),
+                  if (onOpenChannel != null)
+                    _Action(icon: Icons.open_in_new, label: l.details, onTap: onOpenChannel),
+                ],
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  /// Copies `11843 H 27500` and says so (the «تم نسخ التردد» toast).
+  Future<void> _copyFrequency(BuildContext context, Frequency frequency) async {
+    final message = AppLocalizations.of(context).copiedFrequency;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await Clipboard.setData(
+      ClipboardData(
+        text: [
+          MadarDigits.plain(frequency.mhz),
+          frequency.pol.json ?? '',
+          MadarDigits.plain(frequency.sr),
+        ].join(' '),
+      ),
+    );
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _semantics(AppLocalizations l) {
