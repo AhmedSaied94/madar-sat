@@ -29,7 +29,7 @@ flutter analyze
 ./tool/check_literals.sh        # no raw colours, font families or layout numbers
 flutter test                    # goldens included; needs the Flutter in .flutter-version
 flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
-flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
 ```
 
 ## Code generation (never hand-edit the output)

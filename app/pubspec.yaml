@@ -74,3 +74,10 @@ flutter:
           weight: 500
         - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
           weight: 600
+    # The web engine downloads Roboto from fonts.gstatic.com unless a family named Roboto is
+    # bundled (FR-042). This aliases it to a font we already ship; it is only a last-resort
+    # fallback, and the design never asks for Roboto.
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
