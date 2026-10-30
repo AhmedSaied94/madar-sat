@@ -90,19 +90,22 @@ The parser did not guess; check the saved page before touching
 
 ## Pause a source
 
-`sources.is_enabled` and `sources.paused_until` are the switch the tasks read:
+`sources.is_enabled` and `sources.paused_until` are what `ingest` reads:
 
 ```sh
 psql "$DATABASE_URL_SYNC" -c "update sources set is_enabled = false where name = 'ysscores'"
 psql "$DATABASE_URL_SYNC" -c "update sources set is_enabled = true  where name = 'ysscores'"
 ```
 
-A paused source's fetch exits without fetching (and logs `skipped`). Pausing ysscores for a day is
-safe: the bridge still brings its own fixtures, and the next ysscores run merges into the same rows
-through `(source, external_id)` and the 45-minute duplicate probe.
+The check lives in `ingest`, on VPS-2, because the home box has no database. So a paused source is
+still fetched, its pages are still saved, and its run is recorded as `succeeded` with
+`items_upserted = 0` plus a `source_paused` log line: nothing reaches the matches. That is the
+safe direction — the alternative (a pause the fetch host cannot see) would stall the run silently.
 
-To stop only the beat entry, remove it from `backend/app/adapters/schedule.py` and redeploy VPS-2
-([workers.md](workers.md)); an on-demand run still works.
+To stop the fetch itself, remove or disable the beat entry in `backend/app/adapters/schedule.py`
+and deploy VPS-2 ([workers.md](workers.md)); an on-demand run still works. Pausing ysscores is safe
+for a day: the bridge still brings its own fixtures, and the next ysscores run merges into the
+same rows through `(source, external_id)` and the 45-minute duplicate probe.
 
 ## Switch where ysscores fetches
 
