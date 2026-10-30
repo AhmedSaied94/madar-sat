@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.adapters.config import get_adapter_settings
-from app.adapters.schedule import beat_schedule, build_beat_schedule
+from app.adapters.schedule import BEAT_SCHEDULE, build_beat_schedule
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def _fresh_settings():
 
 
 def test_the_three_entries_and_their_utc_schedules() -> None:
-    schedule = beat_schedule
+    schedule = BEAT_SCHEDULE
     assert set(schedule) == {"ysscores-fixtures", "satair-bridge", "prune-raw-pages"}
 
     ysscores = schedule["ysscores-fixtures"]

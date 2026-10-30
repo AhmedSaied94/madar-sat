@@ -11,8 +11,11 @@ from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Protocol, runtime_checkable
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict
+
+from app.domain.time import cairo_to_utc, parse_cairo_wall_clock
 
 WINDOW_DAYS = 4  # today to +3 (FR-021, R16)
 _DOUBLED_SLASH = re.compile(r"^(.+?)\s+/\s+\1$")
@@ -140,3 +143,45 @@ def clean_text(value: str | None) -> str | None:
     if doubled:
         text = doubled.group(1).strip()
     return text or None
+
+
+def allowlisted_logo(url: str | None) -> str | None:
+    """Keep a logo only from a host the media worker may rehost from (FR-024).
+
+    Imported lazily: ``normalize`` runs in ``ingest`` on VPS-2, and the fetch/parse path on the
+    home box must never load ``app.settings`` (FR-028). The pipeline never stores a URL anyway.
+    """
+    if not url:
+        return None
+    from app.settings import get_settings
+
+    host = urlsplit(url).hostname or ""
+    return url if host in frozenset(get_settings().media_rehost_allowed_hosts) else None
+
+
+def normalize_fixture(item: ParsedFixture) -> NormalizedFixture:
+    """The rules from the migration README that every source shares (R16, R19).
+
+    Cairo wall clock to UTC, ``"--:--"`` to ``time_tbd`` with no kickoff, placeholders to NULL,
+    doubled stage text cleaned, and a logo kept only from an allowlisted host.
+    """
+    wall = parse_cairo_wall_clock(item.wall_time)
+    return NormalizedFixture(
+        match_date=item.match_date,
+        kickoff_at=None if wall is None else cairo_to_utc(item.match_date, wall),
+        time_tbd=wall is None,
+        home=clean_text(item.home),
+        away=clean_text(item.away),
+        competition=clean_text(item.competition),
+        stage=clean_text(item.stage),
+        competition_logo=allowlisted_logo(item.competition_logo),
+        home_logo=allowlisted_logo(item.home_logo),
+        away_logo=allowlisted_logo(item.away_logo),
+        external_id=item.external_id,
+        url=item.url,
+        home_external_id=item.home_external_id,
+        away_external_id=item.away_external_id,
+        links=item.links,
+        ys_match_id=item.ys_match_id,
+        legacy_id=item.legacy_id,
+    )

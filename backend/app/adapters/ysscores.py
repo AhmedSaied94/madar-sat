@@ -23,9 +23,8 @@ from app.adapters.base import (
     NormalizedFixture,
     ParsedFixture,
     RawPage,
-    clean_text,
+    normalize_fixture,
 )
-from app.domain.time import cairo_to_utc, parse_cairo_wall_clock
 
 if TYPE_CHECKING:  # the fetch path's HTTP client; importing it here would drag in app.workers
     from app.adapters.fetcher import HttpFetcher
@@ -173,26 +172,7 @@ class YsscoresAdapter:
     # --- normalize -----------------------------------------------------------------------
 
     def normalize(self, item: ParsedFixture) -> NormalizedFixture:
-        wall = parse_cairo_wall_clock(item.wall_time)
-        return NormalizedFixture(
-            match_date=item.match_date,
-            kickoff_at=None if wall is None else cairo_to_utc(item.match_date, wall),
-            time_tbd=wall is None,
-            home=clean_text(item.home),
-            away=clean_text(item.away),
-            competition=clean_text(item.competition),
-            stage=clean_text(item.stage),
-            competition_logo=allowlisted_logo(item.competition_logo),
-            home_logo=allowlisted_logo(item.home_logo),
-            away_logo=allowlisted_logo(item.away_logo),
-            external_id=item.external_id,
-            url=item.url,
-            home_external_id=item.home_external_id,
-            away_external_id=item.away_external_id,
-            links=item.links,
-            ys_match_id=item.ys_match_id,
-            legacy_id=item.legacy_id,
-        )
+        return normalize_fixture(item)
 
 
 def _wall_time(element: HtmlElement) -> str:
@@ -213,17 +193,3 @@ def day_of(url: str) -> date:
         return date.fromisoformat(fragment)
     except ValueError as exc:  # pragma: no cover - a caller bug, not a page problem
         raise ValueError(f"the page URL must carry its day as #YYYY-MM-DD, got {url!r}") from exc
-
-
-def allowlisted_logo(url: str | None) -> str | None:
-    """Keep a logo only from a host the media worker may rehost from (FR-024).
-
-    Imported lazily: ``normalize`` runs in ``ingest`` on VPS-2, and the fetch/parse path on the
-    home box must never load ``app.settings`` (FR-028). The pipeline never stores a URL anyway.
-    """
-    if not url:
-        return None
-    from app.settings import get_settings
-
-    host = urlsplit(url).hostname or ""
-    return url if host in frozenset(get_settings().media_rehost_allowed_hosts) else None

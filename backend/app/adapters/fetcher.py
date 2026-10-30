@@ -30,7 +30,15 @@ RETRYABLE_STATUSES = frozenset({403, 429})
 
 
 class FetchError(Exception):
-    """The request failed and a retry would not help."""
+    """The request failed and a retry would not help.
+
+    ``status`` is the HTTP status when the failure came from one, so an adapter can tell a
+    missing document (404) from a real error.
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class HostNotAllowed(FetchError):
@@ -147,7 +155,7 @@ class HttpFetcher:
             if page.status in RETRYABLE_STATUSES or page.status >= 500:
                 raise Retryable(f"{current} answered {page.status}")
             if page.status >= 400:
-                raise FetchError(f"{current} answered {page.status}")
+                raise FetchError(f"{current} answered {page.status}", status=page.status)
             return page
 
     def _read_capped(self, response: httpx.Response) -> bytes:

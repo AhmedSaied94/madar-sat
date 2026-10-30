@@ -6,9 +6,9 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from app.workers.base import Retryable
 
 from app.adapters.fetcher import FetchError, HostNotAllowed, HttpFetcher, RedirectLimit, ResponseTooLarge
+from app.workers.base import Retryable
 
 ALLOWED = frozenset({"www.ysscores.com"})
 USER_AGENT = "MadarSat/1.0 (+https://example.test; test)"

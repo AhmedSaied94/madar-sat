@@ -1,6 +1,6 @@
 """Beat entries for the ingestion tasks (T076, R16, R19, FR-026).
 
-All times are UTC. ``app.workers`` takes ``beat_schedule`` as its schedule; exactly one ``beat``
+All times are UTC. ``app.workers`` reads ``BEAT_SCHEDULE`` (``workers.load_beat_schedule``); exactly one ``beat``
 runs, on VPS-2. The bridge runs 90 minutes after ysscores, so it adds what ysscores does not have
 instead of racing it for the same fixture.
 
@@ -13,8 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-# Celery ships no stubs (the dependency is Lane B1's, T001).
-from celery.schedules import crontab  # type: ignore[import-untyped]
+from celery.schedules import crontab
 
 from app.adapters.config import get_adapter_settings
 
@@ -48,4 +47,4 @@ def build_beat_schedule(ysscores: str | None = None) -> dict[str, dict[str, Any]
     }
 
 
-beat_schedule = build_beat_schedule()
+BEAT_SCHEDULE = build_beat_schedule()
