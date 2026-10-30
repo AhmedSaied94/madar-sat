@@ -1,6 +1,9 @@
-# backend/ CI and CD (FR-024, SD §9, research R13 and R14):
-#   test → openapi → clients on every PR and push; on master, build linux/arm64 → GHCR → deploy to
-#   VPS-1 over WireGuard (migrate, roll out, /healthz, automatic rollback) → keep 3 image versions.
+# backend/ CI and CD (FR-024, SD §9, research R13, R14, R21 and R22):
+#   test → openapi → clients on every PR and push; on master:
+#     build linux/arm64 (madar-backend) and linux/amd64 natively (madar-backend-amd64, the home box)
+#     → GHCR → deploy VPS-1 over WireGuard (migrate, APIs and worker-media, /healthz, automatic
+#     rollback) → deploy VPS-2's workers and beat through VPS-1 → move madar-backend-amd64:stable
+#     → keep 3 versions of each package.
 # The rollback drill (SC-005): run this workflow on master with break_healthcheck ticked.
 name: backend
 
@@ -228,6 +231,44 @@ jobs:
           cache-from: type=gha,scope=madar-backend
           cache-to: type=gha,mode=max,scope=madar-backend
 
+  # The owner's home box is x86-64, so it gets its own package, built natively on an x86 runner
+  # (research R21). A multi-arch manifest under one tag would show up as untagged versions and
+  # confuse retention, which is why this is a separate package and not a second platform above.
+  build-amd64:
+    needs: [test, openapi, clients]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: image
+        name: Image name (GHCR needs a lowercase owner)
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/madar-backend-amd64:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.image.outputs.ref }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=madar-backend-amd64
+          cache-to: type=gha,mode=max,scope=madar-backend-amd64
+
   deploy:
     needs: build
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
@@ -248,7 +289,8 @@ jobs:
           wg-config: ${{ secrets.WG_CI_CONFIG }}
           ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
           known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-      # The registry token goes to deploy.sh on stdin, never as an argument.
+      # The registry token goes to deploy.sh on stdin, never as an argument. On D2 that deploy also
+      # brings up `worker-media` and waits for its healthcheck (FR-024, research R20).
       - name: Deploy ${{ github.sha }}
         env:
           SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
@@ -264,10 +306,71 @@ jobs:
           sudo wg-quick down wg0 || true
           rm -rf "$RUNNER_TEMP/madar-ssh"
 
-  # Keep the newest 3 versions (current, previous for rollback, one spare) inside GHCR's free
-  # private storage (R13). Needs the repo to have the Admin role on the package (infra/README.md).
+  # VPS-2's workers and its single beat (FR-029, research R22). VPS-2 opens 22 only to VPS-1, so
+  # every connection is a ProxyJump through 10.8.0.1; DEPLOY_KNOWN_HOSTS must hold both host keys.
+  deploy-vps2:
+    needs: [deploy, build]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: deploy-vps2
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: sync
+        uses: ./.github/actions/vps1-sync
+        with:
+          wg-config: ${{ secrets.WG_CI_CONFIG }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: Sync infra to VPS-2 and deploy ${{ github.sha }}
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VPS2_VCN_IP: ${{ vars.VPS2_VCN_IP }}
+        run: |
+          [[ -n $VPS2_VCN_IP ]] || { echo "::error::set the VPS2_VCN_IP repository variable"; exit 1; }
+          read -ra ssh <<<"$SSH_COMMAND -J deploy@10.8.0.1"
+          rsync -a --delete -e "${ssh[*]}" infra/ "deploy@$VPS2_VCN_IP:/srv/madar/infra/"
+          printf '%s\n' "$GHCR_TOKEN" \
+            | "${ssh[@]}" "deploy@$VPS2_VCN_IP" "/srv/madar/infra/scripts/deploy.sh --host vps2 $GITHUB_SHA"
+      - name: Leave WireGuard
+        if: always()
+        run: |
+          sudo wg-quick down wg0 || true
+          rm -rf "$RUNNER_TEMP/madar-ssh"
+
+  # Only after both hosts run the new tag: point the home box's `stable` at it, so the box never
+  # pulls an image the VPS deploy rejected (research R21).
+  stable:
+    needs: [deploy, deploy-vps2, build-amd64]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Move madar-backend-amd64:stable to ${{ github.sha }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/madar-backend-amd64"
+          docker buildx imagetools create -t "$image:stable" "$image:${GITHUB_SHA}"
+
+  # Keep the newest 3 versions of each package (current, previous for rollback, one spare) inside
+  # GHCR's free private storage (R13). `stable` is always the newest amd64 version, so keeping 3
+  # never deletes the one the home box runs. Needs the repo to have the Admin role on both packages
+  # (infra/README.md).
   retention:
-    needs: deploy
+    needs: [deploy, stable]
     runs-on: ubuntu-24.04
     permissions:
       packages: write
@@ -275,5 +378,10 @@ jobs:
       - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
         with:
           package-name: madar-backend
+          package-type: container
+          min-versions-to-keep: 3
+      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          package-name: madar-backend-amd64
           package-type: container
           min-versions-to-keep: 3

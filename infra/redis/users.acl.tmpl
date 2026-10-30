@@ -1,0 +1,11 @@
+# Redis 7 ACL file for VPS-1. Render it, never copy it: `deploy.sh` fills the two placeholders from
+# /srv/madar/.env into /srv/madar/redis/users.acl (mode 600, owner deploy) before Compose starts
+# Redis. Real passwords never enter the repository (constitution V, FR-052).
+#
+# Two users:
+#   default — api-admin, api-public, the workers and the healthcheck, over the VCN and wg0.
+#   homebox — the owner's x86-64 scrape box, which reaches only Redis on wg0 (research R21). Its
+#             patterns cover what it uses: Celery's prefixed keys, the token buckets and its fetch
+#             locks. `-@dangerous` and `-@admin` keep it out of CONFIG, FLUSHALL and KEYS.
+user default on >${REDIS_PASSWORD} ~* &* +@all
+user homebox on >${REDIS_HOMEBOX_PASSWORD} ~celery:* ~ratelimit:* ~lock:fetch:* &* -@all +@connection +@read +@write +@keyspace +@string +@list +@hash +@set +@sortedset +@transaction +@scripting +@pubsub -@admin -@dangerous

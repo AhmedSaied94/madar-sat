@@ -68,17 +68,55 @@ services:
       start_period: 20s
 
   # Bound to the wg0 address only (constitution V); Caddy's wg0 site proxies /admin/api to it.
+  # Proxy headers are trusted from the Caddy on wg0 (10.8.0.1) and from nowhere else, so
+  # X-Forwarded-For reaches the login limiter only through Caddy (FR-003, R3). Uploads and the
+  # first admin's logos are written to /srv/media, so the service mounts it read-write.
   api-admin:
     <<: *backend
-    command: ["gunicorn", "app.admin:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "1", "-b", "0.0.0.0:8001"]
+    command:
+      - gunicorn
+      - app.admin:app
+      - -k
+      - uvicorn.workers.UvicornWorker
+      - -w
+      - "1"
+      - -b
+      - 0.0.0.0:8001
+      - --proxy-headers
+      - --forwarded-allow-ips=10.8.0.1
+    environment:
+      HEALTHZ_FORCE_FAIL: ${HEALTHZ_FORCE_FAIL:-false}
+      FORWARDED_ALLOW_IPS: 10.8.0.1
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:?set ADMIN_JWT_SECRET}
     ports:
       - "10.8.0.1:8001:8001"
+    volumes:
+      - /srv/media:/srv/media
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/admin/api/healthz', timeout=4)"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # Importer-found logos (FR-024, R20). It sits next to the media disk, so no file has to cross
+  # the VCN: VPS-2's import workers only queue `adapters.rehost_logo` on the `media` queue. One
+  # process and a 256 MB cap are enough for a few logos a day. Deployed with the APIs and rolled
+  # back with them (scripts/deploy.sh).
+  worker-media:
+    <<: *backend
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "media", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    environment:
+      HEALTHZ_FORCE_FAIL: ${HEALTHZ_FORCE_FAIL:-false}
+    mem_limit: 256m
+    volumes:
+      - /srv/media:/srv/media
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers inspect ping --destination \"worker@$$HOSTNAME\" --timeout 10 >/dev/null"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
 
   # One-off: `docker compose run --rm migrate` (deploy.sh step 4).
   migrate:
@@ -120,7 +158,9 @@ services:
       retries: 5
       start_period: 30s
 
-  # The password is expanded inside the container from env_file, so it never appears in this file.
+  # Passwords come from the rendered ACL file, not from the command line: /srv/madar/redis/users.acl
+  # is written by scripts/deploy.sh from infra/redis/users.acl.tmpl and /srv/madar/.env, mode 600,
+  # so it never appears here and the `homebox` user (the owner's scrape box) exists (R21).
   # volatile-lru evicts only keys with a TTL (cache), never the Celery queues.
   redis:
     <<: *service
@@ -128,12 +168,18 @@ services:
     command:
       - sh
       - -c
-      - exec docker-entrypoint.sh redis-server --requirepass "$$REDIS_PASSWORD" --maxmemory 512mb --maxmemory-policy volatile-lru --appendonly yes
+      - >-
+        exec docker-entrypoint.sh redis-server --aclfile /etc/redis/users.acl
+        --maxmemory 512mb --maxmemory-policy volatile-lru --appendonly yes
     ports:
       - "${VCN_IP:?set VCN_IP}:6379:6379"
+      # The home box reaches Redis over WireGuard; only its peer address may connect (T082).
+      - "10.8.0.1:6379:6379"
     volumes:
       - redisdata:/data
+      - /srv/madar/redis/users.acl:/etc/redis/users.acl:ro
     healthcheck:
+      # Still the `default` user, so the healthcheck proves the admin path works.
       test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 5s

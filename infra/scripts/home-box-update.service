@@ -1,0 +1,20 @@
+# Pulls the current `stable` amd64 image and recreates the home box's scrape worker
+# (FR-028, research R21). Started by home-box-update.timer every 10 minutes.
+# Install on the box:
+#   sudo install -m 644 home-box-update.service home-box-update.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now home-box-update.timer
+# The script and the Compose file come from the repo checkout at /srv/madar/infra.
+[Unit]
+Description=Madar Sat: update the home box scrape worker
+Documentation=file:/srv/madar/infra/../docs/runbooks/home-box.md
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/madar/infra/scripts/home-box-update.sh
+# The token and the credentials live in /srv/madar/.env (mode 600); nothing else is needed.
+User=root
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=10min

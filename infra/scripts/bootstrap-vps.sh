@@ -121,7 +121,8 @@ ensure_env_file() {
   grep -q '^MADAR_ENV_FILE=' "$env_file" && die "remove MADAR_ENV_FILE from $env_file (CI and dev only)"
 
   local required=(VCN_IP PEER_VCN_IP) key value
-  [[ $role == vps1 ]] && required+=(VPS1_IP ACME_EMAIL FIREBASE_PROJECT_ID GHCR_OWNER POSTGRES_PASSWORD REDIS_PASSWORD)
+  [[ $role == vps1 ]] && required+=(VPS1_IP ACME_EMAIL FIREBASE_PROJECT_ID GHCR_OWNER POSTGRES_PASSWORD REDIS_PASSWORD \
+    REDIS_HOMEBOX_PASSWORD HOME_BOX_WG_IP)
   for key in "${required[@]}"; do
     value=$(env_get "$key")
     [[ -n $value ]] || die "$key is empty in $env_file"
@@ -129,7 +130,9 @@ ensure_env_file() {
       die "$key in $env_file still has its example value"
     fi
   done
-  for key in VCN_IP PEER_VCN_IP; do
+  local address_keys=(VCN_IP PEER_VCN_IP)
+  [[ $role == vps1 ]] && address_keys+=(HOME_BOX_WG_IP)
+  for key in "${address_keys[@]}"; do
     [[ $(env_get "$key") =~ $ipv4_re ]] || die "$key is not an IPv4 address"
   done
   local leftovers
@@ -233,8 +236,8 @@ apply_firewall() {
   local rendered
   rendered=$(mktemp)
   # shellcheck disable=SC2016 # envsubst takes the variable names literally
-  VCN_IP=$(env_get VCN_IP) PEER_VCN_IP=$(env_get PEER_VCN_IP) \
-    envsubst '${VCN_IP} ${PEER_VCN_IP}' < "$infra/firewall/$role.rules" \
+  VCN_IP=$(env_get VCN_IP) PEER_VCN_IP=$(env_get PEER_VCN_IP) HOME_BOX_WG_IP=$(env_get HOME_BOX_WG_IP) \
+    envsubst '${VCN_IP} ${PEER_VCN_IP} ${HOME_BOX_WG_IP}' < "$infra/firewall/$role.rules" \
     | SSH_RULE=$ssh_rule OCI_RULES=$oci_rules awk '
         $0 == "# @PUBLIC_SSH@" { if (ENVIRON["SSH_RULE"] != "") print ENVIRON["SSH_RULE"]; next }
         $0 == "# @OCI_INSTANCE_SERVICES@" { if (ENVIRON["OCI_RULES"] != "") print ENVIRON["OCI_RULES"]; next }

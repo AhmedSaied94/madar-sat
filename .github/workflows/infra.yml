@@ -32,11 +32,30 @@ jobs:
 
       - name: Validate the Compose files
         run: |
-          for f in vps1 vps2 dev; do
+          for f in vps1 vps2 dev home-box; do
             echo "::group::infra/compose/$f.yml"
             docker compose -f "infra/compose/$f.yml" --env-file infra/compose/example.env config -q
             echo "::endgroup::"
           done
+
+      # The home box's units run the update script; `verify` catches a typo or a bad directive.
+      - name: Verify the home-box systemd units
+        run: |
+          systemd-analyze verify infra/scripts/home-box-update.service infra/scripts/home-box-update.timer \
+            || { echo "::error::the home-box units don't verify"; exit 1; }
+
+      # The ACL file is rendered at deploy time (deploy.sh). Every password in it must be a
+      # ${...} placeholder, so no secret can reach the repository (constitution V, FR-052).
+      - name: The Redis ACL template holds placeholders only
+        run: |
+          if grep -E '>[^[:space:]]*[^[:space:]}][[:space:]]*$' infra/redis/users.acl.tmpl \
+            | grep -vE '>\$\{[A-Z_]+\}'; then
+            echo "::error::infra/redis/users.acl.tmpl has a literal password; use a \${...} placeholder"
+            exit 1
+          fi
+          # shellcheck disable=SC2016 # the ${...} name must stay literal here
+          grep -q 'user homebox on >\${REDIS_HOMEBOX_PASSWORD}' infra/redis/users.acl.tmpl \
+            || { echo "::error::the template lost the homebox user"; exit 1; }
 
       - name: Validate the Caddyfile
         run: |
