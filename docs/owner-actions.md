@@ -215,6 +215,15 @@ Checked locally in `admin/`: `pnpm typecheck`, `pnpm lint`, `pnpm test` (136 tes
 
 The review round's items are the four code follow-ups below and at the end of [tasks.md](../specs/002-d02-core-flows/tasks.md#lane-a-follow-ups-open).
 
+#### Code follow-ups, before the PR
+
+Tracked here as well as at the end of [tasks.md](../../specs/002-d02-core-flows/tasks.md#lane-a-follow-ups-open), so the first pass's shortcuts are not forgotten:
+
+- [ ] **A-F1 React Hook Form.** A4 validates its assembled patch with Orval's `patchMatchBody` but does not resolve through React Hook Form yet (T106 stays unticked until it does).
+- [ ] **A-F2 `DataTable`.** A3 draws its own table markup; move it onto the shared `DataTable` (grouping, bulk bar, skeleton, J/K/X/E) and delete the local markup.
+- [ ] **A-F3 Row version.** `AdminMatchRow` has no `etag`, so bulk actions `GET` each selected match first. Ask B1 for `etag` on the row.
+- [ ] **A-F4 Create responses.** Orval emits no schema for 201-only operations, so the five `POST` creates are validated with the entity's `PATCH` envelope (same `$ref`). Revert when the spec gives creates their own schema.
+
 #### Before merge, in this order
 
 - [ ] **The editors' devices.** Install Caddy's internal root CA on each editor's machine (the one WireGuard setup produced) at `~/.config/madar/caddy-root.crt`, so `NODE_EXTRA_CA_CERTS=… pnpm dev:wg` can reach `https://10.8.0.1` without a browser warning. → [private-network](runbooks/private-network.md)
