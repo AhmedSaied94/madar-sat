@@ -1,3 +1,4 @@
 # lean-ctx migration markers and backups (local tool state)
 *.v4-migration.lock
 AGENTS.md.bak
+.claude/settings.json

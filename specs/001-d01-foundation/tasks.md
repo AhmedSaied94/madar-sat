@@ -377,7 +377,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
     - `/v1/teams/{id}`: `competitions`, `upcoming` ≤ 10, `recent` ≤ 10.
   - `backend/app/services/commentators.py`: `/v1/commentators/{id}` with `upcoming` ≤ 20.
   - Both return their `404` codes.
-- [ ] T047 [US1] Connect T040–T046 to the routers from T022 through the T039 ETag dependency, then finish `/healthz` in `backend/app/api/public/health.py` and `backend/app/admin.py`:
+- [x] T047 [US1] Connect T040–T046 to the routers from T022 through the T039 ETag dependency, then finish `/healthz` in `backend/app/api/public/health.py` and `backend/app/admin.py`:
   - `SELECT 1` plus a Redis `PING`, checked live on every request;
   - `503 unhealthy` on failure, or when `HEALTHZ_FORCE_FAIL` is set;
   - a `200` carries `ETag: W/"<16 hex>"` hashed from `data` and honors `If-None-Match`; a `503` carries no `ETag` ([contract](contracts/public-api-v1.md), constitution VI).
@@ -391,7 +391,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   2. Run `docker compose -f infra/compose/vps1.yml run --rm api-public python -m app.cli load-snapshot --snapshot-dir /srv/snapshot/<date> --report-dir /srv/reports`, then `rehost-media`.
   3. Confirm `reconciled: true` and `checks.card_sharing_labels_found: 0` (SC-002).
   4. Run the [quickstart Lane B1](quickstart.md#lane-b1-data-and-contract) `curl` checks against `https://api.<ip1>.sslip.io`, including the `304` (≤ 1 KB) and no media URL on the old hosts (SC-004).
-- [ ] T049 [US1] Confirm the MVP bar: `uv run pytest --cov` passes with `fail_under = 70` on `app/domain`, `app/services` and `app/adapters`, and contract tests cover every FR-008 route (FR-054). Record the coverage figure in the PR.
+- [x] T049 [US1] Confirm the MVP bar: `uv run pytest --cov` passes with `fail_under = 70` on `app/domain`, `app/services` and `app/adapters`, and contract tests cover every FR-008 route (FR-054). Record the coverage figure in the PR.
 
 ---
 
@@ -514,21 +514,21 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Validation (B2)
 
-- [ ] T064 [US2] Bootstrap both hosts with `infra/scripts/bootstrap-vps.sh`:
+- [x] T064 [US2] Bootstrap both hosts with `infra/scripts/bootstrap-vps.sh`:
   1. test the OCI serial console on both hosts first;
   2. run `infra/scripts/bootstrap-vps.sh vps1` and `vps2`;
   3. add WireGuard peers for the owner and CI;
   4. reboot both hosts and confirm `check-firewall.sh` passes and WireGuard comes back.
-- [ ] T065 [US2] Scan VPS-1 from outside WireGuard, as in `specs/001-d01-foundation/quickstart.md` (SC-009):
+- [x] T065 [US2] Scan VPS-1 from outside WireGuard, as in `specs/001-d01-foundation/quickstart.md` (SC-009):
   - `nmap -Pn -p 22,80,443,5432,6379,8000,8001 <ip1>` shows only 80 and 443 open;
   - UDP 51820 answers;
   - each public host has a valid certificate and the SD §8 headers;
   - `https://10.8.0.1` doesn't answer from the public internet, and does answer over WireGuard.
-- [ ] T066 [US2] Run the deploy and rollback drill through `.github/workflows/backend.yml` (SC-005):
+- [x] T066 [US2] Run the deploy and rollback drill through `.github/workflows/backend.yml` (SC-005):
   1. merge a trivial `backend/` change and confirm it is live within 15 minutes with no server step;
   2. run `backend.yml` with `break_healthcheck=true` and confirm the job fails and the previous tag is running again;
   3. confirm only 3 package versions remain in GHCR.
-- [ ] T067 [US2] Prove secret scanning and CI coverage in `.github/workflows/` (SC-006):
+- [x] T067 [US2] Prove secret scanning and CI coverage in `.github/workflows/` (SC-006):
   - open a throwaway PR adding a fake AWS-style key to a test file, confirm `gitleaks.yml` fails, then close the PR;
   - confirm each of `backend.yml`, `admin.yml`, `app.yml`, `infra.yml` and `pwa.yml` has a green run on `master`. Coordinate with Lanes A and M for their first merges.
 
@@ -631,7 +631,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Validation (A)
 
-- [ ] T091 [US4] Validate the lane in `admin/`:
+- [x] T091 [US4] Validate the lane in `admin/`:
   1. run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh`;
   2. run `pnpm prism` + `pnpm dev`, take screenshots of `/login?mock=invalid_credentials`, `/login?mock=account_locked` and the shell at 1440 px and 1024 px, and compare them with the Login and Comp-Admin PNGs;
   3. attach the screenshots next to the PNGs in the PR (constitution "Done means").
@@ -764,7 +764,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Validation (M)
 
-- [ ] T136 [US3] Validate the lane in `app/`:
+- [x] T136 [US3] Validate the lane in `app/`:
   1. run `flutter analyze`, `./tool/check_token_copy.sh` and `./tool/check_literals.sh`;
   2. run `flutter test` inside `ghcr.io/cirruslabs/flutter:<pin>` (all goldens pass);
   3. install the CI `app-prod-debug.apk` on an Android phone and confirm the matches route lists today's matches from VPS-1 (or `EmptyState`) and that `/gallery` opens;
@@ -796,3 +796,27 @@ Source: [reviews/m-round-2.md](reviews/m-round-2.md). The owner's open decision 
 ## Done check
 
 VPS-1 serves `/v1` with snapshot data over HTTPS; contract tagged `v1`; admin login screen renders against the mock; the app shows the component gallery (goldens pass) and loads `/v1/matches`; CI green in all four folders
+
+**Signed off by the owner on 2026-10-30; D1 is closed.** The owner ticked T047, T049, T064–T067, T091 and T136 across all lanes in one step, after all four lanes had merged.
+
+- **Evidence seen before sign-off:**
+  - `backend.yml`, `admin.yml`, `app.yml`, `infra.yml`, `pwa.yml` and `gitleaks.yml` are green on `master`.
+  - `contract-v1` is tagged, and its breaking-change check passes.
+  - Coverage is 97.84% (`fail_under = 70`).
+  - `/healthz` and `/v1/matches` answer over HTTPS from VPS-1.
+  - From outside, only ports 80 and 443 connect, the three public hosts have valid certificates, and the security headers are present.
+  - A push reached production in about 5 minutes with no server step.
+  - The PWA preview deploys.
+  - A local release build of the web app makes no Google font or CanvasKit request.
+- **Accepted without evidence:**
+  - T064: the reboot and `check-firewall.sh` steps.
+  - T065: UDP 51820, and `https://10.8.0.1` not answering from the internet.
+  - T066: the `break_healthcheck` rollback drill, and the GHCR "3 versions" check.
+  - T067: the throwaway gitleaks PR.
+  - T091: the admin screenshots against `Login.png` and `Main.png`.
+  - T136: step 3 (phone install), step 4 (gallery screenshots against the design PNGs) and step 6 (evidence on the PR).
+- **Carried into D2:**
+  - The preview origin `https://madar-sat--master-p2bbuj53.web.app` must be added to `CORS_ORIGINS` on VPS-1, or the preview cannot load matches.
+  - Back up the upload keystore.
+  - Prove `app-release.yml` with a throwaway tag.
+  - Enrol in Play App Signing.

@@ -12,7 +12,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
-| [001 D1 foundation](#001-d1-foundation) | B1 1 · B2 11 · A 2 · M 4 | B1 1 · B2 4, then the done check | **B1:** PR #2 merged on 2026-10-29; 47 of 49 tasks ticked in `../madar-b1`. `contract-v1` is tagged (T024), and T048 is done: VPS-1 serves the snapshot and its media. T047 and T049 are open. **B2:** PRs #3 and #4 merged on 2026-10-29, and `backend.yml` deploys VPS-1; 14 of 18 ticked, with T064–T067 open. **A:** PR open from `d01-a`; 23 of 24 ticked, with T091's screenshots to attach. The PR also carries a contract fix made after the `contract-v1` tag, which its breaking-change check has to pass. **M:** PR #6 open from `d01-m`; 45 of 45 tasks and the round-1 and round-2 review fixes are ticked, with T136's phone, screenshot and browser steps open. The golden image is replaced by a pinned runner in `app.yml` and `pwa.yml` (decided 2026-10-30): the first `app.yml` run may need the goldens taken from CI. Release signing is done (keystore and four secrets set, `app-release.yml` added); still to do: back up the keystore and prove the workflow with a throwaway tag. |
+| [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
 
 ## Every month
 
@@ -34,57 +34,57 @@ The day's done check: VPS-1 serves `/v1` with snapshot data over HTTPS; the cont
 
 ### Lane B1: data and contract
 
-PR #2 merged on 2026-10-29. T024 and T048 were done the same day. T047 and T049 are open ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b1)).
+PR #2 merged on 2026-10-29. T024 and T048 were done the same day. T047 and T049 were ticked at the D1 sign-off on 2026-10-30 ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b1)).
 
 #### Before merge, in this order
 
 - [x] **T024 Contract freeze.** Review `git diff` of `backend/openapi/*.json` against [contracts/](../specs/001-d01-foundation/contracts/), then push the tag: `git tag -a contract-v1 -m "D1 contract freeze" && git push origin contract-v1` ([quickstart](../specs/001-d01-foundation/quickstart.md#lane-b1-data-and-contract)). Lane A's T082 and Lane M's T121 generate their clients from this tag, so it blocks both lanes. Then tell them.
 
   Tagged on 2026-10-29 at your request, on `master` at `231c221`. The contract files there are unchanged since B1's `390ba8a`. The diff review against `contracts/` wasn't done separately. Lanes A and M can now run T082 and T121, and `backend.yml`'s breaking-change check now runs.
-- [ ] **T025–T027 Migrations.** PR #2 already merged them, so read them on `master` line by line, as tasks.md "The owner must review" and delivery-plan §5.4 ask. → [database-migrations](runbooks/database-migrations.md)
+- [x] **T025–T027 Migrations.** PR #2 already merged them, so read them on `master` line by line, as tasks.md "The owner must review" and delivery-plan §5.4 ask. → [database-migrations](runbooks/database-migrations.md)
 
 #### After merge
 
 These need B2's hosts up (T058, T060).
 
-- [ ] **Fresh snapshot.** In `../old_app`, run the README's "Refresh the snapshot" commands, then copy `migration/data/` to `~/madar-snapshot/`. Never copy it into `madar_sat/` ([quickstart Prerequisites](../specs/001-d01-foundation/quickstart.md#prerequisites); spec Edge Cases).
+- [x] **Fresh snapshot.** In `../old_app`, run the README's "Refresh the snapshot" commands, then copy `migration/data/` to `~/madar-snapshot/`. Never copy it into `madar_sat/` ([quickstart Prerequisites](../specs/001-d01-foundation/quickstart.md#prerequisites); spec Edge Cases).
 - [x] **T048 Snapshot on VPS-1.** Over WireGuard, `scp` the snapshot to `/srv/snapshot/<date>/` on VPS-1 (T048 step 1), and tell B1 to run the load. → [snapshot-load](runbooks/snapshot-load.md)
 
   Done on 2026-10-29. Both loads reconciled with the same counts (`load-report-20261029T180143Z`, `…180718Z`). `rehost-media` hosted 4,056 URLs with none failed (3,595 rehosted, 461 deduplicated). The API returns `304` on `If-None-Match`, and no media URL points at the old hosts.
 
 ### Lane B2: servers and CI
 
-Merged on 2026-10-29 in PRs #3 and #4. T050–T063 are ticked; T064–T067 are left ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b2), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-b2-servers-and-ci)).
+Merged on 2026-10-29 in PRs #3 and #4. T050–T063 are ticked; T064–T067 were ticked at the D1 sign-off on 2026-10-30 ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-b2), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-b2-servers-and-ci)).
 
 The bootstrap and the GitHub secrets come before the merge. Merging touches `infra/` and `.github/`, so `infra.yml`'s `sync` job runs on `master` straight away and needs the hosts and the secrets.
 
 #### Before merge, in this order
 
-- [ ] **Host facts.** Tell Claude:
+- [x] **Host facts.** Tell Claude:
   - whether both OCI VMs exist (delivery-plan A2);
   - each one's reserved public IP and VCN private IP;
   - the OS image (`bootstrap-vps.sh` assumes Ubuntu);
   - the login user.
 
   → [provision-host](runbooks/provision-host.md)
-- [ ] **T064 step 1 Serial console.** Test the OCI serial console on both hosts before any SSH change. It's the only way back in if SSH breaks (system-design §7.2, FR-023). → [provision-host](runbooks/provision-host.md#2-console-password-then-test-the-serial-console), [break-glass](runbooks/break-glass.md)
-- [ ] **OCI security list.** Open the ports in the security list (or an NSG), not only in iptables. VPS-1 needs 80/tcp, 443/tcp and 51820/udp from anywhere, plus 5432 and 6379 from VPS-2 inside the VCN. OCI's default list allows only 22 (Gaps 3). → [provision-host](runbooks/provision-host.md), [firewall-changes](runbooks/firewall-changes.md)
+- [x] **T064 step 1 Serial console.** Test the OCI serial console on both hosts before any SSH change. It's the only way back in if SSH breaks (system-design §7.2, FR-023). → [provision-host](runbooks/provision-host.md#2-console-password-then-test-the-serial-console), [break-glass](runbooks/break-glass.md)
+- [x] **OCI security list.** Open the ports in the security list (or an NSG), not only in iptables. VPS-1 needs 80/tcp, 443/tcp and 51820/udp from anywhere, plus 5432 and 6379 from VPS-2 inside the VCN. OCI's default list allows only 22 (Gaps 3). → [provision-host](runbooks/provision-host.md), [firewall-changes](runbooks/firewall-changes.md)
 - [x] **Private repo, no `master` protection.** Decided 2026-10-29: the repo stays private and you're its only contributor, so `master` stays unprotected (GitHub Free can't protect a private repo's branch). Changes reach `master` through a green PR by convention (delivery-plan §5.1).
-- [ ] **Actions minutes.** A private repo's free Actions minutes are capped, and `backend.yml` builds arm64 images under QEMU, which is slow. Watch the usage after the first deploys.
+- [x] **Actions minutes.** A private repo's free Actions minutes are capped, and `backend.yml` builds arm64 images under QEMU, which is slow. Watch the usage after the first deploys.
 
   See Gaps 1. → [ci-workflows](runbooks/ci-workflows.md)
-- [ ] **Who runs the bootstrap.** Either you run it on the hosts and Claude gives you the commands, or you give a lane SSH access.
-- [ ] **Who generates the deploy key.** Either you do, or Claude generates the ed25519 pair locally and loads the private half into `DEPLOY_SSH_KEY` with `gh secret set`, without printing it. → [secrets](runbooks/secrets.md)
-- [ ] **T055, T057, T059 Review.** Read these yourself (tasks.md "The owner must review"):
+- [x] **Who runs the bootstrap.** Either you run it on the hosts and Claude gives you the commands, or you give a lane SSH access.
+- [x] **Who generates the deploy key.** Either you do, or Claude generates the ed25519 pair locally and loads the private half into `DEPLOY_SSH_KEY` with `gh secret set`, without printing it. → [secrets](runbooks/secrets.md)
+- [x] **T055, T057, T059 Review.** Read these yourself (tasks.md "The owner must review"):
   - the firewall rules: `infra/firewall/`, plus `decide_public_ssh` and `apply_firewall` in `infra/scripts/bootstrap-vps.sh`;
   - the `https://10.8.0.1` admin site in `infra/Caddyfile`;
   - `infra/scripts/deploy.sh`.
 
   → [firewall-changes](runbooks/firewall-changes.md), [deploy-and-rollback](runbooks/deploy-and-rollback.md)
 - [x] **Commit and push the branch.** First run `/speckit-review-implementation lane=b2` until no CRITICAL or HIGH finding is left (delivery-plan §5.2). Then ask Claude to commit `d01-b2` and push it.
-- [ ] **T062 Firebase project.** Create the project if Day 0 step 2 isn't done. Give Claude its project ID: it goes into `infra/firebase/.firebaserc` and `CORS_ORIGINS`. Then set the secret `FIREBASE_SERVICE_ACCOUNT` yourself, from a service account with the Firebase Hosting Admin role. → [firebase-hosting](runbooks/firebase-hosting.md)
-- [ ] **ACME email and GHCR owner.** Give `ACME_EMAIL` for Let's Encrypt, and confirm the GHCR owner `ahmedsaied94`, which comes from the git remote. → [tls-certificates](runbooks/tls-certificates.md)
-- [ ] **T064 Bootstrap both hosts.**
+- [x] **T062 Firebase project.** Create the project if Day 0 step 2 isn't done. Give Claude its project ID: it goes into `infra/firebase/.firebaserc` and `CORS_ORIGINS`. Then set the secret `FIREBASE_SERVICE_ACCOUNT` yourself, from a service account with the Firebase Hosting Admin role. → [firebase-hosting](runbooks/firebase-hosting.md)
+- [x] **ACME email and GHCR owner.** Give `ACME_EMAIL` for Let's Encrypt, and confirm the GHCR owner `ahmedsaied94`, which comes from the git remote. → [tls-certificates](runbooks/tls-certificates.md)
+- [x] **T064 Bootstrap both hosts.**
   1. Run `bootstrap-vps.sh vps1` (then `vps2`). The first run creates `/srv/madar/.env` and stops.
   2. Fill in that `.env` (mode 600), then run the script again.
   3. Add WireGuard peers for your devices and for CI.
@@ -92,7 +92,7 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
   5. Reboot both hosts, and confirm that `check-firewall.sh` passes and WireGuard comes back.
 
   The first run needs the repo's `infra/` on the host, and the repo is private (Gaps 23). → [provision-host](runbooks/provision-host.md), [private-network](runbooks/private-network.md)
-- [ ] **T050 GitHub secrets and variables.**
+- [x] **T050 GitHub secrets and variables.**
   - Secrets: `WG_CI_CONFIG` (the CI peer from T064), `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` (VPS-1's host key line for `10.8.0.1`, taken over WireGuard) and `FIREBASE_SERVICE_ACCOUNT`.
   - Variables: `VPS1_IP` and `VPS2_IP`, plus `ARM_RUNNER` if you have one.
 
@@ -102,20 +102,20 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
 #### After merge
 
 - [x] **T058 Certificates.** After the first `infra.yml` `sync` run (or a manual `deploy.sh --infra-only`), confirm that `api.`, `media.` and `app.<ip1>.sslip.io` have Let's Encrypt certificates. → [tls-certificates](runbooks/tls-certificates.md)
-- [ ] **T065 Scan from outside.** On a machine not connected to WireGuard:
+- [x] **T065 Scan from outside.** On a machine not connected to WireGuard:
   - `nmap` shows only 80 and 443 open, and UDP 51820 answers;
   - each public host has a valid certificate and the system-design §8 headers;
   - `https://10.8.0.1` doesn't answer from the internet but does over WireGuard.
 
   nmap isn't installed on the dev machine. → [exposure-check](runbooks/exposure-check.md)
-- [ ] **T066 Deploy and rollback drill.**
+- [x] **T066 Deploy and rollback drill.**
   - Merge a trivial `backend/` change and confirm it's live within 15 minutes with no server step.
   - Run `backend.yml` with `break_healthcheck=true`: the job fails, and the previous tag is running again.
   - Confirm that GHCR keeps 3 versions.
 
   → [deploy-and-rollback](runbooks/deploy-and-rollback.md)
-- [ ] **GHCR package access.** After the first image push, give this repo the Admin role on the `madar-backend` package (`infra/README.md`), or the `retention` job can't delete old versions. → [ci-workflows](runbooks/ci-workflows.md)
-- [ ] **T067 Secret scan and green CI.**
+- [x] **GHCR package access.** After the first image push, give this repo the Admin role on the `madar-backend` package (`infra/README.md`), or the `retention` job can't delete old versions. → [ci-workflows](runbooks/ci-workflows.md)
+- [x] **T067 Secret scan and green CI.**
   - Open a throwaway PR that adds a fake `AKIA…` key to a test file, confirm `gitleaks.yml` fails, then close it.
   - Get green `master` runs for `backend.yml`, `admin.yml`, `app.yml`, `infra.yml` and `pwa.yml`. The last three wait for Lanes A and M.
 
@@ -123,7 +123,7 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
 
 ### Lane A: admin
 
-Implemented on 2026-10-29 on `d01-a` in the main checkout (`madar_sat`, not a `../madar-a` worktree), and opened as a PR. T068–T090 are ticked; T091 waits for its screenshots on the PR ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-a), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-a-admin)).
+Implemented on 2026-10-29 on `d01-a` in the main checkout (`madar_sat`, not a `../madar-a` worktree), and opened as a PR. T068–T090 are ticked; T091 was ticked at the D1 sign-off on 2026-10-30, without the screenshots ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-a), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-a-admin)).
 
 The client was generated from `contract-v1` (`master` at `231c221`) plus the contract fix below.
 
@@ -132,28 +132,30 @@ The client was generated from `contract-v1` (`master` at `231c221`) plus the con
 - [x] **Contract fix, outside Lane A's folder.** Decided 2026-10-29: it merges with Lane A's PR. `d01-a` changes Lane B1's backend because the exported specs didn't match what the API sends: examples lost `"data": null` / `"error": null` (FastAPI drops `None` when it writes the document), error responses had no schema, and 422 was FastAPI's `HTTPValidationError` instead of the envelope. Prism served bodies the generated client rejected, and Orval's mocks didn't type-check.
   - Code: `backend/app/api/openapi.py` (new), `ErrorEnvelope` in `backend/app/api/envelope.py`, one line each in `backend/app/admin.py` and `backend/app/public.py`; test `backend/tests/contract/test_openapi_envelope.py`; re-exported `backend/openapi/public.json` and `admin.json`.
   - It comes after the `contract-v1` tag, so FR-014 applies: CI's oasdiff check (`--fail-on ERR`) against the tag reports no breaking change for either document (run locally on 2026-10-29). The API's behaviour is unchanged; only the documents now say what it sends. Lane M's client (T121) sees the new `ErrorEnvelope` once it regenerates after this merge.
-- [ ] **T091 Screens against the design.** Compare the screenshots with `Login.png` and `Main.png` (the A0 shell): `/login?mock=invalid_credentials`, `/login?mock=account_locked`, and the shell after `/login?mock=login_ok`, each at 1440 px and 1024 px (constitution "Done means", delivery-plan §5.4). Claude took them with the app in a fixed-size frame, because the window manager ignores browser resizes. Attach them to the PR.
+- [x] **T091 Screens against the design.** Compare the screenshots with `Login.png` and `Main.png` (the A0 shell): `/login?mock=invalid_credentials`, `/login?mock=account_locked`, and the shell after `/login?mock=login_ok`, each at 1440 px and 1024 px (constitution "Done means", delivery-plan §5.4). Claude took them with the app in a fixed-size frame, because the window manager ignores browser resizes. Attach them to the PR.
 - [x] **Commit and push.** Done 2026-10-29 at your request, without a `/speckit-review-implementation lane=a` round first; run one on the PR if you want it before merging. The untracked `.claude/settings.json` (Claude Code's local browser permission record) is left out.
-- [ ] **Merge the PR** once its checks are green.
+- [x] **Merge the PR** once its checks are green.
 
 ### Lane M: app
 
-Implemented on 2026-10-29 on `d01-m` in `../madar-m`; T092–T135 are ticked, T136's device and browser steps are the items below ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-m), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-m-app)).
+Implemented on 2026-10-29 on `d01-m` in `../madar-m`; T092–T135 are ticked, T136 was ticked at the D1 sign-off on 2026-10-30, with its device steps (3, 4, 6) accepted without evidence ([tasks.md](../specs/001-d01-foundation/tasks.md#lane-m), [quickstart](../specs/001-d01-foundation/quickstart.md#lane-m-app)).
 
 #### Before merge, in this order
 
-- [ ] **T136 step 3 On a phone.** Install the CI `app-prod-debug.apk` on an Android phone. Confirm that the matches route lists today's matches from VPS-1 (or `EmptyState`), and that `/gallery` opens. It needs VPS-1 serving `/v1` (B1's T048). A local debug build is at `app/build/app/outputs/flutter-apk/app-prod-debug.apk`.
-- [ ] **T136 step 4 Screens against the design.** Compare the gallery screenshots, in both themes, with the four design-system PNGs and `Matches.png` (delivery-plan §5.4).
-- [x] **T136 step 5 No runtime font fetch.** Checked 2026-10-30 in Chrome DevTools on the deployed preview, which showed two hits, both fixed in the same change: (1) the engine downloaded Roboto from `fonts.gstatic.com`, because it does so unless a family named `Roboto` is in the font manifest. `app/pubspec.yaml` now declares a `Roboto` family aliased to the bundled IBM Plex Sans Arabic Regular, so nothing is fetched. (2) CanvasKit loaded from `www.gstatic.com/flutter-canvaskit`. `pwa.yml` and `app/CLAUDE.md` now build with `--no-web-resources-cdn`, which sets `useLocalCanvasKit: true` and serves `build/web/canvaskit/`. A local release build of the fixed code, loaded in Chrome with the Network tab open, made no request to `fonts.gstatic.com`, `fonts.googleapis.com` or `www.gstatic.com`; its only external request was the API. **Left for you:** confirm the same on the preview after the next `pwa.yml` run. The release web build has no `/gallery` (it is `kDebugMode` only), so only the matches route can be checked there.
-- [ ] **T136 step 6 Attach the evidence.** Put the screenshots and the Network result in the PR (constitution "Done means").
-- [ ] **Staging host.** Replace the placeholder LAN address in `app/env/staging.json` with the real LAN Caddy host (public value only). The `prod` values already point at `api.130.110.117.215.sslip.io` and `media.130.110.117.215.sslip.io`.
+- [x] **T136 step 3 On a phone.** Install the CI `app-prod-debug.apk` on an Android phone. Confirm that the matches route lists today's matches from VPS-1 (or `EmptyState`), and that `/gallery` opens. It needs VPS-1 serving `/v1` (B1's T048). A local debug build is at `app/build/app/outputs/flutter-apk/app-prod-debug.apk`.
+- [x] **T136 step 4 Screens against the design.** Compare the gallery screenshots, in both themes, with the four design-system PNGs and `Matches.png` (delivery-plan §5.4).
+- [x] **T136 step 5 No runtime font fetch.** Serve `app/build/web` and open `/gallery` and the matches route in Chrome DevTools → Network: no request to `fonts.gstatic.com` or `fonts.googleapis.com` (FR-042). Fix a hit by bundling the glyph, never by allowing the fetch. Two facts from the 2026-10-30 build, so the check doesn't surprise you: every glyph the app draws is bundled (Changa, IBM Plex Sans Arabic, IBM Plex Mono), so the engine's Noto fallback — the only `fonts.gstatic.com` string in `main.dart.js` — should never fire; but a default `flutter build web` loads CanvasKit from `www.gstatic.com/flutter-canvaskit`, which breaks the same rule. Lane B2 owns the fix in `.github/workflows/pwa.yml`: add `--no-web-resources-cdn` to the web build, which sets `useLocalCanvasKit: true` and serves `build/web/canvaskit/` (verified locally 2026-10-30).
+- [x] **T136 step 6 Attach the evidence.** Put the screenshots and the Network result in the PR (constitution "Done means").
+- [x] **Staging host.** Replace the placeholder LAN address in `app/env/staging.json` with the real LAN Caddy host (public value only). The `prod` values already point at `api.130.110.117.215.sslip.io` and `media.130.110.117.215.sslip.io`.
 - [x] **Golden container tag: choose an image (blocks `app.yml`).** The pin `app/.flutter-version` = 3.47.7 has no `ghcr.io/cirruslabs/flutter` image. The newest tag is `3.44.0`, and it ships Dart 3.12.0, below `app/pubspec.yaml`'s `sdk: ^3.13.5`, so it can't build the app. Checked 2026-10-30 with `docker manifest inspect` on every 3.45–3.47 tag (none) and `flutter pub get` inside `3.44.0` ("version solving failed"). The goldens were therefore regenerated with Flutter 3.47.7 on the host (they now carry a dark ≠ light byte check and pass under `TZ=UTC`, `Africa/Cairo`, `America/New_York` and `Asia/Tokyo`). **Decided 2026-10-30:** drop the container. `app.yml` now installs the version in `app/.flutter-version` with `subosito/flutter-action` on `ubuntu-24.04`, as `backend.yml`'s `clients` job does; `app/.flutter-version` stays the only pin (research R18, amended). **Left:** the goldens were rendered on the host, not the runner, so the first `app.yml` run may show pixel diffs. If it does, take the goldens from the CI run and commit them (the runbook below gives the steps). `pwa.yml`'s `build` job got the same change (2026-10-30), so it no longer pulls the image either. → [ci-workflows](runbooks/ci-workflows.md#goldens-and-the-flutter-pin)
 - [x] **Release signing (before the first release).** Done 2026-10-30. The upload keystore (PKCS12, RSA 4096, alias `upload`) is in `~/.config/madar-sat/` on the owner's machine, and the secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` are set on the repo. `app/android/app/build.gradle.kts` signs `release` with it when `android/key.properties` exists (else the debug key), and `.github/workflows/app-release.yml` builds the signed `prod` AAB on a tag `app-v<x.y.z>`. **Left for you:** (1) **back up the keystore and `keystore-password` to your password manager** (the only copy besides GitHub, which cannot return secrets); (2) prove the workflow once with a throwaway tag (`app-v0.0.1`, steps in the runbook); (3) enrol in Play App Signing and upload the AAB by hand until a Play service account exists. → [secrets](runbooks/secrets.md#rotate-the-android-upload-key), [ci-workflows](runbooks/ci-workflows.md)
 
 ### Day sign-off
 
-- [ ] **Done check 001.** Run it on the deployed `master` and on devices once all four lanes have merged, as in the [quickstart table](../specs/001-d01-foundation/quickstart.md#done-check-spec-sc-010). Write the carry-over notes for anything that fails (delivery-plan §5.2, §5.3).
-- [ ] **Defaults spec 001 used.** Confirm or change them (spec 001 Assumptions; delivery-plan §9):
+**D1 was marked done by the owner on 2026-10-30, with every item below ticked in one step.** What was seen, what was accepted without evidence and what carries into D2 are listed in [tasks.md "Done check"](../specs/001-d01-foundation/tasks.md#done-check). Items that were ticked on trust, not on evidence, include: the serial-console test, the OCI security list, the reboot and `check-firewall.sh`, UDP 51820, the `break_healthcheck` drill, the throwaway gitleaks PR, the fresh snapshot copy, the review reads (T055, T057, T059), the admin and app screenshots, and the phone install.
+
+- [x] **Done check 001.** Run it on the deployed `master` and on devices once all four lanes have merged, as in the [quickstart table](../specs/001-d01-foundation/quickstart.md#done-check-spec-sc-010). Write the carry-over notes for anything that fails (delivery-plan §5.2, §5.3).
+- [x] **Defaults spec 001 used.** Confirm or change them (spec 001 Assumptions; delivery-plan §9):
   - O1: package ID `com.madarsat.app`;
   - O3: drop the card-sharing labels;
   - O10: default satellites Nilesat + Badr, which is due on D1.
