@@ -13,7 +13,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
 | [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
-| [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** 4 items (the contract PR, revision `0003`, `backend/app/auth/`, and `ADMIN_JWT_SECRET`) · **Lane B2:** 4 items (the T081–T085 review, VPS-2's `.env` and secrets, the GitHub variables and VPS-2's host key, the home box) | **Lane B1:** 4 items (the deploy check, the first admin, one account per editor, and the `404` from the internet) · **Lane B2:** 5 items (hosts up, the first unattended run, the bridge, a logo, the firewall proof, and the queue decision) | **Both code lanes are done; the hosts, the first admin and the first run are yours.** Lane B2 now builds on B1's `app.workers`, `app.media` and revision `0003`. |
+| [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** 4 items (the contract PR, revision `0003`, `backend/app/auth/`, and `ADMIN_JWT_SECRET`) · **Lane B2:** 4 items (the T081–T085 review, VPS-2's `.env` and secrets, the GitHub variables and VPS-2's host key, the home box) · **Lane A:** 3 items (the review, the walk-through over WireGuard and the screenshots) | **Lane B1:** 4 items (the deploy check, the first admin, one account per editor, and the `404` from the internet) · **Lane B2:** 5 items (hosts up, the first unattended run, the bridge, a logo, the firewall proof, and the queue decision) · **Lane A:** 2 items (`admin.yml` green, the first editor walk-through) | **All code lanes are done; the hosts, the first admin and the first run are yours.** Lane B2 builds on B1's `app.workers`, `app.media` and revision `0003`; Lane A is rebased on B1's T015 commit, so it carries the D2 admin client. Lane A's A-F1 (React Hook Form) and T107's browser steps are open. |
 
 ## Every month
 
@@ -206,6 +206,25 @@ Lane B2 built the ingestion pipeline and the hosts that run it: the `SourceAdapt
 - [ ] **T087 A logo arrives.** A new ysscores team with a logo on an allowlisted host gets its `logo_asset_id` filled by `worker-media`, and the app serves it from `media.<VPS1_IP>.sslip.io`. → [workers](runbooks/workers.md#worker-media-and-logos)
 - [ ] **T082 Firewall proof.** From a second WireGuard peer (your laptop, not the home box), `nc -vz 10.8.0.1 6379` times out; from the home box, `redis-cli -h 10.8.0.1 -p 6379 --user homebox ping` answers `PONG`. → [firewall-changes](runbooks/firewall-changes.md#redis-on-wg0-the-home-box)
 - [ ] **Decide `YSSCORES_FETCH_QUEUE`.** Keep `scrape_home` (the home box fetches, the default) or switch to `scrape` on VPS-2 if the box is unreliable. → [imports-and-sources](runbooks/imports-and-sources.md#switch-where-ysscores-fetches)
+
+### Lane A: admin
+
+Implemented on 2026-10-30 on `d02-a` in `../madar-a` (a worktree off `d02-b1`, so the D2 admin client of T015 is already there), pushed and opened as a PR into `d02-features`. T090–T105 and T108 are ticked; T106 (the React Hook Form resolver) and T107's browser steps are open, with the rest of the first pass's shortcuts in [tasks.md](../specs/002-d02-core-flows/tasks.md#lane-a-follow-ups-open) ([quickstart](../specs/002-d02-core-flows/quickstart.md#lane-a-admin)).
+
+Checked locally in `admin/`: `pnpm typecheck`, `pnpm lint`, `pnpm test` (136 tests), `pnpm build`, `./scripts/check-literals.sh`, `./scripts/check-token-copy.sh`, and `pnpm orval && git diff --exit-code src/api/generated/` is clean. Nothing was opened in a browser and nothing ran over WireGuard.
+
+The review round's items are the four code follow-ups below and at the end of [tasks.md](../specs/002-d02-core-flows/tasks.md#lane-a-follow-ups-open).
+
+#### Before merge, in this order
+
+- [ ] **The editors' devices.** Install Caddy's internal root CA on each editor's machine (the one WireGuard setup produced) at `~/.config/madar/caddy-root.crt`, so `NODE_EXTRA_CA_CERTS=… pnpm dev:wg` can reach `https://10.8.0.1` without a browser warning. → [private-network](runbooks/private-network.md)
+- [ ] **T107 steps 2–4.** With Prism up: `?mock=edit_conflict`, `?mock=edit_conflict_source`, `?mock=precondition_required` and `?mock=forbidden_remove_channels`. Then, after T047, `NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm dev:wg` and walk [quickstart Lane A](../specs/002-d02-core-flows/quickstart.md#lane-a-admin), including the two-browser conflict. Take screenshots of A3, A4 and both dialogs at 1440 and 1024 and compare them with `Matches.png`, `MatchEditor.png` and `Dialogs.png`.
+
+#### After merge
+
+- [ ] **`admin.yml` on `master`.** The `check` job runs typecheck, lint, test, build and both scripts; read its log rather than assuming.
+- [ ] **The first editor walk-through.** Sign in with an editor account, open tomorrow in A3, filter to missing channels, add two channels with commentators in A4, hide one channel from that match only, set a manual score, save, and confirm the change reaches the app.
+
 
 ## Known for later features
 
