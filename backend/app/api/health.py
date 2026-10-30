@@ -36,7 +36,7 @@ async def _check_redis() -> bool:
     import redis.asyncio as aioredis
 
     try:
-        client = aioredis.from_url(get_settings().redis_url, socket_connect_timeout=2)
+        client = aioredis.from_url(get_settings().redis_url, socket_connect_timeout=2)  # type: ignore[no-untyped-call]
         try:
             await client.ping()
             return True

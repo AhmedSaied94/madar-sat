@@ -26,17 +26,89 @@ logger = logging.getLogger("madar.api")
 class ApiError(Exception):
     """An error with a stable code, mapped to the envelope by the handler."""
 
-    def __init__(self, status_code: int, code: str, message: str = "", meta: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: str = "",
+        meta: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(message or code)
         self.status_code = status_code
         self.code = code
         self.message = message or code
         self.meta = meta or {}
+        self.headers = headers or {}
 
 
 class EntityNotFound(ApiError):
     def __init__(self, code: str, message: str = "") -> None:
         super().__init__(404, code, message)
+
+
+# --- D2 admin errors (contracts/admin-api.md#errors-added-on-d2) ---------------------
+
+ADMIN_ENTITY_NOT_FOUND_CODES = (
+    "match_not_found",
+    "team_not_found",
+    "competition_not_found",
+    "satellite_not_found",
+    "channel_not_found",
+    "commentator_not_found",
+    "hidden_name_not_found",
+)
+
+
+def unauthenticated(code: str = "unauthenticated") -> ApiError:
+    """``unauthenticated`` or ``token_expired`` (401)."""
+    return ApiError(401, code)
+
+
+def forbidden(required_role: str) -> ApiError:
+    return ApiError(403, "forbidden", meta={"required_role": required_role})
+
+
+def precondition_required() -> ApiError:
+    return ApiError(428, "precondition_required")
+
+
+def edit_conflict(
+    current_etag: str,
+    changed_by: dict[str, str] | None,
+    changed_at: str | None,
+    stale_ids: list[int] | None = None,
+) -> ApiError:
+    """``409 edit_conflict``; ``stale_ids`` is set only by bulk requests."""
+    meta: dict[str, Any] = {"current_etag": current_etag, "changed_by": changed_by, "changed_at": changed_at}
+    if stale_ids is not None:
+        meta["stale_ids"] = stale_ids
+    return ApiError(409, "edit_conflict", meta=meta)
+
+
+def in_use(usage: dict[str, int]) -> ApiError:
+    return ApiError(409, "in_use", meta={"usage": usage})
+
+
+def already_exists(field: str) -> ApiError:
+    return ApiError(409, "already_exists", meta={"field": field})
+
+
+def file_too_large(max_bytes: int) -> ApiError:
+    return ApiError(413, "file_too_large", meta={"max_bytes": max_bytes})
+
+
+def unsupported_media_type() -> ApiError:
+    return ApiError(415, "unsupported_media_type")
+
+
+def media_invalid() -> ApiError:
+    return ApiError(422, "media_invalid")
+
+
+def validation_failed(errors: list[dict[str, Any]]) -> ApiError:
+    """``422 validation_error`` with a ``meta.errors[]`` list (same shape as the request validator's)."""
+    return ApiError(422, "validation_error", "invalid request", {"errors": errors})
 
 
 class NotModified(Exception):
@@ -60,7 +132,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
         logger.info("api_error request_id=%s code=%s", _request_id(request), exc.code)
-        return JSONResponse(status_code=exc.status_code, content=fail(exc.code, exc.message, exc.meta).model_dump())
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=fail(exc.code, exc.message, exc.meta).model_dump(),
+            headers=exc.headers or None,
+        )
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:

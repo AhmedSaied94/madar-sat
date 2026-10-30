@@ -1,4 +1,4 @@
-"""Admin auth contract: 501 stubs, declared shapes and examples, public/admin separation (T018)."""
+"""Admin auth contract: declared shapes and examples, public/admin separation (T018)."""
 
 from __future__ import annotations
 
@@ -19,7 +19,47 @@ AUTH_ROUTES = {
     ("POST", "/admin/api/auth/logout"),
     ("GET", "/admin/api/auth/me"),
 }
-ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")}
+
+
+def _crud(prefix: str) -> set[tuple[str, str]]:
+    return {
+        ("GET", prefix),
+        ("POST", prefix),
+        ("GET", f"{prefix}/{{id}}"),
+        ("PATCH", f"{prefix}/{{id}}"),
+        ("DELETE", f"{prefix}/{{id}}"),
+    }
+
+
+# contracts/admin-api.md: the matches, five entities, the A4 lists and uploads (D2).
+D2_ROUTES = (
+    {
+        ("GET", "/admin/api/matches"),
+        ("POST", "/admin/api/matches"),
+        ("POST", "/admin/api/matches/bulk"),
+        ("GET", "/admin/api/matches/{id}"),
+        ("PATCH", "/admin/api/matches/{id}"),
+        ("GET", "/admin/api/broadcast-presets"),
+        ("GET", "/admin/api/hidden-channel-names"),
+        ("POST", "/admin/api/hidden-channel-names"),
+        ("DELETE", "/admin/api/hidden-channel-names/{name}"),
+        ("GET", "/admin/api/sources"),
+        ("POST", "/admin/api/media"),
+    }
+    | _crud("/admin/api/teams")
+    | _crud("/admin/api/competitions")
+    | _crud("/admin/api/satellites")
+    | _crud("/admin/api/channels")
+    | _crud("/admin/api/commentators")
+)
+ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES
+
+
+def _normalize(operations: set[tuple[str, str]]) -> set[tuple[str, str]]:
+    """Path parameter names differ per entity (``{team_id}``…); compare them as ``{id}``."""
+    import re
+
+    return {(method, re.sub(r"\{(?!name\})[a-z_]+\}", "{id}", path)) for method, path in operations}
 
 
 def _examples(operation: dict, status: str) -> dict:
@@ -30,27 +70,28 @@ def _operations(doc: dict) -> set[tuple[str, str]]:
     return {(method.upper(), path) for path, ops in doc["paths"].items() for method in ops}
 
 
-def test_admin_app_exposes_only_the_five_routes():
+def test_admin_app_exposes_exactly_the_contract_routes():
     from app.admin import app
 
     # The live schema walks included routers (FastAPI wraps them, so app.routes doesn't).
-    assert _operations(app.openapi()) == ADMIN_ROUTES
-    assert _operations(ADMIN_DOC) == ADMIN_ROUTES
+    assert _normalize(_operations(app.openapi())) == ADMIN_ROUTES
+    assert _normalize(_operations(ADMIN_DOC)) == ADMIN_ROUTES
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("method", "path"), sorted(AUTH_ROUTES))
-async def test_each_auth_route_is_501_on_d1(admin_client, method, path):
+async def test_no_auth_route_is_a_stub_any_more(anon_admin_client, method, path):
+    # The behavior itself is covered by tests/auth; here only that D1's 501 stubs are gone.
     body = {"email": "editor@example.com", "password": "x"} if path.endswith("/login") else None
-    resp = await admin_client.request(method, path, json=body)
-    assert resp.status_code == 501
+    resp = await anon_admin_client.request(method, path, json=body)
+    assert resp.status_code in {401, 403}
     assert resp.json()["success"] is False
-    assert resp.json()["error"]["code"] == "not_implemented"
+    assert resp.json()["error"]["code"] != "not_implemented"
 
 
 @pytest.mark.asyncio
-async def test_admin_healthz(admin_client):
-    resp = await admin_client.get("/admin/api/healthz")
+async def test_admin_healthz(anon_admin_client):
+    resp = await anon_admin_client.get("/admin/api/healthz")
     assert resp.status_code == 200
     assert resp.json()["data"] == {"db": "ok", "redis": "ok"}
 

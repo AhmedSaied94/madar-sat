@@ -175,7 +175,7 @@ def test_0002_downgrades_cleanly_and_upgrades_again(empty_database):
 
 
 def test_session_database_is_at_head(sync_session):
-    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0002"
+    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0003"
 
 
 @pytest.mark.parametrize(
@@ -238,3 +238,99 @@ def test_a_well_formed_feed_row_is_accepted(sync_session):
             "'live', 'feed', '2H', '90+3', 1, 0, '{kickoff_at}')"
         )
     )
+
+
+# --- Revision 0003: audit source and link origin (D2, data-model "Revision 0003") ---------------
+
+
+def _seed_links(url: str) -> None:
+    """Three links at revision 0002: a snapshot one, an importer's and an editor's (0001 seeds the sources)."""
+    with psycopg.connect(url, autocommit=True) as conn:
+        conn.execute(
+            "INSERT INTO channels (kind, name) VALUES ('platform', 'c1'), ('platform', 'c2'), ('platform', 'c3')"
+        )
+        conn.execute(
+            "INSERT INTO matches (source, match_date, competition_name, home_team_name, away_team_name, time_tbd) "
+            "VALUES ('legacy', '2026-10-28', 'c', 'h', 'a', true)"
+        )
+        conn.execute(
+            "INSERT INTO match_channels (match_id, channel_id, source) "
+            "SELECT m.id, c.id, CASE c.name WHEN 'c1' THEN 'legacy' WHEN 'c2' THEN 'ysscores' ELSE 'manual' END "
+            "FROM matches m, channels c"
+        )
+
+
+def test_0003_adds_the_two_columns_and_the_actor_check(empty_database):
+    command.upgrade(_alembic(empty_database), "head")
+
+    schema = _schema(empty_database)
+    assert {"audit_log.source", "match_channels.imported_by"} <= schema["columns"]
+    assert "ck_audit_log_actor" in schema["constraints"]
+    with psycopg.connect(empty_database) as conn:
+        references = conn.execute(
+            "SELECT conrelid::regclass::text, confrelid::regclass::text FROM pg_constraint WHERE contype = 'f' "
+            "AND conrelid IN ('audit_log'::regclass, 'match_channels'::regclass) AND confrelid = 'sources'::regclass"
+        ).fetchall()
+    assert {tuple(row) for row in references} >= {("audit_log", "sources"), ("match_channels", "sources")}
+
+
+def test_0003_backfills_imported_by_from_source_except_manual(empty_database):
+    cfg = _alembic(empty_database)
+    command.upgrade(cfg, "0002")
+    _seed_links(empty_database)
+
+    command.upgrade(cfg, "0003")
+
+    with psycopg.connect(empty_database) as conn:
+        rows = dict(
+            conn.execute(
+                "SELECT c.name, mc.imported_by FROM match_channels mc JOIN channels c ON c.id = mc.channel_id"
+            ).fetchall()
+        )
+    assert rows == {"c1": "legacy", "c2": "ysscores", "c3": None}
+
+
+def test_0003_downgrade_drops_both_columns_and_keeps_every_other_row(empty_database):
+    cfg = _alembic(empty_database)
+    command.upgrade(cfg, "0002")
+    _seed_links(empty_database)
+    command.upgrade(cfg, "head")
+    with psycopg.connect(empty_database) as conn:
+        before = conn.execute(
+            "SELECT match_id, channel_id, source, is_hidden FROM match_channels ORDER BY 2"
+        ).fetchall()
+
+    command.downgrade(cfg, "0002")
+
+    schema = _schema(empty_database)
+    assert not {"audit_log.source", "match_channels.imported_by"} & schema["columns"]
+    assert "ck_audit_log_actor" not in schema["constraints"]
+    with psycopg.connect(empty_database) as conn:
+        after = conn.execute("SELECT match_id, channel_id, source, is_hidden FROM match_channels ORDER BY 2").fetchall()
+    assert after == before
+
+    command.upgrade(cfg, "head")
+    assert "audit_log.source" in _schema(empty_database)["columns"]
+
+
+def test_audit_row_cannot_have_both_an_admin_and_a_source(sync_session):
+    admin_id = sync_session.scalar(
+        text(
+            "INSERT INTO admin_users (email, name, role, password_hash) "
+            "VALUES ('a@example.com', 'a', 'editor', 'x') RETURNING id"
+        )
+    )
+    with pytest.raises(IntegrityError) as exc_info, sync_session.begin_nested():
+        sync_session.execute(
+            text(
+                "INSERT INTO audit_log (admin_user_id, source, entity, action) "
+                "VALUES (:admin, 'legacy', 'matches', 'update')"
+            ),
+            {"admin": admin_id},
+        )
+    assert exc_info.value.orig.diag.constraint_name == "ck_audit_log_actor"
+
+
+def test_audit_row_may_name_a_source_alone_or_be_a_system_action(sync_session):
+    sync_session.execute(text("INSERT INTO audit_log (source, entity, action) VALUES ('legacy', 'matches', 'update')"))
+    sync_session.execute(text("INSERT INTO audit_log (entity, action) VALUES ('admin_users', 'create')"))

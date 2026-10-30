@@ -11,15 +11,31 @@ Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
   They upsert by `(source, external_id)`, skip any field listed in `locked_fields` (admin edits
   win), and send unmatched names to `unresolved_names`.
 - **Cache invalidation** uses `dataset_versions`. Each write bumps a version; Redis cache keys
-  and ETags are built from the versions, so nothing is deleted by key scan. Admin mutations also
-  write `audit_log` and require `If-Match`.
+  and ETags are built from the versions, so nothing is deleted by key scan.
+- **Admin writes** all go through `app/services/admin/writer.py`, the one unit of work: lock the
+  row (`FOR UPDATE`), check `If-Match` against the version recomputed under the lock (`428` without
+  it, `409 edit_conflict` when stale), apply, diff, add the changed lockable fields to
+  `locked_fields`, write `audit_log`, bump the datasets **as the last statement**, commit. A write
+  that changes nothing writes nothing. Never mutate an entity from a handler any other way.
+- **Entity versions** (`ETag`/`If-Match`) are content hashes (`services/admin/versions.py`): the first
+  32 hex of SHA-256 over the entity's own stored state, in quotes. An importer's change makes an open
+  editor's copy stale too. Importers that touch a match, team or channel must keep that in mind.
+- **Auth** (`app/auth/`): argon2id passwords, 15-minute HS256 access tokens (`ADMIN_JWT_SECRET`), rotating
+  hashed refresh tokens in `admin_refresh_tokens` (reuse revokes the family), the `madar_csrf` double
+  submit, login limiting in Redis. `require_editor` / `require_admin` load the admin from the database on
+  every request; the role in the token is never trusted. Every admin route except `auth/*` and `healthz`
+  carries one (a test walks the routes).
 - **Push** uses an outbox. Producers only insert `notification_outbox` rows with a unique
   `dedupe_key`. One dispatcher claims rows with `FOR UPDATE SKIP LOCKED`, resolves devices with
   `SELECT DISTINCT` over `device_follows`, and sends through FCM.
 - **Match status** is an explicit state machine (§6.2.3). A clock-guessed "live" carries
-  `estimated: true` and must never show a score or minute.
+  `estimated: true` and must never show a score or minute. A manual status (`status_source = 'manual'`)
+  is served as stored until an admin clears it; the allowed fields per status are in
+  `app/domain/manual_status.py`.
+- **Content rule:** no free text that reaches `/v1` may hold a card-sharing label. Request schemas screen it
+  (`Name120`, `Text80`, `Text120` in `app/schemas/admin.py`); `find_card_sharing_label` is in `app/domain/content.py`.
 - **Time:** `kickoff_at` is UTC. Source times are Cairo wall-clock and are converted with
-  `AT TIME ZONE 'Africa/Cairo'`.
+  `AT TIME ZONE 'Africa/Cairo'`. An admin match's `match_date` follows the Cairo date of its kickoff.
 
 ## Running locally
 
@@ -31,28 +47,39 @@ uv run python -m app.cli rehost-media --snapshot-dir ~/madar-snapshot --report-d
 uv run ruff check . && uv run mypy --strict app && uv run pytest   # what backend.yml runs
 uv run python -m app.cli export-openapi && git diff --exit-code openapi/
 uv run uvicorn app.public:app --port 8000
+ADMIN_JWT_SECRET=$(openssl rand -hex 32) uv run uvicorn app.admin:app --port 8001   # needs the secret
 ```
 
 ## Module layout
 
-- `app/public.py`, `app/admin.py` — the two app factories.
+- `app/public.py`, `app/admin.py` — the two app factories. `app.admin` refuses to start without a usable
+  `ADMIN_JWT_SECRET` (checked in its lifespan, so `export-openapi` still works without it).
 - `app/settings.py` — pydantic-settings; every secret is required (fails fast).
 - `app/db/` — SQLAlchemy 2 models (`models.py`) and engines (`session.py`: async asyncpg for the API, sync psycopg for the CLI/Alembic).
-- `app/domain/` — pure logic: `status.py` (clock rule), `time.py` (Cairo→UTC), `frequency.py`, `regions.py`, `ranking.py`.
-- `app/api/` — envelope, errors, ETag, routers.
-- `app/schemas/` — Pydantic response models (the contract).
-- `app/services/` — one read query per endpoint.
+- `app/domain/` — pure logic: `status.py` (clock rule), `manual_status.py` (what each manual status allows),
+  `lockable.py` (the lockable columns), `content.py` (card-sharing labels), `time.py` (Cairo→UTC), `frequency.py`,
+  `regions.py`, `ranking.py`.
+- `app/api/` — envelope, errors, ETag, routers. `app/api/admin/` holds one router per admin resource.
+- `app/auth/` — passwords, tokens, CSRF, login limits, roles, and the account commands behind the CLI.
+- `app/schemas/` — Pydantic models (the contract). `admin.py` also holds the request bodies.
+- `app/services/` — one read query per endpoint. `app/services/admin/` is the admin write side: `writer.py`,
+  `versions.py`, `refs.py` (id checks), one module per entity, `matches.py` + `match_links.py` + `match_view.py` +
+  `match_list.py`, `bulk.py`, `lists.py`, `uploads.py`.
+- `app/media/` — fetch, encode and store media; shared by the snapshot rehoster (`app/etl/media.py`) and the upload route.
+- `app/workers/` — the Celery app (queues, retry base task, Redis locks). Lane B2's schedule module, when it
+  exists, exports `BEAT_SCHEDULE` and `app.workers.config` picks it up.
 - `app/etl/` — snapshot loader, media rehoster, load report.
-- `app/adapters/` — Lane B2 (empty on D1).
+- `app/adapters/` and `tests/adapters/` — Lane B2's. B1 does not edit them.
 
 ## Ownership
 
 - B1 owns **migrations** and the **contract** (`backend/openapi/*.json`).
-- Revision `0001` is `alembic/sql/0001_base_schema.sql`, a byte-for-byte copy of
-  `../old_app/migration/schema.sql` — **never edited**.
+- Revisions `0001`, `0002` and `0003` are applied and **never edited**; a change is a new revision.
+  `0001` is `alembic/sql/0001_base_schema.sql`, a byte-for-byte copy of `../old_app/migration/schema.sql`.
 - `backend/openapi/public.json` and `admin.json` are exported from code, committed,
   and tagged `contract-v1`; after the tag, changes must be non-breaking (FR-014).
-- Generated clients (Orval / swagger_parser) are regenerated, never hand-edited.
+- Generated clients (Orval / swagger_parser) are regenerated, never hand-edited. The PR that changes an
+  OpenAPI document also runs both generators and commits their output (`backend.yml`'s `clients` job fails otherwise).
 
 ## CLI
 
@@ -60,6 +87,11 @@ uv run uvicorn app.public:app --port 8000
   (settings fail fast at import), but connects to nothing, so placeholder values work in CI.
 - `python -m app.cli load-snapshot --snapshot-dir <dir> --report-dir <dir>`
 - `python -m app.cli rehost-media --snapshot-dir <dir> --report-dir <dir>`
+- `python -m app.cli create-admin --email <e> --name <n> --role editor|admin`, `set-admin-password --email <e>`,
+  `deactivate-admin --email <e>`: staff accounts until A16 (D6). There is **no `--password` option**: the password
+  is read twice from the terminal, or once from stdin with `--password-stdin`, so it never reaches shell
+  history or `ps`. Each command writes an `audit_log` row with no password or hash in it; see
+  `docs/runbooks/staff-accounts.md`.
 
 ## Tests
 
@@ -69,10 +101,16 @@ Database tests use real PostgreSQL 16 (`TEST_DATABASE_URL`, default
 
 - `loaded_snapshot` loads `tests/fixtures/snapshot` once per session (committed).
 - `session` / `sync_session` / `db_connection` run each test in a transaction that is
-  rolled back. `public_client` / `admin_client` serve requests through that same
-  connection, so rows a test adds are visible to the API and gone afterwards.
+  rolled back. `public_client` / `anon_admin_client` / `editor_client` / `admin_client` serve requests through that
+  same connection, so rows a test adds are visible to the API and gone afterwards. `editor_client` and
+  `admin_client` are signed in (`client.admin` is the account); `make_admin` creates more accounts.
+- `redis_client` clears only the `auth:` and `lock:test:` keys before a test: other lanes share the server.
 - `empty_database` gives a throwaway database for migration tests.
-- `tests/contract/test_public_schema.py` runs schemathesis over the committed
-  `openapi/public.json` and fails if the file is stale; re-export after any API change.
+- `tests/admin/` covers the admin write side (`helpers.py` has `new_match`, `patch_match`, `create`, dataset and audit
+  helpers); `tests/auth/` covers login, refresh and the CLI; `tests/unit/` the pure parts.
+- `tests/contract/test_public_schema.py` and `test_admin_contract.py` run schemathesis over the committed
+  `openapi/*.json` and fail if the file is stale; re-export after any API change. The admin one writes for real, so it
+  runs against a scratch database of its own.
+- Audio tests need `ffmpeg` and `ffprobe` and skip without them (CI and the image have them).
 
 Coverage ≥ 70 % on `app/domain`, `app/services`, `app/adapters` (MVP bar).
