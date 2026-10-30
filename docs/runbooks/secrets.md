@@ -13,7 +13,12 @@ The rules:
 | Secret | Lives in | Used by | Rotate |
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | `/srv/madar/.env` on **both** VMs, and inside `DATABASE_URL` and `DATABASE_URL_SYNC` | PostgreSQL, the APIs, `migrate`, `cli`, the workers | [Below](#rotate-the-postgresql-password) |
-| `REDIS_PASSWORD` | Both `.env` files, and inside `REDIS_URL` and `CELERY_BROKER_URL` | Redis, the APIs, the workers | [Below](#rotate-the-redis-password) |
+| `REDIS_PASSWORD` | Both `.env` files, and inside `REDIS_URL` and `CELERY_BROKER_URL`; one line of the rendered `/srv/madar/redis/users.acl` (`default` user) | Redis, the APIs, the workers | [Below](#rotate-the-redis-password) |
+| `REDIS_HOMEBOX_PASSWORD` | VPS-1's `.env` and the home box's `.env`; the `homebox` line of the rendered `/srv/madar/redis/users.acl` | The home box's worker, as the `homebox` Redis user | [Below](#rotate-the-home-box-redis-password) |
+| `ADMIN_JWT_SECRET` | Both VPS-1-facing `.env` files (VPS-1 and VPS-2) | `api-admin`, `worker-media`; at least 32 bytes | [Below](#rotate-the-admin-jwt-secret) |
+| `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY` | VPS-2's `.env` only; never in the repo, a log line or a test (D15, FR-052) | The Firestore bridge | [Below](#rotate-the-sat-air-bridge-credentials) |
+| `GHCR_READ_TOKEN` | The home box's `.env` | `home-box-update.sh` (read-only `read:packages`) | [Below](#rotate-the-home-boxs-ghcr-token) |
+| `SCRAPE_USER_AGENT` | VPS-2's and the home box's `.env` | The fetcher's `User-Agent`; not a secret, but keep it a real contact | Edit it and recreate the workers |
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `DEPLOY_SSH_KEY` | GitHub secret. The public half is in VPS-1's `.env` and in `/home/deploy/.ssh/authorized_keys`. | `backend.yml` deploy, `infra.yml` sync | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | `WG_CI_CONFIG` | GitHub secret; the peer `ci` in VPS-1's `wg0.conf` | The same jobs | [private-network.md "Rotate the CI peer"](private-network.md#rotate-the-ci-peer) |
@@ -52,6 +57,62 @@ Not secrets: the public and private IPs, the hostnames, the Firebase project ID,
    ```
 
    From D3, recreate VPS-2's workers too.
+
+## Rotate the home box Redis password
+
+The home box authenticates to Redis as the ACL user `homebox`; its password is
+`REDIS_HOMEBOX_PASSWORD` on both VPS-1 and the box. The rendered ACL file is the only place Redis
+reads it.
+
+1. On VPS-1, make a new value and put it in `/srv/madar/.env`.
+2. Deploy, or `bootstrap` nothing: a deploy renders the ACL and recreates Redis
+   ([deploy-and-rollback.md](deploy-and-rollback.md)). The `homebox` user's old password stops
+   working the moment Redis restarts.
+3. Put the same value in the box's `/srv/madar/.env`, and update `REDIS_URL` there
+   (`redis://homebox:<new>@10.8.0.1:6379/0`).
+4. Recreate the box's worker: `docker compose -f infra/compose/home-box.yml up -d`.
+5. Check the box's log has no `NOPERM` or `WRONGPASS`, and start a run
+   ([imports-and-sources.md](imports-and-sources.md)).
+
+## Rotate the admin JWT secret
+
+Rotating it signs every admin out: an access token minted with the old key stops verifying (the
+refresh token still works, so the admin continues after one refresh).
+
+1. `openssl rand -hex 32` on VPS-1.
+2. Put it in `/srv/madar/.env` there, and in VPS-2's `.env` (the media worker runs the same app).
+3. `dc up -d --force-recreate api-admin worker-media` on VPS-1, and re-run the VPS-2 deploy so its
+   workers read it.
+4. Check `/admin/api/healthz` and that a login works.
+
+## Rotate the Sat Air bridge credentials
+
+The bridge reads the old Sat Air project's public web configuration. It lives only in VPS-2's
+`.env`; nothing in the repository or the tests knows it (D15, FR-052).
+
+1. Get the current web configuration from the old project (Firebase console → project settings →
+   your apps), and take the API key that is restricted to Firestore reads.
+2. Put the project id and the key in VPS-2's `/srv/madar/.env` as `SATAIR_FIREBASE_PROJECT_ID` and
+   `SATAIR_FIREBASE_API_KEY`.
+3. Re-run the VPS-2 deploy, then start a bridge run by hand and read `import_runs`
+   ([imports-and-sources.md](imports-and-sources.md)).
+
+If the key was exposed, revoke it in the old project and issue a new one first. A `403` from
+`firestore.googleapis.com` in the run's log means the key or its restrictions are wrong.
+
+## Rotate the home box's GHCR token
+
+`GHCR_READ_TOKEN` is a fine-grained GitHub token with only `read:packages`, used by
+`home-box-update.sh` to pull `madar-backend-amd64:stable`.
+
+1. Create a new token (GitHub → settings → developer settings → fine-grained tokens), scope: this
+   repository, permission: Packages → read.
+2. Put it in the box's `/srv/madar/.env`.
+3. Run `sudo /srv/madar/infra/scripts/home-box-update.sh` and check it pulls and logs out.
+4. Revoke the old token.
+
+The script logs in, pulls and logs out in one run, so the token is on disk only in the box's `.env`
+(mode 600).
 
 ## Rotate the Redis password
 

@@ -2,16 +2,16 @@
 
 Each runbook covers one area. The first-time setup crosses several of them, so this page gives the order. Do the steps top to bottom. Each one links to the section that has the commands.
 
-Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN. VPS-1 is public; VPS-2 has nothing public and is reached through VPS-1:
+Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's x86-64 home box. VPS-1 is public; VPS-2 has nothing public and is reached through VPS-1; the home box reaches only Redis:
 
-| | VPS-1 "app" | VPS-2 "workers" |
-| --- | --- | --- |
-| Reserved public IP | `130.110.117.215` | `130.110.97.25` |
-| VCN private IP | `10.1.0.97` | `10.1.0.118` |
-| WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` |
-| Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None |
-| Admin | `https://10.8.0.1`, over WireGuard only | None |
-| Runs | Caddy, `api-public`, `api-admin`, PostgreSQL 16, Redis 7 | Celery workers, `beat`, Flower: off until D3. Uptime Kuma and backups later. |
+| | VPS-1 "app" | VPS-2 "workers" | Home box |
+| --- | --- | --- | --- |
+| Reserved public IP | `130.110.117.215` | `130.110.97.25` | none |
+| VCN private IP | `10.1.0.97` | `10.1.0.118` | none |
+| WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` | Peer, outbound only |
+| Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None | None |
+| Admin | `https://10.8.0.1`, over WireGuard only | None | None |
+| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7 | `worker-imports`, `worker-scrape`, `worker-maintenance`, `beat`; Flower off until D3. Uptime Kuma and backups later. | `worker-scrape -Q scrape_home` and a 10-minute update timer |
 
 | Runbook | What it covers |
 | --- | --- |
@@ -22,6 +22,9 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN. VPS-1 is public; 
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
 | [snapshot-load.md](snapshot-load.md) | Loading the Sat Air snapshot into VPS-1 and rehosting its media |
+| [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs` and `run.json`, pausing a source, switching the ysscores queue, the bridge's configuration |
+| [home-box.md](home-box.md) | Joining the scrape box to `wg0`, its `.env`, the update timer, checking it, taking it offline |
+| [workers.md](workers.md) | VPS-2's services and `beat`, `worker-media` and logos, the VPS-2 deploy and rollback, raw-page retention |
 | [firewall-changes.md](firewall-changes.md) | Changing, testing and applying the iptables rules on either VM |
 | [exposure-check.md](exposure-check.md) | What the internet can reach, and the certificates and headers (T065) |
 | [tls-certificates.md](tls-certificates.md) | Let's Encrypt on sslip.io, failed issuance, a changed public IP |
@@ -71,7 +74,10 @@ Each `.env` names the other VM's private IP, so create both VMs before you boots
 7. **Rollback drill:** [deploy-and-rollback.md "Rehearse the failure path"](deploy-and-rollback.md#rehearse-the-failure-path) (T066).
 8. **Secret-scan proof:** [ci-workflows.md "Prove the secret scan"](ci-workflows.md#prove-the-secret-scan) (T067, first half).
 9. **Once Lanes A and M have merged:** the PWA preview and its CORS origin ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)), then a green `master` run for every workflow (T067, second half).
-10. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
+10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
+11. **The home box:** the peer, its `.env`, the Redis ACL and firewall rule, and the timer ([home-box.md](home-box.md)). It is optional for the platform but required for ysscores: without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
+12. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
+13. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
 
 Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [owner-actions.md](../owner-actions.md).
 
@@ -80,6 +86,9 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | When | Go to |
 | --- | --- |
 | Releasing, or a deploy failed | [deploy-and-rollback.md](deploy-and-rollback.md) |
+| No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
+| A worker on VPS-2 or `worker-media` is unhealthy | [workers.md](workers.md) |
+| The home box is offline, or a logo did not arrive | [home-box.md](home-box.md) |
 | A bad release is serving | [deploy-and-rollback.md "Roll back"](deploy-and-rollback.md#roll-back) |
 | `infra/` or `.github/` changed | [deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra) |
 | `/srv/madar/.env` changed | [deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra), the table |
@@ -105,9 +114,7 @@ Later days add these. Each arrives with the change that builds the part it cover
 
 | Runbook | Covers | From |
 | --- | --- | --- |
-| `imports-and-sources.md` | The source adapters, `import_runs`, source health, restarting a source, the Firestore bridge, the unresolved-names queue | D2–D7 (runbook v0 on D4) |
-| `home-box.md` | The home scrape worker over WireGuard | D2 |
-| `workers.md` | Deploying VPS-2's workers, `beat` and Flower. Nothing deploys to VPS-2 yet. | D2–D3 |
+| `staff-accounts.md` | Admin accounts and roles, password resets, lockouts | D2; TOTP on D16 |
 | `push-notifications.md` | FCM, the outbox and its dispatcher, the admin composer | D3, D6 |
 | `backup-and-restore.md` | Nightly backups, the restore drill, the monthly routine | D3; drill and runbook v1 on D8 |
 | `monitoring.md` | Uptime Kuma, alert routing, the monitoring review | D3, D7, D12 |

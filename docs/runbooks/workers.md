@@ -1,0 +1,120 @@
+# Workers: VPS-2, `worker-media`, and the VPS-2 deploy
+
+The Celery processes of SD §6.1, the one `beat`, and the deploy that keeps them current
+(FR-024, FR-029, research R20 and R22). The schedule each task runs on is in
+[imports-and-sources.md](imports-and-sources.md); the fetch host is in [home-box.md](home-box.md).
+
+## What runs where
+
+| Host | Service | Command | Health |
+| --- | --- | --- | --- |
+| VPS-2 | `worker-imports` | `-Q imports` | `celery inspect ping` |
+| VPS-2 | `worker-scrape` | `-Q scrape` | `celery inspect ping` |
+| VPS-2 | `worker-maintenance` | `-Q maintenance` | `celery inspect ping` |
+| VPS-2 | `beat` | `celery beat` with a fixed `container_name` | `kill -0 $(cat /tmp/celerybeat.pid)` |
+| VPS-1 | `worker-media` | `-Q media`, `-c 1`, 256 MB, `/srv/media` read-write | `celery inspect ping` |
+
+`worker-live`, `worker-notify` and `flower` are defined in `compose/vps2.yml` and are **not**
+started on D2. Exactly one `beat` runs: the fixed `container_name: madar-beat` makes a second one
+fail instead of double-scheduling everything.
+
+`worker-media` exists because importer-found logos must land on VPS-1's disk, where Caddy serves
+them. VPS-2's import workers only queue `adapters.rehost_logo`; they never download media
+themselves. It is deployed with the APIs and rolled back with them.
+
+## Check the fleet
+
+```sh
+# VPS-1
+ssh deploy@10.8.0.1 'docker compose -p madar ps --format "{{.Service}} {{.Status}}"'
+
+# VPS-2 (SSH only from VPS-1)
+ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
+  'docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers ps'
+
+# the queues and what is in flight
+ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
+  'docker compose -p madar exec -T worker-imports celery -A app.workers inspect active'
+```
+
+A worker that is `unhealthy` but `running` usually cannot reach Redis or PostgreSQL: read its log
+(`docker compose -p madar logs --tail 100 worker-imports`) and check `/srv/madar/.env`'s
+`DATABASE_URL`, `DATABASE_URL_SYNC`, `REDIS_URL` and `CELERY_BROKER_URL` — on VPS-2 all of them
+point at VPS-1's VCN address.
+
+`beat` healthy but no runs happening means the schedule lost its tasks or the queue has no
+consumer: check `celery -A app.workers inspect registered` and the `import_runs` table.
+
+## Deploy VPS-2
+
+CI does it: `backend.yml`'s `deploy-vps2` runs after the VPS-1 deploy, reaches VPS-2 through
+`ssh -J deploy@10.8.0.1 deploy@<VPS2_VCN_IP>`, rsyncs `infra/` to `/srv/madar/infra/`, and runs
+`deploy.sh --host vps2 <sha>`. It needs the `VPS2_VCN_IP` repository variable and VPS-2's host key
+in `DEPLOY_KNOWN_HOSTS`.
+
+By hand, from your machine (the token goes on stdin, never as an argument):
+
+```sh
+read -rs GHCR_TOKEN                                  # a token with read:packages
+sha=$(git rev-parse HEAD)
+ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" 'mkdir -p /srv/madar/infra'
+rsync -a --delete -e "ssh -J deploy@10.8.0.1" infra/ deploy@"$VPS2_VCN_IP":/srv/madar/infra/
+printf '%s\n' "$GHCR_TOKEN" \
+  | ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" "/srv/madar/infra/scripts/deploy.sh --host vps2 $sha"
+```
+
+The script pulls the four services, starts them, and waits up to 90 s for each to report healthy.
+Migrations are not run here: VPS-1's deploy runs `alembic upgrade head` first, and this job runs
+after it.
+
+## Roll back VPS-2
+
+The script rolls back by itself when the new tag does not get healthy: it starts
+`/srv/madar/previous_tag` again and exits non-zero. To roll back deliberately, run the same command
+with the earlier tag:
+
+```sh
+cat /srv/madar/previous_tag                        # on VPS-2
+printf '%s\n' "$GHCR_TOKEN" \
+  | ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" "/srv/madar/infra/scripts/deploy.sh --host vps2 <tag>"
+```
+
+Rolling back VPS-2 alone is safe while the schema is expand-only (D2's `0003` adds two nullable
+columns). Never roll VPS-1 back past a migration that dropped something: [database-migrations.md](database-migrations.md).
+
+## `worker-media` and logos
+
+`worker-media` runs on VPS-1 next to `/srv/media`. For a resolved team or competition whose logo is
+empty and whose logo URL is on `MEDIA_REHOST_ALLOWED_HOSTS`:
+
+1. the import worker queues `adapters.rehost_logo(entity, id, url, source)` on `media` after the
+   commit;
+2. the task takes `lock:media:<sha256(url)>` so a duplicate in flight is dropped, downloads with the
+   allowlist and the 5 MB cap, re-encodes to WebP ≤ 512 px, and stores it content-addressed;
+3. it fills `logo_asset_id` only where it is still NULL, writes an `audit_log` row with the source,
+   and bumps `teams` (or `competitions`) and `matches`.
+
+An existing logo is never replaced. A host outside the allowlist, an oversize file or a decode
+failure is logged and dropped with the logo still NULL; network errors and 5xx retry with backoff.
+
+```sh
+ssh deploy@10.8.0.1 'docker compose -p madar logs --tail 100 worker-media'
+ssh deploy@10.8.0.1 'docker compose -p madar exec -T worker-media celery -A app.workers inspect active'
+```
+
+Check the URL the app serves: a rehosted logo answers on `media.<VPS1_IP>.sslip.io`, never on the
+source's host.
+
+## Raw pages and retention
+
+`ingest` writes `/srv/raw/<source>/<YYYY-MM-DD>/<run_id>/` on VPS-2 (mounted read-write into
+`worker-imports` and `worker-maintenance`), and `import_runs.raw_path` points at it. The nightly
+`prune-raw-pages` (03:15 UTC) deletes run folders older than 5 days.
+
+```sh
+ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" 'du -sh /srv/raw/*; find /srv/raw -maxdepth 2 -type d | head'
+```
+
+Disk pressure means the prune is not running: check `worker-maintenance`'s log and
+`celery -A app.workers inspect registered`. Deleting a folder by hand is safe; the pages are
+evidence for a failed run, not a dependency of anything.

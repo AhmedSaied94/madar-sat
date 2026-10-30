@@ -13,7 +13,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
 | [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
-| [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** 4 items (the contract PR, revision `0003`, `backend/app/auth/`, and `ADMIN_JWT_SECRET`) | **Lane B1:** 4 items (the deploy check, the first admin, one account per editor, and the `404` from the internet) | **Lane B1 code done on `d02-b1`; nothing is committed or pushed yet.** T015 (the PR) and T047 (the deploy check) are open. |
+| [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** 4 items (the contract PR, revision `0003`, `backend/app/auth/`, and `ADMIN_JWT_SECRET`) · **Lane B2:** 4 items (the T081–T085 review, VPS-2's `.env` and secrets, the GitHub variables and VPS-2's host key, the home box) | **Lane B1:** 4 items (the deploy check, the first admin, one account per editor, and the `404` from the internet) · **Lane B2:** 5 items (hosts up, the first unattended run, the bridge, a logo, the firewall proof, and the queue decision) | **Both code lanes are done; the hosts, the first admin and the first run are yours.** Lane B2 now builds on B1's `app.workers`, `app.media` and revision `0003`. |
 
 ## Every month
 
@@ -185,6 +185,27 @@ These need Lane B2's host changes (T078, T085).
 - [ ] **One editor account per editor.** The same command with `--role editor`, then give each person their password over a channel you trust. Lane A's T107 needs the first account. → [staff-accounts](runbooks/staff-accounts.md#create-an-account)
 - [ ] **T047 Not on the internet.** `https://api.<ip1>.sslip.io/admin/api/…` answers `404` from outside WireGuard. → [exposure-check](runbooks/exposure-check.md)
 - [ ] **Know the exit.** Deactivating someone, resetting a password and a suspected leak are in one runbook. → [staff-accounts](runbooks/staff-accounts.md#a-token-or-password-may-have-leaked)
+
+### Lane B2: ingestion and hosts
+
+Lane B2 built the ingestion pipeline and the hosts that run it: the `SourceAdapter` base, the ysscores adapter, the read-only Firestore bridge, entity resolution, the upsert pipeline, VPS-2's workers and `beat`, `worker-media` on VPS-1 and the home box ([tasks.md](../specs/002-d02-core-flows/tasks.md#lane-b2), [quickstart](../specs/002-d02-core-flows/quickstart.md#lane-b2-ingestion-and-hosts)).
+
+#### Before merge, in this order
+
+- [ ] **T081–T085 Review the changes only you can approve.** The Redis ACL (`infra/redis/users.acl.tmpl` and the `--aclfile` switch in `vps1.yml`), the firewall rule that limits 6379 on `wg0` to one peer, `deploy.sh --host vps2` with its rollback, the home box's update script and units, and `backend.yml`'s new jobs (`build-amd64`, `deploy-vps2`, `stable`, the second retention step). → [firewall-changes](runbooks/firewall-changes.md#redis-on-wg0-the-home-box), [workers](runbooks/workers.md), [home-box](runbooks/home-box.md)
+- [ ] **T078–T080 VPS-2's `.env` and the new secrets.** In `/srv/madar/.env` on VPS-2: `DATABASE_URL`, `DATABASE_URL_SYNC` and `REDIS_URL` pointing at VPS-1's VCN IP, plus `MEDIA_BASE_URL`, `MEDIA_ROOT`, `MEDIA_REHOST_ALLOWED_HOSTS`, `CORS_ORIGINS`, `ADMIN_JWT_SECRET`, `CELERY_BROKER_URL`, `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY`, `SCRAPE_USER_AGENT`, `YSSCORES_FETCH_QUEUE`, `RAW_ROOT=/srv/raw`. On VPS-1: `REDIS_HOMEBOX_PASSWORD` and `HOME_BOX_WG_IP`. Generate the passwords with `openssl rand -hex 32`. → [secrets](runbooks/secrets.md#where-they-live)
+- [ ] **T082–T085 GitHub.** Add the `VPS2_VCN_IP` repository variable, add VPS-2's host key to `DEPLOY_KNOWN_HOSTS`, and make sure the `deploy` user's public key is authorised on **both** VMs (the VPS-2 deploy jumps through VPS-1). Give the repository the Admin role on the new `madar-backend-amd64` package after its first push.
+- [ ] **T080–T084 The home box.** Join it to `wg0` (`wg-add-peer.sh home-box`), write its `.env` (`GHCR_OWNER`, `REDIS_URL` for the `homebox` user, `SCRAPE_USER_AGENT`, `GHCR_READ_TOKEN` with only `read:packages`), start `worker-scrape`, install the two systemd units, then re-run `bootstrap-vps.sh vps1` so the firewall carries its address. → [home-box](runbooks/home-box.md)
+- [ ] **T083–T084 Review `deploy.sh --host vps2` and `home-box-update.sh` once more on the host**: `bash -n` them, and run `home-box-update.sh --dry-run` on the box (it only validates the Compose file).
+
+#### After merge
+
+- [ ] **T086 Hosts up.** `backend.yml`'s `deploy` and `deploy-vps2` are green, the amd64 image is tagged `stable`, VPS-1 shows `api-public`, `api-admin` and `worker-media` healthy, VPS-2 shows its four services healthy with exactly one `beat`, and the home box shows one healthy `worker-scrape` on `scrape_home`. → [workers](runbooks/workers.md#check-the-fleet)
+- [ ] **T087 The first unattended run.** After the next `ysscores-fixtures` slot: `import_runs` shows a `succeeded` (or a `partial` with its reasons in `run.json`) run, `raw_path` exists on VPS-2, tomorrow's Cairo day has ysscores matches with UTC kickoffs, a second run reports `items_upserted = 0`, and a kickoff you locked in the admin is unchanged (SC-004). → [imports-and-sources](runbooks/imports-and-sources.md#read-what-a-run-did)
+- [ ] **T087 The bridge.** Stop the home box's worker, start a `legacy` run by hand, and see tomorrow's fixtures with their channel links appear without duplicates; the orphan channel id is skipped and logged. → [imports-and-sources](runbooks/imports-and-sources.md#start-a-run-now)
+- [ ] **T087 A logo arrives.** A new ysscores team with a logo on an allowlisted host gets its `logo_asset_id` filled by `worker-media`, and the app serves it from `media.<VPS1_IP>.sslip.io`. → [workers](runbooks/workers.md#worker-media-and-logos)
+- [ ] **T082 Firewall proof.** From a second WireGuard peer (your laptop, not the home box), `nc -vz 10.8.0.1 6379` times out; from the home box, `redis-cli -h 10.8.0.1 -p 6379 --user homebox ping` answers `PONG`. → [firewall-changes](runbooks/firewall-changes.md#redis-on-wg0-the-home-box)
+- [ ] **Decide `YSSCORES_FETCH_QUEUE`.** Keep `scrape_home` (the home box fetches, the default) or switch to `scrape` on VPS-2 if the box is unreliable. → [imports-and-sources](runbooks/imports-and-sources.md#switch-where-ysscores-fetches)
 
 ## Known for later features
 
