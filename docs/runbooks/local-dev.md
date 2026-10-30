@@ -42,6 +42,14 @@ uv run uvicorn app.public:app --host 172.17.0.1 --port 8000
 - `172.17.0.1` is Docker's `docker0` address on Linux. The dev Caddy reaches the host through it (`host.docker.internal:host-gateway`), and it keeps the API off your LAN. Check yours with `ip -4 addr show docker0`.
 - Local media isn't served: `MEDIA_BASE_URL` only shapes the URLs in responses.
 
+The admin API is a second app, and it also needs a signing key of at least 32 bytes (it refuses to start without one) and an account to sign in with ([staff-accounts.md](staff-accounts.md)). Locally any value will do:
+
+```bash
+export ADMIN_JWT_SECRET=$(openssl rand -hex 32)
+uv run python -m app.cli create-admin --email you@example.com --name "اسمك" --role admin   # asks for the password twice
+uv run uvicorn app.admin:app --host 172.17.0.1 --port 8001
+```
+
 ```bash
 curl -s --cacert root.crt https://localhost:8443/healthz | jq .data     # after "The local CA" below
 ```

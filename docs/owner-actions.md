@@ -13,6 +13,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
 | [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
+| [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** 4 items (the contract PR, revision `0003`, `backend/app/auth/`, and `ADMIN_JWT_SECRET`) | **Lane B1:** 4 items (the deploy check, the first admin, one account per editor, and the `404` from the internet) | **Lane B1 code done on `d02-b1`; nothing is committed or pushed yet.** T015 (the PR) and T047 (the deploy check) are open. |
 
 ## Every month
 
@@ -159,6 +160,31 @@ Implemented on 2026-10-29 on `d01-m` in `../madar-m`; T092–T135 are ticked, T1
   - O1: package ID `com.madarsat.app`;
   - O3: drop the card-sharing labels;
   - O10: default satellites Nilesat + Badr, which is due on D1.
+
+## 002 D2 core flows
+
+### Lane B1: admin API
+
+Implemented on 2026-10-30 on `d02-b1` in `../madar-b1-d02` (a worktree off `master`; the main checkout stays on `d02-b2`). Every Lane B1 task is ticked except T015 (the PR) and T047 (the deploy check), which need you ([tasks.md](../specs/002-d02-core-flows/tasks.md#lane-b1), [quickstart](../specs/002-d02-core-flows/quickstart.md#lane-b1-admin-api)). Nothing is committed or pushed yet: say so when you want the contract PR.
+
+What was checked locally: `ruff`, `mypy --strict` and the full `pytest --cov` run are green (coverage 97% on `app/domain` and `app/services`); the committed `admin.json` is what `export-openapi` writes; oasdiff against `contract-v1` reports no breaking change for either document, and `public.json` has no diff; Prism serves all 234 named response examples; the regenerated admin client type-checks, lints and passes its 78 tests. The Flutter generator (`swagger_parser` and `build_runner`) found `master`'s app client already stale: it lacks the `ErrorEnvelope` model that `public.json` has had since the D1 contract fix. That is the only difference (one line in `export.dart` and three new `error_envelope*.dart` files), and it is in the working tree for T015's PR, as CLAUDE.md allows. Nothing was run on a host.
+
+#### Before merge, in this order
+
+- [ ] **T015 The contract PR (merge it first).** It carries `backend/openapi/admin.json`, the regenerated admin client, and B2's morning blockers: the settings, `app.workers`, `app.media` and revision `0003` (T001, T006–T010). Lane B2 and Lane A wait for it. Read the `admin.json` diff against [contracts/admin-api.md](../specs/002-d02-core-flows/contracts/admin-api.md). Once it is on `master`, B2 and A rebase on it.
+- [ ] **T010 Revision `0003`.** Read `backend/alembic/versions/0003_audit_source_link_origin.py` line by line: two nullable columns, one CHECK and one backfill, all additive. → [database-migrations](runbooks/database-migrations.md#revision-0003)
+- [ ] **T031–T034 and T019 `backend/app/auth/` and the role dependency.** Read the password hashing, the tokens, refresh rotation with family revocation, the CSRF check, the login limits, and `require_editor` / `require_admin` with the test that walks every admin route. This is the code that guards the admin API.
+- [ ] **`ADMIN_JWT_SECRET`.** Put a value of at least 32 bytes in `/srv/madar/.env` on VPS-1 (`openssl rand -hex 32`, never committed). `api-admin` refuses to start without it, so a deploy before this leaves it restarting. → [secrets](runbooks/secrets.md#where-they-live)
+
+#### After merge
+
+These need Lane B2's host changes (T078, T085).
+
+- [ ] **T047 The deploy check.** `backend.yml` is green and ran `0003`; over WireGuard, the [quickstart](../specs/002-d02-core-flows/quickstart.md#lane-b1-admin-api) `curl` checks give `expires_in` 900, an `ETag` on a match, and `precondition_required` for a `PATCH` without `If-Match`. → [staff-accounts](runbooks/staff-accounts.md#check-an-account-works)
+- [ ] **T047 The first admin.** In the "Working on VPS-1" shell, `dc run --rm cli create-admin --email … --name … --role admin`, and type the password at the prompt (it asks twice and shows nothing). There is no password argument on purpose. → [staff-accounts](runbooks/staff-accounts.md#create-an-account)
+- [ ] **One editor account per editor.** The same command with `--role editor`, then give each person their password over a channel you trust. Lane A's T107 needs the first account. → [staff-accounts](runbooks/staff-accounts.md#create-an-account)
+- [ ] **T047 Not on the internet.** `https://api.<ip1>.sslip.io/admin/api/…` answers `404` from outside WireGuard. → [exposure-check](runbooks/exposure-check.md)
+- [ ] **Know the exit.** Deactivating someone, resetting a password and a suspected leak are in one runbook. → [staff-accounts](runbooks/staff-accounts.md#a-token-or-password-may-have-leaked)
 
 ## Known for later features
 

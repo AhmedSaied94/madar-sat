@@ -1,6 +1,6 @@
 # Database migrations
 
-The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
+The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
 
 ## How a migration runs in a deploy
 
@@ -48,6 +48,23 @@ IMAGE_TAG=<tag> dc run --rm -T migrate
 4. Fix it in a new commit and merge. The next deploy runs it again.
 
 If a migration did leave partial changes (a non-transactional statement), check what it did in `psql` (`\d <table>`) before you fix it forward. Don't edit `alembic_version` by hand unless the fix needs it, and note what you did in the PR.
+
+## Revision 0003
+
+Added on D2 (`backend/alembic/versions/0003_audit_source_link_origin.py`). Two additive changes, so the release before it keeps running on the new schema:
+
+- `audit_log.source` (nullable, references `sources(name)`) names the importer behind a change. `ck_audit_log_actor` requires a row to have an admin **or** a source, never both (neither is a CLI action).
+- `match_channels.imported_by` (nullable, references `sources(name)`) records which importer first brought a channel link. `NULL` means an editor added it. The migration backfills it with `UPDATE match_channels SET imported_by = source WHERE source <> 'manual'`, in the same transaction as the two `ALTER TABLE`s.
+
+Check it after a deploy, in `psql` ([above](#read-the-state)):
+
+```sql
+SELECT version_num FROM alembic_version;                       -- 0003
+SELECT count(*) FILTER (WHERE source <> 'manual' AND imported_by IS NULL) AS missed   -- must be 0
+FROM match_channels;
+```
+
+`/v1` doesn't read either column. The migration has a downgrade (it drops both columns and the CHECK), meant for a local database: `cd backend && uv run alembic downgrade 0002 && uv run alembic upgrade head`. In production a rollback is the older release on the newer schema, as for every revision ([deploy-and-rollback.md "Roll back"](deploy-and-rollback.md#roll-back)).
 
 ## Writing a migration
 
