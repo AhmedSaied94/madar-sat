@@ -32,7 +32,7 @@ class MatchesPage extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            MadarTopBar.root(onSearch: () => context.go('/search')),
+            MadarTopBar.root(onSearch: () => context.push('/search')),
             Expanded(
               child: switch (matches) {
                 AsyncError(:final error) => EmptyState(
@@ -60,7 +60,8 @@ class MatchesPage extends ConsumerWidget {
                           final match = value[index];
                           return MatchRow(
                             match: match,
-                            onTap: () => context.go('/match/${match.id}'),
+                            // push, not go: the detail needs a stack to pop back to.
+                            onTap: () => context.push('/match/${match.id}'),
                           );
                         },
                       ),

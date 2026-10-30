@@ -2,19 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:madar_sat/core/network/generated/export.dart';
 import 'package:madar_sat/core/router/app_router.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
 import 'package:madar_sat/features/gallery/presentation/gallery_page.dart';
 import 'package:madar_sat/features/matches/data/matches_api.dart';
+import 'package:madar_sat/features/matches/presentation/matches_page.dart';
 import 'package:madar_sat/features/matches/presentation/matches_providers.dart';
 import 'package:madar_sat/features/shell/presentation/stub_page.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
 import '../../fixtures/fake_api_client.dart';
+import '../../fixtures/sample_models.dart';
 
-Widget _app(GoRouter router) => ProviderScope(
+Widget _app(GoRouter router, {List<MatchSummary> rows = const []}) => ProviderScope(
       overrides: [
-        matchesApiProvider.overrideWithValue(MatchesApi(FakeApiClient())),
+        matchesApiProvider.overrideWithValue(MatchesApi(FakeApiClient(rows: rows))),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -84,6 +87,25 @@ void main() {
 
     final icon = tester.widget<Icon>(find.byIcon(Icons.arrow_back));
     expect(icon.icon?.matchTextDirection, isTrue);
+  });
+
+  testWidgets('a match row opens its detail with a back arrow that returns to the list',
+      (tester) async {
+    final router = createAppRouter(includeGallery: false);
+    await tester.pumpWidget(_app(router, rows: [sampleMatch()]));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('الأهلي'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StubPage), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MatchesPage), findsOneWidget);
+    expect(find.byType(StubPage), findsNothing);
   });
 
   testWidgets('the gallery route exists only when enabled', (tester) async {
