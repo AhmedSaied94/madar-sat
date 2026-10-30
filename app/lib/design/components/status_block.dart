@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/format/bidi.dart';
 import '../../core/format/digits.dart';
 import '../../core/format/time.dart';
+import '../../core/theme/madar_line.dart';
 import '../../core/theme/madar_tokens.dart';
 import '../../core/network/generated/models/score.dart';
 import '../../core/network/generated/models/status.dart';
@@ -306,8 +307,8 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
     return FadeTransition(
       opacity: Tween<double>(begin: 0.45, end: 1).animate(_controller),
       child: Container(
-        width: MadarSpace.s1 + 2,
-        height: MadarSpace.s1 + 2,
+        width: MadarSpace.s2,
+        height: MadarSpace.s2,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
@@ -330,12 +331,12 @@ class _DashedOutlinePainter extends CustomPainter {
       );
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
+      ..strokeWidth = MadarLine.hairline
       ..color = color;
     for (final metric in path.computeMetrics()) {
       var distance = 0.0;
-      const dash = 4.0;
-      const gap = 3.0;
+      const dash = MadarSpace.s1;
+      const gap = MadarSpace.s1;
       while (distance < metric.length) {
         canvas.drawPath(metric.extractPath(distance, distance + dash), paint);
         distance += dash + gap;

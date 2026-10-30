@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/madar_line.dart';
 import '../../core/theme/madar_tokens.dart';
 
 /// Sizes drawn in the design package (Logo README): 28, 40 and 64.
@@ -195,7 +196,7 @@ class _ShieldPainter extends CustomPainter {
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
+          ..strokeWidth = MadarLine.hairline
           ..color = edge,
       );
     if (letter.isEmpty) return;

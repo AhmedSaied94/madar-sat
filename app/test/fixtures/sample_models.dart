@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:madar_sat/core/network/generated/export.dart';
 
 /// A fixed instant whose wall clock reads 18:00 on the device (research R18).
@@ -10,6 +12,26 @@ DateTime sampleNow({int hour = 18, int minute = 0}) => DateTime(2026, 10, 28, ho
 /// A kickoff whose local wall clock reads [hour]:[minute], as the UTC instant the API sends.
 DateTime sampleKickoffAt({int hour = 21, int minute = 0}) =>
     sampleNow(hour: hour, minute: minute).toUtc();
+
+/// A `MatchSummary` built the way the app really receives one: a JSON map off the wire, so
+/// `match_date` is a date string that `MatchSummary.fromJson` parses to local midnight
+/// (M-R2-1). A fixture made by hand with `DateTime.utc(...)` would hide a zone bug.
+MatchSummary sampleMatchFromJson({
+  String matchDate = '2026-10-28',
+  String status = 'scheduled',
+  bool nullKickoff = false,
+}) {
+  // `toJson` leaves the nested parts as models, so round-trip through the encoder: this is
+  // the map shape the generated client parses.
+  final json = jsonDecode(jsonEncode(sampleMatch().toJson())) as Map<String, Object?>;
+  json['match_date'] = matchDate;
+  json['status'] = status;
+  if (nullKickoff) {
+    json['kickoff_at'] = null;
+    json['time_tbd'] = true;
+  }
+  return MatchSummary.fromJson(json);
+}
 
 /// Sample models for widget and golden tests. Synthetic, never the real snapshot.
 MatchSummary sampleMatch({
@@ -31,7 +53,7 @@ MatchSummary sampleMatch({
     sport: sport,
     kickoffAt: timeTbd ? null : kickoffAt,
     timeTbd: timeTbd,
-    matchDate: DateTime.utc(2026, 10, 28),
+    matchDate: DateTime(2026, 10, 28),
     status: status,
     estimated: estimated,
     period: null,

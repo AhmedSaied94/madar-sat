@@ -11,13 +11,10 @@ void main() {
   setUp(() => database = AppDatabase(NativeDatabase.memory()));
   tearDown(() => database.close());
 
-  test('a MatchSummary round-trips through drift unchanged', () async {
-    final fixture = sampleMatch(
-      status: Status.live,
-      score: null,
-      minute: '67',
-      estimated: true,
-    );
+  test('a parsed MatchSummary round-trips through drift unchanged', () async {
+    // Built with fromJson, as the client builds it: `match_date` is a date string, which
+    // parses to local midnight, never to a UTC instant (M-R2-1, FR-047).
+    final fixture = sampleMatchFromJson();
 
     await database.replaceDay([fixture]);
     final rows = await database.readAll();
@@ -26,8 +23,19 @@ void main() {
     expect(rows.single, fixture);
   });
 
+  test('the calendar date keeps its day in every zone', () async {
+    await database.replaceDay([sampleMatchFromJson()]);
+
+    final read = (await database.readAll()).single;
+
+    expect(read.matchDate.year, 2026);
+    expect(read.matchDate.month, 10);
+    expect(read.matchDate.day, 28);
+    expect(read.matchDate.isUtc, isFalse);
+  });
+
   test('an unknown status and a null kickoff round-trip unchanged', () async {
-    final fixture = sampleMatch(status: Status.$unknown, timeTbd: true);
+    final fixture = sampleMatchFromJson(status: 'added_on_d2', nullKickoff: true);
 
     await database.replaceDay([fixture]);
     final read = (await database.readAll()).single;
@@ -35,15 +43,15 @@ void main() {
     expect(read, fixture);
     expect(read.status, Status.$unknown);
     expect(read.kickoffAt, isNull);
+    expect(read.timeTbd, isTrue);
   });
 
-  test('timestamps are read back as UTC', () async {
-    await database.replaceDay([sampleMatch()]);
+  test('instants are read back as UTC', () async {
+    await database.replaceDay([sampleMatchFromJson()]);
 
     final read = (await database.readAll()).single;
 
     expect(read.kickoffAt!.isUtc, isTrue);
-    expect(read.matchDate.isUtc, isTrue);
     expect(read.updatedAt.isUtc, isTrue);
   });
 

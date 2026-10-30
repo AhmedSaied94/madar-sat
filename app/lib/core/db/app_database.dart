@@ -23,7 +23,11 @@ class Matches extends Table {
   TextColumn get sport => text()();
   DateTimeColumn get kickoffAt => dateTime().nullable()();
   BoolColumn get timeTbd => boolean()();
-  DateTimeColumn get matchDate => dateTime()();
+
+  /// A calendar date, not an instant: `format: date` in the contract, so it is stored as
+  /// `yyyy-MM-dd` text and read back as the same local `DateTime` the generated
+  /// `fromJson` builds (FR-047).
+  TextColumn get matchDate => text()();
   TextColumn get status => text()();
   BoolColumn get estimated => boolean()();
   TextColumn get period => text().nullable()();
@@ -71,7 +75,7 @@ class AppDatabase extends _$AppDatabase {
         sport: _enumText(match.sport),
         kickoffAt: Value(match.kickoffAt?.toUtc()),
         timeTbd: match.timeTbd,
-        matchDate: match.matchDate.toUtc(),
+        matchDate: _dateText(match.matchDate),
         status: _enumText(match.status),
         estimated: match.estimated,
         period: Value(match.period == null ? null : _enumText(match.period!)),
@@ -88,6 +92,12 @@ class AppDatabase extends _$AppDatabase {
         updatedAt: match.updatedAt.toUtc(),
       );
 
+  /// `yyyy-MM-dd` for a calendar date; a full ISO string would carry a zone the date
+  /// does not have.
+  static String _dateText(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   /// The generated enums keep the contract value in `json` and fall back to `$unknown` for
   /// a value this build does not know; `name` keeps that fallback readable instead of
   /// storing an empty string (FR-047).
@@ -103,7 +113,7 @@ class AppDatabase extends _$AppDatabase {
         sport: Sport.fromJson(row.sport),
         kickoffAt: row.kickoffAt?.toUtc(),
         timeTbd: row.timeTbd,
-        matchDate: row.matchDate.toUtc(),
+        matchDate: DateTime.parse(row.matchDate),
         status: Status.fromJson(row.status),
         estimated: row.estimated,
         period: row.period == null ? null : Period.fromJson(row.period!),

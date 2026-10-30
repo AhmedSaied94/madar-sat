@@ -55,11 +55,11 @@ class $MatchesTable extends Matches with TableInfo<$MatchesTable, StoredMatch> {
     'matchDate',
   );
   @override
-  late final GeneratedColumn<DateTime> matchDate = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<String> matchDate = GeneratedColumn<String>(
     'match_date',
     aliasedName,
     false,
-    type: DriftSqlType.dateTime,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
@@ -380,7 +380,7 @@ class $MatchesTable extends Matches with TableInfo<$MatchesTable, StoredMatch> {
         data['${effectivePrefix}time_tbd'],
       )!,
       matchDate: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
+        DriftSqlType.string,
         data['${effectivePrefix}match_date'],
       )!,
       status: attachedDatabase.typeMapping.read(
@@ -445,7 +445,11 @@ class StoredMatch extends DataClass implements Insertable<StoredMatch> {
   final String sport;
   final DateTime? kickoffAt;
   final bool timeTbd;
-  final DateTime matchDate;
+
+  /// A calendar date, not an instant: `format: date` in the contract, so it is stored as
+  /// `yyyy-MM-dd` text and read back as the same local `DateTime` the generated
+  /// `fromJson` builds (FR-047).
+  final String matchDate;
   final String status;
   final bool estimated;
   final String? period;
@@ -486,7 +490,7 @@ class StoredMatch extends DataClass implements Insertable<StoredMatch> {
       map['kickoff_at'] = Variable<DateTime>(kickoffAt);
     }
     map['time_tbd'] = Variable<bool>(timeTbd);
-    map['match_date'] = Variable<DateTime>(matchDate);
+    map['match_date'] = Variable<String>(matchDate);
     map['status'] = Variable<String>(status);
     map['estimated'] = Variable<bool>(estimated);
     if (!nullToAbsent || period != null) {
@@ -556,7 +560,7 @@ class StoredMatch extends DataClass implements Insertable<StoredMatch> {
       sport: serializer.fromJson<String>(json['sport']),
       kickoffAt: serializer.fromJson<DateTime?>(json['kickoffAt']),
       timeTbd: serializer.fromJson<bool>(json['timeTbd']),
-      matchDate: serializer.fromJson<DateTime>(json['matchDate']),
+      matchDate: serializer.fromJson<String>(json['matchDate']),
       status: serializer.fromJson<String>(json['status']),
       estimated: serializer.fromJson<bool>(json['estimated']),
       period: serializer.fromJson<String?>(json['period']),
@@ -579,7 +583,7 @@ class StoredMatch extends DataClass implements Insertable<StoredMatch> {
       'sport': serializer.toJson<String>(sport),
       'kickoffAt': serializer.toJson<DateTime?>(kickoffAt),
       'timeTbd': serializer.toJson<bool>(timeTbd),
-      'matchDate': serializer.toJson<DateTime>(matchDate),
+      'matchDate': serializer.toJson<String>(matchDate),
       'status': serializer.toJson<String>(status),
       'estimated': serializer.toJson<bool>(estimated),
       'period': serializer.toJson<String?>(period),
@@ -600,7 +604,7 @@ class StoredMatch extends DataClass implements Insertable<StoredMatch> {
     String? sport,
     Value<DateTime?> kickoffAt = const Value.absent(),
     bool? timeTbd,
-    DateTime? matchDate,
+    String? matchDate,
     String? status,
     bool? estimated,
     Value<String?> period = const Value.absent(),
@@ -736,7 +740,7 @@ class MatchesCompanion extends UpdateCompanion<StoredMatch> {
   final Value<String> sport;
   final Value<DateTime?> kickoffAt;
   final Value<bool> timeTbd;
-  final Value<DateTime> matchDate;
+  final Value<String> matchDate;
   final Value<String> status;
   final Value<bool> estimated;
   final Value<String?> period;
@@ -773,7 +777,7 @@ class MatchesCompanion extends UpdateCompanion<StoredMatch> {
     required String sport,
     this.kickoffAt = const Value.absent(),
     required bool timeTbd,
-    required DateTime matchDate,
+    required String matchDate,
     required String status,
     required bool estimated,
     this.period = const Value.absent(),
@@ -801,7 +805,7 @@ class MatchesCompanion extends UpdateCompanion<StoredMatch> {
     Expression<String>? sport,
     Expression<DateTime>? kickoffAt,
     Expression<bool>? timeTbd,
-    Expression<DateTime>? matchDate,
+    Expression<String>? matchDate,
     Expression<String>? status,
     Expression<bool>? estimated,
     Expression<String>? period,
@@ -841,7 +845,7 @@ class MatchesCompanion extends UpdateCompanion<StoredMatch> {
     Value<String>? sport,
     Value<DateTime?>? kickoffAt,
     Value<bool>? timeTbd,
-    Value<DateTime>? matchDate,
+    Value<String>? matchDate,
     Value<String>? status,
     Value<bool>? estimated,
     Value<String?>? period,
@@ -892,7 +896,7 @@ class MatchesCompanion extends UpdateCompanion<StoredMatch> {
       map['time_tbd'] = Variable<bool>(timeTbd.value);
     }
     if (matchDate.present) {
-      map['match_date'] = Variable<DateTime>(matchDate.value);
+      map['match_date'] = Variable<String>(matchDate.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -974,7 +978,7 @@ typedef $$MatchesTableCreateCompanionBuilder = MatchesCompanion Function({
   required String sport,
   Value<DateTime?> kickoffAt,
   required bool timeTbd,
-  required DateTime matchDate,
+  required String matchDate,
   required String status,
   required bool estimated,
   Value<String?> period,
@@ -993,7 +997,7 @@ typedef $$MatchesTableUpdateCompanionBuilder = MatchesCompanion Function({
   Value<String> sport,
   Value<DateTime?> kickoffAt,
   Value<bool> timeTbd,
-  Value<DateTime> matchDate,
+  Value<String> matchDate,
   Value<String> status,
   Value<bool> estimated,
   Value<String?> period,
@@ -1037,7 +1041,7 @@ class $$MatchesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get matchDate => $composableBuilder(
+  ColumnFilters<String> get matchDate => $composableBuilder(
     column: $table.matchDate,
     builder: (column) => ColumnFilters(column),
   );
@@ -1132,7 +1136,7 @@ class $$MatchesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get matchDate => $composableBuilder(
+  ColumnOrderings<String> get matchDate => $composableBuilder(
     column: $table.matchDate,
     builder: (column) => ColumnOrderings(column),
   );
@@ -1219,7 +1223,7 @@ class $$MatchesTableAnnotationComposer
   GeneratedColumn<bool> get timeTbd =>
       $composableBuilder(column: $table.timeTbd, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get matchDate =>
+  GeneratedColumn<String> get matchDate =>
       $composableBuilder(column: $table.matchDate, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
@@ -1302,7 +1306,7 @@ class $$MatchesTableTableManager
                 Value<String> sport = const Value.absent(),
                 Value<DateTime?> kickoffAt = const Value.absent(),
                 Value<bool> timeTbd = const Value.absent(),
-                Value<DateTime> matchDate = const Value.absent(),
+                Value<String> matchDate = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<bool> estimated = const Value.absent(),
                 Value<String?> period = const Value.absent(),
@@ -1340,7 +1344,7 @@ class $$MatchesTableTableManager
                 required String sport,
                 Value<DateTime?> kickoffAt = const Value.absent(),
                 required bool timeTbd,
-                required DateTime matchDate,
+                required String matchDate,
                 required String status,
                 required bool estimated,
                 Value<String?> period = const Value.absent(),

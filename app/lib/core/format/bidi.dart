@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/madar_tokens.dart';
+
 /// Wraps a Unicode LTR isolate (LRI … PDI) so a frequency or a Latin name never
 /// reorders inside Arabic text (constitution III).
 String isolateLtr(String text) => '\u2066$text\u2069';
@@ -64,7 +66,7 @@ class ScoreParts extends StatelessWidget {
       children: [
         LtrIsland(home, style: style),
         Padding(
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 6),
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s1),
           child: Text(separator, style: separatorStyle ?? style),
         ),
         LtrIsland(away, style: style),

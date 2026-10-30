@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/error_copy.dart';
+import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/bottom_nav.dart';
 import '../../../design/components/empty_state.dart';
@@ -50,8 +51,11 @@ class MatchesPage extends ConsumerWidget {
                       )
                     : ListView.separated(
                         itemCount: value.length,
-                        separatorBuilder: (context, index) =>
-                            Divider(height: 1, color: colors.divider),
+                        separatorBuilder: (context, index) => Divider(
+                          height: MadarLine.hairline,
+                          thickness: MadarLine.hairline,
+                          color: colors.divider,
+                        ),
                         itemBuilder: (context, index) {
                           final match = value[index];
                           return MatchRow(

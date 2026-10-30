@@ -24,7 +24,14 @@ scan() {
 
 scan "colours" 'Color\(0x|(?<!Madar)\bColors\.'
 scan "font family" 'fontFamily\s*:'
-scan "numeric literals in layout" '(EdgeInsets(\.|\()|SizedBox\(|BorderRadius\.circular\(|fontSize\s*:)[^;\n]*\b\d+(\.\d+)?\b'
+scan "numeric literals in insets and boxes" \
+  '(EdgeInsets\w*|SizedBox|BorderRadius\.circular|Divider)[^;\n]*\b\d+(\.\d+)?\b'
+scan "numeric literals in text, strokes and rules" \
+  '(fontSize|strokeWidth|thickness)\s*[:=][^;\n]*\b\d+(\.\d+)?\b'
+# A token plus a bare number is the same offence as a bare number; a token *multiplied* is
+# how the app builds a size the scale lacks (40dp = s5 * 2), so those wait for a size group
+# in tokens.json rather than being flagged here.
+scan "arithmetic on a token" 'Madar\w+\.\w+\s*[+-]\s*\d'
 
 if [[ $status -ne 0 ]]; then
   echo "use MadarSpace/MadarRadii/MadarText/MadarColors from core/theme" >&2

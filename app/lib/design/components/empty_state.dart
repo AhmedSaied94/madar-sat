@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/madar_line.dart';
 import '../../core/theme/madar_tokens.dart';
 
 /// What the empty screen is saying: nothing to list, a failed load, or all clear.
@@ -79,7 +80,7 @@ class _OrbitRingsPainter extends CustomPainter {
     final center = size.center(Offset.zero);
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
+      ..strokeWidth = MadarLine.hairline
       ..color = ring;
     for (final factor in [1.0, 1.35, 1.7]) {
       canvas.drawCircle(center, size.shortestSide * 0.5 * factor, paint);
