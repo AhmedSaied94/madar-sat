@@ -39,9 +39,6 @@ jobs:
   build:
     needs: flutter-version
     runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/cirruslabs/flutter:${{ needs.flutter-version.outputs.version }}
-      options: --user root
     defaults:
       run:
         working-directory: app
@@ -49,6 +46,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ needs.flutter-version.outputs.version }}
+          cache: true
       - run: flutter pub get
       - run: flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -57,7 +58,7 @@ jobs:
           path: app/build/web
           if-no-files-found: error
 
-  # Deploys from a plain runner: the Firebase action needs Node, which the Flutter image lacks.
+  # Deploys from its own job so the Firebase action runs without the Flutter toolchain.
   deploy:
     needs: build
     runs-on: ubuntu-24.04

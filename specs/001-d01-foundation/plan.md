@@ -48,7 +48,7 @@ New dependencies are justified under [Complexity Tracking](#complexity-tracking)
 
 - **Backend:** pytest + pytest-asyncio + httpx ASGI transport + schemathesis, against a real PostgreSQL 16 (CI service, local Compose).
 - **Admin:** Vitest + Testing Library + MSW.
-- **App:** flutter_test with goldens rendered in a pinned Linux image.
+- **App:** flutter_test with goldens rendered by a pinned Flutter version on a pinned Linux OS ([R18](research.md#r18-golden-tests)).
 - **Infra:** `docker compose config`, `caddy validate`, shellcheck.
 
 **Target Platform**:

@@ -195,7 +195,8 @@ Phase 0 of [plan.md](plan.md). Each entry is a decision the lanes build on. The 
 
 - **Decision:**
   - **Harness:** Flutter's built-in `matchesGoldenFile`, with the bundled fonts loaded through `FontLoader` in `test/flutter_test_config.dart`. A helper renders each component state in four variants: RTL × {light, dark} × text scale {1.0, 1.3}.
-  - **Where goldens are made:** goldens are generated and checked in one pinned Linux container image (`ghcr.io/cirruslabs/flutter:<pinned>`), locally and in CI, so font rasterization is identical.
+  - **Where goldens are made:** goldens are generated and checked with one pinned Flutter version (`app/.flutter-version`) on one pinned Linux OS, with the bundled fonts, so font rasterization is identical. CI (`app.yml`) installs that version with `subosito/flutter-action` on `ubuntu-24.04`, and its run is the reference.
+  - **Amended 2026-10-30 (review finding M-R1-7):** this decision first named a pinned container image, `ghcr.io/cirruslabs/flutter:<pinned>`. That image has no tag for the pinned 3.47.7, and its newest tag, 3.44.0, ships a Dart below `app/pubspec.yaml`'s `sdk: ^3.13.5`, so the owner approved dropping the container for a pinned runner OS.
 - **Rationale:** No new dependency is needed, and one rendering environment avoids per-machine golden drift.
 - **Alternatives:** `alchemist` (rejected: the built-in API covers this, so the extra dependency buys nothing).
 

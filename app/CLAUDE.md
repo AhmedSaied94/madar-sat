@@ -27,9 +27,7 @@ flutter run -t lib/main_prod.dart --dart-define-from-file=env/prod.json --flavor
 flutter analyze
 ./tool/check_token_copy.sh      # cmp against madar-design/design-system
 ./tool/check_literals.sh        # no raw colours, font families or layout numbers
-flutter test
-docker run --rm -v "$PWD":/app -w /app \
-  ghcr.io/cirruslabs/flutter:$(cat .flutter-version) flutter test
+flutter test                    # goldens included; needs the Flutter in .flutter-version
 flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
 flutter build web --release -t lib/main_prod.dart --dart-define-from-file=env/prod.json
 ```
@@ -71,17 +69,22 @@ verbatim; change `tokens.json`, run `generate_tokens.py`, then re-copy and rerun
 
 ## Goldens
 
-Goldens are generated and checked only in the pinned container image
-(`ghcr.io/cirruslabs/flutter:$(cat .flutter-version)`), so rasterization matches CI:
+Goldens are rendered by the Flutter version in `.flutter-version` with the bundled fonts
+(`test/flutter_test_config.dart`). CI (`app.yml`) checks them with that version on
+`ubuntu-24.04`, and that run is the reference (research R18). Update them only with that
+version, on Linux x64:
 
 ```bash
-docker run --rm -v "$PWD":/app -w /app \
-  ghcr.io/cirruslabs/flutter:$(cat .flutter-version) flutter test --update-goldens
+flutter --version                # must print the version in .flutter-version
+flutter test --update-goldens
 ```
 
-Update a golden only there, never on the host. Every variant is RTL × {light, dark} ×
-text scale {1.0, 1.3}; the harness sets `disableAnimations` so pulses and shimmers are
-static.
+Never update them with another Flutter version, or on macOS or Windows. If CI reports
+pixel diffs that your host doesn't, take the goldens from the CI runner
+(`../docs/runbooks/ci-workflows.md`, "Goldens and the Flutter pin").
+
+Every variant is RTL × {light, dark} × text scale {1.0, 1.3}; the harness sets
+`disableAnimations` so pulses and shimmers are static.
 
 ## D1 scope
 

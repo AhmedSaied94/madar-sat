@@ -119,7 +119,7 @@ cd app
 flutter pub get && dart run build_runner build -d          # swagger_parser client, freezed, drift, riverpod
 ./tool/check_token_copy.sh && ./tool/check_literals.sh
 flutter analyze
-docker run --rm -v "$PWD":/app -w /app ghcr.io/cirruslabs/flutter:$(cat .flutter-version) flutter test   # goldens in the pinned image
+flutter test                                               # goldens included; use the Flutter in .flutter-version (R18)
 flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
 ```
 

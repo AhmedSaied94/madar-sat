@@ -1,5 +1,6 @@
-# app/ checks and the prod-flavor debug APK (FR-025, research R14). Everything runs in the
-# pinned Flutter image, the same one that renders the goldens (R18).
+# app/ checks and the prod-flavor debug APK (FR-025, research R14). Everything runs with the
+# Flutter version pinned in app/.flutter-version on a pinned OS (ubuntu-24.04); that pin plus
+# the bundled fonts is what renders the goldens (R18).
 name: app
 
 on:
@@ -44,9 +45,6 @@ jobs:
   check:
     needs: flutter-version
     runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/cirruslabs/flutter:${{ needs.flutter-version.outputs.version }}
-      options: --user root
     defaults:
       run:
         working-directory: app
@@ -54,10 +52,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ needs.flutter-version.outputs.version }}
+          cache: true
       - name: Install ripgrep (the literal and token checks use rg)
         run: |
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends ripgrep
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ripgrep
       - run: flutter pub get
       - run: flutter analyze
       - run: ./tool/check_token_copy.sh
