@@ -1,17 +1,35 @@
 """The admin ASGI app (``app.admin:app``).
 
-A separate application from ``app.public`` (FR-013). On D1 it only exposes the auth
-stubs (501) and its health route; it is bound to WireGuard ``wg0`` by Compose, never
-mounted on the public app.
+A separate application from ``app.public`` (FR-013): bound to WireGuard ``wg0`` by Compose and
+never mounted on the public app. Every route except ``auth/*`` and ``healthz`` carries the role
+dependency of ``app.auth.roles`` (research R4); a test walks the routes to keep it that way.
 """
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api import errors, health, openapi
-from app.api.admin import auth
+from app.api.admin import auth, channels, commentators, competitions, lists, matches, media, satellites, teams
+from app.auth.tokens import signing_key
 from app.settings import get_settings
+
+DESCRIPTION = (
+    "Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` "
+    "needs `Authorization: Bearer <access_token>` and the role in its row of the contract. "
+    "Writes need `If-Match` with the entity's `ETag`."
+)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Refuse to start without a usable ``ADMIN_JWT_SECRET``. Checked here, not at import, so
+    ``export-openapi`` (CI) can import this module without the secret."""
+    signing_key()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -19,13 +37,25 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Madar Sat Admin API",
         version=settings.contract_version,
-        description="Admin API — reachable only over WireGuard (constitution V).",
+        description=DESCRIPTION,
+        lifespan=lifespan,
     )
 
     app.add_middleware(errors.RequestIdMiddleware)
     errors.register_exception_handlers(app)
 
     app.include_router(auth.router)
+    for router in (
+        matches.router,
+        teams.router,
+        competitions.router,
+        satellites.router,
+        channels.router,
+        commentators.router,
+        lists.router,
+        media.router,
+    ):
+        app.include_router(router)
 
     app.add_api_route("/admin/api/healthz", health.health_endpoint, methods=["GET"], tags=["health"])
     openapi.install(app)

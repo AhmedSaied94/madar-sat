@@ -10,17 +10,11 @@ datasets of the rows that changed are bumped last (data-model "dataset_versions"
 
 from __future__ import annotations
 
-import hashlib
-import io
-import shutil
-import subprocess
-import tempfile
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import select
@@ -42,13 +36,16 @@ from app.domain.arabic import ar_normalize
 from app.etl.report import Report
 from app.etl.snapshot import bump_dataset_versions, run_checks
 from app.etl.types import Snapshot
+from app.media.encode import download_and_encode
+from app.media.errors import RehostError
+from app.media.fetch import MAX_BYTES, fetch_media, host_of
+from app.media.store import get_or_create_asset
 
-MAX_BYTES = 5 * 1024 * 1024  # download cap
-MAX_ASSET_BYTES = 2 * 1024 * 1024  # ck_media_assets_bytes
-TIMEOUT_S = 10.0
+# The fetch, encode and store code lives in app.media (shared with the admin uploads and the
+# logo worker). The names below stay importable from here for the callers that always used them.
+__all__ = ["MAX_BYTES", "RehostError", "Target", "collect_targets", "download_and_encode", "fetch_media", "rehost"]
+
 WORKERS = 4
-MAX_IMAGE_PX = 512
-MAX_AUDIO_S = 30
 
 _PLACEHOLDERS = {"⚽"}  # README rule 6
 _NOT_LISTED = ar_normalize("غير مدرج")
@@ -67,12 +64,6 @@ _TABLES: dict[str, tuple[Any, str | None]] = {
 }
 
 
-class RehostError(Exception):
-    def __init__(self, reason: str) -> None:
-        super().__init__(reason)
-        self.reason = reason
-
-
 @dataclass(frozen=True)
 class Target:
     kind: str  # logo | photo | audio
@@ -80,129 +71,6 @@ class Target:
     table: str  # a _TABLES key
     key: str  # legacy_id, name, or "<match legacy_id>#<slot>" for custom broadcasts
     column: str
-
-
-def _host(url: str) -> str:
-    return urlsplit(url).netloc
-
-
-def fetch_media(client: httpx.Client, url: str, allowed_hosts: list[str]) -> bytes:
-    """Fetch one media URL, enforcing the allowlist, redirect policy and size cap.
-
-    The body is streamed and abandoned as soon as it passes ``MAX_BYTES`` (or when the
-    declared ``Content-Length`` already does), so an oversized file is never fully read.
-    """
-    if _host(url) not in allowed_hosts:
-        raise RehostError("host_not_allowed")
-    body = bytearray()
-    try:
-        with client.stream("GET", url, follow_redirects=False, timeout=TIMEOUT_S) as response:
-            if response.is_redirect:
-                raise RehostError("redirect_off_host")
-            if response.status_code != 200:
-                raise RehostError(f"http_{response.status_code}")
-            declared = response.headers.get("Content-Length", "")
-            if declared.isdigit() and int(declared) > MAX_BYTES:
-                raise RehostError("too_large")
-            for chunk in response.iter_bytes():
-                body.extend(chunk)
-                if len(body) > MAX_BYTES:
-                    raise RehostError("too_large")
-    except httpx.TimeoutException as e:
-        raise RehostError("timeout") from e
-    except httpx.HTTPError as e:
-        raise RehostError("http_error") from e
-    if not body:
-        raise RehostError("decode_error")
-    return bytes(body)
-
-
-def _encode_image(data: bytes) -> tuple[bytes, int, int]:
-    from PIL import Image, ImageOps
-
-    try:
-        with Image.open(io.BytesIO(data)) as src:
-            # Apply the EXIF orientation before the metadata is dropped.
-            img = ImageOps.exif_transpose(src)
-            has_alpha = img.mode in ("RGBA", "LA", "PA") or "transparency" in img.info
-            img = img.convert("RGBA" if has_alpha else "RGB")  # WebP keeps the alpha channel
-            img.thumbnail((MAX_IMAGE_PX, MAX_IMAGE_PX))
-            img.info.clear()  # no EXIF, ICC or XMP in the output
-            out = io.BytesIO()
-            img.save(out, format="WEBP")
-            return out.getvalue(), img.width, img.height
-    except Exception as e:
-        raise RehostError("decode_error") from e
-
-
-def _encode_audio(data: bytes) -> tuple[bytes, int]:
-    ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg is None:
-        raise RehostError("decode_error")
-    with tempfile.TemporaryDirectory(prefix="madar-audio-") as tmp:
-        src, dst = Path(tmp) / "in", Path(tmp) / "out.mp4"
-        src.write_bytes(data)
-        try:
-            subprocess.run(
-                [ffmpeg, "-nostdin", "-y", "-i", str(src), "-t", str(MAX_AUDIO_S), "-vn", "-map_metadata", "-1"]
-                + ["-c:a", "aac", str(dst)],
-                check=True,
-                capture_output=True,
-                timeout=60,
-            )
-        except (subprocess.SubprocessError, OSError) as e:
-            raise RehostError("decode_error") from e
-        encoded = dst.read_bytes() if dst.exists() else b""
-        if not encoded:
-            raise RehostError("decode_error")
-        return encoded, _audio_duration_ms(dst)
-
-
-def _audio_duration_ms(path: Path) -> int:
-    """Duration from ffprobe, clamped into ck_media_assets_audio's 1–30000 ms."""
-    ffprobe = shutil.which("ffprobe")
-    if ffprobe is None:
-        raise RehostError("decode_error")
-    try:
-        out = subprocess.run(
-            [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1"]
-            + [str(path)],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        ).stdout.strip()
-        ms = int(float(out) * 1000)
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        raise RehostError("decode_error") from e
-    return min(max(ms, 1), MAX_AUDIO_S * 1000)
-
-
-def download_and_encode(
-    target: Target, allowed_hosts: list[str], client: httpx.Client
-) -> tuple[dict[str, Any] | None, str | None]:
-    """Download + encode one URL. Returns (fields, failure_reason)."""
-    try:
-        data = fetch_media(client, target.url, allowed_hosts)
-        if target.kind == "audio":
-            encoded, duration = _encode_audio(data)
-            fields: dict[str, Any] = {
-                "kind": "audio",
-                "mime": "audio/mp4",
-                "width": None,
-                "height": None,
-                "duration_ms": duration,
-            }
-        else:
-            encoded, width, height = _encode_image(data)
-            kind = target.kind if target.kind in ("logo", "photo") else "logo"
-            fields = {"kind": kind, "mime": "image/webp", "width": width, "height": height, "duration_ms": None}
-        if len(encoded) > MAX_ASSET_BYTES:
-            raise RehostError("too_large")
-        fields.update(sha256=hashlib.sha256(encoded).hexdigest(), bytes=len(encoded), encoded=encoded)
-        return fields, None
-    except RehostError as e:
-        return None, e.reason
 
 
 # --- Targets (README rule 16) ---------------------------------------------------
@@ -369,7 +237,7 @@ def rehost(
         "hosts": {},
     }
     for url in by_url:
-        media["hosts"][_host(url)] = media["hosts"].get(_host(url), 0) + 1
+        media["hosts"][host_of(url)] = media["hosts"].get(host_of(url), 0) + 1
 
     touched: set[str] = set()
     hosted = _hosted_assets(session, list(by_url))
@@ -401,30 +269,8 @@ def rehost(
                     report.detail("media", url, "skip", reason)
                     continue
 
-                sha = fields["sha256"]
-                asset = session.execute(select(MediaAsset).where(MediaAsset.sha256 == sha)).scalar_one_or_none()
-                if asset is not None:
-                    media["deduplicated"] += 1
-                else:
-                    ext = "webp" if fields["mime"] == "image/webp" else "mp4"
-                    rel_path = f"{fields['kind']}/{sha[:2]}/{sha}.{ext}"
-                    abs_path = root / rel_path
-                    abs_path.parent.mkdir(parents=True, exist_ok=True)
-                    abs_path.write_bytes(fields["encoded"])
-                    asset = MediaAsset(
-                        sha256=sha,
-                        kind=fields["kind"],
-                        path=rel_path,
-                        mime=fields["mime"],
-                        bytes=fields["bytes"],
-                        width=fields["width"],
-                        height=fields["height"],
-                        duration_ms=fields["duration_ms"],
-                        original_url=url,
-                    )
-                    session.add(asset)
-                    session.flush()
-                    media["rehosted"] += 1
+                asset, created = get_or_create_asset(session, root, fields, url)
+                media["rehosted" if created else "deduplicated"] += 1
                 touched |= _apply(session, by_url[url], asset.id)
     finally:
         if own_client:

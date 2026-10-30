@@ -1,8 +1,13 @@
-"""CLI: export-openapi, load-snapshot, rehost-media (stdlib argparse)."""
+"""CLI: export-openapi, load-snapshot, rehost-media, create-admin, set-admin-password, deactivate-admin.
+
+Stdlib argparse. A password is never accepted as an argument (it would land in shell history and
+``ps``): it is read twice from the terminal, or once from stdin with ``--password-stdin``.
+"""
 
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import sys
 from pathlib import Path
@@ -10,6 +15,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
+from app.auth import admins
 from app.db.session import SyncSession
 from app.etl.report import Report
 from app.etl.snapshot import load
@@ -67,11 +73,57 @@ def cmd_rehost_media(args: argparse.Namespace) -> int:
         return _finish(session, report, args.report_dir)
 
 
+def _read_password(args: argparse.Namespace) -> str:
+    """The new password: one line from stdin, or twice from the terminal (no echo)."""
+    if args.password_stdin:
+        return sys.stdin.readline().rstrip("\r\n")
+    first = getpass.getpass("Password: ")
+    if first != getpass.getpass("Repeat password: "):
+        raise admins.AdminError("the two passwords differ")
+    return first
+
+
+def _run_admin_command(args: argparse.Namespace) -> int:
+    """Run one account command in a transaction; a refusal prints its reason (never a password) and exits 1."""
+    try:
+        with SyncSession() as session:
+            if args.command == "create-admin":
+                password = _read_password(args)
+                admin = admins.create_admin(session, args.email, args.name, args.role, password)
+                message = f"created {admin.role} {admin.email} (id {admin.id})"
+            elif args.command == "set-admin-password":
+                password = _read_password(args)
+                admin = admins.set_password(session, args.email, password)
+                message = f"password changed for {admin.email}; every session of theirs has ended"
+            else:
+                admin = admins.deactivate(session, args.email)
+                message = f"deactivated {admin.email}; every session of theirs has ended"
+            session.commit()
+    except admins.AdminError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(message)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("export-openapi", help="Export the public and admin OpenAPI documents")
+
+    p = sub.add_parser("create-admin", help="Create an editor or admin account (prompts for the password twice)")
+    p.add_argument("--email", required=True)
+    p.add_argument("--name", required=True)
+    p.add_argument("--role", required=True, choices=list(admins.ROLES))
+    p.add_argument("--password-stdin", action="store_true", help="read the password once from stdin")
+
+    p = sub.add_parser("set-admin-password", help="Replace an admin's password and end their sessions")
+    p.add_argument("--email", required=True)
+    p.add_argument("--password-stdin", action="store_true", help="read the password once from stdin")
+
+    p = sub.add_parser("deactivate-admin", help="Switch an account off and end their sessions")
+    p.add_argument("--email", required=True)
 
     p = sub.add_parser("load-snapshot", help="Load the snapshot into PostgreSQL")
     p.add_argument("--snapshot-dir", required=True)
@@ -93,6 +145,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_load_snapshot(args)
     if args.command == "rehost-media":
         return cmd_rehost_media(args)
+    if args.command in ("create-admin", "set-admin-password", "deactivate-admin"):
+        return _run_admin_command(args)
     parser.error(f"unknown command {args.command}")
     return 2
 

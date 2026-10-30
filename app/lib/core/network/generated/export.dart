@@ -33,8 +33,8 @@ export 'models/envelope_list_rights_holder.dart';
 export 'models/envelope_list_satellite.dart';
 export 'models/envelope_list_team_search_item.dart';
 export 'models/error_body.dart';
+export 'models/error_envelope.dart';
 export 'models/frequency.dart';
-export 'models/http_validation_error.dart';
 export 'models/headline_entry.dart';
 export 'models/health_status.dart';
 export 'models/kind.dart';
@@ -59,7 +59,6 @@ export 'models/status.dart';
 export 'models/team_detail.dart';
 export 'models/team_ref.dart';
 export 'models/team_search_item.dart';
-export 'models/validation_error.dart';
 export 'models/broadcast_entry_kind.dart';
 // Root client
 export 'madar_api.dart';

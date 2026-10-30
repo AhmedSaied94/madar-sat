@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     # HTTP.
     cors_origins: Annotated[list[str], NoDecode] = Field(alias="CORS_ORIGINS")
     contract_version: str = Field(default="1.0.0", alias="CONTRACT_VERSION")
+
+    # Admin access-token signing key (research R2). Only api-admin needs it, so it is optional
+    # here and checked when that app starts (app.admin lifespan); the public app and the
+    # workers never read it. No default: a deployment without it must not sign anything.
+    admin_jwt_secret: SecretStr | None = Field(default=None, alias="ADMIN_JWT_SECRET")
 
     # Rollback drill only (never used for real traffic).
     healthz_force_fail: bool = Field(default=False, alias="HEALTHZ_FORCE_FAIL")
