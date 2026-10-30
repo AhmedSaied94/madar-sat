@@ -21,7 +21,8 @@ void main() {
           const AccessBadge(access: Access.encrypted, provider: 'beIN'),
           const SatelliteBadge(name: 'نايل سات'),
           const SatelliteBadge(name: 'Nilesat 7.0W'),
-          ChangedBadge(changedAt: DateTime.utc(2026, 10, 20)),
+          // A local wall clock, so the day-month label is the same in every host zone.
+          ChangedBadge(changedAt: DateTime(2026, 10, 20, 12)),
           const CategoryBadge(sports: true),
           const CategoryBadge(sports: false),
           const CountBadge(count: 171),

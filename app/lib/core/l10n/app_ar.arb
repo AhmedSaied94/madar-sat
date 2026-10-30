@@ -57,6 +57,7 @@
   "errorNetwork": "تعذّر الاتصال بالخادم",
   "errorNotImplemented": "هذه الخدمة غير متاحة بعد",
   "vs": "{home} ضد {away}",
+  "minuteShort": "{minute}′",
   "minuteSemantics": "الدقيقة {minute}",
   "scoreSemantics": "النتيجة {home} مقابل {away}",
   "channelOn": "على {channel}",

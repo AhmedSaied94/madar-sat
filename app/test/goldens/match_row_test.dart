@@ -10,7 +10,7 @@ import 'golden_harness.dart';
 
 void main() {
   testWidgets('MatchRow golden variants', (tester) async {
-    final kickoff = DateTime.utc(2026, 10, 28, 18);
+    final kickoff = sampleKickoffAt();
     const score = Score(home: 1, away: 0, homePen: null, awayPen: null);
 
     await goldenVariants(

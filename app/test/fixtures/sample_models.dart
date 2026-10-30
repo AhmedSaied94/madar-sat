@@ -1,5 +1,16 @@
 import 'package:madar_sat/core/network/generated/export.dart';
 
+/// A fixed instant whose wall clock reads 18:00 on the device (research R18).
+///
+/// Fixtures and goldens are built from local wall-clock times, never from a fixed UTC
+/// instant: the widgets render local time, so a UTC fixture would draw a different PNG in
+/// every host zone and fail in the UTC container the goldens are generated in.
+DateTime sampleNow({int hour = 18, int minute = 0}) => DateTime(2026, 10, 28, hour, minute);
+
+/// A kickoff whose local wall clock reads [hour]:[minute], as the UTC instant the API sends.
+DateTime sampleKickoffAt({int hour = 21, int minute = 0}) =>
+    sampleNow(hour: hour, minute: minute).toUtc();
+
 /// Sample models for widget and golden tests. Synthetic, never the real snapshot.
 MatchSummary sampleMatch({
   int id = 48213,
@@ -14,13 +25,13 @@ MatchSummary sampleMatch({
   String home = 'الأهلي',
   String away = 'الزمالك',
 }) {
-  final kickoffAt = kickoff ?? DateTime.utc(2026, 10, 28, 18);
+  final kickoffAt = kickoff ?? sampleKickoffAt();
   return MatchSummary(
     id: id,
     sport: sport,
     kickoffAt: timeTbd ? null : kickoffAt,
     timeTbd: timeTbd,
-    matchDate: DateTime(2026, 10, 28),
+    matchDate: DateTime.utc(2026, 10, 28),
     status: status,
     estimated: estimated,
     period: null,

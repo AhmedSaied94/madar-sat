@@ -187,6 +187,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String minuteShort(Object minute) {
+    return '$minute′';
+  }
+
+  @override
   String minuteSemantics(Object minute) {
     return 'الدقيقة $minute';
   }

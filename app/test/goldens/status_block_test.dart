@@ -4,11 +4,12 @@ import 'package:madar_sat/core/network/generated/export.dart';
 import 'package:madar_sat/core/theme/madar_tokens.dart';
 import 'package:madar_sat/design/components/status_block.dart';
 
+import '../fixtures/sample_models.dart';
 import 'golden_harness.dart';
 
 void main() {
   testWidgets('StatusBlock golden variants', (tester) async {
-    final now = DateTime.utc(2026, 10, 28, 18);
+    final now = sampleNow();
     const score = Score(home: 1, away: 0, homePen: null, awayPen: null);
     const shootout = Score(home: 2, away: 2, homePen: 3, awayPen: 4);
 

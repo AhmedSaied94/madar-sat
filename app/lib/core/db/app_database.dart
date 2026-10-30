@@ -68,13 +68,13 @@ class AppDatabase extends _$AppDatabase {
 
   MatchesCompanion _toRow(MatchSummary match) => MatchesCompanion.insert(
         id: Value(match.id),
-        sport: match.sport.json ?? '',
-        kickoffAt: Value(match.kickoffAt),
+        sport: _enumText(match.sport),
+        kickoffAt: Value(match.kickoffAt?.toUtc()),
         timeTbd: match.timeTbd,
-        matchDate: match.matchDate,
-        status: match.status.json ?? '',
+        matchDate: match.matchDate.toUtc(),
+        status: _enumText(match.status),
         estimated: match.estimated,
-        period: Value(match.period?.json),
+        period: Value(match.period == null ? null : _enumText(match.period!)),
         minute: Value(match.minute),
         scoreJson: Value(match.score == null ? null : jsonEncode(match.score!.toJson())),
         statusLabel: Value(match.statusLabel),
@@ -85,15 +85,25 @@ class AppDatabase extends _$AppDatabase {
         commentatorJson: Value(
           match.commentator == null ? null : jsonEncode(match.commentator!.toJson()),
         ),
-        updatedAt: match.updatedAt,
+        updatedAt: match.updatedAt.toUtc(),
       );
+
+  /// The generated enums keep the contract value in `json` and fall back to `$unknown` for
+  /// a value this build does not know; `name` keeps that fallback readable instead of
+  /// storing an empty string (FR-047).
+  static String _enumText(Object value) => switch (value) {
+        final Sport sport => sport.json ?? sport.name,
+        final Status status => status.json ?? status.name,
+        final Period period => period.json ?? period.name,
+        _ => '$value',
+      };
 
   MatchSummary _fromRow(StoredMatch row) => MatchSummary(
         id: row.id,
         sport: Sport.fromJson(row.sport),
-        kickoffAt: row.kickoffAt,
+        kickoffAt: row.kickoffAt?.toUtc(),
         timeTbd: row.timeTbd,
-        matchDate: row.matchDate,
+        matchDate: row.matchDate.toUtc(),
         status: Status.fromJson(row.status),
         estimated: row.estimated,
         period: row.period == null ? null : Period.fromJson(row.period!),
@@ -115,6 +125,6 @@ class AppDatabase extends _$AppDatabase {
             : CommentatorRef.fromJson(
                 jsonDecode(row.commentatorJson!) as Map<String, Object?>,
               ),
-        updatedAt: row.updatedAt,
+        updatedAt: row.updatedAt.toUtc(),
       );
 }

@@ -56,6 +56,9 @@ void main() {
         DateTime(2026, 4, 24, 12),
         offsetAt: _cairo2026,
       );
+      // Cairo leaves +02 for +03 at 00:00 local on 2026-04-24, so that day has 23 hours.
+      expect(window.from, DateTime.utc(2026, 4, 23, 22));
+      expect(window.to, DateTime.utc(2026, 4, 24, 21));
       expect(window.length, const Duration(hours: 23));
     });
 
@@ -64,6 +67,9 @@ void main() {
         DateTime(2026, 10, 29, 12),
         offsetAt: _cairo2026,
       );
+      // Cairo returns to +02 at 00:00 local on 2026-10-30, so 2026-10-29 has 25 hours.
+      expect(window.from, DateTime.utc(2026, 10, 28, 21));
+      expect(window.to, DateTime.utc(2026, 10, 29, 22));
       expect(window.length, const Duration(hours: 25));
     });
 
@@ -105,8 +111,21 @@ void main() {
   });
 }
 
-Duration _cairo2026(DateTime local) {
-  if (local.isBefore(DateTime(2026, 4, 24))) return const Duration(hours: 2);
-  if (local.isBefore(DateTime(2026, 10, 30))) return const Duration(hours: 3);
+/// Cairo's 2026 offsets, looked up by wall-clock date so the test is host-zone agnostic:
+/// +02, then +03 from 2026-04-24 00:00 (which is skipped) to 2026-10-30 00:00 local, then
+/// +02 again.
+Duration _cairo2026(DateTime wallClock) {
+  final wall = DateTime.utc(
+    wallClock.year,
+    wallClock.month,
+    wallClock.day,
+    wallClock.hour,
+    wallClock.minute,
+  );
+  // The day that starts with the jump begins in +02, so its 00:00 maps back to 22:00Z.
+  final springForward = DateTime.utc(2026, 4, 24);
+  final fallBack = DateTime.utc(2026, 10, 30);
+  if (!wall.isAfter(springForward)) return const Duration(hours: 2);
+  if (wall.isBefore(fallBack)) return const Duration(hours: 3);
   return const Duration(hours: 2);
 }

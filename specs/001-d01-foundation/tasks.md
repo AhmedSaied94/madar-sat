@@ -772,6 +772,18 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
   5. build and serve the web app, and confirm in Chrome DevTools → Network that `/gallery` and the matches route make no request to `fonts.gstatic.com` or `fonts.googleapis.com` ([quickstart.md](quickstart.md#lane-m-app), FR-042). Fix a hit by bundling the missing glyphs, never by allowing the fetch;
   6. attach the screenshots and the Network result to the PR.
 
+### Review fixes (round 1)
+
+Source: [reviews/m-round-1.md](reviews/m-round-1.md). Fix in this order, then re-run `/speckit-review-implementation lane m` as round 2.
+
+- [x] M-R1-1 [US3] Make the dark goldens really dark (FR-044, SC-007). In `app/test/goldens/golden_harness.dart`, apply the theme before each capture (for example `pumpAndSettle`, or pass `themeAnimationDuration: Duration.zero` to `MaterialApp`), and turn off `debugShowCheckedModeBanner`. Regenerate the goldens only in the pinned container (after M-R1-7). Add a check that fails if a light and a dark PNG of the same component and scale are byte-identical.
+- [x] M-R1-2 [US3] Make the goldens and `app/test/core/format/time_test.dart` independent of the host time zone. Render fixed kickoff times by building the widgets from a known local `DateTime` (or injecting the offset), and write the spring-forward test with explicit UTC instants. Prove it by running `TZ=UTC flutter test` and `TZ=Africa/Cairo flutter test`; both exit 0 with no golden changes between them.
+- [x] M-R1-3 [US3] Make the drift `Matches` table round-trip a `MatchSummary` unchanged (FR-047, US3-7). In `app/lib/core/db/app_database.dart`, read `kickoffAt`, `matchDate` and `updatedAt` back as UTC (a converter or `.toUtc()` in `readAll`), and store unknown `sport` and `status` values so they read back as the same value instead of `''`. Change `app/test/core/db/matches_table_test.dart` to `expect(read, fixture)` on the whole object, including a `kickoffAt` of `null` and an unknown status.
+- [x] M-R1-4 [US3] Show the error state without the 38-second retry delay (FR-048). In `app/lib/features/matches/presentation/matches_providers.dart`, give `matchesProvider` a `retry:` that does not retry (or at most one quick retry) so the `error.code` copy appears right away. Add a widget test that overrides the API to throw a `MatchesFailure` and expects the `EmptyState` (error kind) after one `pump()`, not a `Skeleton`.
+- [x] M-R1-5 [US3] Remove missing glyphs from the golden images. Load the icon font in `app/test/flutter_test_config.dart` so icons draw, replace `'$minute′'` in `app/lib/design/components/status_block.dart` (lines 93 and 122) with a localized minute string from `app_ar.arb` or confirm U+2032 exists in the bundled fonts, and regenerate the goldens (in the pinned container). Open one regenerated PNG and confirm no empty squares remain.
+- [x] M-R1-6 [US3] Add `<uses-permission android:name="android.permission.INTERNET"/>` to `app/android/app/src/main/AndroidManifest.xml`. Release signing with the debug key (`app/android/app/build.gradle.kts:56-58`) stays a TODO only if `docs/owner-actions.md` names it as an owner action for the day the first release is cut; add that line there.
+- [x] M-R1-7 [US3] Make `app/.flutter-version` name a Flutter version that has a `ghcr.io/cirruslabs/flutter` image (verify with `docker manifest inspect ghcr.io/cirruslabs/flutter:<version>`) that still builds the app and passes `flutter analyze`. Then update `docs/owner-actions.md` (golden container tag) and `docs/runbooks/ci-workflows.md` if they name the old value. If no such image exists for the Flutter version the project needs, say so in `docs/owner-actions.md` and ask the owner which image to use; do not guess.
+
 ---
 
 ## Done check

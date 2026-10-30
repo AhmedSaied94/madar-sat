@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/format/time.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
+import 'package:madar_sat/design/components/empty_state.dart';
+import 'package:madar_sat/design/components/skeleton.dart';
 import 'package:madar_sat/features/matches/data/matches_api.dart';
 import 'package:madar_sat/features/matches/presentation/matches_page.dart';
 import 'package:madar_sat/features/matches/presentation/matches_providers.dart';
@@ -59,6 +61,20 @@ void main() {
     expect(find.text('تعذّر تحميل البيانات'), findsOneWidget);
     expect(find.text('لم نجد ما تبحث عنه'), findsOneWidget);
     expect(find.textContaining('for logs only'), findsNothing);
+  });
+
+  testWidgets('a failure shows the error state on the first frame, not a skeleton',
+      (tester) async {
+    final api = MatchesApi(
+      FakeApiClient(rows: const [], errorCode: 'internal_error'),
+    );
+    await tester.pumpWidget(_app(api));
+    // One frame: no retry delay may hide the error copy behind the skeleton (FR-048).
+    await tester.pump();
+
+    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byType(Skeleton), findsNothing);
+    expect(find.text('حدث خطأ غير متوقع'), findsOneWidget);
   });
 
   test('the request window is the device local day as UTC bounds', () async {

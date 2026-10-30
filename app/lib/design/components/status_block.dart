@@ -90,7 +90,12 @@ class StatusBlock extends StatelessWidget {
             _scoreOrDash(context),
             const SizedBox(height: MadarSpace.s1),
             _StatusPill(
-              label: minute == null ? l.live : '$minute′',
+              // The minute keeps the design's "67′" in an LTR island: U+2032 is missing
+              // from Changa and IBM Plex Sans Arabic but present in IBM Plex Mono.
+              content: minute == null
+                  ? null
+                  : _minuteLabel(l.minuteShort(minute!), colors.live),
+              label: minute == null ? l.live : null,
               foreground: colors.live,
               background: colors.liveContainer,
               live: true,
@@ -119,7 +124,19 @@ class StatusBlock extends StatelessWidget {
             _scoreOrDash(context),
             const SizedBox(height: MadarSpace.s1),
             _StatusPill(
-              label: minute == null ? l.extraTime : '${minute!}′ · ${l.extraTime}',
+              content: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (minute != null) ...[
+                    _minuteLabel(l.minuteShort(minute!), colors.halftime),
+                    const SizedBox(width: MadarSpace.s1),
+                  ],
+                  Text(
+                    l.extraTime,
+                    style: MadarText.textMicro.copyWith(color: colors.halftime),
+                  ),
+                ],
+              ),
               foreground: colors.halftime,
               background: colors.halftimeContainer,
             ),
@@ -198,16 +215,22 @@ class StatusBlock extends StatelessWidget {
   }
 }
 
+/// A minute as the design draws it: isolated LTR in the mono family, where U+2032 exists.
+Widget _minuteLabel(String text, Color color) =>
+    LtrIsland(text, style: MadarText.readout.copyWith(color: color));
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({
-    required this.label,
+    this.label,
+    this.content,
     required this.foreground,
     required this.background,
     this.dashed = false,
     this.live = false,
-  });
+  }) : assert(label != null || content != null, 'a pill needs a label or content');
 
-  final String label;
+  final String? label;
+  final Widget? content;
   final Color foreground;
   final Color background;
   final bool dashed;
@@ -232,11 +255,12 @@ class _StatusPill extends StatelessWidget {
             const _PulseDot(),
             const SizedBox(width: MadarSpace.s1),
           ],
-          Text(
-            label,
-            style: MadarText.textMicro.copyWith(color: foreground),
-            maxLines: 1,
-          ),
+          content ??
+              Text(
+                label!,
+                style: MadarText.textMicro.copyWith(color: foreground),
+                maxLines: 1,
+              ),
         ],
       ),
     );

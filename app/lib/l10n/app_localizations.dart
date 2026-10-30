@@ -436,6 +436,12 @@ abstract class AppLocalizations {
   /// **'{home} ضد {away}'**
   String vs(Object away, Object home);
 
+  /// No description provided for @minuteShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'{minute}′'**
+  String minuteShort(Object minute);
+
   /// No description provided for @minuteSemantics.
   ///
   /// In ar, this message translates to:

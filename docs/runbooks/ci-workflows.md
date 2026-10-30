@@ -38,9 +38,30 @@ Some failures are expected while the lanes merge for the first time:
 | `infra` `check`, Caddy | `adapting config using caddyfile: …` | Fix `infra/Caddyfile`. The check runs with `example.env`'s values. |
 | `infra` `check`, shellcheck or actionlint | Findings | Fix the script or workflow |
 | `gitleaks` | A finding | [secrets.md "When gitleaks fails"](secrets.md#when-gitleaks-fails) |
-| `app` | Goldens differ | Regenerate them in the pinned image `ghcr.io/cirruslabs/flutter:<app/.flutter-version>`, never on your machine (research R18) |
+| `app` | Goldens differ | Regenerate them in the pinned image `ghcr.io/cirruslabs/flutter:<app/.flutter-version>`, never on your machine (research R18). No image exists for the current pin: see "The golden image is not published" below. |
 | `admin` | `pnpm install --frozen-lockfile` fails | Run `pnpm install` in `admin/` and commit `pnpm-lock.yaml` |
 | `pwa` | Anything | [firebase-hosting.md "If it fails"](firebase-hosting.md#if-it-fails) |
+
+## The golden image is not published
+
+`app/.flutter-version` pins Flutter 3.47.7, and `app.yml` and `pwa.yml` use it as the image
+tag, which is how the goldens stay host-independent (R18). `ghcr.io/cirruslabs/flutter` has
+no `3.47.7` tag — its newest is `3.44.0`, which ships Dart 3.12.0 and cannot resolve
+`app/pubspec.yaml` (`sdk: ^3.13.5`):
+
+```bash
+docker manifest inspect ghcr.io/cirruslabs/flutter:3.47.7     # no such manifest
+docker run --rm ghcr.io/cirruslabs/flutter:3.44.0 flutter --version   # Dart 3.12.0
+docker run --rm -v "$PWD/app":/app -w /app ghcr.io/cirruslabs/flutter:3.44.0 flutter pub get
+```
+
+Until the owner picks one of these, both workflows fail at the image pull and the `app`
+gates can only be run on a host with Flutter 3.47.7:
+
+- wait for the `3.47.7` image, then push any commit to re-run;
+- publish the image from this repo (a one-stage job on `python`/`debian` plus the SDK);
+- approve moving the app to Flutter 3.44.0: lower `sdk:` in `app/pubspec.yaml`, re-resolve
+  `app/pubspec.lock`, then regenerate every golden in that image.
 
 ## Re-running
 
