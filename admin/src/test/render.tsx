@@ -6,13 +6,18 @@ import { MemoryRouter } from 'react-router-dom';
 interface RtlRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
   wrapper?: (props: { children: ReactNode }) => ReactElement;
+  /** `false` when the UI brings its own data router (`<RouterProvider>`, needed for `useBlocker`). */
+  withRouter?: boolean;
 }
 
 /**
  * Renders inside an RTL root (as admin/index.html does) with a fresh query client and a memory router.
  * `wrapper` adds app providers (session, toasts) inside the router.
  */
-export function renderRtl(ui: ReactElement, { route = '/', wrapper: Inner, ...options }: RtlRenderOptions = {}): RenderResult {
+export function renderRtl(
+  ui: ReactElement,
+  { route = '/', wrapper: Inner, withRouter = true, ...options }: RtlRenderOptions = {},
+): RenderResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -21,7 +26,13 @@ export function renderRtl(ui: ReactElement, { route = '/', wrapper: Inner, ...op
     return (
       <div dir="rtl" lang="ar">
         <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={[route]}>{Inner ? <Inner>{children}</Inner> : children}</MemoryRouter>
+          {withRouter ? (
+            <MemoryRouter initialEntries={[route]}>{Inner ? <Inner>{children}</Inner> : children}</MemoryRouter>
+          ) : Inner ? (
+            <Inner>{children}</Inner>
+          ) : (
+            <>{children}</>
+          )}
         </QueryClientProvider>
       </div>
     );

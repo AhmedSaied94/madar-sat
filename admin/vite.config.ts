@@ -34,14 +34,20 @@ function mockExampleStatuses(): Record<string, Record<string, number>> {
   return statuses;
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
   plugins: [react(), devWithoutCsp()],
   define: {
     __MOCK_EXAMPLE_STATUSES__: JSON.stringify(command === 'serve' ? mockExampleStatuses() : {}),
   },
   server: {
     // `pnpm prism` serves backend/openapi/admin.json on :4010 (research R15).
-    proxy: { '/admin/api': 'http://localhost:4010' },
+    // `pnpm dev:wg` (`--mode wg`) proxies to the admin API over WireGuard instead, through Caddy's
+    // root CA: the browser only ever talks to localhost, so the cookies stay host-only and the admin
+    // API needs no CORS (research R23).
+    proxy:
+      mode === 'wg'
+        ? { '/admin/api': { target: 'https://10.8.0.1', secure: true, changeOrigin: false } }
+        : { '/admin/api': 'http://localhost:4010' },
   },
   test: {
     environment: 'jsdom',

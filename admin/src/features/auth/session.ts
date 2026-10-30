@@ -1,10 +1,23 @@
-import { createContext, createElement, useContext, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 
 import type { Session } from '../../api/generated/admin.schemas';
+import { bindSession, endSession, refreshSession, setAccessToken } from '../../api/http';
 
-// The signed-in session (access token + AdminUser), held in React state only: never in
-// localStorage, sessionStorage or a JS-readable cookie (FR-034). A reload signs the editor out
-// until D2 restores the session from the HttpOnly refresh cookie (POST /admin/api/auth/refresh).
+// The signed-in session (access token + AdminUser), held in React state only: the token is never in
+// localStorage, sessionStorage or a JS-readable cookie (FR-034), it lives in the mutator's memory.
+// On load the provider restores the session from the HttpOnly refresh cookie, and it refreshes again
+// at `expires_in − 60 s`, so a working editor is never signed out mid-task (research R24).
 
 interface SessionValue {
   session: Session | null;
@@ -14,17 +27,65 @@ interface SessionValue {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
+/** Refresh this many seconds before the token expires. */
+export const REFRESH_LEAD_S = 60;
+
 export function SessionProvider({ children }: { children: ReactNode }): ReactElement {
   const [session, setSession] = useState<Session | null>(null);
-  const value = useMemo<SessionValue>(
-    () => ({
-      session,
-      signIn: setSession,
-      // D1: the logout route answers 501, so signing out only drops the in-memory session. D2 calls it.
-      signOut: () => setSession(null),
-    }),
-    [session],
-  );
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // One restore on mount; a refresh done inside the mutator (after a 401) lands here too.
+  useEffect(() => {
+    let cancelled = false;
+    bindSession({
+      onRefreshed: (fresh) => {
+        if (!cancelled) setSession(fresh);
+      },
+      onExpired: () => {
+        if (!cancelled) setSession(null);
+      },
+    });
+
+    refreshSession()
+      .then((restored) => {
+        if (!cancelled) setSession(restored);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      bindSession({});
+    };
+  }, []);
+
+  const signIn = useCallback((next: Session) => {
+    setAccessToken(next.access_token);
+    setSession(next);
+  }, []);
+
+  const signOut = useCallback(() => {
+    setSession(null);
+    void endSession();
+  }, []);
+
+  // Refresh a minute before the access token expires, and again for each new one.
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!session) return;
+    timer.current = setTimeout(
+      () => {
+        refreshSession()
+          .then(setSession)
+          .catch(() => setSession(null));
+      },
+      Math.max(session.expires_in - REFRESH_LEAD_S, 0) * 1000,
+    );
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [session]);
+
+  const value = useMemo<SessionValue>(() => ({ session, signIn, signOut }), [session, signIn, signOut]);
   return createElement(SessionContext.Provider, { value }, children);
 }
 

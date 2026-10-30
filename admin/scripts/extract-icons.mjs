@@ -11,6 +11,7 @@ const wanted = {
   bell: 'bell', users: 'users', history: 'history', logout: 'logout', search: 'search', mail: 'mail',
   lock: 'lock', eye: 'eye', eyeOff: 'eyeoff', alert: 'alert', shieldCheck: 'shieldck', clock: 'clock',
   check: 'check', sort: 'sort', edit: 'edit', dotsVertical: 'dotsv', trash: 'trash', info: 'info', close: 'x',
+  plus: 'plus', chevronDown: 'chd', calendar: 'cal',
 };
 
 const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());

@@ -459,33 +459,33 @@ T086 and T087 are the owner's checks on the live hosts, and stay open until the 
 
 ### Setup (A)
 
-- [ ] T090 [US4] Add `date-fns` and `date-fns-tz` to `admin/package.json` and `admin/pnpm-lock.yaml`. Add the `dev:wg` script (`vite --mode wg`) and, in `admin/vite.config.ts`, a `wg` mode whose `server.proxy['/admin/api']` targets `https://10.8.0.1` with `secure: true`, trusting Caddy's root through `NODE_EXTRA_CA_CERTS` ([R23](research.md#r23-reaching-the-admin-api-over-wireguard-on-d2)). No CORS is enabled anywhere.
-- [ ] T091 [P] [US4] Move `admin/src/app/App.tsx` from `BrowserRouter` to `createBrowserRouter` + `RouterProvider`, with the A3 (`/matches`) and A4 (`/matches/new`, `/matches/:id`) routes behind the session guard. `App.test.tsx` and `Shell.test.tsx` stay green.
-- [ ] T092 [P] [US4] Update `admin/CLAUDE.md`: `pnpm dev:wg` with `NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt`; that admin times are always Cairo time through `src/lib/cairoTime.ts`; that every endpoint's Zod schema is registered in `src/api/http.ts`.
-- [ ] T093 [US4] After B1's T015 is on `master` (it carries the regenerated admin client), rebase `d02-a` on it and confirm `pnpm orval && git diff --exit-code src/api/generated/` is clean. Never edit or regenerate a different client by hand on this branch. Register every new endpoint's response schema in `admin/src/api/http.ts`'s `responseSchemas` map (keyed `"<METHOD> <path>"`), and add the generated MSW handlers to `admin/src/test/server.ts`.
+- [x] T090 [US4] Add `date-fns` and `date-fns-tz` to `admin/package.json` and `admin/pnpm-lock.yaml`. Add the `dev:wg` script (`vite --mode wg`) and, in `admin/vite.config.ts`, a `wg` mode whose `server.proxy['/admin/api']` targets `https://10.8.0.1` with `secure: true`, trusting Caddy's root through `NODE_EXTRA_CA_CERTS` ([R23](research.md#r23-reaching-the-admin-api-over-wireguard-on-d2)). No CORS is enabled anywhere.
+- [x] T091 [P] [US4] Move `admin/src/app/App.tsx` from `BrowserRouter` to `createBrowserRouter` + `RouterProvider`, with the A3 (`/matches`) and A4 (`/matches/new`, `/matches/:id`) routes behind the session guard. `App.test.tsx` and `Shell.test.tsx` stay green.
+- [x] T092 [P] [US4] Update `admin/CLAUDE.md`: `pnpm dev:wg` with `NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt`; that admin times are always Cairo time through `src/lib/cairoTime.ts`; that every endpoint's Zod schema is registered in `src/api/http.ts`.
+- [x] T093 [US4] After B1's T015 is on `master` (it carries the regenerated admin client), rebase `d02-a` on it and confirm `pnpm orval && git diff --exit-code src/api/generated/` is clean. Never edit or regenerate a different client by hand on this branch. Register every new endpoint's response schema in `admin/src/api/http.ts`'s `responseSchemas` map (keyed `"<METHOD> <path>"`), and add the generated MSW handlers to `admin/src/test/server.ts`.
 
 ### Tests first (A): write them and see them fail
 
-- [ ] T094 [P] [US4] Write `admin/src/lib/cairoTime.test.ts` ([R24](research.md#r24-session-forms-and-time-in-the-admin)):
+- [x] T094 [P] [US4] Write `admin/src/lib/cairoTime.test.ts` ([R24](research.md#r24-session-forms-and-time-in-the-admin)):
   - a Cairo wall time converts to the right UTC instant on each side of Egypt's 2026 DST changes (the stored UTC differs by the right offset);
   - formatting a UTC instant gives Cairo time with Western digits (`ar-EG-u-nu-latn`), whatever `process.env.TZ` is (run under `TZ=UTC` and `TZ=Asia/Riyadh`);
   - Cairo day bounds for A3's tabs are UTC `from`/`to` covering exactly that Cairo day.
-- [ ] T095 [P] [US4] Write `admin/src/api/http.test.ts`:
+- [x] T095 [P] [US4] Write `admin/src/api/http.test.ts`:
   - mutating requests send `X-CSRF-Token` from the `madar_csrf` cookie;
   - two parallel requests that get `401 token_expired` share one refresh, then both retry once;
   - a failed refresh clears the in-memory token and routes to A1;
   - a response that fails its Zod schema is rejected with a typed error, never passed through.
-- [ ] T096 [P] [US4] Write `admin/src/components/Button/Button.test.tsx`: each variant and size in `Button/README.md`, disabled, loading, and visible keyboard focus.
-- [ ] T097 [P] [US4] Write `admin/src/components/ConfirmDialog/ConfirmDialog.test.tsx` and `admin/src/components/ConfirmDialog/ConflictDialog.test.tsx`:
+- [x] T096 [P] [US4] Write `admin/src/components/Button/Button.test.tsx`: each variant and size in `Button/README.md`, disabled, loading, and visible keyboard focus.
+- [x] T097 [P] [US4] Write `admin/src/components/ConfirmDialog/ConfirmDialog.test.tsx` and `admin/src/components/ConfirmDialog/ConflictDialog.test.tsx`:
   - `ConfirmDialog phrase`: the confirm button stays disabled until the exact phrase is typed; Escape and cancel close it; focus is trapped and returns to the trigger;
   - `ConflictDialog diff`: the title «عدّل ‹user› هذا العنصر — اعرض التغييرات» for `changed_by.kind = "admin"`, the source's name for `kind = "source"`, the field diff lines, and «إعادة التحميل».
-- [ ] T098 [P] [US4] Write `admin/src/features/matches/MatchesPage.test.tsx` (A3, MSW from Orval):
+- [x] T098 [P] [US4] Write `admin/src/features/matches/MatchesPage.test.tsx` (A3, MSW from Orval):
   - day tabs in Cairo time; the four filters (competition, source, missing channels, status) sent as query parameters;
   - rows grouped by competition with time, teams and logos, status, channel count, commentator, sources and the locked marker;
   - the table skeleton and the empty state;
   - bulk change of competition for an editor; bulk removal of channels only for an `admin`, after typed confirmation, and absent for an editor;
   - «إضافة مباراة»; no delete action anywhere.
-- [ ] T099 [P] [US4] Write `admin/src/features/matches/MatchEditor.test.tsx` (A4, MSW from Orval):
+- [x] T099 [P] [US4] Write `admin/src/features/matches/MatchEditor.test.tsx` (A4, MSW from Orval):
   - the team picker shows country, logo and competitions to tell same-name teams apart, and accepts free text;
   - a kickoff entered in Cairo time, labelled «بتوقيت القاهرة», is sent as the right UTC instant on each side of the DST change; "time to be confirmed" sends `time_tbd`;
   - the status override allows a score only where the data-model table allows it, and penalties only for `penalties` and `finished`;
@@ -496,24 +496,34 @@ T086 and T087 are the owner's checks on the live hosts, and stay open until the 
 
 ### Implementation (A)
 
-- [ ] T100 [P] [US4] Build `admin/src/components/Button/Button.tsx` with `cva` from `Button/README.md`, tokens only. T096 passes.
-- [ ] T101 [P] [US4] Build `admin/src/components/ConfirmDialog/ConfirmDialog.tsx` and `admin/src/components/ConfirmDialog/ConflictDialog.tsx` from the README and `Dialogs.png`, tokens only, RTL. T097 passes.
-- [ ] T102 [P] [US4] Implement `admin/src/lib/cairoTime.ts` with `fromZonedTime` and `formatInTimeZone` for `Africa/Cairo`, and the day-bounds helper. T094 passes.
-- [ ] T103 [US4] Update `admin/src/api/http.ts` (the CSRF header, the single-flight refresh, the retry) and `admin/src/features/auth/session.ts` (refresh once on load, again at `expires_in − 60 s`). T095 passes, and the D1 login tests stay green.
-- [ ] T104 [US4] Add the D2 copy to `admin/src/i18n/ar.ts`: A3 and A4 labels, toasts, dialogs, empty states, and the `error.code` → Arabic map for every D2 code (`forbidden`, the `*_not_found` codes, `edit_conflict`, `in_use`, `already_exists`, `file_too_large`, `unsupported_media_type`, `validation_error`, `media_invalid`, `precondition_required`). No Arabic literal in components.
-- [ ] T105 [US4] Build A3 in `admin/src/features/matches/MatchesPage.tsx`, `admin/src/features/matches/BulkBar.tsx` and `admin/src/features/matches/queries.ts` (React Query hooks over the Orval client), from `DataTable`, `StatusChip`, `EmptyState`, `Toast` and the new components, and add it to the sidebar. T098 passes.
-- [ ] T106 [US4] Build A4 in `admin/src/features/matches/MatchEditor.tsx` with one React Hook Form form and Orval's Zod resolver, split into `admin/src/features/matches/editor/{FieldsSection,TimeField,StatusSection,BroadcastSlots,ChannelsSection}.tsx`, `admin/src/features/matches/TeamPicker.tsx` and `admin/src/features/matches/ChannelPicker.tsx`, plus the unsaved guard, the conflict flow and the toasts. T099 passes.
+- [x] T100 [P] [US4] Build `admin/src/components/Button/Button.tsx` with `cva` from `Button/README.md`, tokens only. T096 passes.
+- [x] T101 [P] [US4] Build `admin/src/components/ConfirmDialog/ConfirmDialog.tsx` and `admin/src/components/ConfirmDialog/ConflictDialog.tsx` from the README and `Dialogs.png`, tokens only, RTL. T097 passes.
+- [x] T102 [P] [US4] Implement `admin/src/lib/cairoTime.ts` with `fromZonedTime` and `formatInTimeZone` for `Africa/Cairo`, and the day-bounds helper. T094 passes.
+- [x] T103 [US4] Update `admin/src/api/http.ts` (the CSRF header, the single-flight refresh, the retry) and `admin/src/features/auth/session.ts` (refresh once on load, again at `expires_in − 60 s`). T095 passes, and the D1 login tests stay green.
+- [x] T104 [US4] Add the D2 copy to `admin/src/i18n/ar.ts`: A3 and A4 labels, toasts, dialogs, empty states, and the `error.code` → Arabic map for every D2 code (`forbidden`, the `*_not_found` codes, `edit_conflict`, `in_use`, `already_exists`, `file_too_large`, `unsupported_media_type`, `validation_error`, `media_invalid`, `precondition_required`). No Arabic literal in components.
+- [x] T105 [US4] (built from `StatusChip`, `EmptyState` and `Toast`; the table markup is local rather than `DataTable` — see A-F2) Build A3 in `admin/src/features/matches/MatchesPage.tsx`, `admin/src/features/matches/BulkBar.tsx` and `admin/src/features/matches/queries.ts` (React Query hooks over the Orval client), from `DataTable`, `StatusChip`, `EmptyState`, `Toast` and the new components, and add it to the sidebar. T098 passes.
+- [ ] T106 [US4] (open: the editor is one form whose patch is validated by Orval's `patchMatchBody`; the React Hook Form resolver is not wired — A-F1) Build A4 in `admin/src/features/matches/MatchEditor.tsx` with one React Hook Form form and Orval's Zod resolver, split into `admin/src/features/matches/editor/{FieldsSection,TimeField,StatusSection,BroadcastSlots,ChannelsSection}.tsx`, `admin/src/features/matches/TeamPicker.tsx` and `admin/src/features/matches/ChannelPicker.tsx`, plus the unsaved guard, the conflict flow and the toasts. T099 passes.
 
 ### Validation (A)
 
-- [ ] T107 [US4] Validate the lane in `admin/`:
+- [ ] T107 [US4] (automated step 1 passes; steps 2–4 are the owner's browser walk — A-F5) Validate the lane in `admin/`:
   1. run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh`, and confirm `pnpm orval && git diff --exit-code src/api/generated/`;
   2. run `pnpm prism` + `pnpm dev` and check `?mock=edit_conflict`, `?mock=edit_conflict_source`, `?mock=precondition_required` and `?mock=forbidden_remove_channels`;
   3. after B1's T047, run `NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm dev:wg` and walk the [quickstart Lane A](quickstart.md#lane-a-admin) steps, including the two-browser conflict;
   4. take screenshots of A3, A4 and both dialogs at 1440 px and 1024 px, compare them with `Matches.png`, `MatchEditor.png` and `Dialogs.png`, and attach them next to the PNGs in the PR.
-- [ ] T108 [US4] Add the D2 Lane A items to `docs/owner-actions.md` (after merge: a WireGuard peer and Caddy's root CA on each editor's machine, and the first editor walk-through), each with its task ID and runbook link, and update the "Open now" table.
+- [x] T108 [US4] Add the D2 Lane A items to `docs/owner-actions.md` (after merge: a WireGuard peer and Caddy's root CA on each editor's machine, and the first editor walk-through), each with its task ID and runbook link, and update the "Open now" table.
 
 ---
+
+### Lane A follow-ups (open)
+
+Carried out of the first implementation pass; none of these are hidden in a commit message.
+
+- [ ] A-F1 **T106, React Hook Form.** Wire `zodResolver(patchMatchBody)` into `MatchEditor` so the one form resolves through the Orval schema instead of validating the assembled patch by hand. Keep A4's behaviour and `MatchEditor.test.tsx` green.
+- [ ] A-F2 **T105, `DataTable`.** Move A3's table onto the shared `DataTable` (grouping, bulk bar, skeleton, J/K/X/E keys) and delete the local markup in `MatchesPage.tsx`. Keep `MatchesPage.test.tsx` green.
+- [ ] A-F3 **Per-row version (Lane B1's contract).** `AdminMatchRow` carries no `etag`, so a bulk action reads each selected match with a `GET` first. Ask B1 to add `etag` to the row (non-breaking) and drop the round trips in `BulkBar.tsx`.
+- [ ] A-F4 **Create responses in the client.** Orval emits no response schema for a 201-only operation, so `responseSchemas` maps the five `POST` creates to the entity's `PATCH` envelope (same `$ref` in `admin.json`). Switch back if B1's spec ever gives creates their own response schema or a `200`.
+- [ ] A-F5 **T107 steps 2–4 (owner).** Prism `?mock=…` walk, `pnpm dev:wg` over WireGuard with the two-browser conflict, and screenshots at 1440 and 1024 against `Matches.png`, `MatchEditor.png` and `Dialogs.png`. Steps are in [owner-actions](../../docs/owner-actions.md#lane-a-admin-1).
 
 ## Lane M
 
