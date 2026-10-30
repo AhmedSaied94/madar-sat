@@ -69,6 +69,26 @@ The run's summary prints `PWA preview: <url> (expires …)`. The address has the
 
 **Add that origin to `CORS_ORIGINS`.** The preview is served from its own origin, which isn't one of the two default hostnames, so until you add it the PWA preview can't call the API. Append it in VPS-1's `.env` and recreate the APIs, as in §3.
 
+### Addresses today (project `madar-sat`)
+
+| Address | What it is | State on 2026-10-30 |
+| --- | --- | --- |
+| `https://madar-sat--master-p2bbuj53.web.app` | The `master` preview channel that `pwa.yml` deploys. The suffix stays while the channel lives and changes if it expires and is created again. | Serves the app. The API blocks it (CORS preflight returns 400) until it is in `CORS_ORIGINS`. |
+| `https://madar-sat.web.app`, `https://madar-sat.firebaseapp.com` | The site's live channel. `pwa.yml` never deploys here; the first live deploy arrives with the `web-v*` release on D4. | "Site Not Found" (404). Both are already allowed by the API's CORS. |
+
+The `CORS_ORIGINS` line on VPS-1 should hold all three:
+
+```text
+CORS_ORIGINS=https://madar-sat.web.app,https://madar-sat.firebaseapp.com,https://madar-sat--master-p2bbuj53.web.app
+```
+
+Then recreate the APIs (`dc up -d --force-recreate api-public api-admin`) and check the preflight:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X OPTIONS https://api.130.110.117.215.sslip.io/v1/matches \
+  -H 'Origin: https://madar-sat--master-p2bbuj53.web.app' -H 'Access-Control-Request-Method: GET'   # 200
+```
+
 Check the cache headers:
 
 ```bash
@@ -87,7 +107,9 @@ Files whose names carry a content hash (`.<8+ hex>.`) get `public, max-age=31536
 | 403 `Permission denied to get service firebasehosting.googleapis.com` (`serviceusage.services.get`) | Add **Service Usage Consumer** to the service account (§2) |
 | `… is outside of project directory` | `firebase.json`'s `public` points outside `infra/firebase/`. It must be `public`, which `deploy` fills from the artifact. |
 | `Failed to get Firebase project` | The ID in `.firebaserc` is wrong, or the account has no access to that project |
-| The preview loads but every API call fails with a CORS error | The channel's origin isn't in `CORS_ORIGINS` (§4) |
+| The preview loads but every API call fails with a CORS error. The app shows «تعذّر تحميل البيانات», and the preflight returns `400 Disallowed CORS origin`. | The channel's origin isn't in `CORS_ORIGINS` (§4) |
+| `madar-sat.web.app` shows "Site Not Found" | Nothing is deployed to the live channel yet. `pwa.yml` only deploys the preview channel; use the preview address in §4 until the D4 release. |
+| Chrome's Network tab shows a request to `fonts.gstatic.com` or `www.gstatic.com` | A build without the Roboto alias in `app/pubspec.yaml` or without `--no-web-resources-cdn` (FR-042). Both are in the current `pwa.yml` build. |
 | The channel expired | Run `pwa.yml` again |
 
 Rotating the key: [secrets.md](secrets.md#rotate-the-firebase-service-account-key).
