@@ -165,7 +165,7 @@ Phase 0 of [plan.md](plan.md). Each entry is a decision the lanes build on. The 
   - **Tokens and fonts:** `admin/src/styles/tokens.css`, `admin/src/styles/tokens.ts` and the font files are verbatim copies from `madar-design/design-system/`. A check script fails CI when a copy differs from its source.
   - **Tailwind:** `admin/tailwind.config.ts` maps theme colors to `var(--<token>)`, so `data-theme` switches the theme. Spacing, radii and shadows come from `tokens.ts`. `eslint-plugin-tailwindcss` `no-arbitrary-value` is an error.
   - **Client:** Orval generates React Query hooks plus Zod schemas into `admin/src/api/generated/`, and MSW handlers into `admin/src/api/mocks/` for Vitest.
-  - **Manual mock:** Prism (`@stoplight/prism-cli`) serves `backend/openapi/admin.json`. In dev builds only, a `?mock=<example>` URL parameter adds `Prefer: example=<example>`, so A1's error and lockout states can be shown on demand.
+  - **Manual mock:** Prism (`@stoplight/prism-cli`) serves `backend/openapi/admin.json`. In dev builds only, a `?mock=<example>` URL parameter adds `Prefer: code=<status>, example=<example>` (Prism needs the status to pick a non-2xx example), so A1's error and lockout states can be shown on demand.
 - **Rationale:** Constitution IV says tokens are generated once in the design package, so a copy check keeps them identical without editing the generator. Prism serves the real spec's named examples, and MSW gives deterministic tests.
 
 ## App (Lane M)

@@ -2,7 +2,7 @@
 
 ## Read first
 - `.specify/memory/constitution.md` is the highest authority: principles, quality gates, fixed stack.
-- `CLAUDE.md` is the architecture/UI brief (API envelope, ingestion, cache, push, client and design rules). Read it before planning code and keep it in sync.
+- `CLAUDE.md` is the cross-project brief (API contract, lanes, client UI rules). Each project folder has its own `CLAUDE.md` with its commands and rules (`backend/` holds ingestion, cache, push, status and time; also `admin/`, `app/`, `infra/`, `tools/speckit-extensions/`). Read the root one and the one for the folder you are changing before planning code, and keep them in sync.
 - Source-of-truth order: constitution > `docs/system-design.md` (how) > `docs/product-business.md` (what/copy) > `madar-design/` (look) > `docs/delivery-plan.md` (when/who). Docs win on data and behaviour; the design package wins on visuals. If they conflict or are silent, stop and ask; never invent product behaviour.
 
 ## Current state

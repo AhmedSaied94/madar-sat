@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import errors, health
+from app.api import errors, health, openapi
 from app.api.public import (
     channels,
     commentators,
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(commentators.router)
 
     app.add_api_route("/healthz", health.health_endpoint, methods=["GET"], tags=["health"])
+    openapi.install(app)
 
     return app
 

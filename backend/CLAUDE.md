@@ -3,6 +3,24 @@
 Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
 `app.admin:app` (`/admin/api`, WireGuard only, never mounted on the public app).
 
+## Architecture rules
+
+- **Ingestion** uses scraper adapters in `app/adapters/` (Lane B2: ysscores, LiveSoccerTV,
+  sporteventz, YallaKora, API-Football) that implement the `SourceAdapter` protocol
+  (system-design §6.6): `fetch` → `parse` (pure, tested against saved raw pages) → `normalize`.
+  They upsert by `(source, external_id)`, skip any field listed in `locked_fields` (admin edits
+  win), and send unmatched names to `unresolved_names`.
+- **Cache invalidation** uses `dataset_versions`. Each write bumps a version; Redis cache keys
+  and ETags are built from the versions, so nothing is deleted by key scan. Admin mutations also
+  write `audit_log` and require `If-Match`.
+- **Push** uses an outbox. Producers only insert `notification_outbox` rows with a unique
+  `dedupe_key`. One dispatcher claims rows with `FOR UPDATE SKIP LOCKED`, resolves devices with
+  `SELECT DISTINCT` over `device_follows`, and sends through FCM.
+- **Match status** is an explicit state machine (§6.2.3). A clock-guessed "live" carries
+  `estimated: true` and must never show a score or minute.
+- **Time:** `kickoff_at` is UTC. Source times are Cairo wall-clock and are converted with
+  `AT TIME ZONE 'Africa/Cairo'`.
+
 ## Running locally
 
 ```bash
@@ -10,7 +28,7 @@ docker compose -f ../infra/compose/dev.yml up -d postgres redis   # PostgreSQL 1
 uv run alembic upgrade head
 uv run python -m app.cli load-snapshot --snapshot-dir ~/madar-snapshot --report-dir /tmp
 uv run python -m app.cli rehost-media --snapshot-dir ~/madar-snapshot --report-dir /tmp
-uv run pytest
+uv run ruff check . && uv run mypy --strict app && uv run pytest   # what backend.yml runs
 uv run python -m app.cli export-openapi && git diff --exit-code openapi/
 uv run uvicorn app.public:app --port 8000
 ```

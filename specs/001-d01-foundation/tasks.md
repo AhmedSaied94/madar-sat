@@ -251,7 +251,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
   `app/public.py` never imports `app.api.admin`.
 - [x] T023 [US1] Add the `export-openapi` command to `backend/app/cli.py` (stdlib argparse). It writes `backend/openapi/public.json` and `backend/openapi/admin.json` deterministically (sorted keys, 2-space indent, `info.version = CONTRACT_VERSION`). Commit both files.
-- [ ] T024 [US1] Freeze the contract in `backend/openapi/` by 13:00:
+- [x] T024 [US1] Freeze the contract in `backend/openapi/` by 13:00:
   1. open a PR with `backend/openapi/*.json`;
   2. the owner reviews `git diff` against `specs/001-d01-foundation/contracts/`;
   3. merge, then `git tag -a contract-v1 -m "D1 contract freeze" && git push origin contract-v1`;
@@ -386,7 +386,7 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Validation (B1)
 
-- [ ] T048 [US1] Load the data on VPS-1 with `infra/compose/vps1.yml` (needs B2's T058 and T060):
+- [x] T048 [US1] Load the data on VPS-1 with `infra/compose/vps1.yml` (needs B2's T058 and T060):
   1. Copy the refreshed snapshot to `/srv/snapshot/<date>/` over WireGuard (`scp`). Never commit it.
   2. Run `docker compose -f infra/compose/vps1.yml run --rm api-public python -m app.cli load-snapshot --snapshot-dir /srv/snapshot/<date> --report-dir /srv/reports`, then `rehost-media`.
   3. Confirm `reconciled: true` and `checks.card_sharing_labels_found: 0` (SC-002).
@@ -549,79 +549,79 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Setup (A)
 
-- [ ] T068 [US4] Scaffold `admin/` with Vite, React 18 and TypeScript, using pnpm with `admin/pnpm-lock.yaml`:
+- [X] T068 [US4] Scaffold `admin/` with Vite, React 18 and TypeScript, using pnpm with `admin/pnpm-lock.yaml`:
   - **`admin/tsconfig.json`:** `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`.
   - **Dependencies:** react-router-dom v6, @tanstack/react-query v5, react-hook-form, zod, @hookform/resolvers, axios (the Orval client), clsx, class-variance-authority.
   - **Dev dependencies:** tailwindcss v3, postcss, autoprefixer, vitest, @testing-library/react, @testing-library/user-event, jsdom, msw, orval, @stoplight/prism-cli, eslint + typescript-eslint + eslint-plugin-react-hooks + eslint-plugin-jsx-a11y + eslint-plugin-tailwindcss.
   - **Scripts:** `dev`, `build`, `typecheck`, `lint`, `test`, `orval`, `prism`.
-- [ ] T069 [P] [US4] Write `admin/CLAUDE.md` (delivery-plan §8.2). It covers:
+- [X] T069 [P] [US4] Write `admin/CLAUDE.md` (delivery-plan §8.2). It covers:
   - running Vite with the Prism mock;
   - `pnpm orval` regeneration from `backend/openapi/admin.json` (never hand-edited);
   - token and font copies;
   - looking up `madar-design/admin-react/SCREENS.md`;
   - the RTL, digits and error-code rules;
   - the test commands.
-- [ ] T070 [P] [US4] Copy the design tokens and fonts verbatim into `admin/src/`, and add a copy check ([R15](research.md#r15-tokens-fonts-and-the-generated-client)):
+- [X] T070 [P] [US4] Copy the design tokens and fonts verbatim into `admin/src/`, and add a copy check ([R15](research.md#r15-tokens-fonts-and-the-generated-client)):
   - `madar-design/design-system/tokens.css` → `admin/src/styles/tokens.css`;
   - `madar-design/design-system/code/react/tokens.ts` → `admin/src/styles/tokens.ts`;
   - `madar-design/design-system/fonts/*.ttf` → `admin/src/assets/fonts/`;
   - `admin/scripts/check-token-copy.sh` runs `cmp` on each copy against its source and fails on any difference.
-- [ ] T071 [US4] Set up the theme and the RTL root in `admin/tailwind.config.ts`, `admin/src/styles/global.css` and `admin/index.html`:
+- [X] T071 [US4] Set up the theme and the RTL root in `admin/tailwind.config.ts`, `admin/src/styles/global.css` and `admin/index.html`:
   - **`admin/tailwind.config.ts`:** colors map to `var(--<token>)` for every `ColorToken`; spacing, radii and shadows come from `tokens.ts`; there is no default palette.
   - **`admin/src/styles/global.css`:** `@font-face` for Changa, IBM Plex Sans Arabic and IBM Plex Mono from the bundled files (`font-display: swap`, no external fetch); tabular numerals on numeric text.
   - **`admin/index.html`:** `<html lang="ar" dir="rtl" data-theme="dark">`, with a CSP `meta` of `default-src 'self'`.
-- [ ] T072 [P] [US4] Set up linting and the literal check in `admin/eslint.config.js` and `admin/scripts/check-literals.sh`:
+- [X] T072 [P] [US4] Set up linting and the literal check in `admin/eslint.config.js` and `admin/scripts/check-literals.sh`:
   - `admin/eslint.config.js`: `tailwindcss/no-arbitrary-value: error`, react-hooks rules, jsx-a11y, `@typescript-eslint/no-explicit-any: error`;
   - `admin/scripts/check-literals.sh`, which uses `rg` to fail on hex colors, `\d+px` and `font-family` in `admin/src/` outside `admin/src/styles/` and generated folders (SC-008).
-- [ ] T073 [P] [US4] Write the Arabic copy and the error-code map in `admin/src/i18n/ar.ts`:
+- [X] T073 [P] [US4] Write the Arabic copy and the error-code map in `admin/src/i18n/ar.ts`:
   - A0 sidebar labels, in PB §10 A0 order: لوحة المتابعة، المباريات، الفرق، البطولات، القنوات، الأقمار، حقوق البث، المعلقون، الفيدات، القوائم، المصادر، البلاغات [V2]، الإشعارات، المستخدمون، سجل التغييرات;
   - the A1 copy from the Login board;
   - `errorCopy` mapping `invalid_credentials`, `account_locked`, `validation_error`, `not_implemented`, `csrf_failed`, `refresh_invalid`, `unauthenticated`, `token_expired`, `internal_error` and a network error to Arabic text.
 
   `error.message` is never rendered.
-- [ ] T074 [US4] Create the test setup in `admin/src/test/setup.ts`: Testing Library, jsdom, an MSW server, and a helper that renders inside `dir="rtl"` with the query client and router.
+- [X] T074 [US4] Create the test setup in `admin/src/test/setup.ts`: Testing Library, jsdom, an MSW server, and a helper that renders inside `dir="rtl"` with the query client and router.
 
 ### Tests first (A): write them and see them fail
 
-- [ ] T075 [P] [US4] Write `admin/src/components/SidebarNav/SidebarNav.test.tsx`: every state in `madar-design/design-system/components/SidebarNav/README.md` (active item, grouped sections, attention counts, V2-marked items, signed-in user with role, keyboard focus), plus that it renders in the right-hand position in RTL.
-- [ ] T076 [P] [US4] Write `admin/src/components/DataTable/DataTable.test.tsx`: every state in `madar-design/design-system/components/DataTable/README.md`:
+- [X] T075 [P] [US4] Write `admin/src/components/SidebarNav/SidebarNav.test.tsx`: every state in `madar-design/design-system/components/SidebarNav/README.md` (active item, grouped sections, attention counts, V2-marked items, signed-in user with role, keyboard focus), plus that it renders in the right-hand position in RTL.
+- [X] T076 [P] [US4] Write `admin/src/components/DataTable/DataTable.test.tsx`: every state in `madar-design/design-system/components/DataTable/README.md`:
   - sortable header; competition group rows; row actions on hover/focus;
   - bulk selection with the bulk bar; warning rows; locked-field marker;
   - skeleton and empty states;
   - keyboard navigation.
-- [ ] T077 [P] [US4] Write `admin/src/components/Field/Field.test.tsx`: every state in `madar-design/design-system/components/FormField/README.md` (label, hint, error, locked, disabled, focus), with label/`aria-describedby` wiring.
-- [ ] T078 [P] [US4] Write `admin/src/components/StatusChip/StatusChip.test.tsx`: every `kind` in `madar-design/design-system/components/StatusChip/README.md` (send states, `SourceChip`, `RoleChip`, health). Meaning must never depend on color alone: each has a text or icon label.
-- [ ] T079 [P] [US4] Write `admin/src/components/Toast/Toast.test.tsx`: «تم الحفظ» and «فشل الحفظ» toasts per the toast part of `madar-design/design-system/components/Banner/README.md`, with an `aria-live` region, auto-dismiss timing and reduced motion respected.
-- [ ] T080 [P] [US4] Write `admin/src/features/shell/Shell.test.tsx`: the A0 sidebar on the right with the T073 labels in order, V2 items marked, and the top bar with global search and the signed-in user and role.
-- [ ] T081 [P] [US4] Write `admin/src/features/auth/LoginPage.test.tsx` against the Orval MSW handlers:
+- [X] T077 [P] [US4] Write `admin/src/components/Field/Field.test.tsx`: every state in `madar-design/design-system/components/FormField/README.md` (label, hint, error, locked, disabled, focus), with label/`aria-describedby` wiring.
+- [X] T078 [P] [US4] Write `admin/src/components/StatusChip/StatusChip.test.tsx`: every `kind` in `madar-design/design-system/components/StatusChip/README.md` (send states, `SourceChip`, `RoleChip`, health). Meaning must never depend on color alone: each has a text or icon label.
+- [X] T079 [P] [US4] Write `admin/src/components/Toast/Toast.test.tsx`: «تم الحفظ» and «فشل الحفظ» toasts per the toast part of `madar-design/design-system/components/Banner/README.md`, with an `aria-live` region, auto-dismiss timing and reduced motion respected.
+- [X] T080 [P] [US4] Write `admin/src/features/shell/Shell.test.tsx`: the A0 sidebar on the right with the T073 labels in order, V2 items marked, and the top bar with global search and the signed-in user and role.
+- [X] T081 [P] [US4] Write `admin/src/features/auth/LoginPage.test.tsx` against the Orval MSW handlers:
   - **States:** default, submitting, `invalid_credentials` (shows «إيميل أو باسوورد غلط» and «تبقّت 3 محاولات قبل الإيقاف المؤقت»), `account_locked` (shows «تم إيقاف الدخول مؤقتاً» and a countdown starting at «14:32» from `retry_after_s: 872`), and `validation_error`.
   - **Storage:** after login, `localStorage` and `sessionStorage` hold no token (FR-034).
   - **Error text:** `error.message` text never appears.
 
 ### Client and mock (A, after the 13:00 tag)
 
-- [ ] T082 [US4] Write `admin/orval.config.ts` and generate the client:
+- [X] T082 [US4] Write `admin/orval.config.ts` and generate the client (from `contract-v1` plus `d01-a`'s non-breaking envelope fix to the spec; Orval has no separate mock path, so the MSW handlers are `admin/src/api/generated/admin.msw.ts`):
   - input `../backend/openapi/admin.json` at tag `contract-v1`;
   - output react-query hooks to `admin/src/api/generated/`, with Zod schemas from the same spec, and MSW handlers to `admin/src/api/mocks/`;
   - an axios mutator `admin/src/api/http.ts` with base URL `/admin/api`, `withCredentials`, and every response parsed with Zod;
   - run `pnpm orval` and commit the output, which is never hand-edited.
-- [ ] T083 [US4] Configure the Prism mock in `admin/package.json`, `admin/vite.config.ts` and `admin/src/api/http.ts`:
+- [X] T083 [US4] Configure the Prism mock in `admin/package.json`, `admin/vite.config.ts` and `admin/src/api/http.ts`:
   - a `prism` script: `prism mock ../backend/openapi/admin.json --port 4010`;
   - a Vite dev proxy `/admin/api` → `http://localhost:4010`;
   - in `admin/src/api/http.ts`, only when `import.meta.env.DEV`, a `?mock=<name>` page parameter adds `Prefer: example=<name>` ([contracts/admin-auth-v1.md](contracts/admin-auth-v1.md#prism-usage-lane-a)).
 
 ### Implementation (A)
 
-- [ ] T084 [P] [US4] Implement `admin/src/components/SidebarNav/SidebarNav.tsx` with cva variants and token classes only, until T075 passes.
-- [ ] T085 [P] [US4] Implement `admin/src/components/DataTable/DataTable.tsx` (`columns`, `rows`, `groupBy`, `selectable`; keyboard-first) until T076 passes.
-- [ ] T086 [P] [US4] Implement `admin/src/components/Field/Field.tsx` (`label`, `hint`, `error`, `locked`) until T077 passes.
-- [ ] T087 [P] [US4] Implement `admin/src/components/StatusChip/StatusChip.tsx` (`Stat`, `SourceChip`, `RoleChip`, `HealthChip`) until T078 passes.
-- [ ] T088 [P] [US4] Implement `admin/src/components/Toast/Toast.tsx` and `useToast` until T079 passes.
-- [ ] T089 [US4] Implement the app root and the A0 shell in `admin/src/app/App.tsx` and `admin/src/features/shell/Shell.tsx`:
+- [X] T084 [P] [US4] Implement `admin/src/components/SidebarNav/SidebarNav.tsx` with cva variants and token classes only, until T075 passes.
+- [X] T085 [P] [US4] Implement `admin/src/components/DataTable/DataTable.tsx` (`columns`, `rows`, `groupBy`, `selectable`; keyboard-first) until T076 passes.
+- [X] T086 [P] [US4] Implement `admin/src/components/Field/Field.tsx` (`label`, `hint`, `error`, `locked`) until T077 passes.
+- [X] T087 [P] [US4] Implement `admin/src/components/StatusChip/StatusChip.tsx` (`Stat`, `SourceChip`, `RoleChip`, `HealthChip`) until T078 passes.
+- [X] T088 [P] [US4] Implement `admin/src/components/Toast/Toast.tsx` and `useToast` until T079 passes.
+- [X] T089 [US4] Implement the app root and the A0 shell in `admin/src/app/App.tsx` and `admin/src/features/shell/Shell.tsx`:
   - `admin/src/app/App.tsx`: QueryClient, routes `/login` and `/`, and an auth guard that sends unauthenticated users to `/login`;
   - `admin/src/features/shell/Shell.tsx`: `SidebarNav` on the right, the top bar with search and the user and role, and a content outlet with an `EmptyState` placeholder;
   - run until T080 passes.
-- [ ] T090 [US4] Implement `admin/src/features/auth/LoginPage.tsx`, `admin/src/features/auth/session.ts` and `admin/src/features/auth/useCountdown.ts`, until T081 passes:
+- [X] T090 [US4] Implement `admin/src/features/auth/LoginPage.tsx`, `admin/src/features/auth/session.ts` and `admin/src/features/auth/useCountdown.ts`, until T081 passes:
   - React Hook Form + a Zod schema built from the generated types;
   - submit with the generated login mutation;
   - the session (access token and `AdminUser`) is held in a React context in memory only;

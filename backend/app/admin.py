@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from app.api import errors, health
+from app.api import errors, health, openapi
 from app.api.admin import auth
 from app.settings import get_settings
 
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
 
     app.add_api_route("/admin/api/healthz", health.health_endpoint, methods=["GET"], tags=["health"])
+    openapi.install(app)
 
     return app
 

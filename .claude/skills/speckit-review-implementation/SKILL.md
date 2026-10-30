@@ -176,6 +176,8 @@ spec conformance always gets its own. Give each one its checklist below, its fil
 the paths of `FEATURE_DIR`, the constitution and `CLAUDE.md`, the base and head commits, and the
 finding format of step 5. Ask it to report what it checked as well as what it found. Use a
 specialized reviewer (security, database, Python, TypeScript, Flutter) where your agent has one.
+Run every subagent on a cheaper model than your own (in Claude Code, pass `model: "sonnet"` to the
+Agent tool, even for a specialized reviewer); step 5 re-checks each finding on your model.
 Give subagents the code and the checklist, not your suspicions. Without subagents, review the
 layers yourself, one at a time.
 
