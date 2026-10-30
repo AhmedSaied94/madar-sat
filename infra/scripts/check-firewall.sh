@@ -62,4 +62,28 @@ status=0
 compare IPv4 iptables-save iptables-restore /etc/iptables/rules.v4 || status=1
 echo
 compare IPv6 ip6tables-save ip6tables-restore /etc/iptables/rules.v6 || status=1
+echo
+
+# Two rules matter more than the active/persisted diff (T082, research R21): Redis on wg0 exists
+# only as a DOCKER-USER rule limited to the home box, and no INPUT rule accepts 6379 from every
+# wg0 peer any more.
+check_expectations() {
+  local active=$1 status=0
+  if ! grep -qE '^-A DOCKER-USER ! -s [0-9.]+/32 -p tcp -m conntrack --ctorigdst 10\.8\.0\.1 --ctorigdstport 6379 --ctdir ORIGINAL -j DROP$' <<<"$active"; then
+    echo "IPv4: the home box's Redis rule is missing (DOCKER-USER, 10.8.0.1:6379, one source /32)" >&2
+    status=1
+  fi
+  if grep -qE '^-A INPUT .*-i wg0 .*--dport 6379 .*-j ACCEPT$' <<<"$active"; then
+    echo "IPv4: INPUT still accepts 6379 from every wg0 peer; only the home box may reach Redis" >&2
+    status=1
+  fi
+  if grep -qE '^-A INPUT .*-s 10\.8\.0\.0/.*--dport 6379 .*-j ACCEPT$' <<<"$active"; then
+    echo "IPv4: an INPUT rule accepts 6379 from the whole wg0 subnet" >&2
+    status=1
+  fi
+  ((status == 0)) && echo "IPv4: the home-box Redis rules are in place"
+  return "$status"
+}
+
+check_expectations "$(iptables-save -t filter | normalize)" || status=1
 exit "$status"

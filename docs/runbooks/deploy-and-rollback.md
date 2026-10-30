@@ -1,6 +1,6 @@
 # Deploy and roll back
 
-Deploys are automatic. A push to `master` that changes `backend/**` (or `backend.yml`) builds the image and deploys it to VPS-1. A push that changes only `infra/**` or `.github/**` applies the infra files without a new image. Both go through `infra/scripts/deploy.sh` on VPS-1, over WireGuard. It applies the infra services, records the running tag, pulls, migrates, starts the new release, checks health, and starts the previous release again if the check fails. Background: `specs/001-d01-foundation/research.md` R13, SD §9, and the header of `deploy.sh`.
+Deploys are automatic. A push to `master` that changes `backend/**` (or `backend.yml`) builds the images and deploys them to VPS-1 and then VPS-2. A push that changes only `infra/**` or `.github/**` applies the infra files without a new image. Both go through `infra/scripts/deploy.sh`, over WireGuard. It renders the Redis ACL, applies the infra services, records the running tag, pulls, migrates, starts the new release, checks health, and starts the previous release again if the check fails. Background: `specs/001-d01-foundation/research.md` R13, `specs/002-d02-core-flows/research.md` R20–R22, SD §9, and the header of `deploy.sh`.
 
 ## How a release reaches VPS-1
 
@@ -12,20 +12,23 @@ Deploys are automatic. A push to `master` that changes `backend/**` (or `backend
 | `openapi` | Exports both OpenAPI documents and fails if the committed ones differ; once `contract-v1` exists, fails on a breaking change | Yes |
 | `clients` | Regenerates the admin and app clients and fails if they're stale. Skipped until `admin/orval.config.ts` and `app/swagger_parser.yaml` both exist. | Yes |
 | `build` | Builds `linux/arm64` with buildx and QEMU (or on `vars.ARM_RUNNER`) and pushes `ghcr.io/ahmedsaied94/madar-backend:<sha>` | No |
+| `build-amd64` | Builds `linux/amd64` natively on `ubuntu-24.04` and pushes `ghcr.io/ahmedsaied94/madar-backend-amd64:<sha>`, the home box's image | No |
 | `deploy` | Joins WireGuard as `ci`, pins VPS-1's host key, `rsync`s `infra/` to `/srv/madar/infra/`, then runs `deploy.sh <sha>` as `deploy@10.8.0.1`, with the job's `GITHUB_TOKEN` on stdin | No |
-| `retention` | Keeps the newest 3 `madar-backend` versions in GHCR ("Images in GHCR" below) | No |
+| `deploy-vps2` | Same WireGuard step, then rsyncs `infra/` and runs `deploy.sh --host vps2 <sha>` through `ssh -J deploy@10.8.0.1` ([workers.md](workers.md)) | No |
+| `stable` | Moves `madar-backend-amd64:stable` to `<sha>`, so the home box picks the release only after both hosts are healthy | No |
+| `retention` | Keeps the newest 3 versions of `madar-backend` and of `madar-backend-amd64` in GHCR ("Images in GHCR" below) | No |
 
 `deploy.sh <sha>`, in order:
 
-1. `docker compose up -d --wait caddy postgres redis` (only services whose definition changed are recreated), then `caddy reload`;
+1. renders `/srv/madar/redis/users.acl` from `infra/redis/users.acl.tmpl` and `/srv/madar/.env` (mode 600), then `docker compose up -d --wait caddy postgres redis` (only services whose definition changed are recreated), then `caddy reload`;
 2. writes the running tag to `/srv/madar/previous_tag`;
 3. logs in to GHCR with the token from stdin, pulls, and logs out (also on exit), so no registry credential stays on the host;
 4. runs `alembic upgrade head` in a one-off `migrate` container. If it fails, it stops **before** touching the running APIs;
-5. starts `api-public` and `api-admin` on the new tag;
-6. polls `http://127.0.0.1:8000/healthz` and `http://10.8.0.1:8001/admin/api/healthz` for 60 s;
-7. on success, writes the tag to `/srv/madar/current_tag`. On failure, starts the previous tag again, checks it, and exits non-zero.
+5. starts `api-public`, `api-admin` and `worker-media` on the new tag;
+6. polls `http://127.0.0.1:8000/healthz`, `http://10.8.0.1:8001/admin/api/healthz` and `worker-media`'s healthcheck for 60 s;
+7. on success, writes the tag to `/srv/madar/current_tag`. On failure, starts the previous tag again (the media worker included), checks it, and exits non-zero.
 
-Deploys never overlap. `backend.yml`'s `deploy` and `infra.yml`'s `sync` share the concurrency group `deploy-vps1`, and `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
+Deploys never overlap. `backend.yml`'s `deploy` and `infra.yml`'s `sync` share the concurrency group `deploy-vps1`, `deploy-vps2` has its own group, and `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
 
 The `build` job, under QEMU, is the slow part. SC-005 asks for a change to be live within 15 minutes.
 
@@ -64,7 +67,7 @@ curl -fsS http://127.0.0.1:8000/healthz               # what deploy.sh checks
 | Compose or Caddy errors before `pulling` | Step 1: `caddy`, `postgres` or `redis` didn't come up healthy, or the Caddyfile didn't load | The APIs are unchanged. A failed `caddy reload` keeps the old config. | Read that container's log. Fix in a new commit. |
 | `denied` or `unauthorized` at login or pull | The repository can't read the package | Unchanged | "Images in GHCR" below |
 | `error: migration failed; the running containers were not touched (still <tag>)` | `alembic upgrade head` failed | The previous release | Read the migration's error above it. [database-migrations.md](database-migrations.md#when-a-migration-fails) |
-| `health check failed for <sha>`, then `rolled back to <prev>, which is healthy` | The new release didn't pass `/healthz` within 60 s | The previous release, restored | See below: the failed release's containers are already gone |
+| `health check failed for <sha>`, then `rolled back to <prev>, which is healthy` | The new release didn't pass `/healthz`, or `worker-media` didn't get healthy, within 60 s | The previous release, restored | See below: the failed release's containers are already gone |
 | `error: no previous tag to roll back to; <sha> is left running for inspection` | The very first deploy failed | The failed release | `docker logs --tail 100 madar-api-public-1`, fix, push again |
 | `rolled back to <prev>, but it is not healthy either` | Both releases fail `/healthz` | **Possibly nothing** | **Act now.** `/healthz` returns 503 when PostgreSQL or Redis is down: `dc ps`, then the `postgres` and `redis` logs. Then deploy a known-good tag by hand ("Roll back"). |
 
@@ -83,10 +86,14 @@ IMAGE_TAG=<sha> dc run --rm api-public
 
   ```bash
   docker image ls ghcr.io/ahmedsaied94/madar-backend      # the tag must be on the host
-  IMAGE_TAG=<tag> HEALTHZ_FORCE_FAIL=false dc up -d api-public api-admin
+  IMAGE_TAG=<tag> HEALTHZ_FORCE_FAIL=false dc up -d api-public api-admin worker-media
   curl -fsS http://127.0.0.1:8000/healthz && curl -fsS http://10.8.0.1:8001/admin/api/healthz
+  docker inspect --format '{{.State.Health.Status}}' "$(IMAGE_TAG=<tag> dc ps -q worker-media)"   # healthy
   echo <tag> > /srv/madar/current_tag
   ```
+
+- **VPS-2** rolls back by itself when its four services don't get healthy in 90 s. To do it by hand,
+  run `deploy.sh --host vps2 <tag>` with the earlier tag: [workers.md "Roll back VPS-2"](workers.md#roll-back-vps-2).
 
   If the tag isn't on the host, pull it first. The package is private, so log in with a token that has `read:packages`, from your machine:
 
@@ -108,6 +115,7 @@ The rollback drill (SC-005, T066). It deploys `master`'s newest commit with `HEA
 
 ```bash
 ssh ubuntu@10.8.0.1 cat /srv/madar/current_tag
+ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118 cat /srv/madar/current_tag   # VPS-2 comes back too
 git fetch origin && git rev-parse origin/master
 ```
 
@@ -200,20 +208,22 @@ Do this when `DEPLOY_SSH_KEY` may have leaked, or on a schedule.
 
 If the key leaked, rotate the CI peer too: whoever has both can log in as `deploy`, which can run Docker.
 
-`DEPLOY_KNOWN_HOSTS` changes only if VPS-1's SSH host key changes, which means a rebuilt VM. Pin the new one as in provision-host.md §8.
+`DEPLOY_KNOWN_HOSTS` holds VPS-1's host key **and** VPS-2's (the `deploy-vps2` job jumps through VPS-1). It changes if either VM is rebuilt: pin both, as in provision-host.md §8. `DEPLOY_SSH_KEY`'s public half must be in `deploy`'s `authorized_keys` on both hosts.
 
 ## Updating the edge or infra
 
-A merge to `master` that changes `infra/**`, `.github/workflows/**` or `.github/actions/**` runs `infra.yml`: the checks, then the `sync` job. `sync` joins WireGuard, `rsync`s `infra/` to `/srv/madar/infra/`, and runs `deploy.sh --infra-only`, which is step 1 above: `compose up -d` for `caddy`, `postgres` and `redis` (only changed ones are recreated; recreating PostgreSQL or Redis is a short outage), then `caddy reload`. It reads no token and doesn't touch the APIs.
+A merge to `master` that changes `infra/**`, `.github/workflows/**` or `.github/actions/**` runs `infra.yml`: the checks (Compose validation for all four files, the home-box units, the ACL placeholders, Caddy, shellcheck, actionlint), then the `sync` job. `sync` joins WireGuard, `rsync`s `infra/` to `/srv/madar/infra/`, and runs `deploy.sh --infra-only`, which is step 1 above: it renders the Redis ACL, runs `compose up -d` for `caddy`, `postgres` and `redis` (only changed ones are recreated; recreating PostgreSQL or Redis is a short outage), then `caddy reload`. It reads no token and doesn't touch the APIs.
+
+VPS-2's copy of `infra/` is synced by `backend.yml`'s `deploy-vps2`, which runs after every backend deploy. An infra-only change reaches VPS-2 on the next backend push, or by running `deploy.sh --host vps2 <current tag>` by hand ([workers.md](workers.md#deploy-vps-2)). The home box takes only the image and its own `compose/home-box.yml`, which it keeps in its checkout.
 
 What it does **not** apply:
 
 | Change | Applied by |
 | --- | --- |
-| `api-public`, `api-admin`, `migrate` or `cli` in `vps1.yml` | The next backend deploy. To apply it now, in the "Working on VPS-1" shell: `dc up -d api-public api-admin`. |
+| `api-public`, `api-admin`, `worker-media`, `migrate` or `cli` in `vps1.yml` | The next backend deploy. To apply it now, in the "Working on VPS-1" shell: `dc up -d api-public api-admin worker-media`. |
 | `/srv/madar/.env` | Nothing: it lives only on the host. Recreate the services that read it: `dc up -d --force-recreate api-public api-admin`, and `caddy` for `VPS1_IP`, `ACME_EMAIL` or `FIREBASE_PROJECT_ID`. |
 | `infra/firewall/`, `infra/wireguard/`, the sshd drop-in, Docker's start order | `bootstrap-vps.sh` only: [firewall-changes.md](firewall-changes.md) |
-| Anything on VPS-2 | Nothing syncs to VPS-2 yet. Copy `infra/` by hand ([firewall-changes.md §2](firewall-changes.md#2-apply-it-after-the-merge)). |
+| `vps2.yml`, or `infra/` on VPS-2 | `backend.yml`'s `deploy-vps2` on the next backend push, or `deploy.sh --host vps2 <tag>` by hand ([workers.md](workers.md)). |
 
 If CI can't sync (WireGuard or the deploy key is broken), apply it by hand from your machine, over WireGuard:
 

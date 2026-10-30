@@ -1,0 +1,37 @@
+# The owner's x86-64 home box: one scrape worker, nothing else (FR-028, research R21).
+#
+# ysscores blocks datacenter IPs, so the fetch runs here and only the parse result leaves the box,
+# as a versioned ScrapeResult queued on Redis (VPS-1, over WireGuard). The box holds no database
+# credentials and no media disk; it reaches `10.8.0.1:6379` as the `homebox` Redis user, whose ACL
+# in infra/redis/users.acl.tmpl allows only `celery:*`, `ratelimit:*` and `lock:fetch:*`.
+#
+# Run from /srv/madar on the box (scripts/home-box-update.sh does it every 10 minutes):
+#   docker compose --env-file /srv/madar/.env -f home-box.yml up -d
+name: madar-home-box
+
+services:
+  worker-scrape:
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend-amd64:stable
+    platform: linux/amd64
+    restart: unless-stopped
+    # Only what the fetch path needs: the broker (with the homebox user) and the user agent.
+    env_file: ${MADAR_ENV_FILE:-/srv/madar/.env}
+    environment:
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL to redis://homebox:<password>@10.8.0.1:6379/0}
+      SCRAPE_USER_AGENT: ${SCRAPE_USER_AGENT:?set SCRAPE_USER_AGENT}
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape_home", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers inspect ping --destination \"worker@$$HOSTNAME\" --timeout 10 >/dev/null"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 30s

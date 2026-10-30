@@ -6,8 +6,8 @@ One workflow per folder, each filtered to its own paths, plus `gitleaks` on ever
 
 | Workflow | Runs on | Jobs | Secrets |
 | --- | --- | --- | --- |
-| `backend.yml` | Pushes to `master` and PRs that change `backend/**` or the workflow; by hand, with `break_healthcheck` | `test`, `openapi`, `clients`; on `master` also `build`, `deploy`, `retention` | `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` |
-| `infra.yml` | Pushes to `master` and PRs that change `infra/**`, `.github/workflows/**` or `.github/actions/**` | `check`: `docker compose config` for the three Compose files, `caddy validate`, shellcheck, actionlint. On a `master` push also `sync`. | The same three, for `sync` |
+| `backend.yml` | Pushes to `master` and PRs that change `backend/**` or the workflow; by hand, with `break_healthcheck` | `test`, `openapi`, `clients`; on `master` also `build`, `build-amd64`, `deploy`, `deploy-vps2`, `stable`, `retention` | `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, and the `VPS2_VCN_IP` variable |
+| `infra.yml` | Pushes to `master` and PRs that change `infra/**`, `.github/workflows/**` or `.github/actions/**` | `check`: `docker compose config` for the four Compose files, `systemd-analyze verify` on the home-box units, the Redis ACL placeholder check, `caddy validate`, shellcheck, actionlint. On a `master` push also `sync`. | The same three, for `sync` |
 | `gitleaks.yml` | Every push to any branch, and every PR | `scan`: the full history, redacted | None |
 | `app.yml` | Pushes to `master` and PRs that change `app/**`, `backend/openapi/public.json`, `madar-design/**` or the workflow | `check`: `flutter analyze`, the token-copy and literal checks, `flutter test` (goldens), the `prod` debug APK as the artifact `app-prod-debug.apk` | None |
 | `app-release.yml` | A pushed tag `app-v<major>.<minor>.<patch>` | `aab`: writes the upload keystore from the secrets, builds the signed `prod` AAB (`--build-name` from the tag, `--build-number` = run number), checks it is signed by the `Madar Sat` upload key and not the debug key, uploads `app-prod-release.aab`. Play upload is not wired. | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` |
@@ -33,11 +33,16 @@ Some failures are expected while the lanes merge for the first time:
 | `backend` `openapi` | "No breaking change against contract-v1" fails | The change breaks the frozen contract (FR-014). Make it additive. |
 | `backend` `clients` | "The generated clients are stale" | Regenerate both and commit them in the contract-change PR (D14): `cd admin && pnpm install && pnpm orval`, then `cd app && flutter pub get && dart run swagger_parser && dart run build_runner build -d` |
 | `backend` `build` | Very slow, or Actions minutes run out | QEMU arm64 builds: [deploy-and-rollback.md "One-time setup"](deploy-and-rollback.md#one-time-setup) step 2 |
+| `backend` `build-amd64` | Fails where `build` passes | It builds natively on `ubuntu-24.04`; read the build log, not the QEMU path. The home box then pulls `madar-backend-amd64:stable` ([home-box.md](home-box.md#updates)) |
 | `backend` `deploy`, `infra` `sync` | Anything | [deploy-and-rollback.md "Reading a failed deploy"](deploy-and-rollback.md#reading-a-failed-deploy) |
+| `backend` `deploy-vps2` | "set the VPS2_VCN_IP repository variable", or a jump/known-host failure | Set the variable; add VPS-2's host key to `DEPLOY_KNOWN_HOSTS` and the `deploy` user's key to VPS-2 ([workers.md](workers.md#deploy-vps-2)) |
+| `backend` `stable` | `imagetools create` 403 or 404 | The repository lacks the Admin role on `madar-backend-amd64` ([deploy-and-rollback.md "Images in GHCR"](deploy-and-rollback.md#images-in-ghcr)) |
 | `backend` `retention` | 403 or 404 | The repository lacks the Admin role on the package ([deploy-and-rollback.md "Images in GHCR"](deploy-and-rollback.md#images-in-ghcr)) |
 | `infra` `check`, Compose | `required variable … is missing a value` | Add the variable to `infra/compose/example.env`, which must list every variable the Compose files use |
 | `infra` `check`, Caddy | `adapting config using caddyfile: …` | Fix `infra/Caddyfile`. The check runs with `example.env`'s values. |
 | `infra` `check`, shellcheck or actionlint | Findings | Fix the script or workflow |
+| `infra` `check`, home-box units | `systemd-analyze verify` reports a directive | Fix `infra/scripts/home-box-update.service` or `.timer` |
+| `infra` `check`, ACL | A literal password in the template | Use a `${...}` placeholder; `deploy.sh` fills it from `/srv/madar/.env` ([firewall-changes.md](firewall-changes.md#redis-on-wg0-the-home-box)) |
 | `gitleaks` | A finding | [secrets.md "When gitleaks fails"](secrets.md#when-gitleaks-fails) |
 | `app` | Goldens differ | Regenerate them only with the Flutter version in `app/.flutter-version`, on Linux x64. If only the runner differs, take them from the runner: see "Goldens and the Flutter pin" below (research R18). |
 | `admin` | `pnpm install --frozen-lockfile` fails | Run `pnpm install` in `admin/` and commit `pnpm-lock.yaml` |
