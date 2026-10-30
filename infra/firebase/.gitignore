@@ -1,0 +1,2 @@
+# The built web app: pwa.yml downloads it here (Firebase rejects a public dir outside the project).
+/public/

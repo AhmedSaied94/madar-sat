@@ -22,6 +22,7 @@ The rest of the Firebase project (the Android and web apps, the FCM web-push key
 1. In the Google Cloud console for the same project: IAM & Admin → Service accounts → Create service account, named `github-pwa-deploy`.
 2. Give it these roles:
    - **Firebase Hosting Admin**, to deploy;
+   - **Service Usage Consumer**, so the CLI can check that the Hosting API is enabled (without it the deploy fails with a 403 on `serviceusage.services.get`);
    - **API Keys Viewer** and **Firebase Authentication Admin**. `firebase init hosting:github`, the official setup for `FirebaseExtended/action-hosting-deploy`, grants these too. The CLI uses the second to add a preview channel's address to Auth's authorized domains.
 
    It doesn't need **Cloud Run Viewer**: `firebase.json` has no Cloud Run rewrites. If a deploy fails with a permission error, check the action's README for the current role list.
@@ -62,6 +63,8 @@ gh workflow run pwa.yml -R "$R" --ref master
 gh run watch -R "$R" "$(gh run list -R "$R" --workflow pwa.yml -L 1 --json databaseId -q '.[0].databaseId')"
 ```
 
+The `build` job uploads `app/build/web` as the artifact `pwa-web`, and `deploy` downloads it into `infra/firebase/public/` (git-ignored), because `firebase.json`'s `public` must sit inside the project folder.
+
 The run's summary prints `PWA preview: <url> (expires …)`. The address has the form `https://<project>--master-<suffix>.web.app`, and it stays the same for the channel's life.
 
 **Add that origin to `CORS_ORIGINS`.** The preview is served from its own origin, which isn't one of the two default hostnames, so until you add it the PWA preview can't call the API. Append it in VPS-1's `.env` and recreate the APIs, as in §3.
@@ -81,6 +84,8 @@ Files whose names carry a content hash (`.<8+ hex>.`) get `public, max-age=31536
 | --- | --- |
 | The `build` job fails reading `app/.flutter-version` | Lane M hasn't merged `app/` yet. Expected until then. |
 | `Failed to authenticate`, or a 403 | Check `FIREBASE_SERVICE_ACCOUNT` and the roles in §2 |
+| 403 `Permission denied to get service firebasehosting.googleapis.com` (`serviceusage.services.get`) | Add **Service Usage Consumer** to the service account (§2) |
+| `… is outside of project directory` | `firebase.json`'s `public` points outside `infra/firebase/`. It must be `public`, which `deploy` fills from the artifact. |
 | `Failed to get Firebase project` | The ID in `.firebaserc` is wrong, or the account has no access to that project |
 | The preview loads but every API call fails with a CORS error | The channel's origin isn't in `CORS_ORIGINS` (§4) |
 | The channel expired | Run `pwa.yml` again |
