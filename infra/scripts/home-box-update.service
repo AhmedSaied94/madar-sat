@@ -12,7 +12,9 @@ After=network-online.target docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/srv/madar/infra/scripts/home-box-update.sh
+# Through /bin/bash: systemd-analyze verify then checks a binary that exists everywhere, and the
+# repository's `infra.yml` can validate the unit without the host's /srv tree.
+ExecStart=/bin/bash /srv/madar/infra/scripts/home-box-update.sh
 # The token and the credentials live in /srv/madar/.env (mode 600); nothing else is needed.
 User=root
 Nice=10
