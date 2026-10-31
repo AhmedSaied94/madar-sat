@@ -387,7 +387,7 @@ export const getListBroadcastPresetsQueryKey = () => {
     }
 
     
-export const getListBroadcastPresetsQueryOptions = <TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBroadcastPresets>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+export const getListBroadcastPresetsQueryOptions = <TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<void | ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBroadcastPresets>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -406,10 +406,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListBroadcastPresetsQueryResult = NonNullable<Awaited<ReturnType<typeof listBroadcastPresets>>>
-export type ListBroadcastPresetsQueryError = ErrorType<ErrorEnvelope>
+export type ListBroadcastPresetsQueryError = ErrorType<void | ErrorEnvelope>
 
 
-export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<void | ErrorEnvelope>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBroadcastPresets>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listBroadcastPresets>>,
@@ -419,7 +419,7 @@ export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBr
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBroadcastPresets>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listBroadcastPresets>>,
@@ -429,7 +429,7 @@ export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBr
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBroadcastPresets>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -437,7 +437,7 @@ export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBr
  * @summary Broadcaster presets for A4's slots (read-only until A11)
  */
 
-export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListBroadcastPresets<TData = Awaited<ReturnType<typeof listBroadcastPresets>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBroadcastPresets>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -481,7 +481,7 @@ export const getListChannelsQueryKey = (params?: ListChannelsParams,) => {
     }
 
     
-export const getListChannelsQueryOptions = <TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<ErrorEnvelope>>(params?: ListChannelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChannels>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+export const getListChannelsQueryOptions = <TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<void | ErrorEnvelope>>(params?: ListChannelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChannels>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -500,10 +500,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListChannelsQueryResult = NonNullable<Awaited<ReturnType<typeof listChannels>>>
-export type ListChannelsQueryError = ErrorType<ErrorEnvelope>
+export type ListChannelsQueryError = ErrorType<void | ErrorEnvelope>
 
 
-export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<void | ErrorEnvelope>>(
  params: undefined |  ListChannelsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChannels>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChannels>>,
@@ -513,7 +513,7 @@ export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListChannelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChannels>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChannels>>,
@@ -523,7 +523,7 @@ export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListChannelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChannels>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -531,7 +531,7 @@ export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>
  * @summary Search channels (top 20 by similarity) or page through them by `(sort_order, id)`
  */
 
-export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListChannels<TData = Awaited<ReturnType<typeof listChannels>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListChannelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChannels>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -860,7 +860,7 @@ export const getListCommentatorsQueryKey = (params?: ListCommentatorsParams,) =>
     }
 
     
-export const getListCommentatorsQueryOptions = <TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<ErrorEnvelope>>(params?: ListCommentatorsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCommentators>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+export const getListCommentatorsQueryOptions = <TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<void | ErrorEnvelope>>(params?: ListCommentatorsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCommentators>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -879,10 +879,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListCommentatorsQueryResult = NonNullable<Awaited<ReturnType<typeof listCommentators>>>
-export type ListCommentatorsQueryError = ErrorType<ErrorEnvelope>
+export type ListCommentatorsQueryError = ErrorType<void | ErrorEnvelope>
 
 
-export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<void | ErrorEnvelope>>(
  params: undefined |  ListCommentatorsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCommentators>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCommentators>>,
@@ -892,7 +892,7 @@ export function useListCommentators<TData = Awaited<ReturnType<typeof listCommen
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListCommentatorsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCommentators>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCommentators>>,
@@ -902,7 +902,7 @@ export function useListCommentators<TData = Awaited<ReturnType<typeof listCommen
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListCommentatorsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCommentators>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -910,7 +910,7 @@ export function useListCommentators<TData = Awaited<ReturnType<typeof listCommen
  * @summary Search commentators (top 20 by similarity) or page through them
  */
 
-export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListCommentators<TData = Awaited<ReturnType<typeof listCommentators>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListCommentatorsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCommentators>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1709,7 +1709,7 @@ export const getListHiddenChannelNamesQueryKey = () => {
     }
 
     
-export const getListHiddenChannelNamesQueryOptions = <TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listHiddenChannelNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+export const getListHiddenChannelNamesQueryOptions = <TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<void | ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listHiddenChannelNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1728,10 +1728,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListHiddenChannelNamesQueryResult = NonNullable<Awaited<ReturnType<typeof listHiddenChannelNames>>>
-export type ListHiddenChannelNamesQueryError = ErrorType<ErrorEnvelope>
+export type ListHiddenChannelNamesQueryError = ErrorType<void | ErrorEnvelope>
 
 
-export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<void | ErrorEnvelope>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listHiddenChannelNames>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listHiddenChannelNames>>,
@@ -1741,7 +1741,7 @@ export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof list
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listHiddenChannelNames>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listHiddenChannelNames>>,
@@ -1751,7 +1751,7 @@ export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof list
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listHiddenChannelNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1759,7 +1759,7 @@ export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof list
  * @summary Channel names hidden from every match page («مخفية دائماً»)
  */
 
-export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListHiddenChannelNames<TData = Awaited<ReturnType<typeof listHiddenChannelNames>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listHiddenChannelNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2733,7 +2733,7 @@ export const usePatchSatellite = <TError = ErrorType<ErrorEnvelope>,
     }
     
 /**
- * @summary Sources, for A3's source filter (read-only until A13)
+ * @summary List Sources
  */
 export const listSources = (
     
@@ -2757,7 +2757,7 @@ export const getListSourcesQueryKey = () => {
     }
 
     
-export const getListSourcesQueryOptions = <TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSources>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+export const getListSourcesQueryOptions = <TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<void | ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSources>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2776,10 +2776,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof listSources>>>
-export type ListSourcesQueryError = ErrorType<ErrorEnvelope>
+export type ListSourcesQueryError = ErrorType<void | ErrorEnvelope>
 
 
-export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<void | ErrorEnvelope>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSources>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listSources>>,
@@ -2789,7 +2789,7 @@ export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, 
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSources>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listSources>>,
@@ -2799,15 +2799,15 @@ export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, 
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSources>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Sources, for A3's source filter (read-only until A13)
+ * @summary List Sources
  */
 
-export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<void | ErrorEnvelope>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSources>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2851,7 +2851,7 @@ export const getListTeamsQueryKey = (params?: ListTeamsParams,) => {
     }
 
     
-export const getListTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<ErrorEnvelope>>(params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+export const getListTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<void | ErrorEnvelope>>(params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2870,10 +2870,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof listTeams>>>
-export type ListTeamsQueryError = ErrorType<ErrorEnvelope>
+export type ListTeamsQueryError = ErrorType<void | ErrorEnvelope>
 
 
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<void | ErrorEnvelope>>(
  params: undefined |  ListTeamsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listTeams>>,
@@ -2883,7 +2883,7 @@ export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TErr
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listTeams>>,
@@ -2893,7 +2893,7 @@ export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TErr
       >, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -2901,7 +2901,7 @@ export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TErr
  * @summary Search teams (top 20 by similarity) or page through them
  */
 
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<ErrorEnvelope>>(
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = ErrorType<void | ErrorEnvelope>>(
  params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

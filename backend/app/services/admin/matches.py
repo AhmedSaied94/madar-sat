@@ -139,6 +139,24 @@ async def apply_fields(session: AsyncSession, match: Match, fields: a.MatchField
             match.commentator_id = fields.commentator_id
 
 
+def supplied_lockable(fields: a.MatchFields) -> set[str]:
+    """The lockable columns an editor supplied, through the names their input maps to (B1-R1-4).
+
+    ``create`` builds its ``MatchFields`` with every key, so a ``None`` value here means "not sent".
+    """
+    sent = {name for name in fields.model_fields_set if getattr(fields, name) is not None}
+    names: set[str] = set()
+    if {"kickoff_at", "time_tbd"} & sent:
+        names.add("kickoff_at")
+    if {"competition_id", "competition_name"} & sent:
+        names |= {"competition_id", "competition_name"}
+    for side in ("home", "away"):
+        if side in sent:
+            names |= {f"{side}_team_id", f"{side}_team_name"}
+    names |= {column for column in ("competition_stage", "stadium", "commentator_id") if column in sent}
+    return names
+
+
 # --- manual status ----------------------------------------------------------------------------------
 
 
@@ -249,6 +267,7 @@ async def update(
 
 
 async def create(session: AsyncSession, admin: AuthedAdmin, body: a.MatchCreate, now: datetime) -> Match:
+    """A new manual match. The fields the editor supplied are locked, or the next import could take it over."""
     errors: list[Error] = await match_links.link_errors(session, body.channels)
     errors += await match_links.slot_errors(session, body.broadcasts)
 
@@ -279,10 +298,11 @@ async def create(session: AsyncSession, admin: AuthedAdmin, body: a.MatchCreate,
     )
     await apply_fields(session, match, fields, errors)
     refs.raise_if_any(errors)
+    writer.lock_changed_fields(match, supplied_lockable(fields), MATCH_LOCKABLE)
 
     session.add(match)
     await writer.flush(session)
-    extra: dict[str, Any] = {}
+    extra: dict[str, Any] = {"locked_fields": [None, list(match.locked_fields)]} if match.locked_fields else {}
     slots = await match_links.reconcile_slots(session, match.id, body.broadcasts)
     if slots:
         extra["broadcasts"] = slots

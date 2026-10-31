@@ -91,10 +91,11 @@ export const getRefreshAdminApiAuthRefreshPostResponseMock403 = (): ErrorEnvelop
 
 export const getRefreshAdminApiAuthRefreshPostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock = (): EnvelopeListBroadcastPreset => ({"data":[{"id":1,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"ON Sport 1"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock = (): EnvelopeListBroadcastPreset => ({"data":[{"id":1,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":88,"name":"ON Sport 1"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock200 = (): EnvelopeListBroadcastPreset => ({"data":[{"id":1,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"ON Sport 1"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock200 = (): EnvelopeListBroadcastPreset => ({"data":[{"id":1,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":88,"name":"ON Sport 1"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
 
 
 export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -106,6 +107,7 @@ export const getListChannelsAdminApiChannelsGetResponseMock = (): EnvelopeListCh
 
 
 export const getListChannelsAdminApiChannelsGetResponseMock200 = (): EnvelopeListChannelItem => ({"data":[{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
 
 
 export const getListChannelsAdminApiChannelsGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -200,6 +202,7 @@ export const getListCommentatorsAdminApiCommentatorsGetResponseMock = (): Envelo
 
 
 export const getListCommentatorsAdminApiCommentatorsGetResponseMock200 = (): EnvelopeListAdminCommentator => ({"data":[{"audio":"https://media.example/audio/ef/ef56.mp4","audio_asset_id":32,"id":7,"name":"معلق تجريبي","photo":"https://media.example/logo/ab/ab12cd.webp","photo_asset_id":31,"usage":{"match_channels":340,"matches":120}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
 
 
 export const getListCommentatorsAdminApiCommentatorsGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -387,10 +390,11 @@ export const getHealthEndpointAdminApiHealthzGetResponseMock = (overrideResponse
 
 export const getHealthEndpointAdminApiHealthzGetResponseMock200 = (overrideResponse: Partial< EnvelopeHealthStatus > = {}): EnvelopeHealthStatus => ({data: faker.helpers.arrayElement([{db: "ok", redis: "ok"},null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
 
-export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetResponseMock = (overrideResponse: Partial< EnvelopeListHiddenChannelName > = {}): EnvelopeListHiddenChannelName => ({data: faker.helpers.arrayElement([Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}})})),null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetResponseMock = (): EnvelopeListHiddenChannelName => ({"data":[{"name":"قناة مخفية"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetResponseMock200 = (overrideResponse: Partial< EnvelopeListHiddenChannelName > = {}): EnvelopeListHiddenChannelName => ({data: faker.helpers.arrayElement([Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}})})),null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetResponseMock200 = (): EnvelopeListHiddenChannelName => ({"data":[{"name":"قناة مخفية"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
 
 
 export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -633,10 +637,11 @@ export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock422 
 
 export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getListSourcesAdminApiSourcesGetResponseMock = (overrideResponse: Partial< EnvelopeListSourceItem > = {}): EnvelopeListSourceItem => ({data: faker.helpers.arrayElement([Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({is_enabled: faker.datatype.boolean(), kind: faker.helpers.arrayElement(['scraper','api','internal'] as const), name: faker.string.alpha({length: {min: 10, max: 20}})})),null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+export const getListSourcesAdminApiSourcesGetResponseMock = (): EnvelopeListSourceItem => ({"data":[{"is_enabled":true,"kind":"scraper","name":"ysscores"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListSourcesAdminApiSourcesGetResponseMock200 = (overrideResponse: Partial< EnvelopeListSourceItem > = {}): EnvelopeListSourceItem => ({data: faker.helpers.arrayElement([Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({is_enabled: faker.datatype.boolean(), kind: faker.helpers.arrayElement(['scraper','api','internal'] as const), name: faker.string.alpha({length: {min: 10, max: 20}})})),null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+export const getListSourcesAdminApiSourcesGetResponseMock200 = (): EnvelopeListSourceItem => ({"data":[{"is_enabled":true,"kind":"scraper","name":"ysscores"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
 
 
 export const getListSourcesAdminApiSourcesGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -648,6 +653,7 @@ export const getListTeamsAdminApiTeamsGetResponseMock = (): EnvelopeListTeamItem
 
 
 export const getListTeamsAdminApiTeamsGetResponseMock200 = (): EnvelopeListTeamItem => ({"data":[{"competitions":[{"id":12,"name":"الدوري المصري الممتاز"},{"id":40,"name":"دوري أبطال أفريقيا"}],"country":"مصر","id":101,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الأهلي","primary_competition":{"id":12,"name":"الدوري المصري الممتاز"}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
 
 
 export const getListTeamsAdminApiTeamsGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -979,6 +985,17 @@ export const getListBroadcastPresetsAdminApiBroadcastPresetsGetMockHandler200 = 
 }
 
 
+export const getListBroadcastPresetsAdminApiBroadcastPresetsGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/broadcast-presets', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
 export const getListBroadcastPresetsAdminApiBroadcastPresetsGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
   return http.get('*/admin/api/broadcast-presets', async (info) => {
   
@@ -1025,6 +1042,17 @@ export const getListChannelsAdminApiChannelsGetMockHandler200 = (overrideRespons
     : getListChannelsAdminApiChannelsGetResponseMock200()),
       { status: 200,
         headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListChannelsAdminApiChannelsGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
       })
   }, options)
 }
@@ -1449,6 +1477,17 @@ export const getListCommentatorsAdminApiCommentatorsGetMockHandler200 = (overrid
     : getListCommentatorsAdminApiCommentatorsGetResponseMock200()),
       { status: 200,
         headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListCommentatorsAdminApiCommentatorsGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/commentators', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
       })
   }, options)
 }
@@ -2320,6 +2359,17 @@ export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetMockHandler20
     : getListHiddenChannelNamesAdminApiHiddenChannelNamesGetResponseMock200()),
       { status: 200,
         headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListHiddenChannelNamesAdminApiHiddenChannelNamesGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/hidden-channel-names', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
       })
   }, options)
 }
@@ -3451,6 +3501,17 @@ export const getListSourcesAdminApiSourcesGetMockHandler200 = (overrideResponse?
 }
 
 
+export const getListSourcesAdminApiSourcesGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
 export const getListSourcesAdminApiSourcesGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
   return http.get('*/admin/api/sources', async (info) => {
   
@@ -3497,6 +3558,17 @@ export const getListTeamsAdminApiTeamsGetMockHandler200 = (overrideResponse?: En
     : getListTeamsAdminApiTeamsGetResponseMock200()),
       { status: 200,
         headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListTeamsAdminApiTeamsGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/teams', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
       })
   }, options)
 }

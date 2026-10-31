@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import select
 
 from app.db.models import Match
-from tests.admin.helpers import ADMIN, changed_datasets, dataset_versions, new_match, patch_match
+from tests.admin.helpers import ADMIN, changed_datasets, dataset_versions, locks, new_match, patch_match
 
 # 17:00Z is an hour before the frozen "now" (18:00Z), inside both /v1/matches and the /v1/live window.
 STARTED = "2026-10-28T17:00:00Z"
@@ -47,7 +47,7 @@ class TestSet:
             "status_label": None,
             "status_updated_at": "2026-10-28T18:00:00Z",
         }
-        assert data["locked_fields"] == ["away_score", "home_score", "status"]
+        assert data["locked_fields"] == locks("away_score", "home_score", "status")
         assert await changed_datasets(session, before) == {"matches", "live"}
         stored = await _stored(session, match["id"])
         assert (stored.status_source, stored.status, stored.home_score, stored.away_score) == ("manual", "live", 1, 0)
@@ -75,7 +75,7 @@ class TestSet:
             editor_client, match, {"status": {"set": {"status": "postponed", "status_label": "الأمطار"}}}
         )
 
-        assert resp.json()["data"]["locked_fields"] == ["status"]
+        assert resp.json()["data"]["locked_fields"] == locks("status")
         assert resp.json()["data"]["status"]["status_label"] == "الأمطار"
 
     async def test_setting_the_same_status_again_changes_nothing(self, editor_client, session):
@@ -110,7 +110,9 @@ class TestSet:
         )
 
         assert resp.json()["data"]["status"]["score"] == {"home": 1, "away": 1, "home_pen": 4, "away_pen": 3}
-        assert resp.json()["data"]["locked_fields"] == ["away_pen", "away_score", "home_pen", "home_score", "status"]
+        assert resp.json()["data"]["locked_fields"] == locks(
+            "away_pen", "away_score", "home_pen", "home_score", "status"
+        )
 
 
 class TestRefusals:
@@ -183,7 +185,7 @@ class TestClear:
         status = resp.json()["data"]["status"]
         assert status["status_source"] == "clock"
         assert (status["period"], status["minute"], status["score"]) == (None, None, None)
-        assert resp.json()["data"]["locked_fields"] == []
+        assert resp.json()["data"]["locked_fields"] == locks()
         assert await changed_datasets(session, before) == {"matches", "live"}
 
         stored = await _stored(session, match["id"])
@@ -201,7 +203,7 @@ class TestClear:
 
         cleared = await patch_match(editor_client, match, {"status": {"clear": True}})
 
-        assert cleared.json()["data"]["locked_fields"] == ["stadium"]
+        assert cleared.json()["data"]["locked_fields"] == locks("stadium")
 
     async def test_clearing_a_clock_match_changes_nothing(self, editor_client, session):
         match = await _started_match(editor_client)

@@ -21,6 +21,7 @@ from app.domain.status import derive_status
 from app.domain.time import validate_window
 from app.schemas import admin as a
 from app.schemas import public as s
+from app.services.admin import versions
 from app.services.admin.common import asset_urls, url_of
 from app.services.matches import fetch_visible_channels, match_score, tbd_dates
 
@@ -84,6 +85,7 @@ async def list_rows(
     ).all()
 
     match_ids = [row[0].id for row in found]
+    etags = await versions.match_versions(session, [row[0] for row in found])
     visible = await fetch_visible_channels(session, match_ids)
     broadcasters = await _count_by_match(session, match_ids)
     sources = await _sources_by_match(session, match_ids)
@@ -138,6 +140,7 @@ async def list_rows(
                 ),
                 sources=[match.source, *sorted(sources.get(match.id, set()) - {match.source})],
                 locked=bool(match.locked_fields),
+                etag=etags[match.id],
             )
         )
     return rows

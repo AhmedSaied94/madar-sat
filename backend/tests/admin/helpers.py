@@ -81,3 +81,23 @@ async def changed_datasets(session, before: dict[str, int]) -> set[str]:
     """The datasets whose version moved since ``before``."""
     after = await dataset_versions(session)
     return {name for name, version in after.items() if version != before.get(name)}
+
+
+# A match created through the API locks the fields the editor supplied (B1-R1-4), so an edit's
+# lock list starts from these.
+LOCKED_ON_CREATE = frozenset(
+    {
+        "kickoff_at",
+        "competition_id",
+        "competition_name",
+        "home_team_id",
+        "home_team_name",
+        "away_team_id",
+        "away_team_name",
+    }
+)
+
+
+def locks(*added: str) -> list[str]:
+    """The locks a created match has, plus the ones this edit adds."""
+    return sorted(LOCKED_ON_CREATE | set(added))

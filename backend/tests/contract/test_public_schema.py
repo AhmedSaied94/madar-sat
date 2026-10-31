@@ -53,3 +53,16 @@ def test_committed_contract_matches_app() -> None:
     live["info"]["version"] = get_settings().contract_version
     committed = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
     assert json.loads(json.dumps(live, sort_keys=True)) == committed
+
+
+def test_the_nul_guard_is_not_a_published_pattern() -> None:
+    """A `pattern` added to a `/v1` query parameter is a breaking change against `contract-v1`
+    (B1-R2-1): the guard runs as an `AfterValidator`, so the 422 stays and the schema doesn't grow."""
+    committed = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
+    guarded = [
+        ("/v1/teams", "q"),
+        ("/v1/satellites/{satellite_id}/channels", "q"),
+    ]
+    for path, name in guarded:
+        parameter = next(p for p in committed["paths"][path]["get"]["parameters"] if p["name"] == name)
+        assert "pattern" not in parameter["schema"], f"{path} publishes a pattern on {name}"

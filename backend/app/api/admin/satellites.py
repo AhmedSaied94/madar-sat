@@ -24,7 +24,11 @@ _NOT_FOUND = _docs.not_found("satellite_not_found")
     response_model=Envelope[list[a.AdminSatellite]],
     dependencies=[Depends(ETag("admin_satellites", ("satellites",)))],
     responses={
-        200: {"description": "Satellites", **_docs.ok_example("satellites_ok", [ex.SATELLITE], _docs.LIST_META)},
+        200: {
+            "description": "Satellites, with the list's `ETag`",
+            **ETAG_HEADER,
+            **_docs.ok_example("satellites_ok", [ex.SATELLITE], _docs.LIST_META),
+        },
         **_docs.AUTHED,
         304: _docs.NOT_MODIFIED,
     },

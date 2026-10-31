@@ -211,3 +211,85 @@ async def test_a_malformed_body_is_a_validation_error_and_counts_nothing(anon_ad
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "validation_error"
     assert await _keys(redis_client, "auth:*") == []
+
+
+# --- Concurrency (B1-R1-1, B1-R1-7) ---------------------------------------------------------------
+#
+# These two tests run requests in parallel, and no two requests may share one AsyncSession. They
+# build their own client over the real ``get_session``, so every request gets its own connection.
+# The account they log in as is committed outside the test's transaction, so those connections see it.
+
+
+async def test_parallel_wrong_logins_verify_at_most_five_passwords(
+    parallel_admin_client, redis_client, committed_editor, monkeypatch
+):
+    """Ten attempts at once: five are checked, the other five are refused before argon2 (SC-003)."""
+    import asyncio
+    import time
+
+    from app.auth import passwords
+
+    email, _ = committed_editor
+    verified: list[str] = []
+    real = passwords.verify_password
+
+    def counting(password_hash: str, password: str):
+        time.sleep(0.02)  # widen the window the reservation is there to close
+        verified.append(password)
+        return real(password_hash, password)
+
+    monkeypatch.setattr(passwords, "verify_password", counting)
+
+    responses = await asyncio.gather(
+        *(
+            parallel_admin_client.post(LOGIN, json={"email": email, "password": "wrong wrong wrong"})
+            for _ in range(10)
+        )
+    )
+
+    statuses = [response.status_code for response in responses]
+    assert len(verified) <= 5, f"{len(verified)} passwords were checked"
+    assert statuses.count(429) >= 5, statuses
+    assert statuses.count(401) <= 5
+
+
+async def test_a_login_does_not_block_another_request(committed_editor, monkeypatch):
+    """Argon2 runs in a worker thread, so a slow login doesn't stall the editor's requests (B1-R1-7)."""
+    import asyncio
+    import time
+    from datetime import UTC, datetime
+
+    from httpx import ASGITransport, AsyncClient
+
+    from app.admin import app
+    from app.auth import passwords
+    from app.auth.tokens import issue_access_token
+
+    email, admin_id = committed_editor
+    token = issue_access_token(admin_id, "editor", datetime.now(UTC))
+
+    real = passwords.verify_password
+
+    def slow(password_hash: str, password: str):
+        time.sleep(0.4)
+        return real(password_hash, password)
+
+    monkeypatch.setattr(passwords, "verify_password", slow)
+
+    transport = ASGITransport(app=app, client=("127.0.0.1", 50000))
+    headers = {"Authorization": f"Bearer {token}"}
+    async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
+
+        async def login():
+            return await client.post(LOGIN, json={"email": email, "password": "correct horse battery"})
+
+        async def me():
+            started = time.perf_counter()
+            response = await client.get("/admin/api/auth/me")
+            return response, time.perf_counter() - started
+
+        login_response, (me_response, me_seconds) = await asyncio.gather(login(), me())
+
+    assert login_response.status_code == 200
+    assert me_response.status_code == 200
+    assert me_seconds < 0.3, f"the other request waited {me_seconds:.2f}s for the login"

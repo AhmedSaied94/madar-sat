@@ -24,7 +24,11 @@ _NOT_FOUND = _docs.not_found("competition_not_found")
     response_model=Envelope[list[a.AdminCompetition]],
     dependencies=[Depends(ETag("admin_competitions", ("competitions",)))],
     responses={
-        200: {"description": "Competitions", **_docs.ok_example("competitions_ok", [ex.COMPETITION], _docs.LIST_META)},
+        200: {
+            "description": "Competitions, with the list's `ETag`",
+            **ETAG_HEADER,
+            **_docs.ok_example("competitions_ok", [ex.COMPETITION], _docs.LIST_META),
+        },
         **_docs.AUTHED,
         304: _docs.NOT_MODIFIED,
     },

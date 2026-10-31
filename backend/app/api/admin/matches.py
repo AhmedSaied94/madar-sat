@@ -38,7 +38,11 @@ _WRITE_ERRORS: dict[int | str, dict[str, Any]] = {
     response_model=Envelope[list[a.AdminMatchRow]],
     dependencies=[Depends(ETag("admin_matches", LIST_DATASETS, bucket_s=60))],
     responses={
-        200: {"description": "The window's matches", **_docs.ok_example("matches_ok", [ex.MATCH_ROW], _docs.LIST_META)},
+        200: {
+            "description": "The window's matches, with the list's `ETag`",
+            **ETAG_HEADER,
+            **_docs.ok_example("matches_ok", [ex.MATCH_ROW], _docs.LIST_META),
+        },
         **_docs.AUTHED,
         304: _docs.NOT_MODIFIED,
         422: _docs.VALIDATION,

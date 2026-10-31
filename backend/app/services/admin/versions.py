@@ -98,6 +98,21 @@ async def match_version(session: AsyncSession, match: Match) -> str:
     return etag_of(match_state(match, links, slots))
 
 
+async def match_versions(session: AsyncSession, matches: Iterable[Match]) -> dict[int, str]:
+    """The current version of each match, in three queries: the A3 list shows one per row (A-F3)."""
+    rows = list(matches)
+    if not rows:
+        return {}
+    ids = [match.id for match in rows]
+    links: dict[int, list[MatchChannel]] = {match_id: [] for match_id in ids}
+    slots: dict[int, list[MatchCustomBroadcast]] = {match_id: [] for match_id in ids}
+    for link in await session.scalars(select(MatchChannel).where(MatchChannel.match_id.in_(ids))):
+        links[link.match_id].append(link)
+    for slot in await session.scalars(select(MatchCustomBroadcast).where(MatchCustomBroadcast.match_id.in_(ids))):
+        slots[slot.match_id].append(slot)
+    return {match.id: etag_of(match_state(match, links[match.id], slots[match.id])) for match in rows}
+
+
 async def team_version(session: AsyncSession, team: Team) -> str:
     query = select(TeamCompetition.competition_id).where(TeamCompetition.team_id == team.id)
     return etag_of(team_state(team, (await session.scalars(query)).all()))
@@ -125,6 +140,7 @@ __all__ = [
     "etag_of",
     "match_state",
     "match_version",
+    "match_versions",
     "matches_etag",
     "row_state",
     "row_version",

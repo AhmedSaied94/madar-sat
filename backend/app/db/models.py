@@ -492,4 +492,6 @@ DATASET_NAMES = (
     "teams",
     "commentators",
     "rights_holders",
+    "broadcast_presets",
+    "sources",
 )

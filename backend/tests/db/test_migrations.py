@@ -19,7 +19,18 @@ OLD_APP_SCHEMA = BACKEND.parent.parent / "old_app" / "migration" / "schema.sql"
 # SHA-256 of ../old_app/migration/schema.sql, recorded when 0001 was copied (FR-001).
 SCHEMA_SHA256 = "c0c9ff2617eee890f0507de73de8299daf68079b70b026543657e84380e2bcae"
 
-DATASET_NAMES = {"matches", "live", "channels", "satellites", "competitions", "teams", "commentators", "rights_holders"}
+DATASET_NAMES = {
+    "matches",
+    "live",
+    "channels",
+    "satellites",
+    "competitions",
+    "teams",
+    "commentators",
+    "rights_holders",
+    "broadcast_presets",
+    "sources",
+}
 
 # Every object revision 0002 adds (data-model "Revision 0002").
 TABLES_0002 = {
@@ -175,7 +186,7 @@ def test_0002_downgrades_cleanly_and_upgrades_again(empty_database):
 
 
 def test_session_database_is_at_head(sync_session):
-    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0003"
+    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0004"
 
 
 @pytest.mark.parametrize(

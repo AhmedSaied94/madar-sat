@@ -55,7 +55,8 @@ class TestMatchList:
         assert (row["home"]["name"], row["away"]["name"]) == ("فريق أ", "فريق ب")
         assert (row["channel_count"], row["broadcaster_count"], row["missing_channels"]) == (0, 0, True)
         assert row["sources"] == ["manual"]
-        assert row["locked"] is False
+        assert row["locked"] is True  # a create locks the fields the editor supplied (B1-R1-4)
+        assert row["etag"] == (await editor_client.get(f"{MATCHES}/{match['id']}")).headers["etag"]
 
     async def test_missing_channels_means_no_visible_link_and_no_manual_broadcaster(self, editor_client, session):
         channel_id = await session.scalar(select(Channel.id).where(Channel.deleted_at.is_(None)).order_by(Channel.id))
@@ -304,6 +305,22 @@ async def test_broadcast_presets_and_sources_are_read_only_lists(editor_client):
     assert (await editor_client.post(f"{ADMIN}/sources", json={})).status_code == 405
 
 
+async def test_a_preset_lists_the_asset_id_the_editor_saves_in_a_slot(editor_client, session):
+    """A4 saves a slot's `logo_asset_id`; the preset list has to carry it (B1-R2-8, A-R2-2)."""
+    from app.db.models import BroadcastPreset
+
+    asset_id = await make_asset(session, "preset-logo")
+    session.add(BroadcastPreset(name="قناة البث التجريبية", logo_asset_id=asset_id))
+    await session.flush()
+
+    resp = await editor_client.get(f"{ADMIN}/broadcast-presets")
+
+    assert resp.status_code == 200, resp.text
+    row = next(r for r in resp.json()["data"] if r["name"] == "قناة البث التجريبية")
+    assert row["logo_asset_id"] == asset_id
+    assert row["logo"]  # the URL is still there for the preview
+
+
 class TestHiddenNames:
     async def test_adding_stores_the_normalized_name_then_is_idempotent(self, editor_client, session):
         before = await dataset_versions(session)
@@ -314,7 +331,7 @@ class TestHiddenNames:
         normalized = await session.scalar(select(func.ar_normalize("  أبو ظبي الرياضية  ")))
         assert (first.status_code, second.status_code) == (201, 200)
         assert first.json()["data"] == {"name": normalized} == second.json()["data"]
-        assert await changed_datasets(session, before) == {"matches"}
+        assert await changed_datasets(session, before) == {"matches", "channels"}
         rows = await audit_rows(session, "hidden_channel_names")
         assert len(rows) == 1  # the repeat wrote nothing
         assert (rows[0].action, rows[0].entity_id, rows[0].diff) == ("create", None, {"name": [None, normalized]})
@@ -332,7 +349,7 @@ class TestHiddenNames:
 
         assert removed.status_code == 200 and removed.json()["data"] is None
         assert (again.status_code, again.json()["error"]["code"]) == (404, "hidden_name_not_found")
-        assert await changed_datasets(session, before) == {"matches"}
+        assert await changed_datasets(session, before) == {"matches", "channels"}
         rows = await audit_rows(session, "hidden_channel_names")
         assert [r.action for r in rows] == ["create", "delete"]
 
@@ -349,6 +366,22 @@ class TestHiddenNames:
 
     async def test_an_empty_name_is_refused(self, editor_client):
         assert (await editor_client.post(f"{ADMIN}/hidden-channel-names", json={"name": ""})).status_code == 422
+
+    async def test_a_hidden_name_changes_the_satellite_etags(self, editor_client, public_client, session):
+        """B1-R1-5: /v1/satellites filters by hidden names, so its version must move with them."""
+        satellite = await session.scalar(select(Satellite).order_by(Satellite.id))
+        list_path = "/v1/satellites"
+        channels_path = f"/v1/satellites/{satellite.id}/channels"
+        before = [(await public_client.get(path)).headers["etag"] for path in (list_path, channels_path)]
+
+        posted = await editor_client.post(f"{ADMIN}/hidden-channel-names", json={"name": "قناة تختفي"})
+        after_add = [(await public_client.get(path)).headers["etag"] for path in (list_path, channels_path)]
+
+        await editor_client.delete(f"{ADMIN}/hidden-channel-names/{quote(posted.json()['data']['name'], safe='')}")
+        after_remove = [(await public_client.get(path)).headers["etag"] for path in (list_path, channels_path)]
+
+        assert after_add[0] != before[0] and after_add[1] != before[1]
+        assert after_remove[0] != after_add[0] and after_remove[1] != after_add[1]
 
 
 async def test_a_link_row_for_a_deleted_channel_is_not_shown_in_the_editor(editor_client, session):

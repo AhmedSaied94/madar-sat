@@ -8,8 +8,10 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.admin import _docs
 from app.api.admin._common import ETAG_HEADER, Db, Editor, IdPath, IfMatch, Now, set_etag
+from app.api.deps import ETag
 from app.api.envelope import Envelope, ok
 from app.auth.roles import require_editor
+from app.schemas import NO_NUL_PATTERN
 from app.schemas import admin as a
 from app.schemas import admin_examples as ex
 from app.schemas.public import Access, Category, Kind
@@ -25,15 +27,21 @@ _NOT_FOUND = _docs.not_found("channel_not_found")
     "",
     response_model=Envelope[list[a.ChannelItem]],
     responses={
-        200: {"description": "Channels", **_docs.ok_example("channels_ok", [ex.CHANNEL_ITEM], _docs.PAGE_META)},
+        200: {
+            "description": "Channels, with the list's `ETag`",
+            **ETAG_HEADER,
+            **_docs.ok_example("channels_ok", [ex.CHANNEL_ITEM], _docs.PAGE_META),
+        },
         **_docs.AUTHED,
+        304: _docs.NOT_MODIFIED,
         422: _docs.VALIDATION,
     },
     summary="Search channels (top 20 by similarity) or page through them by `(sort_order, id)`",
+    dependencies=[Depends(ETag("admin_channels", ("channels", "satellites")))],
 )
 async def list_channels(
     session: Db,
-    q: Annotated[str | None, Query(min_length=1, max_length=a.MAX_QUERY_LENGTH)] = None,
+    q: Annotated[str | None, Query(min_length=1, max_length=a.MAX_QUERY_LENGTH, pattern=NO_NUL_PATTERN)] = None,
     satellite_id: Annotated[int | None, Query(ge=1, le=2**63 - 1)] = None,
     category: Category | None = None,
     kind: Kind | None = None,

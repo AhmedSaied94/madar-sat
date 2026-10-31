@@ -5,7 +5,16 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import func, select
 
-from app.db.models import Channel, Commentator, Competition, Match, Satellite, Team
+from app.db.models import (
+    Channel,
+    Commentator,
+    Competition,
+    Match,
+    RightsHolder,
+    RightsHolderCompetition,
+    Satellite,
+    Team,
+)
 from tests.admin.helpers import ADMIN, audit_rows, create, dataset_versions, if_match
 
 TEAMS = f"{ADMIN}/teams"
@@ -157,6 +166,21 @@ class TestCompetitions:
 
         assert resp.status_code == 409
         assert resp.json()["meta"]["usage"]["matches"] >= 1
+
+    async def test_a_competition_a_rights_holder_names_is_in_use(self, editor_client, session):
+        """0001 cascades the association away, so without this check the rows would vanish unlogged."""
+        competition = await create(editor_client, COMPETITIONS, {"name": "بطولة حقوق"})
+        rights_holder = RightsHolder(name="ناقل الحقوق")
+        session.add(rights_holder)
+        await session.flush()
+        session.add(RightsHolderCompetition(rights_holder_id=rights_holder.id, competition_id=competition["id"]))
+        await session.flush()
+
+        resp = await editor_client.delete(f"{COMPETITIONS}/{competition['id']}", headers=if_match(competition["_etag"]))
+
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "in_use"
+        assert resp.json()["meta"]["usage"]["rights_holders"] == 1
 
     async def test_the_list_is_ordered_by_priority_with_nulls_last(self, editor_client):
         await create(editor_client, COMPETITIONS, {"name": "بلا أولوية"})

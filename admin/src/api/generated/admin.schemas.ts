@@ -371,9 +371,12 @@ export interface BodyUploadMediaAdminApiMediaPost {
 
 export type BroadcastPresetLogo = string | null;
 
+export type BroadcastPresetLogoAssetId = number | null;
+
 export interface BroadcastPreset {
   id: number;
   logo: BroadcastPresetLogo;
+  logo_asset_id: BroadcastPresetLogoAssetId;
   name: string;
 }
 

@@ -181,3 +181,122 @@ def test_only_existing_adapter_task_modules_are_included(module):
     included = set(app.conf.include or ())
     assert included == set(existing_modules(("app.adapters.tasks", "app.adapters.media_tasks")))
     assert (module in included) == (module in existing_modules((module,)))
+
+
+def test_a_bare_celery_call_routes_through_the_app_without_importing_the_tasks_module():
+    """``celery call`` imports only ``app.workers``; the route is resolved lazily (B2-R1-19)."""
+    probe = (
+        "import sys, app.workers as w; "
+        "print('app.adapters.tasks' in sys.modules); "
+        "print(w.app.amqp.router.route({}, 'adapters.fetch', args=('legacy',), kwargs={})['queue'].name); "
+        "print(w.app.amqp.router.route({}, 'adapters.fetch', args=('ysscores',), kwargs={})['queue'].name)"
+    )
+    out = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [sys.executable, "-c", probe],
+        cwd=BACKEND,
+        env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", ""), "REDIS_URL": "redis://x:6379/0"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert out.returncode == 0, out.stderr
+    imported, legacy, ysscores = out.stdout.strip().splitlines()
+    assert imported == "False"  # importing the app alone still doesn't load the tasks module
+    assert legacy == "scrape"
+    assert ysscores == "scrape_home"
+
+
+def test_the_json_formatter_keeps_extra_fields(capsys):
+    """The lock-skip and 'fetched' events are ``log.info`` with ``extra=``; both must reach stdout."""
+    import json
+    import logging
+
+    from app.workers import logs
+
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+    try:
+        logs.setup_logging("INFO")
+        logging.getLogger("madar.test").info("skipped", extra={"why": "lock_held", "source": "ysscores"})
+    finally:
+        root.handlers[:] = before[0]
+        root.setLevel(before[1])
+
+    payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert payload["message"] == "skipped"
+    assert (payload["level"], payload["logger"]) == ("INFO", "madar.test")
+    assert (payload["why"], payload["source"]) == ("lock_held", "ysscores")
+
+
+def test_celery_switches_the_json_logger_on():
+    """The signal is what makes the formatter apply in every worker, beat and the CLI."""
+    import logging
+
+    from celery import signals
+
+    from app.workers import logs
+
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+    try:
+        signals.setup_logging.send(sender=None, loglevel="INFO")
+        assert isinstance(root.handlers[-1].formatter, logs.JsonFormatter)
+    finally:
+        root.handlers[:] = before[0]
+        root.setLevel(before[1])
+
+
+def test_the_json_formatter_drops_and_caps_a_failing_tasks_payload(capsys):
+    """Celery's failure log carries the task payload; one line must stay one readable line (B1-R2-7)."""
+    import json
+    import logging
+
+    from app.workers import logs
+
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+    argument = "x" * 100_000  # a whole scrape page, or a task argument that points at one
+    try:
+        logs.setup_logging("INFO")
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            logging.getLogger("madar.test").error(
+                "task failed",
+                extra={"data": {"args": [argument], "kwargs": {"source": "ysscores"}}, "task_id": "abc"},
+                exc_info=True,
+            )
+    finally:
+        root.handlers[:] = before[0]
+        root.setLevel(before[1])
+
+    line = capsys.readouterr().out.strip()
+    assert len(line) < logs.MAX_LINE_CHARS, f"one record wrote {len(line)} bytes"
+    payload = json.loads(line)
+    assert "data" not in payload and "args" not in payload and "kwargs" not in payload
+    assert payload["task_id"] == "abc"
+    assert "boom" in payload["exc"]
+
+
+def test_httpx_and_httpcore_stay_at_warning(capsys):
+    """`httpx` logs every request's full URL at INFO, and a URL can carry a key (B1-R2-7, D15)."""
+    import logging
+
+    from app.workers import logs
+
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+    levels = {name: logging.getLogger(name).level for name in logs.QUIET_LOGGERS}
+    try:
+        logs.setup_logging("INFO")
+        logging.getLogger("httpx").info("HTTP Request: GET https://firestore.example/x?key=SECRET123")
+        logging.getLogger("httpcore").info("connect to firestore.example")
+    finally:
+        root.handlers[:] = before[0]
+        root.setLevel(before[1])
+        for name, level in levels.items():
+            logging.getLogger(name).setLevel(level)
+
+    out = capsys.readouterr().out
+    assert "SECRET123" not in out
+    assert out.strip() == ""

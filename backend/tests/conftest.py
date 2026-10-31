@@ -284,3 +284,48 @@ def etag_of():
         return response.headers["etag"]
 
     return _etag
+
+
+# --- Requests that run in parallel ---------------------------------------------------------------
+#
+# Concurrent requests may not share one AsyncSession, so these tests get their own client over the
+# real ``get_session``: every request opens its own connection. The account is committed outside the
+# test's transaction (and removed afterwards), so those connections can see it.
+
+
+@pytest.fixture
+async def committed_editor(_prepare_database, admin_password_hash):
+    """An ``editor`` committed in its own transaction; yields ``(email, id)``."""
+    from uuid import uuid4
+
+    from app.db.models import AdminUser
+    from app.db.session import SyncSession
+
+    email = f"race-{uuid4().hex[:10]}@example.com"
+    with SyncSession() as session:
+        admin = AdminUser(
+            email=email, name="سباق", role="editor", password_hash=admin_password_hash, is_active=True
+        )
+        session.add(admin)
+        session.commit()
+        admin_id = admin.id
+    try:
+        yield email, admin_id
+    finally:
+        from sqlalchemy import delete
+
+        with SyncSession() as session:
+            session.execute(delete(AdminUser).where(AdminUser.id == admin_id))
+            session.commit()
+
+
+@pytest.fixture
+async def parallel_admin_client():
+    """The admin app with the real session dependency: each request uses its own connection."""
+    from httpx import ASGITransport, AsyncClient
+
+    from app.admin import app
+
+    transport = ASGITransport(app=app, client=("127.0.0.1", 50000))
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client

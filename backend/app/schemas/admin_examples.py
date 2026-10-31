@@ -40,6 +40,7 @@ MATCH_ROW: dict[str, Any] = {
     "commentator": {"id": 7, "name": "معلق تجريبي"},
     "sources": ["ysscores", "legacy"],
     "locked": True,
+    "etag": '"3f9a1c6d47b0e2a5c8d14f7b90e3a652"',
 }
 
 MATCH: dict[str, Any] = {
@@ -172,7 +173,7 @@ COMMENTATOR: dict[str, Any] = {
     "usage": {"matches": 120, "match_channels": 340},
 }
 
-BROADCAST_PRESET: dict[str, Any] = {"id": 1, "name": "ON Sport 1", "logo": LOGO}
+BROADCAST_PRESET: dict[str, Any] = {"id": 1, "name": "ON Sport 1", "logo_asset_id": 88, "logo": LOGO}
 HIDDEN_CHANNEL_NAME: dict[str, Any] = {"name": "قناة مخفية"}
 SOURCE: dict[str, Any] = {"name": "ysscores", "kind": "scraper", "is_enabled": True}
 MEDIA_ASSET: dict[str, Any] = {

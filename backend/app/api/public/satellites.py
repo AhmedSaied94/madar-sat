@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +12,7 @@ from app.api.envelope import Envelope, ok
 from app.api.errors import EntityNotFound
 from app.api.public._query import IdPath
 from app.db.session import get_session
+from app.schemas import NoNul
 from app.schemas import public as s
 from app.services import satellites
 
@@ -35,7 +38,7 @@ async def list_satellites(
 async def list_satellite_channels(
     satellite_id: IdPath,
     category: s.Category | None = Query(None),
-    q: str | None = Query(None, max_length=64),
+    q: Annotated[str | None, Query(max_length=64), NoNul] = None,
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[list[s.ChannelCarriage]]:
     data = await satellites.list_satellite_channels(

@@ -464,3 +464,95 @@ class TestCreate:
         listed = await editor_client.get(MATCHES, params={"from": "2026-10-31T00:00:00Z", "to": "2026-11-01T00:00:00Z"})
 
         assert created["id"] in {row["id"] for row in listed.json()["data"]}
+
+    async def test_the_supplied_fields_are_locked(self, editor_client, session):
+        """A created match protects what the editor typed; otherwise the next import can take it over."""
+        home = await session.scalar(select(Team).where(Team.legacy_id == "team-zamalek"))
+        away = await session.scalar(select(Team).where(Team.legacy_id == "team-city"))
+
+        created = await new_match(editor_client, home={"team_id": home.id}, away={"team_id": away.id})
+
+        row = await session.get(Match, created["id"], populate_existing=True)
+        assert set(row.locked_fields) >= {
+            "kickoff_at",
+            "competition_name",
+            "home_team_id",
+            "home_team_name",
+            "away_team_id",
+            "away_team_name",
+        }
+        audit = (await audit_rows(session, "matches", created["id"]))[0]
+        assert audit.diff["locked_fields"][1] == row.locked_fields
+
+
+async def test_an_import_cannot_move_a_kickoff_of_a_match_created_through_the_api(
+    parallel_admin_client, committed_editor, session
+):
+    """B1-R1-4, end to end: the ysscores probe finds the new match and leaves its kickoff alone.
+
+    The API write and the importer must see each other, so the create goes through the real session
+    dependency and the importer commits on its own connection. Both rows are removed afterwards as a
+    superuser would (``matches_forbid_delete`` blocks ordinary deletes), because a committed match
+    would otherwise leak into this session's database.
+    """
+    from datetime import UTC, datetime
+
+    from sqlalchemy.orm import Session
+
+    from app.adapters.base import NormalizedFixture
+    from app.adapters.upsert import UpsertPipeline
+    from app.auth.tokens import issue_access_token
+    from app.db.session import sync_engine
+
+    _, admin_id = committed_editor
+    token = issue_access_token(admin_id, "editor", datetime.now(UTC))
+    home = await session.scalar(select(Team).where(Team.legacy_id == "team-zamalek"))
+    away = await session.scalar(select(Team).where(Team.legacy_id == "team-city"))
+    kickoff = datetime(2031, 1, 1, 18, 0, tzinfo=UTC)
+    body = match_body(
+        kickoff_at="2031-01-01T18:00:00Z",
+        match_date="2031-01-01",
+        home={"team_id": home.id},
+        away={"team_id": away.id},
+    )
+
+    created = await parallel_admin_client.post(MATCHES, json=body, headers={"Authorization": f"Bearer {token}"})
+    assert created.status_code == 201, created.text
+    match_id = created.json()["data"]["id"]
+
+    try:
+        item = NormalizedFixture(
+            match_date=kickoff.date(),
+            kickoff_at=kickoff.replace(minute=20),  # within the ±45-minute probe window
+            time_tbd=False,
+            home="الزمالك",
+            away="مان سيتي",
+            competition="الدوري المصري الممتاز",
+            external_id="ys-locked-create-1",
+        )
+        # A committed importer: the test's own transaction must not hold the row, or the cleanup
+        # below would wait for a lock it can never get.
+        with Session(bind=sync_engine) as importer:
+            UpsertPipeline(importer, source="ysscores", media_hosts=["imgs.ysscores.com"]).run([item])
+            importer.commit()
+
+        kept = await session.get(Match, match_id, populate_existing=True)
+        assert kept.kickoff_at == kickoff
+        assert "kickoff_at" in kept.locked_fields
+    finally:
+        _delete_match(match_id)
+
+
+def _delete_match(match_id: int) -> None:
+    """Remove a committed test match a normal DELETE can't (``matches_forbid_delete``)."""
+    from sqlalchemy import text
+
+    from app.db.models import MatchChannel, MatchCustomBroadcast, MatchExternalId
+    from app.db.session import SyncSession
+
+    with SyncSession() as cleanup:
+        cleanup.execute(text("SET session_replication_role = replica"))
+        for model in (MatchChannel, MatchCustomBroadcast, MatchExternalId):
+            cleanup.execute(model.__table__.delete().where(model.match_id == match_id))
+        cleanup.execute(Match.__table__.delete().where(Match.id == match_id))
+        cleanup.commit()

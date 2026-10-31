@@ -114,10 +114,15 @@ export const refreshResponse = zod.object({
 /**
  * @summary Broadcaster presets for A4's slots (read-only until A11)
  */
+export const listBroadcastPresetsResponseDataItemLogoAssetIdMaxOne = 9223372036854776000;
+
+
+
 export const listBroadcastPresetsResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
+  "logo_asset_id": zod.union([zod.number().min(1).max(listBroadcastPresetsResponseDataItemLogoAssetIdMaxOne),zod.null()]),
   "name": zod.string()
 })),zod.null()]),
   "error": zod.union([zod.object({
@@ -1581,7 +1586,7 @@ export const patchSatelliteResponse = zod.object({
 
 
 /**
- * @summary Sources, for A3's source filter (read-only until A13)
+ * @summary List Sources
  */
 export const listSourcesResponse = zod.object({
   "data": zod.union([zod.array(zod.object({

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import EntityNotFound
 from app.auth.roles import AuthedAdmin
-from app.db.models import Competition, DeviceFollow, Match, Team, TeamCompetition
+from app.db.models import Competition, DeviceFollow, Match, RightsHolderCompetition, Team, TeamCompetition
 from app.schemas import admin as a
 from app.services.admin import refs, versions, writer
 from app.services.admin.common import asset_urls, refuse_if_in_use, sent, url_of
@@ -104,6 +104,10 @@ async def remove(
             "matches": select(Match.id).where(Match.competition_id == competition.id),
             "teams": team_ids,
             "follows": select(DeviceFollow.device_id).where(DeviceFollow.competition_id == competition.id),
+            # The cascade in 0001 would delete these silently (B1-R1-6).
+            "rights_holders": select(RightsHolderCompetition.rights_holder_id).where(
+                RightsHolderCompetition.competition_id == competition.id
+            ),
         },
     )
     await writer.save_delete(

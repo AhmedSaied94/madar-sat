@@ -8,8 +8,10 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.admin import _docs
 from app.api.admin._common import ETAG_HEADER, Db, Editor, IdPath, IfMatch, Now, set_etag
+from app.api.deps import ETag
 from app.api.envelope import Envelope, ok
 from app.auth.roles import require_editor
+from app.schemas import NO_NUL_PATTERN
 from app.schemas import admin as a
 from app.schemas import admin_examples as ex
 from app.services.admin import commentators as service
@@ -24,15 +26,23 @@ _NOT_FOUND = _docs.not_found("commentator_not_found")
     "",
     response_model=Envelope[list[a.AdminCommentator]],
     responses={
-        200: {"description": "Commentators", **_docs.ok_example("commentators_ok", [ex.COMMENTATOR], _docs.PAGE_META)},
+        200: {
+            "description": "Commentators, with the list's `ETag`",
+            **ETAG_HEADER,
+            **_docs.ok_example("commentators_ok", [ex.COMMENTATOR], _docs.PAGE_META),
+        },
         **_docs.AUTHED,
+        304: _docs.NOT_MODIFIED,
         422: _docs.VALIDATION,
     },
     summary="Search commentators (top 20 by similarity) or page through them",
+    # `usage` counts `matches.commentator_id` and `match_channels`, so assigning one moves the list
+    # (B1-R2-2).
+    dependencies=[Depends(ETag("admin_commentators", ("commentators", "matches")))],
 )
 async def list_commentators(
     session: Db,
-    q: Annotated[str | None, Query(min_length=1, max_length=a.MAX_QUERY_LENGTH)] = None,
+    q: Annotated[str | None, Query(min_length=1, max_length=a.MAX_QUERY_LENGTH, pattern=NO_NUL_PATTERN)] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> Envelope[list[a.AdminCommentator]]:

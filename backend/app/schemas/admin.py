@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     AfterValidator,
@@ -89,6 +89,19 @@ def _no_card_sharing_label(value: str) -> str:
     return value
 
 
+# Every admin text input is refused a NUL before it reaches the database (B1-R1-2, FR-013).
+def _no_nul(value: Any) -> None:
+    if isinstance(value, str):
+        if "\x00" in value:
+            raise PydanticCustomError("nul_byte", "this text may not contain a NUL character")
+    elif isinstance(value, dict):
+        for item in value.values():
+            _no_nul(item)
+    elif isinstance(value, (list, tuple, set)):
+        for item in value:
+            _no_nul(item)
+
+
 # Trimmed, non-empty text with a length cap and no card-sharing label.
 Name120 = Annotated[
     str,
@@ -118,9 +131,15 @@ MAX_QUERY_LENGTH = 64
 
 
 class _Body(BaseModel):
-    """Base of every request body: unknown fields are a validation error."""
+    """Base of every request body: unknown fields are a validation error, and no text carries a NUL."""
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _refuse_nul(cls, data: Any) -> Any:
+        _no_nul(data)
+        return data
 
 
 # --- D2: shared response parts --------------------------------------------------------------------
@@ -182,6 +201,7 @@ class AdminMatchRow(BaseModel):
     commentator: IdName | None
     sources: list[str]
     locked: bool
+    etag: Etag  # the version the bulk actions send as each item's If-Match (A-R1-3)
 
 
 class AdminMatchTeam(BaseModel):
@@ -648,6 +668,7 @@ class BroadcastPreset(BaseModel):
 
     id: int
     name: str
+    logo_asset_id: Id | None  # the id A4 saves in a slot's logo_asset_id (B1-R2-8)
     logo: str | None
 
 

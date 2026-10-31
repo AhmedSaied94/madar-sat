@@ -101,6 +101,34 @@ async def test_a_token_revoked_by_logout_cannot_be_refreshed(anon_admin_client, 
     assert resp.json()["error"]["code"] == "refresh_invalid"
 
 
+async def test_two_parallel_refreshes_rotate_once_and_the_second_revokes_the_family(
+    parallel_admin_client, committed_editor, redis_client
+):
+    """The row lock is what makes this true: without ``FOR UPDATE`` both would rotate (B1-R1-9)."""
+    import asyncio
+
+    email, _ = committed_editor
+    login = await parallel_admin_client.post(
+        BASE + "/login", json={"email": email, "password": "correct horse battery"}
+    )
+    assert login.status_code == 200
+    cookies = _cookies(login)
+    headers = {"Cookie": "; ".join(f"{name}={value}" for name, value in cookies.items())}
+    headers["X-CSRF-Token"] = cookies["madar_csrf"]
+
+    first, second = await asyncio.gather(
+        parallel_admin_client.post(f"{BASE}/refresh", headers=headers),
+        parallel_admin_client.post(f"{BASE}/refresh", headers=headers),
+    )
+
+    assert sorted([first.status_code, second.status_code]) == [200, 401]
+    refused = second if first.status_code == 200 else first
+    assert refused.json()["error"]["code"] == "refresh_invalid"
+    # The reuse rule killed the family, including the token the winner received.
+    winner = _cookies(first if first.status_code == 200 else second)
+    assert (await parallel_admin_client.post(f"{BASE}/refresh", headers=_session_headers(winner))).status_code == 401
+
+
 @pytest.mark.parametrize("route", ["refresh", "logout"])
 @pytest.mark.parametrize("csrf", [None, "not-the-cookie-value"])
 async def test_a_missing_or_different_csrf_header_is_403_and_changes_nothing(

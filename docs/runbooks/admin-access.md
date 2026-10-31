@@ -17,11 +17,13 @@ no CORS rule exists anywhere and the session cookies stay host-only.
 | Node ≥ 22.12 and pnpm 10 | `admin/package.json` (`packageManager`) |
 | An admin account (`editor` unless the owner made you `admin`) | [staff-accounts.md](staff-accounts.md) |
 
-Put the CA where `NODE_EXTRA_CA_CERTS` expects it:
+Put the CA where `NODE_EXTRA_CA_CERTS` expects it. Caddy keeps its root inside the container, so fetch it
+through VPS-1 (the command from [private-network.md "Install the admin CA root"](private-network.md#install-the-admin-ca-root)):
 
 ```bash
 mkdir -p ~/.config/madar
-scp ubuntu@10.8.0.1:/tmp/caddy-root.crt ~/.config/madar/caddy-root.crt   # or the command in private-network.md
+ssh ubuntu@10.8.0.1 sudo docker exec madar-caddy-1 cat /data/caddy/pki/authorities/local/root.crt \
+  > ~/.config/madar/caddy-root.crt
 openssl x509 -in ~/.config/madar/caddy-root.crt -noout -subject
 ```
 
@@ -33,9 +35,12 @@ pnpm install --frozen-lockfile
 NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm dev:wg
 ```
 
-`dev:wg` is `vite --mode wg`: `/admin/api` is proxied to `https://10.8.0.1` with `secure: true`, and
-Node trusts that host through the CA file above. Open `http://localhost:5173`, sign in, and you land on
-A3 (`/matches`).
+`dev:wg` is `vite --mode wg`: `/admin/api` is proxied to `https://10.8.0.1` with `secure: true` and
+`changeOrigin: true`, so Caddy sees its own site address (`https://10.8.0.1`) in the `Host` header
+instead of `localhost:5173` (A-R2-13; the T107 walk re-checks it end to end). Node trusts that host
+through the CA file above. Open `http://localhost:5173`. Signing in lands on `/` («هذا القسم قيد
+البناء»), because the login route only returns to a `from` page when the guard sent you there; open
+«المباريات» (A3) from the sidebar.
 
 Check the tunnel and the API before blaming the app:
 
@@ -56,16 +61,21 @@ pnpm prism        # :4010, from ../backend/openapi/admin.json
 pnpm dev          # :5173, /admin/api proxied to Prism
 ```
 
-In dev builds `?mock=<example>` asks Prism for one named example. The D2 screens use:
+In dev builds `?mock=<example>` asks Prism for one named example, and the status that example lives on.
+The `Prefer` header goes on the request the operation makes, so a save's example is asked for from the
+match page that saves (a `PATCH /admin/api/matches/{id}`), never from the list. The D2 screens use:
 
 | URL | What it shows |
 | --- | --- |
 | `/login?mock=invalid_credentials` | «إيميل أو باسوورد غلط» |
 | `/login?mock=account_locked` | the lockout panel with its countdown |
-| `/matches?mock=edit_conflict` | saving A4 answers `409` and opens `ConflictDialog` |
-| `/matches?mock=edit_conflict_source` | the same dialog for a save by a source |
-| `/matches?mock=precondition_required` | `428` on save: reload the page, then save again |
+| `/matches/48213?mock=edit_conflict` | saving A4 answers `409` and opens `ConflictDialog` |
+| `/matches/48213?mock=edit_conflict_source` | the same dialog for a save by a source |
+| `/matches/48213?mock=precondition_required` | `428` on save: reload the page, then save again |
 | `/matches?mock=forbidden_remove_channels` | the bulk removal refused for an editor |
+
+Each example needs the page's own request to Prism to match an operation the spec gives that example;
+`/matches/48213` works with Prism because it answers the detail `GET` from the same spec.
 
 ## When it doesn't work
 

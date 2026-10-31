@@ -96,3 +96,16 @@ class TestTbdAnchor:
             lo, hi = local_day(other)
             assert (lo <= anchor < hi) is expected, (zone, day, other)
         assert tbd_dates(*local_day(day)) == {day}
+
+
+@pytest.mark.parametrize(
+    "window",
+    [
+        (datetime(1, 1, 1, tzinfo=UTC), datetime(1, 1, 3, tzinfo=UTC)),  # the calendar's first day
+        (datetime(9999, 12, 30, tzinfo=UTC), datetime(9999, 12, 31, tzinfo=UTC)),  # and its last
+    ],
+)
+def test_a_tbd_window_at_the_calendar_edges_does_not_overflow(window):
+    """Schemathesis sends `from` on year 1; the two-day margin used to raise OverflowError (a 500)."""
+    dates = tbd_dates(*window)
+    assert all(window[0] <= tbd_anchor(d) < window[1] for d in dates)

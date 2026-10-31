@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,7 @@ from app.api.envelope import Envelope, ok
 from app.api.errors import EntityNotFound
 from app.api.public._query import IdPath, query_error
 from app.db.session import get_session
+from app.schemas import NoNul
 from app.schemas import public as s
 from app.services import teams
 
@@ -27,7 +29,8 @@ TEAM_DATASETS = ("teams", "competitions", "matches", "channels", "satellites", "
     dependencies=[Depends(ETag("teams", TEAM_DATASETS))],
 )
 async def search_teams(
-    q: str = Query(..., min_length=1, max_length=64),
+    # No `pattern=`: the NUL guard must not enter the published schema (B1-R2-1).
+    q: Annotated[str, Query(min_length=1, max_length=64), NoNul],
     limit: int = Query(20, ge=1, le=50),
     cursor: str | None = Query(None),
     session: AsyncSession = Depends(get_session),

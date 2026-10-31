@@ -51,7 +51,8 @@ COMPETITION_CHANGED = ("competitions", "matches")
 SATELLITE_CHANGED = ("satellites", "channels", "matches")
 CHANNEL_CHANGED = ("channels", "satellites", "matches")
 COMMENTATOR_CHANGED = ("commentators", "matches")
-HIDDEN_NAME_CHANGED = ("matches",)
+# A hidden name changes what the match, satellite and channel lists show (R6, amended 2026-10-31).
+HIDDEN_NAME_CHANGED = ("matches", "channels")
 
 
 # Unique indexes of the base schema and the field an editor would have to change.

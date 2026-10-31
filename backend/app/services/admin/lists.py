@@ -267,7 +267,12 @@ async def commentators(
 async def broadcast_presets(session: AsyncSession) -> list[a.BroadcastPreset]:
     rows = (await session.scalars(select(BroadcastPreset).order_by(BroadcastPreset.name))).all()
     urls = await asset_urls(session, [row.logo_asset_id for row in rows])
-    return [a.BroadcastPreset(id=row.id, name=row.name, logo=url_of(urls, row.logo_asset_id)) for row in rows]
+    return [
+        a.BroadcastPreset(
+            id=row.id, name=row.name, logo_asset_id=row.logo_asset_id, logo=url_of(urls, row.logo_asset_id)
+        )
+        for row in rows
+    ]
 
 
 async def sources(session: AsyncSession) -> list[a.SourceItem]:

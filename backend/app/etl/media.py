@@ -60,7 +60,7 @@ _TABLES: dict[str, tuple[Any, str | None]] = {
     "match": (Match, "matches"),
     "match_custom_broadcast": (MatchCustomBroadcast, "matches"),
     "commentator": (Commentator, "commentators"),
-    "broadcast": (BroadcastPreset, None),  # admin-only picker, no public dataset
+    "broadcast": (BroadcastPreset, "broadcast_presets"),  # A4's preset list has its own dataset
 }
 
 

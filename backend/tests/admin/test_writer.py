@@ -13,6 +13,7 @@ from tests.admin.helpers import (
     create,
     dataset_versions,
     if_match,
+    locks,
     new_match,
     patch_match,
 )
@@ -151,7 +152,7 @@ async def test_locked_fields_gain_only_the_changed_lockable_fields(editor_client
         {"fields": {"stadium": "ملعب", "competition_stage": "الجولة 3"}},  # the stadium is sent unchanged
     )
 
-    assert resp.json()["data"]["locked_fields"] == ["competition_stage"]
+    assert resp.json()["data"]["locked_fields"] == locks("competition_stage", "stadium")
 
 
 async def test_a_second_edit_adds_to_the_locks(editor_client):
@@ -161,7 +162,7 @@ async def test_a_second_edit_adds_to_the_locks(editor_client):
 
     second = await patch_match(editor_client, match, {"fields": {"competition_stage": "نهائي"}})
 
-    assert second.json()["data"]["locked_fields"] == ["competition_stage", "stadium"]
+    assert second.json()["data"]["locked_fields"] == locks("competition_stage", "stadium")
 
 
 # --- the response and no-ops -----------------------------------------------------------------------------
@@ -284,7 +285,7 @@ async def test_a_hidden_name_bumps_matches(editor_client, session):
     resp = await editor_client.post(f"{ADMIN}/hidden-channel-names", json={"name": "قناة مخفية"})
 
     assert resp.status_code == 201
-    assert await changed_datasets(session, before) == {"matches"}
+    assert await changed_datasets(session, before) == {"matches", "channels"}
 
 
 async def test_dataset_bumps_are_the_last_statement_so_a_refused_write_bumps_nothing(editor_client, session):

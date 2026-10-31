@@ -164,6 +164,8 @@ async def test_cors_allows_only_configured_origins(public_client):
         f"/v1/satellites/1/channels?q={'a' * 65}",  # q > 64
         f"/v1/teams?q={'a' * 65}",
         "/v1/teams?q=a&limit=51",
+        "/v1/teams?q=a%00b",  # a NUL never reaches asyncpg; the guard answers 422 (B1-R2-1)
+        "/v1/satellites/1/channels?q=a%00b",
         "/v1/teams?q=a&cursor=%E2%9C%93",
         "/v1/channels/0",
         f"/v1/channels/{2**63}",  # past PostgreSQL bigint

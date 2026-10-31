@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+import anyio.to_thread
 from fastapi import APIRouter, Cookie, Depends, Header, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -193,16 +194,26 @@ async def login(
             429, "account_locked", meta={"retry_after_s": retry_after}, headers={"Retry-After": str(retry_after)}
         )
 
+    # Reserve before the hash check: a burst of parallel requests can't all reach argon2 (SC-003).
+    attempt = await limiter.reserve(email, ip)
+    if not attempt.allowed:
+        raise ApiError(
+            429,
+            "account_locked",
+            meta={"retry_after_s": attempt.retry_after_s},
+            headers={"Retry-After": str(attempt.retry_after_s)},
+        )
+
     admin = await session.scalar(select(AdminRow).where(func.lower(AdminRow.email) == email.lower()))
     if admin is None or not admin.is_active:
-        # Same cost as a real check, so response time doesn't say which emails exist.
-        passwords.burn_verify(body.password)
+        # Same cost as a real check, so response time doesn't say which emails exist. Argon2 is
+        # synchronous and costs tens of milliseconds: keep it off the event loop.
+        await anyio.to_thread.run_sync(passwords.burn_verify, body.password)
         verdict = passwords.Verification(ok=False)
     else:
-        verdict = passwords.verify_password(admin.password_hash, body.password)
+        verdict = await anyio.to_thread.run_sync(passwords.verify_password, admin.password_hash, body.password)
     if admin is None or not admin.is_active or not verdict.ok:
-        remaining = await limiter.record_failure(email, ip)
-        raise ApiError(401, "invalid_credentials", meta={"attempts_remaining": remaining})
+        raise ApiError(401, "invalid_credentials", meta={"attempts_remaining": attempt.attempts_remaining})
 
     await limiter.clear(email, ip)
     if verdict.new_hash is not None:

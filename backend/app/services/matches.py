@@ -27,12 +27,26 @@ async def fetch_media_paths(session: AsyncSession, asset_ids: Iterable[int | Non
 
 
 def tbd_dates(from_dt: datetime, to_dt: datetime) -> set[date]:
+    """The dates whose TBD anchor falls inside the window.
+
+    A window may legally start on the calendar's first day or end on its last, so the two-day
+    margins are clamped instead of raising ``OverflowError`` (schemathesis finds it).
+    """
     result: set[date] = set()
-    d = (from_dt - timedelta(days=2)).date()
-    end = (to_dt + timedelta(days=2)).date()
+    try:
+        start = (from_dt - timedelta(days=2)).date()
+    except OverflowError:
+        start = date.min
+    try:
+        end = (to_dt + timedelta(days=2)).date()
+    except OverflowError:
+        end = date.max
+    d = start
     while d <= end:
         if from_dt <= tbd_anchor(d) < to_dt:
             result.add(d)
+        if d == date.max:
+            break
         d += timedelta(days=1)
     return result
 

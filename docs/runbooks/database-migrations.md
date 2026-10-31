@@ -1,6 +1,6 @@
 # Database migrations
 
-The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
+The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), `0004` adds the `broadcast_presets` and `sources` dataset names ([below](#revision-0004)), and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
 
 ## How a migration runs in a deploy
 
@@ -65,6 +65,18 @@ FROM match_channels;
 ```
 
 `/v1` doesn't read either column. The migration has a downgrade (it drops both columns and the CHECK), meant for a local database: `cd backend && uv run alembic downgrade 0002 && uv run alembic upgrade head`. In production a rollback is the older release on the newer schema, as for every revision ([deploy-and-rollback.md "Roll back"](deploy-and-rollback.md#roll-back)).
+
+## Revision 0004
+
+Added on D2 (`backend/alembic/versions/0004_list_datasets.py`). It widens `ck_dataset_versions_name`
+by two names, `broadcast_presets` and `sources`, and inserts both rows at version 0, so the two
+read-only admin lists can answer `304` (constitution VI). No table or column changes, so the release
+before it keeps running on the new schema. The downgrade deletes the two rows and restores the
+eight-name CHECK.
+
+```sql
+SELECT name, version FROM dataset_versions ORDER BY name;       -- ten rows, both new ones at 0
+```
 
 ## Writing a migration
 

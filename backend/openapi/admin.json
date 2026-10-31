@@ -849,6 +849,7 @@
               "stage": "\u0627\u0644\u062c\u0648\u0644\u0629 9"
             },
             "estimated": false,
+            "etag": "\"3f9a1c6d47b0e2a5c8d14f7b90e3a652\"",
             "home": {
               "id": 101,
               "logo": "https://media.example/logo/ab/ab12cd.webp",
@@ -901,6 +902,12 @@
           "estimated": {
             "title": "Estimated",
             "type": "boolean"
+          },
+          "etag": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Etag",
+            "type": "string"
           },
           "home": {
             "$ref": "#/components/schemas/TeamRef"
@@ -975,7 +982,8 @@
           "missing_channels",
           "commentator",
           "sources",
-          "locked"
+          "locked",
+          "etag"
         ],
         "title": "AdminMatchRow",
         "type": "object"
@@ -1486,6 +1494,7 @@
           {
             "id": 1,
             "logo": "https://media.example/logo/ab/ab12cd.webp",
+            "logo_asset_id": 88,
             "name": "ON Sport 1"
           }
         ],
@@ -1505,6 +1514,19 @@
             ],
             "title": "Logo"
           },
+          "logo_asset_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Asset Id"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -1513,6 +1535,7 @@
         "required": [
           "id",
           "name",
+          "logo_asset_id",
           "logo"
         ],
         "title": "BroadcastPreset",
@@ -5531,6 +5554,7 @@
                         {
                           "id": 1,
                           "logo": "https://media.example/logo/ab/ab12cd.webp",
+                          "logo_asset_id": 88,
                           "name": "ON Sport 1"
                         }
                       ],
@@ -5548,7 +5572,18 @@
                 }
               }
             },
-            "description": "Presets"
+            "description": "Presets, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
           },
           "401": {
             "content": {
@@ -5629,6 +5664,7 @@
                 {
                   "maxLength": 64,
                   "minLength": 1,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -5798,7 +5834,18 @@
                 }
               }
             },
-            "description": "Channels"
+            "description": "Channels, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
           },
           "401": {
             "content": {
@@ -6794,6 +6841,7 @@
                 {
                   "maxLength": 64,
                   "minLength": 1,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -6869,7 +6917,18 @@
                 }
               }
             },
-            "description": "Commentators"
+            "description": "Commentators, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
           },
           "401": {
             "content": {
@@ -7857,7 +7916,15 @@
                 }
               }
             },
-            "description": "Competitions"
+            "description": "Competitions, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "304": {
             "description": "The list hasn't changed since `If-None-Match`; no body"
@@ -8797,12 +8864,40 @@
           "200": {
             "content": {
               "application/json": {
+                "examples": {
+                  "hidden_names_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "name": "\u0642\u0646\u0627\u0629 \u0645\u062e\u0641\u064a\u0629"
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
                 "schema": {
                   "$ref": "#/components/schemas/Envelope_list_HiddenChannelName__"
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Hidden names, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
           },
           "401": {
             "content": {
@@ -9012,6 +9107,7 @@
             "schema": {
               "maxLength": 120,
               "minLength": 1,
+              "pattern": "^[^\\x00]*$",
               "title": "Name",
               "type": "string"
             }
@@ -9256,6 +9352,7 @@
                             "stage": "\u0627\u0644\u062c\u0648\u0644\u0629 9"
                           },
                           "estimated": false,
+                          "etag": "\"3f9a1c6d47b0e2a5c8d14f7b90e3a652\"",
                           "home": {
                             "id": 101,
                             "logo": "https://media.example/logo/ab/ab12cd.webp",
@@ -9294,7 +9391,15 @@
                 }
               }
             },
-            "description": "The window's matches"
+            "description": "The window's matches, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "304": {
             "description": "The list hasn't changed since `If-None-Match`; no body"
@@ -10696,7 +10801,15 @@
                 }
               }
             },
-            "description": "Satellites"
+            "description": "Satellites, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "304": {
             "description": "The list hasn't changed since `If-None-Match`; no body"
@@ -11657,12 +11770,42 @@
           "200": {
             "content": {
               "application/json": {
+                "examples": {
+                  "sources_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "is_enabled": true,
+                          "kind": "scraper",
+                          "name": "ysscores"
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
                 "schema": {
                   "$ref": "#/components/schemas/Envelope_list_SourceItem__"
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Sources, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
           },
           "401": {
             "content": {
@@ -11724,7 +11867,7 @@
             "description": "The role is below the route's requirement"
           }
         },
-        "summary": "Sources, for A3's source filter (read-only until A13)",
+        "summary": "List Sources",
         "tags": [
           "lists"
         ]
@@ -11743,6 +11886,7 @@
                 {
                   "maxLength": 64,
                   "minLength": 1,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -11860,7 +12004,18 @@
                 }
               }
             },
-            "description": "Teams"
+            "description": "Teams, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
           },
           "401": {
             "content": {

@@ -16,12 +16,14 @@ from typing import Any
 from celery import Celery
 from kombu import Queue
 
+from app.workers import logs  # noqa: F401 - registers the JSON log handler
 from app.workers.base import BaseTask
 from app.workers.config import get_worker_settings
 
 QUEUE_NAMES = ("scrape", "scrape_home", "imports", "maintenance", "media", "live", "notifications")
 TASK_MODULES = ("app.adapters.tasks", "app.adapters.media_tasks")
 SCHEDULE_MODULE = "app.adapters.schedule"
+ROUTER_MODULE = "app.adapters.tasks"
 
 
 def existing_modules(names: Iterable[str]) -> list[str]:
@@ -52,6 +54,21 @@ def load_beat_schedule(module: str = SCHEDULE_MODULE) -> dict[str, Any]:
     return dict(schedule)
 
 
+def route(name: str, args: Any = None, kwargs: Any = None, options: Any = None, task: Any = None, **_: Any) -> Any:
+    """Resolve a task's queue through the adapters' router, imported on first use (B2-R1-19).
+
+    ``celery call`` imports only this package, so registering the router object at app creation
+    would need ``app.adapters.tasks`` (and the database) on the home box. Importing it here, per
+    publish, keeps ``import app.workers`` database-free while ``adapters.fetch`` still routes right.
+    """
+    del options, task
+    if not existing_modules([ROUTER_MODULE]):
+        return None
+    module = importlib.import_module(ROUTER_MODULE)
+    router: Any = module.IngestionRouter()
+    return router.route_for_task(name, args=args, kwargs=kwargs)
+
+
 def create_app() -> Celery:
     celery = Celery("madar", broker=get_worker_settings().broker_url, task_cls=BaseTask)
     celery.conf.update(
@@ -71,6 +88,7 @@ def create_app() -> Celery:
         task_default_queue="maintenance",
         include=existing_modules(TASK_MODULES),
         beat_schedule=load_beat_schedule(),
+        task_routes=(route,),
     )
     return celery
 
