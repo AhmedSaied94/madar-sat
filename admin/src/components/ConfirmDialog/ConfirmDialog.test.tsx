@@ -101,6 +101,7 @@ describe('ConflictDialog (If-Match failed)', () => {
         changes={changes}
         onReload={onReload}
         onDiscard={vi.fn()}
+        onDismiss={vi.fn()}
       />,
     );
 
@@ -127,10 +128,53 @@ describe('ConflictDialog (If-Match failed)', () => {
         changes={changes}
         onReload={vi.fn()}
         onDiscard={vi.fn()}
+        onDismiss={vi.fn()}
       />,
     );
 
     const dialog = screen.getByRole('alertdialog', { name: 'حدّث ysscores هذا العنصر' });
     expect(within(dialog).getByText('ysscores')).toHaveAttribute('dir', 'ltr');
+  });
+
+  it('says the save time is unknown when the conflict carries none', () => {
+    renderRtl(
+      <ConflictDialog
+        open
+        subject="ميلان × بولونيا"
+        changedBy={{ kind: 'admin', name: 'يوسف عمر', at: '' }}
+        changes={changes}
+        onReload={vi.fn()}
+        onDiscard={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    // Never the client's clock dressed up as the other editor's save time (A-R2-7).
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('في وقت غير معروف');
+  });
+
+  it('offers no empty diff toggle when nothing visible changed, and Escape dismisses instead of discarding', async () => {
+    const onDiscard = vi.fn();
+    const onDismiss = vi.fn();
+    renderRtl(
+      <ConflictDialog
+        open
+        subject="ميلان × بولونيا"
+        changedBy={changedByAdmin}
+        changes={[]}
+        onReload={vi.fn()}
+        onDiscard={onDiscard}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).queryByRole('button', { name: 'اعرض التغييرات' })).toBeNull();
+    expect(dialog).toHaveTextContent('لم يتغيّر أي حقل تعرضه هذه الشاشة');
+
+    // Escape closes the dialog and keeps the edits; only «تجاهل تعديلاتي» drops them (A-R2-6).
+    await userEvent.keyboard('{Escape}');
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDiscard).not.toHaveBeenCalled();
   });
 });

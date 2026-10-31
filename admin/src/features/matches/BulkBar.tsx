@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 
 import type { AdminCompetition, AdminMatchRow } from '../../api/generated/admin.schemas';
 import { ApiError } from '../../api/http';
@@ -30,21 +30,38 @@ export function BulkBar({ selected, competitions, canRemoveChannels, onClear }: 
   const toast = useToast();
   const [mode, setMode] = useState<'idle' | 'competition' | 'remove'>('idle');
   const [competitionId, setCompetitionId] = useState<number | ''>('');
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<ReactNode>(null);
 
   const count = selected.length;
   const items = selected.map((row) => ({ id: row.id, etag: rowEtag(row) }));
 
   function fail(error: unknown): void {
     const code = error instanceof ApiError ? error.code : 'network_error';
-    // A `409` names the rows whose version moved since the list was drawn.
+    // A `409` names the rows whose version moved since the list was drawn, by their teams, not by id.
     const stale = error instanceof ApiError ? (error.meta as { stale_ids?: number[] }).stale_ids : undefined;
-    const named = Array.isArray(stale) && stale.length > 0 ? copy.bulk.stale(stale.join('، ')) : null;
+    const staleRows = Array.isArray(stale) ? selected.filter((row) => stale.includes(row.id)) : [];
+    const named: ReactNode =
+      staleRows.length > 0 ? (
+        <>
+          {copy.bulk.staleBefore}
+          {staleRows.map((row, index) => (
+            <span key={row.id}>
+              {index > 0 ? '، ' : null}
+              {/* Each name stays its own direction island (A-R1-18). */}
+              <bdi>{row.home.name}</bdi> × <bdi>{row.away.name}</bdi>
+            </span>
+          ))}
+          {copy.bulk.staleAfter}
+        </>
+      ) : null;
     setFailure(named ?? copyForErrorCode(code));
     toast.show({
       kind: 'error',
       title: toastCopy.saveFailed,
-      description: named ?? copyForErrorCode(code),
+      description:
+        staleRows.length > 0
+          ? `${copy.bulk.staleBefore}${staleRows.map((row) => `${row.home.name} × ${row.away.name}`).join('، ')}${copy.bulk.staleAfter}`
+          : copyForErrorCode(code),
     });
   }
 

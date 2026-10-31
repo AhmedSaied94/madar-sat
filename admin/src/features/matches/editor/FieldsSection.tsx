@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import type { ReactElement } from 'react';
+import { useId, type ReactElement } from 'react';
 
 import { formatUtcTime, cairoWallTimeToUtc } from '../../../lib/cairoTime';
 import { Field } from '../../../components/Field/Field';
@@ -20,6 +20,7 @@ interface EditorSectionsProps {
 }
 
 export function EditorSections({ state, competitions, lockedFields, onChange }: EditorSectionsProps): ReactElement {
+  const stageListId = useId();
   const utc = state.date !== '' && state.time !== '' ? cairoWallTimeToUtc(`${state.date}T${state.time}`) : null;
   const locked = (field: string): boolean => lockedFields.includes(field);
 
@@ -114,8 +115,15 @@ export function EditorSections({ state, competitions, lockedFields, onChange }: 
         </label>
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* The stages US4 lists, offered over free text so two editors do not invent two spellings (A-R2-5). */}
+          <datalist id={stageListId}>
+            {copy.stagePresets.map((stage) => (
+              <option key={stage} value={stage} />
+            ))}
+          </datalist>
           <Field
             label={copy.stage}
+            list={stageListId}
             locked={locked('competition_stage')}
             value={state.stage}
             onChange={(event) => onChange({ stage: event.target.value })}

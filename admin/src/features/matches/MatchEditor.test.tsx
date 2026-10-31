@@ -154,6 +154,10 @@ let patched: { body: Record<string, unknown>; ifMatch: string | null; bearer: st
 let patchCalls = 0;
 let created: { body: Record<string, unknown> } | null = null;
 let channelQueries: URL[] = [];
+/** What the next `GET /matches/48213` answers, and with which version: a test replaces both to model a
+ *  refetch that brings changed data (A-R2-1). */
+let matchBody: Record<string, unknown> = match;
+let matchEtag = '"v1"';
 
 const session = {
   access_token: 'token-1',
@@ -167,11 +171,13 @@ function serveMatchData(overrides: Record<string, unknown> = {}): void {
   patchCalls = 0;
   created = null;
   channelQueries = [];
+  matchBody = { ...match, ...overrides };
+  matchEtag = '"v1"';
   server.use(
     // This suite starts signed in: the editor's writes carry the bearer the mutator holds (A-R1-1).
     mswHttp.post('*/admin/api/auth/refresh', () => HttpResponse.json(envelope(session))),
     mswHttp.get('*/admin/api/matches/48213', () =>
-      HttpResponse.json(envelope({ ...match, ...overrides }), { headers: { ETag: '"v1"' } }),
+      HttpResponse.json(envelope(matchBody), { headers: { ETag: matchEtag } }),
     ),
     mswHttp.patch('*/admin/api/matches/48213', async ({ request }) => {
       patchCalls += 1;
@@ -206,8 +212,9 @@ function serveMatchData(overrides: Record<string, unknown> = {}): void {
     mswHttp.get('*/admin/api/broadcast-presets', () =>
       HttpResponse.json(
         envelope([
-          { id: 31, name: 'Sky Sport Italy', logo: null },
-          { id: 32, name: 'beIN Sports', logo: null },
+          // A preset's own id (71/72) is never a media asset id: `logo_asset_id` is the asset (A-R2-2).
+          { id: 71, name: 'Sky Sport Italy', logo: null, logo_asset_id: 31 },
+          { id: 72, name: 'beIN Sports', logo: null, logo_asset_id: 82 },
         ]),
       ),
     ),
@@ -491,11 +498,12 @@ describe('MatchEditor (A4)', () => {
     expect(patched?.body).toMatchObject({ status: { set: { score: { home_pen: 4 } } } });
   });
 
-  it('offers two broadcaster slots, their presets, and keeps the logo of an untouched slot', async () => {
+  it('offers two broadcaster slots and their presets, and sends the preset’s asset id, never its id', async () => {
     renderEditor();
     await waitForEditor();
 
-    // Typing a known preset name carries its logo asset (A-R1-8).
+    // A preset sets the label and the media asset the slot saves. Its own id (72) is a different table;
+    // sending it would publish an unrelated media asset as the broadcaster's logo (A-R2-2, B1-R2-8).
     const first = screen.getByLabelText('يعرض على');
     await userEvent.clear(first);
     await userEvent.type(first, 'beIN Sports');
@@ -504,11 +512,11 @@ describe('MatchEditor (A4)', () => {
 
     await waitFor(() => expect(patched).not.toBeNull());
     expect(patched?.body).toMatchObject({
-      broadcasts: [{ slot: 1, label: 'beIN Sports', logo_asset_id: 32, commentator_id: null }],
+      broadcasts: [{ slot: 1, label: 'beIN Sports', logo_asset_id: 82, commentator_id: null }],
     });
   });
 
-  it('keeps a slot’s logo when its label is retyped', async () => {
+  it('drops a slot’s logo when its label becomes another broadcaster', async () => {
     renderEditor();
     await waitForEditor();
 
@@ -517,8 +525,31 @@ describe('MatchEditor (A4)', () => {
     await userEvent.click(saveButton());
 
     await waitFor(() => expect(patched).not.toBeNull());
-    // A name-only edit must not clear the broadcaster's logo (A-R1-8).
-    expect(patched?.body).toMatchObject({ broadcasts: [{ slot: 1, label: 'Sky Sport Italy HD', logo_asset_id: 31 }] });
+    // «Sky Sport Italy HD» is not Sky Sport Italy: the slot must not keep Sky's logo (A-R2-12).
+    expect(patched?.body).toMatchObject({
+      broadcasts: [{ slot: 1, label: 'Sky Sport Italy HD', logo_asset_id: null }],
+    });
+  });
+
+  it('offers the stage presets over free text', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    const stage = screen.getByLabelText('المرحلة');
+    const listId = stage.getAttribute('list');
+    expect(listId).toBeTruthy();
+    const options = Array.from(document.getElementById(listId ?? '')?.querySelectorAll('option') ?? []).map(
+      (option) => option.getAttribute('value'),
+    );
+    // US4 scenario 4's rounds are suggestions; the field still takes any text (A-R2-5).
+    expect(options).toEqual(['الجولة الأولى', 'ذهاب دور 16', 'إياب دور 16', 'ربع النهائي', 'نصف النهائي', 'النهائي']);
+
+    await userEvent.clear(stage);
+    await userEvent.type(stage, 'ربع النهائي');
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(patched).not.toBeNull());
+    expect(patched?.body).toMatchObject({ fields: { competition_stage: 'ربع النهائي' } });
   });
 
   it('never sends half a score', async () => {
@@ -702,6 +733,189 @@ describe('MatchEditor (A4)', () => {
 
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(screen.getByLabelText('الوقت بتوقيت القاهرة')).toHaveValue('19:30');
+  });
+
+  it('saves under the version a changed refetch returned, after «إعادة التحميل»', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    // Their save changed the stadium, and the refetch that follows the 409 answers with that data at "v4".
+    matchBody = { ...match, stadium: 'سان سيرو الجديد' };
+    matchEtag = '"v4"';
+    server.use(
+      mswHttp.patch('*/admin/api/matches/48213', async ({ request }) => {
+        patchCalls += 1;
+        const body = (await request.json()) as Record<string, unknown>;
+        if (patchCalls === 1) {
+          return HttpResponse.json(
+            errorBody('edit_conflict', {
+              changed_at: '2026-10-31T12:00:00Z',
+              changed_by: { kind: 'admin', name: 'يوسف عمر' },
+            }),
+            { status: 409 },
+          );
+        }
+        patched = { body, ifMatch: request.headers.get('If-Match'), bearer: request.headers.get('Authorization') };
+        return HttpResponse.json(envelope(matchBody), { headers: { ETag: '"v5"' } });
+      }),
+    );
+
+    await userEvent.clear(screen.getByLabelText('الملعب'));
+    await userEvent.type(screen.getByLabelText('الملعب'), 'سان سيرو 3');
+    await userEvent.click(saveButton());
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إعادة التحميل' }));
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText('الملعب'), '!');
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(patchCalls).toBe(2));
+    // The reloaded version, not a version the refetch lost: without it this save is a 428 (A-R2-1).
+    expect(patched?.ifMatch).toBe('"v4"');
+  });
+
+  it('keeps the version when A4 is reopened from a changed refetch', async () => {
+    const router = renderEditor();
+    await waitForEditor();
+
+    // A save returns "v2", the invalidation refetches the match with other data at "v3".
+    await userEvent.clear(screen.getByLabelText('الملعب'));
+    await userEvent.type(screen.getByLabelText('الملعب'), 'سان سيرو 2');
+    matchBody = { ...match, stadium: 'سان سيرو 2' };
+    matchEtag = '"v3"';
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(patched?.ifMatch).toBe('"v1"'));
+
+    await router.navigate('/matches');
+    expect(await screen.findByText('قائمة المباريات')).toBeInTheDocument();
+    await router.navigate('/matches/48213');
+    await waitForEditor();
+
+    await userEvent.type(screen.getByLabelText('الملعب'), '!');
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(patchCalls).toBe(2));
+    expect(patched?.ifMatch).toBe('"v3"');
+  });
+
+  it('offers no reload, and keeps the edits, when the refetch after a 409 fails', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    server.use(
+      mswHttp.patch('*/admin/api/matches/48213', () =>
+        HttpResponse.json(
+          errorBody('edit_conflict', {
+            changed_at: '2026-10-31T12:00:00Z',
+            changed_by: { kind: 'admin', name: 'يوسف عمر' },
+          }),
+          { status: 409 },
+        ),
+      ),
+      // The version the server holds can't be read: the dialog must not be built from the cache (A-R3-1).
+      mswHttp.get('*/admin/api/matches/48213', () => HttpResponse.error()),
+    );
+
+    await userEvent.clear(screen.getByLabelText('الوقت بتوقيت القاهرة'));
+    await userEvent.type(screen.getByLabelText('الوقت بتوقيت القاهرة'), '23:00');
+    await userEvent.click(saveButton());
+
+    expect(
+      await screen.findByText('تعذّر الاتصال بالخادم. تأكد من اتصال WireGuard وحاول مرة أخرى'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    // A failed background refetch no longer replaces the editor: the edits are still on screen.
+    expect(screen.getByLabelText('الوقت بتوقيت القاهرة')).toHaveValue('23:00');
+  });
+
+  it('keeps the edits when Escape closes the conflict dialog', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    server.use(
+      mswHttp.patch('*/admin/api/matches/48213', () =>
+        HttpResponse.json(errorBody('edit_conflict', { changed_by: { kind: 'admin', name: 'يوسف عمر' } }), { status: 409 }),
+      ),
+    );
+
+    await userEvent.clear(screen.getByLabelText('الوقت بتوقيت القاهرة'));
+    await userEvent.type(screen.getByLabelText('الوقت بتوقيت القاهرة'), '23:00');
+    await userEvent.click(saveButton());
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.keyboard('{Escape}');
+
+    // Escape dismisses the dialog; only «تجاهل تعديلاتي» throws the edits away (A-R2-6).
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(screen.getByLabelText('الوقت بتوقيت القاهرة')).toHaveValue('23:00');
+  });
+
+  it('diffs a score-only conflict with names, and says when their save time is unknown', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    matchBody = {
+      ...match,
+      status: {
+        status: 'finished',
+        status_source: 'manual',
+        estimated: false,
+        period: null,
+        minute: null,
+        score: { home: 2, away: 1, home_pen: null, away_pen: null },
+        status_label: null,
+        status_updated_at: null,
+      },
+    };
+    matchEtag = '"v2"';
+    server.use(
+      mswHttp.patch('*/admin/api/matches/48213', () =>
+        // No `changed_at`: the dialog must not pass the client's clock off as their save time (A-R2-7).
+        HttpResponse.json(errorBody('edit_conflict', { changed_by: { kind: 'admin', name: 'يوسف عمر' } }), { status: 409 }),
+      ),
+    );
+
+    await userEvent.type(screen.getByLabelText('الملعب'), ' ');
+    await userEvent.click(saveButton());
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('في وقت غير معروف');
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'اعرض التغييرات' }));
+    const diff = within(dialog).getByTestId('conflict-diff');
+    // A score-only change is a change: the diff names it, with numbers the editor can read (A-R2-7).
+    expect(diff).toHaveTextContent('النتيجة');
+    expect(diff).toHaveTextContent('2 – 1');
+  });
+
+  it('keeps the keyboard inside the rows the picker shows', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    const many = Array.from({ length: 7 }, (_, index) => ({
+      id: 300 + index,
+      name: 'الأهلي',
+      country: 'مصر',
+      logo: null,
+      primary_competition: { id: 12, name: 'الدوري الإيطالي' },
+      competitions: [{ id: 12, name: 'الدوري الإيطالي' }],
+    }));
+    server.use(mswHttp.get('*/admin/api/teams', () => HttpResponse.json(envelope(many))));
+
+    const home = screen.getByLabelText('صاحب الأرض');
+    await userEvent.clear(home);
+    await userEvent.type(home, 'الأهلي');
+    await screen.findAllByRole('option', { name: /الأهلي/ });
+
+    // Seven results, five rows: the arrows stop at the fifth, so Enter cannot pick an unseen team (A-R2-8).
+    expect(screen.getAllByRole('option', { name: /الأهلي/ })).toHaveLength(5);
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(patched).not.toBeNull());
+    expect(patched?.body).toMatchObject({ fields: { home: { team_id: 304 } } });
   });
 
   it.each([

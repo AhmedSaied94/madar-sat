@@ -1,3 +1,4 @@
+import { clsx } from 'clsx';
 import { useId, useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
 
 import { useListTeams } from '../../api/generated/admin';
@@ -7,6 +8,8 @@ import { editor as copy } from '../../i18n/ar';
 // A4's team picker: a combobox keyed by team id, or the name as text when the source's team is not in
 // the database. Country, crest and competitions are on every option, so two teams with one name can be
 // told apart — and choosing an option sets its id, never a name lookup (A-R1-6).
+const OPTIONS_SHOWN = 5;
+
 interface TeamPickerProps {
   label: string;
   /** `team_id` when the row is linked, null for free text. */
@@ -23,11 +26,15 @@ export function TeamPicker({ label, teamId, name, onChange }: TeamPickerProps): 
   const [active, setActive] = useState(0);
   const { data } = useListTeams({ q: query.length >= 2 ? query : null, limit: 20 });
   const teams: readonly TeamItem[] = useMemo(() => data?.data ?? [], [data]);
+  // The list shows five options, so the keyboard moves through those five and no further: Enter can
+  // only pick a team the editor can see, and `aria-activedescendant` always names a rendered id (A-R2-8).
+  const shown = teams.slice(0, OPTIONS_SHOWN);
 
   function type(value: string): void {
     setQuery(value);
     // Text that matches no option is the source's team name: free text, no id.
     onChange({ teamId: null, name: value });
+    setActive(0); // a new query starts at its first option, never at a stale index (A-R2-8)
     setOpen(true);
   }
 
@@ -52,7 +59,7 @@ export function TeamPicker({ label, teamId, name, onChange }: TeamPickerProps): 
     }
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActive((current) => Math.min(current + 1, Math.max(teams.length - 1, 0)));
+      setActive((current) => Math.min(current + 1, Math.max(shown.length - 1, 0)));
       return;
     }
     if (event.key === 'ArrowUp') {
@@ -61,7 +68,7 @@ export function TeamPicker({ label, teamId, name, onChange }: TeamPickerProps): 
       return;
     }
     if (event.key === 'Enter') {
-      const team = teams[active];
+      const team = shown[active];
       if (team) {
         event.preventDefault();
         pick(team);
@@ -82,7 +89,7 @@ export function TeamPicker({ label, teamId, name, onChange }: TeamPickerProps): 
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={open && teams[active] ? `${listId}-${teams[active].id}` : undefined}
+          aria-activedescendant={open && shown[active] ? `${listId}-${shown[active].id}` : undefined}
           autoComplete="off"
           value={name}
           placeholder={copy.teamSearch}
@@ -94,13 +101,13 @@ export function TeamPicker({ label, teamId, name, onChange }: TeamPickerProps): 
         />
       </div>
 
-      {open && teams.length > 0 ? (
+      {open && shown.length > 0 ? (
         <ul
           id={listId}
           role="listbox"
           className="absolute inset-x-0 top-full z-10 mt-1 overflow-y-auto rounded-md bg-surface-1 py-1 ring-1 ring-inset ring-divider"
         >
-          {teams.slice(0, 5).map((team, index) => (
+          {shown.map((team, index) => (
             <li
               key={team.id}
               id={`${listId}-${team.id}`}
@@ -112,7 +119,10 @@ export function TeamPicker({ label, teamId, name, onChange }: TeamPickerProps): 
                 event.preventDefault();
                 pick(team);
               }}
-              className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-surface-2"
+              className={clsx(
+                'flex cursor-pointer items-center gap-2 px-3 py-2',
+                index === active ? 'bg-surface-2' : 'hover:bg-surface-2',
+              )}
             >
               {team.logo ? (
                 <img src={team.logo} alt="" width={24} height={24} className="size-6 rounded-pill bg-surface-2 object-contain" />

@@ -23,10 +23,13 @@ function mockExampleStatuses(): Record<string, Record<string, number>> {
   const spec = JSON.parse(readFileSync(new URL('../backend/openapi/admin.json', import.meta.url), 'utf8')) as OpenApiSpec;
   const statuses: Record<string, Record<string, number>> = {};
   for (const [path, operations] of Object.entries(spec.paths ?? {})) {
+    // `adminHttp` keys an operation by its template, `PATCH /admin/api/matches/{}`, so a literal
+    // `{match_id}` from the spec is normalised to it here (A-R2-4).
+    const template = path.replace(/\{[^}]+\}/g, '{}');
     for (const [method, operation] of Object.entries(operations)) {
       for (const [status, response] of Object.entries(operation.responses ?? {})) {
         for (const example of Object.keys(response.content?.['application/json']?.examples ?? {})) {
-          (statuses[`${method.toUpperCase()} ${path}`] ??= {})[example] = Number(status);
+          (statuses[`${method.toUpperCase()} ${template}`] ??= {})[example] = Number(status);
         }
       }
     }
@@ -40,13 +43,12 @@ export default defineConfig(({ command, mode }) => ({
     __MOCK_EXAMPLE_STATUSES__: JSON.stringify(command === 'serve' ? mockExampleStatuses() : {}),
   },
   server: {
-    // `pnpm prism` serves backend/openapi/admin.json on :4010 (research R15).
-    // `pnpm dev:wg` (`--mode wg`) proxies to the admin API over WireGuard instead, through Caddy's
-    // root CA: the browser only ever talks to localhost, so the cookies stay host-only and the admin
-    // API needs no CORS (research R23).
+    // The proxy keeps the browser on localhost, so the cookies stay host-only and the admin API needs
+    // no CORS (research R23). `changeOrigin` rewrites `Host` to 10.8.0.1, Caddy's only site address: with
+    // `Host: localhost:5173` the request matches no site and Caddy answers nothing (A-R2-13).
     proxy:
       mode === 'wg'
-        ? { '/admin/api': { target: 'https://10.8.0.1', secure: true, changeOrigin: false } }
+        ? { '/admin/api': { target: 'https://10.8.0.1', secure: true, changeOrigin: true } }
         : { '/admin/api': 'http://localhost:4010' },
   },
   test: {

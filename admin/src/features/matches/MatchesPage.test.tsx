@@ -246,9 +246,10 @@ describe('MatchesPage (A3)', () => {
     expect(detailReads).toBe(0);
   });
 
-  it('names the stale rows when a bulk write answers 409', async () => {
+  it('names the stale rows by their teams when a bulk write answers 409', async () => {
     renderPage('editor');
     await waitForRows();
+    const listsBefore = listRequests.length;
 
     server.use(
       mswHttp.post('*/admin/api/matches/bulk', () =>
@@ -270,7 +271,12 @@ describe('MatchesPage (A3)', () => {
     await userEvent.selectOptions(within(dialog).getByLabelText('البطولة'), '40');
     await userEvent.click(screen.getByRole('button', { name: 'تغيير' }));
 
-    expect(await within(screen.getByRole('toolbar')).findByText(/تغيّرت هذه المباريات منذ عرض القائمة: 48213/)).toBeInTheDocument();
+    // The rows are named by their teams, each in its own direction island; the numeric ids are gone (A-R2-9).
+    const alert = await within(screen.getByRole('toolbar')).findByText(/تغيّرت هذه المباريات منذ عرض القائمة/);
+    expect(alert).toHaveTextContent('الأهلي × الزمالك');
+    expect(alert).not.toHaveTextContent('48213');
+    // And the list refetches, so a retry is made against the versions that exist (A-R2-9).
+    await waitFor(() => expect(listRequests.length).toBeGreaterThan(listsBefore));
   });
 
   it('keeps channel removal for an admin, behind the typed phrase, and sends it', async () => {

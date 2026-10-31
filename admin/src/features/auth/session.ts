@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
   createElement,
@@ -33,6 +34,9 @@ export const REFRESH_LEAD_S = 60;
 export function SessionProvider({ children }: { children: ReactNode }): ReactElement {
   const [session, setSession] = useState<Session | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The cache belongs to the session: a second editor on the same tab must never see the first
+  // editor's data or versions (A-R2-10).
+  const queryClient = useQueryClient();
 
   // One restore on mount; a refresh done inside the mutator (after a 401) lands here too.
   useEffect(() => {
@@ -42,7 +46,10 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
         if (!cancelled) setSession(fresh);
       },
       onExpired: () => {
-        if (!cancelled) setSession(null);
+        if (!cancelled) {
+          setSession(null);
+          queryClient.clear();
+        }
       },
     });
 
@@ -56,7 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
       cancelled = true;
       bindSession({});
     };
-  }, []);
+  }, [queryClient]);
 
   const signIn = useCallback((next: Session) => {
     setAccessToken(next.access_token);
@@ -65,8 +72,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
 
   const signOut = useCallback(() => {
     setSession(null);
+    queryClient.clear();
     void endSession();
-  }, []);
+  }, [queryClient]);
 
   // Refresh a minute before the access token expires, and again for each new one.
   useEffect(() => {

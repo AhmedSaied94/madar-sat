@@ -12,12 +12,13 @@ interface RtlRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 
 /**
  * Renders inside an RTL root (as admin/index.html does) with a fresh query client and a memory router.
- * `wrapper` adds app providers (session, toasts) inside the router.
+ * `wrapper` adds app providers (session, toasts) inside the router. The client is returned too, so a test
+ * can assert what the session's cache holds (A-R2-10).
  */
 export function renderRtl(
   ui: ReactElement,
   { route = '/', wrapper: Inner, withRouter = true, ...options }: RtlRenderOptions = {},
-): RenderResult {
+): RenderResult & { queryClient: QueryClient } {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -38,5 +39,5 @@ export function renderRtl(
     );
   }
 
-  return render(ui, { wrapper: Providers, ...options });
+  return { ...render(ui, { wrapper: Providers, ...options }), queryClient };
 }

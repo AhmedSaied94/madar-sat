@@ -173,6 +173,28 @@ describe('adminHttp', () => {
     expect(operationTemplate('GET', '/admin/api/unknown/1')).toBeUndefined();
   });
 
+  it('sends the Prefer header for a named example on an operation with a path parameter', async () => {
+    // The spec keys its examples by `{match_id}` and the mutator by `{}`; the dev map normalises the
+    // spec's path, so a page at `/matches/48213?mock=edit_conflict` really asks Prism for that example (A-R2-4).
+    window.history.replaceState({}, '', '/matches/48213?mock=edit_conflict');
+    let prefer: string | null = null;
+
+    server.use(
+      mswHttp.patch('*/admin/api/matches/48213', ({ request }) => {
+        prefer = request.headers.get('Prefer');
+        return HttpResponse.json(errorBody('edit_conflict'), { status: 409 });
+      }),
+    );
+
+    try {
+      await adminHttp({ method: 'PATCH', url: '/admin/api/matches/48213' }).catch(() => undefined);
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
+
+    expect(prefer).toBe('code=409, example=edit_conflict');
+  });
+
   it('rejects a body that fails its Zod schema instead of passing it through', async () => {
     server.use(
       mswHttp.get('*/admin/api/sources', () =>

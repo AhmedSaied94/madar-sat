@@ -24,24 +24,25 @@ describe('Button', () => {
     expect(button).toHaveClass(fill, text);
   });
 
-  // The token scale steps 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48, so the heights are 48, 32 and 24 px.
-  // The two smaller sizes keep a 48 px and a 40 px target through a transparent band of border, with
-  // the fill clipped to the padding box (A-R1-20).
+  // Every size is a 48 px element; the two smaller ones clip a 40 px and a 32 px fill inside it with
+  // a transparent band of border, because `border-box` puts the border inside the height (A-R2-3).
   it.each([
-    ['default', 'h-12', null],
-    ['sm', 'h-8', 'border-y-8'],
-    ['xs', 'h-6', 'border-y-8'],
-  ] as const)('%s renders its own height and keeps its target', (size, height, target) => {
+    ['default', null],
+    ['sm', 'border-y-4'],
+    ['xs', 'border-y-8'],
+  ] as const)('%s keeps a 48 px target', (size, band) => {
     renderRtl(<Button size={size}>تصفية</Button>);
 
     const button = screen.getByRole('button', { name: 'تصفية' });
     expect(button).toHaveAttribute('data-size', size);
-    expect(button).toHaveClass(height);
-    expect(button).not.toHaveClass('min-h-12');
-    if (target === null) {
+    // 48 px is the element's height, not a band drawn around a smaller one: a 32 px or 24 px element
+    // leaves A4's Save and the dialogs with a target below the 48 px rule (constitution IV).
+    expect(button).toHaveClass('h-12');
+    expect(button).not.toHaveClass('h-8', 'h-6', 'min-h-12');
+    if (band === null) {
       expect(button).not.toHaveClass('border-transparent');
     } else {
-      expect(button).toHaveClass(target, 'border-transparent', 'bg-clip-padding');
+      expect(button).toHaveClass(band, 'border-transparent', 'bg-clip-padding');
     }
   });
 

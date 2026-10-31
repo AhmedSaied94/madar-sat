@@ -132,8 +132,11 @@ export const dialogs = {
   conflictBodyBefore: 'حُفظت نسخة أحدث من «',
   conflictBodyAfter: (cairoTime: string): string =>
     `» في ${cairoTime} بتوقيت القاهرة. تعديلاتك لم تُحفظ بعد.`,
+  /** `meta.changed_at` was missing: say so instead of showing the client's clock as their save time (A-R2-7). */
+  conflictTimeUnknown: '» في وقت غير معروف. تعديلاتك لم تُحفظ بعد.',
   showChanges: 'اعرض التغييرات',
   hideChanges: 'أخفِ التغييرات',
+  noChanges: 'لم يتغيّر أي حقل تعرضه هذه الشاشة.',
   reload: 'إعادة التحميل',
   discard: 'تجاهل تعديلاتي',
   before: 'قبل',
@@ -195,8 +198,9 @@ export const matches = {
     competitionTitle: 'تغيير بطولة المباريات المحددة',
     competitionBody: 'ستنتقل كل المباريات المحددة إلى البطولة التي تختارها.',
     confirm: 'تغيير',
-    /** A `409` from a bulk write names the rows whose version moved (A-R1-3). */
-    stale: (ids: string): string => `تغيّرت هذه المباريات منذ عرض القائمة: ${ids}. حدّث القائمة ثم أعد المحاولة`,
+    /** A `409` from a bulk write names the rows whose version moved (A-R1-3); the names stay islands (A-R2-9). */
+    staleBefore: 'تغيّرت هذه المباريات منذ عرض القائمة: ',
+    staleAfter: '. حدّث القائمة ثم أعد المحاولة',
   },
   empty: {
     title: 'لا مباريات في هذا اليوم',
@@ -236,6 +240,15 @@ export const editor = {
   competition: 'البطولة',
   stadium: 'الملعب',
   stage: 'المرحلة',
+  /** US4 scenario 4's stages, as suggestions over free text (A-R2-5). */
+  stagePresets: [
+    'الجولة الأولى',
+    'ذهاب دور 16',
+    'إياب دور 16',
+    'ربع النهائي',
+    'نصف النهائي',
+    'النهائي',
+  ],
   teamSearch: 'ابحث عن فريق',
   freeText: 'أو اكتب اسماً',
   channels: 'القنوات الناقلة',
@@ -268,6 +281,7 @@ export const editor = {
   slot1: 'يعرض على',
   slot2: 'يعرض أيضاً على',
   pickFromList: 'اختر من القائمة أو اكتب اسماً',
+  slotLogoKept: 'شعار هذه القناة محفوظ',
   statusTitle: 'الحالة والنتيجة',
   status: 'الحالة',
   autoStatus: 'تلقائي · من المصدر',

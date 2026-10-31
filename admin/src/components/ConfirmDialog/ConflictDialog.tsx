@@ -34,6 +34,8 @@ interface ConflictDialogProps {
   onReload: () => void;
   /** «تجاهل تعديلاتي»: the form goes back to the version it loaded. */
   onDiscard: () => void;
+  /** Escape, or a click outside: close the dialog and keep the editor's edits (A-R2-6). */
+  onDismiss: () => void;
 }
 
 export function ConflictDialog({
@@ -43,6 +45,7 @@ export function ConflictDialog({
   changes,
   onReload,
   onDiscard,
+  onDismiss,
 }: ConflictDialogProps): ReactElement {
   const headingId = useId();
   const [showing, setShowing] = useState(false);
@@ -51,7 +54,7 @@ export function ConflictDialog({
     changedBy.kind === 'admin' ? dialogs.conflictTitleAdminPrefix : dialogs.conflictTitleSourcePrefix;
 
   return (
-    <Modal open={open} onClose={onDiscard} labelledBy={headingId}>
+    <Modal open={open} onClose={onDismiss} labelledBy={headingId}>
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
@@ -68,12 +71,13 @@ export function ConflictDialog({
           <p className="text-body text-text-secondary">
             {dialogs.conflictBodyBefore}
             <bdi>{subject}</bdi>
-            {dialogs.conflictBodyAfter(formatCairoTime(changedBy.at))}
+            {/* A missing `meta.changed_at` is said, never replaced with the client's clock (A-R2-7). */}
+            {changedBy.at === '' ? dialogs.conflictTimeUnknown : dialogs.conflictBodyAfter(formatCairoTime(changedBy.at))}
           </p>
         </div>
       </div>
 
-      {showing ? (
+      {showing && changes.length > 0 ? (
         <div data-testid="conflict-diff" className="flex flex-col gap-3 rounded-lg bg-bg p-4">
           {changes.map((change) => (
             <div key={change.field} className="flex flex-col gap-1">
@@ -105,14 +109,19 @@ export function ConflictDialog({
           {dialogs.discard}
         </Button>
         <span className="flex-1" />
-        <Button
-          variant="outline"
-          size="sm"
-          aria-expanded={showing}
-          onClick={() => setShowing((current) => !current)}
-        >
-          {showing ? dialogs.hideChanges : dialogs.showChanges}
-        </Button>
+        {changes.length > 0 ? (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-expanded={showing}
+            onClick={() => setShowing((current) => !current)}
+          >
+            {showing ? dialogs.hideChanges : dialogs.showChanges}
+          </Button>
+        ) : (
+          // Nothing the editor can see differs: no toggle that would open an empty list (A-R2-7).
+          <span className="text-caption text-text-tertiary">{dialogs.noChanges}</span>
+        )}
         <Button size="sm" onClick={onReload}>
           {dialogs.reload}
         </Button>

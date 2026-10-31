@@ -16,7 +16,7 @@ import { BroadcastSlots } from './editor/BroadcastSlots';
 import { ChannelsSection } from './editor/ChannelsSection';
 import { StatusSection } from './editor/StatusSection';
 import { cairoDay, cairoWallTimeToUtc, formatCairoTime, utcToCairoWallTime } from '../../lib/cairoTime';
-import { copyForErrorCode, editor as copy, toast as toastCopy } from '../../i18n/ar';
+import { copyForErrorCode, editor as copy, matchStatus, toast as toastCopy } from '../../i18n/ar';
 
 // A4 (admin board "Match editor"): one form over Orval's `patchMatchBody`, so what the API accepts is
 // what the form checks. A save sends only the sections the editor changed, under the match's `If-Match`;
@@ -59,6 +59,8 @@ export interface EditorChannel {
 export interface EditorBroadcast {
   slot: 1 | 2;
   label: string;
+  /** The slot's logo url, shown only: the editor sees which logo a preset or an earlier edit kept (A-R2-12). */
+  logo: string | null;
   /** Kept so a commentator-only edit never clears the slot's logo (A-R1-8). */
   logoAssetId: number | null;
   commentatorId: number | null;
@@ -114,6 +116,7 @@ function fromMatch(match: AdminMatch): EditorState {
       .map((broadcast) => ({
         slot: (broadcast.slot === 2 ? 2 : 1) as 1 | 2,
         label: broadcast.label,
+        logo: broadcast.logo,
         logoAssetId: broadcast.logo_asset_id,
         commentatorId: broadcast.commentator_id,
       }))
@@ -272,38 +275,110 @@ export function buildCreate(current: EditorState): MatchCreate | null {
 }
 
 /** The difference between the version the editor loaded and the one the server now holds. */
-export function diffStates(before: EditorState, after: EditorState): ConflictChange[] {
-  const changes: ConflictChange[] = [];
-  const clock = (state: EditorState): string | null =>
-    state.timeTbd
-      ? copy.timeTbd
-      : state.date && state.time
-        ? formatCairoTime(cairoWallTimeToUtc(`${state.date}T${state.time}`))
-        : null;
-  if (before.date !== after.date || before.time !== after.time || before.timeTbd !== after.timeTbd) {
-    changes.push({ field: 'kickoff_at', label: copy.time, before: clock(before), after: clock(after) });
-  }
-  if (before.competitionId !== after.competitionId) {
-    changes.push({ field: 'competition_id', label: copy.competition, before: before.competitionId || null, after: after.competitionId || null });
-  }
-  if (before.stage !== after.stage) {
-    changes.push({ field: 'competition_stage', label: copy.stage, before: before.stage || null, after: after.stage || null });
-  }
-  if (before.stadium !== after.stadium) {
-    changes.push({ field: 'stadium', label: copy.stadium, before: before.stadium || null, after: after.stadium || null });
-  }
-  if (before.statusMode !== after.statusMode) {
-    changes.push({ field: 'status', label: copy.status, before: before.statusMode, after: after.statusMode });
-  }
-  if (before.channels.length !== after.channels.length) {
-    changes.push({
-      field: 'channels',
-      label: copy.channels,
-      before: String(before.channels.length),
-      after: String(after.channels.length),
-    });
-  }
-  return changes;
+export function diffStates(before: EditorState, after: EditorState, lookups: DiffLookups = {}): ConflictChange[] {
+  const texts = (state: EditorState): Record<DiffField, string | null> => ({
+    kickoff_at: clockText(state),
+    home: orNull(state.home.name),
+    away: orNull(state.away.name),
+    competition_id: state.competitionId === '' ? null : (lookups.competitionName?.(state.competitionId) ?? state.competitionId),
+    competition_stage: orNull(state.stage),
+    stadium: orNull(state.stadium),
+    status: statusText(state),
+    score: scoreText(state),
+    minute: orNull(state.minute),
+    period: periodText(state.period),
+    channels: channelsText(state, lookups.commentatorName),
+    broadcasts: broadcastsText(state, lookups.commentatorName),
+  });
+  const from = texts(before);
+  const to = texts(after);
+  return DIFF_FIELDS.filter(({ field }) => from[field] !== to[field]).map(({ field, label }) => ({
+    field,
+    label,
+    before: from[field],
+    after: to[field],
+  }));
+}
+
+/** The editor fields the conflict diff compares, in A4's own order, with their Arabic labels. */
+const DIFF_FIELDS = [
+  { field: 'kickoff_at', label: copy.time },
+  { field: 'home', label: copy.home },
+  { field: 'away', label: copy.away },
+  { field: 'competition_id', label: copy.competition },
+  { field: 'competition_stage', label: copy.stage },
+  { field: 'stadium', label: copy.stadium },
+  { field: 'status', label: copy.status },
+  { field: 'score', label: copy.scoreLabel },
+  { field: 'minute', label: copy.minute },
+  { field: 'period', label: copy.period },
+  { field: 'channels', label: copy.channels },
+  { field: 'broadcasts', label: copy.manualBroadcast },
+] as const;
+
+type DiffField = (typeof DIFF_FIELDS)[number]['field'];
+
+export interface DiffLookups {
+  /** `competition_id` → its name, so the diff shows «الدوري الإيطالي», never `12` (A-R2-7). */
+  competitionName?: (id: string) => string | null;
+  /** Commentator ids → names, for the channel and broadcast lines. */
+  commentatorName?: (id: number) => string | null;
+}
+
+const orNull = (value: string): string | null => (value.trim() === '' ? null : value);
+
+/** The kickoff as the editor shows it: the Cairo wall clock, or «لم يتحدد». */
+function clockText(state: EditorState): string | null {
+  if (state.timeTbd) return copy.timeTbd;
+  return state.date && state.time ? formatCairoTime(cairoWallTimeToUtc(`${state.date}T${state.time}`)) : null;
+}
+
+const statusText = (state: EditorState): string =>
+  state.statusMode === 'auto' ? copy.autoStatus : matchStatus[state.statusMode];
+
+/** «2 – 1», with the penalties in brackets when the status has them. */
+function scoreText(state: EditorState): string | null {
+  if (state.scoreHome === '' && state.scoreAway === '') return null;
+  const score = `${state.scoreHome || '—'} – ${state.scoreAway || '—'}`;
+  return state.homePen !== '' || state.awayPen !== ''
+    ? `${score} (${state.homePen || '—'} – ${state.awayPen || '—'})`
+    : score;
+}
+
+const PERIOD_COPY: Record<Period, string> = {
+  '1H': copy.periodFirstHalf,
+  '2H': copy.periodSecondHalf,
+  ET1: copy.periodExtraFirst,
+  ET2: copy.periodExtraSecond,
+};
+
+const periodText = (period: Period | ''): string | null => (period === '' ? null : PERIOD_COPY[period]);
+
+/** The channel links as one line each: name, hidden-from-this-match, and the commentators. */
+function channelsText(state: EditorState, commentatorName?: (id: number) => string | null): string | null {
+  if (state.channels.length === 0) return null;
+  return [...state.channels]
+    .sort((a, b) => a.channelId - b.channelId)
+    .map((channel) => {
+      const people = [channel.commentatorId, channel.commentator2Id]
+        .filter((id): id is number => id !== null)
+        .map((id) => commentatorName?.(id) ?? copy.commentator(1));
+      return [channel.name, channel.isHidden ? copy.hideFromMatch : null, ...people].filter(Boolean).join(' · ');
+    })
+    .join('، ');
+}
+
+/** The two manual broadcaster slots: their labels and commentators. */
+function broadcastsText(state: EditorState, commentatorName?: (id: number) => string | null): string | null {
+  const filled = state.broadcasts.filter((broadcast) => broadcast.label !== '');
+  if (filled.length === 0) return null;
+  return filled
+    .map((broadcast) => {
+      const slot = broadcast.slot === 1 ? copy.slot1 : copy.slot2;
+      const person = broadcast.commentatorId === null ? null : (commentatorName?.(broadcast.commentatorId) ?? '');
+      return [slot, broadcast.label, person].filter(Boolean).join(' · ');
+    })
+    .join('، ');
 }
 
 interface ConflictState {
@@ -339,7 +414,14 @@ export function MatchEditor(): ReactElement {
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const match = useGetMatch(matchId ?? 0, { query: { enabled: matchId !== null } });
+  const match = useGetMatch(matchId ?? 0, {
+    query: {
+      enabled: matchId !== null,
+      // The version rides on the response object (A-R1-2); structural sharing rebuilds a changed body
+      // from its enumerable keys and would drop it, so this query keeps the object it fetched (A-R2-1).
+      structuralSharing: false,
+    },
+  });
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const competitions = useListCompetitions();
@@ -410,6 +492,14 @@ export function MatchEditor(): ReactElement {
       changed_at?: string;
     };
     const refreshed = await match.refetch();
+    if (refreshed.isError) {
+      // React Query's `refetch` resolves on failure and keeps the previous data, so the version here
+      // would be the cache's stale one: «إعادة التحميل» would adopt it and the next save would 409
+      // again. Say the refetch failed instead of building the dialog from the cache (A-R3-1).
+      setConflict(null);
+      setSaveError(copyForErrorCode(refreshed.error?.code ?? NETWORK_ERROR));
+      return;
+    }
     const current = refreshed.data?.data;
     if (!current || baseline === null) {
       setSaveError(copyForErrorCode(failure.code));
@@ -420,9 +510,15 @@ export function MatchEditor(): ReactElement {
       changedBy: {
         kind: meta.changed_by?.kind === 'source' ? 'source' : 'admin',
         name: meta.changed_by?.name ?? '',
-        at: meta.changed_at ?? new Date().toISOString(),
+        // A missing `changed_at` stays empty: the dialog says the time is unknown (A-R2-7).
+        at: meta.changed_at ?? '',
       },
-      changes: diffStates(baseline.state, theirs),
+      changes: diffStates(baseline.state, theirs, {
+        competitionName: (competitionId) =>
+          competitors.find((competition) => String(competition.id) === competitionId)?.name ?? null,
+        commentatorName: (commentatorId) =>
+          commentatorOptions.find((person) => person.id === commentatorId)?.name ?? null,
+      }),
       theirs: { state: theirs, lockedFields: current.locked_fields, etag: etagOf(refreshed.data) },
     });
   }
@@ -518,7 +614,9 @@ export function MatchEditor(): ReactElement {
 
   if (matchId !== null && match.isPending) return <EditorSkeleton />;
 
-  if (matchId !== null && match.isError) {
+  // Only a first load that failed replaces the screen: a background refetch that failed keeps the form
+  // and its unsaved edits, and the banner above says what happened (A-R3-1, A-R2-15).
+  if (matchId !== null && match.isError && match.data === undefined) {
     return (
       <EmptyState
         kind="error"
@@ -599,9 +697,10 @@ export function MatchEditor(): ReactElement {
             <bdi>{state.home.name}</bdi> × <bdi>{state.away.name}</bdi>
           </>
         }
-        changedBy={conflict?.changedBy ?? { kind: 'admin', name: '', at: new Date().toISOString() }}
+        changedBy={conflict?.changedBy ?? { kind: 'admin', name: '', at: '' }}
         changes={conflict?.changes ?? []}
         onReload={() => conflict && adopt(conflict.theirs)}
+        onDismiss={() => setConflict(null)}
         onDiscard={() => {
           // «تجاهل تعديلاتي» really drops them: the form goes back to the version it loaded (A-R1-5).
           if (baseline !== null) setState(baseline.state);

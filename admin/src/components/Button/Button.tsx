@@ -4,9 +4,8 @@ import type { ButtonHTMLAttributes, ReactElement } from 'react';
 import { focusRing } from '../focus';
 
 // Admin actions in five emphasis levels (Button README): one primary per screen, danger for deletes.
-// The token scale steps at 4/8/12/16/20/24/32/48 px, so the heights are 48, 32 and 24; every size
-// keeps a 48 px target through a transparent band of border, with the fill clipped to the padding box
-// so the button still looks its size (A-R1-20). Busy shows a spinner and a present-tense verb.
+// Every size is a 48 px element: the two smaller ones clip a 40 px and a 32 px fill inside a
+// transparent band of border, because `border-box` puts the border inside the height (A-R2-3).
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'default' | 'sm' | 'xs';
 
@@ -23,8 +22,9 @@ const buttonStyles = cva(
       },
       size: {
         default: 'h-12 px-5',
-        sm: 'h-8 border-y-8 border-transparent bg-clip-padding px-3',
-        xs: 'h-6 border-y-8 border-transparent bg-clip-padding px-2',
+        // 48 − 2 × 4 = a 40 px fill; 48 − 2 × 8 = a 32 px fill. The target stays 48 px either way.
+        sm: 'h-12 border-y-4 border-transparent bg-clip-padding px-3',
+        xs: 'h-12 border-y-8 border-transparent bg-clip-padding px-2',
       },
       iconOnly: {
         true: 'w-12 px-0',

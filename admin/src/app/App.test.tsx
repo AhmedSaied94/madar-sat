@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ReactElement, ReactNode } from 'react';
@@ -82,5 +82,19 @@ describe('App routes', () => {
     await signIn();
 
     expect(await screen.findByRole('heading', { name: 'هذا القسم قيد البناء' })).toBeInTheDocument();
+  });
+
+  it('clears the query cache on sign-out, so a second editor never sees the first one’s data', async () => {
+    server.use(http.post('*/admin/api/auth/login', loginOk));
+    const { queryClient } = renderApp('/matches');
+
+    await signIn();
+    await screen.findByRole('navigation', { name: 'القائمة الرئيسية' });
+    await waitFor(() => expect(queryClient.getQueryCache().getAll().length).toBeGreaterThan(0));
+
+    await userEvent.click(screen.getByRole('button', { name: 'تسجيل الخروج' }));
+
+    // The cached matches, lists and their versions go with the session (A-R2-10).
+    await waitFor(() => expect(queryClient.getQueryCache().getAll()).toHaveLength(0));
   });
 });
