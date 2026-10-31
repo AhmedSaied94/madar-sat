@@ -6,15 +6,17 @@ One workflow per folder, each filtered to its own paths, plus `gitleaks` on ever
 
 | Workflow | Runs on | Jobs | Secrets |
 | --- | --- | --- | --- |
-| `backend.yml` | Pushes to `master` and PRs that change `backend/**` or the workflow; by hand, with `break_healthcheck` | `test`, `openapi`, `clients`; on `master` also `build`, `build-amd64`, `deploy`, `deploy-vps2`, `stable`, `retention` | `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, and the `VPS2_VCN_IP` variable |
+| `backend.yml` | Pushes to `master` and PRs that change `backend/**` or the workflow; PRs that also change `infra/compose/**`, so the api-admin command check runs without making an infra-only push deploy a release (B2-R3-4); by hand, with `break_healthcheck` | `test`, `openapi`, `clients`; on `master` also `build`, `build-amd64`, `deploy`, `deploy-vps2`, `stable`, `retention` | `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, and the `VPS2_VCN_IP` variable |
 | `infra.yml` | Pushes to `master` and PRs that change `infra/**`, `.github/workflows/**` or `.github/actions/**` | `check`: `docker compose config` for the four Compose files, `systemd-analyze verify` on the home-box units, the Redis ACL placeholder check, `caddy validate`, shellcheck, actionlint. On a `master` push also `sync`. | The same three, for `sync` |
 | `gitleaks.yml` | Every push to any branch, and every PR | `scan`: the full history, redacted | None |
 | `app.yml` | Pushes to `master` and PRs that change `app/**`, `backend/openapi/public.json`, `madar-design/**` or the workflow | `check`: `flutter analyze`, the token-copy and literal checks, `flutter test` (goldens), the `prod` debug APK as the artifact `app-prod-debug.apk` | None |
-
-Two checks ship in `app/tool/` and still need a step in `app.yml` (Lane B2 owns the workflow; see `docs/owner-actions.md`, Lane M, "Round 1 review fixes"): `check_providers.sh` (every Riverpod provider is generated, M-R1-16) and `check_web_assets.sh` after the web build (the PWA's `sqlite3.wasm` and `drift_worker.js`, M-R1-2).
 | `app-release.yml` | A pushed tag `app-v<major>.<minor>.<patch>` | `aab`: writes the upload keystore from the secrets, builds the signed `prod` AAB (`--build-name` from the tag, `--build-number` = run number), checks it is signed by the `Madar Sat` upload key and not the debug key, uploads `app-prod-release.aab`. Play upload is not wired. | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` |
 | `pwa.yml` | Pushes to `master` that change `app/**`, `infra/firebase/**` or the workflow; by hand | `build` (web), `deploy` to the preview channel `master` | `FIREBASE_SERVICE_ACCOUNT` |
 | `admin.yml` | Pushes to `master` and PRs that change `admin/**`, `backend/openapi/admin.json`, `madar-design/**` or the workflow | `check`: typecheck, lint, test, build, the literal and token-copy checks | None |
+
+The one check that ships in `app/tool/` and needs a step in `app.yml` is `check_web_assets.sh`, after the web build: it fails when `build/web` lacks `sqlite3.wasm` or `drift_worker.js` (the PWA's drift database, M-R1-2). Lane B2 owns the workflow and added the step in its round-2 change (`B2-R2-13`). The provider check is not a script any more: `app/test/architecture/providers_test.dart` runs inside `flutter test` (M-R2-7, which also catches the `.autoDispose` and `.family` forms).
+
+Still owed by Lane B2 in the same file (M-R3-2): a stale-generated-code step for the app's providers. Run `dart run build_runner build -d` in `app/`, then fail on `git status --porcelain -- app/lib`. `backend.yml`'s `clients` job covers only `app/lib/core/network/generated` and the admin client, so a provider `*.g.dart` left behind by a source change passes CI today.
 
 Every action is pinned to a commit SHA, and every image to an exact version. To update one, change the SHA and its version comment together.
 

@@ -76,11 +76,18 @@ def test_the_pinned_kickoff_matches_the_readme(adapter: YsscoresAdapter) -> None
     assert normalized.time_tbd is False
 
 
-def test_postponed_items_keep_their_time(adapter: YsscoresAdapter) -> None:
+def test_postponed_items_are_kept_without_a_kickoff(adapter: YsscoresAdapter) -> None:
+    """B2-R1-10: the fixture stays, but its old time is not presented as fact."""
     items = adapter.parse(_page(POSTPONED))
     assert len(items) == 129
-    # 10 of these carry `match-postponed`; a postponement is not a reason to lose the fixture.
-    assert all(item.wall_time and item.wall_time != "--:--" for item in items)
+    postponed = [item for item in items if item.postponed]
+    assert len(postponed) == 10  # `match-postponed` / `data-status="14"` with «تأجلت»
+
+    normalized = [adapter.normalize(item) for item in postponed]
+    assert all(item.kickoff_at is None and item.time_tbd is True for item in normalized)
+    assert all(item.postponed for item in normalized)
+    # Every other fixture keeps its time.
+    assert all(item.postponed is False for item in items if item not in postponed)
 
 
 def test_an_empty_day_gives_no_items_and_is_not_a_layout_change(adapter: YsscoresAdapter) -> None:

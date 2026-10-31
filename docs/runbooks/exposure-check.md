@@ -73,6 +73,15 @@ curl -s --cacert madar-admin-root.crt https://10.8.0.1/admin/api/healthz | jq .d
 
 `api-admin` itself (`10.8.0.1:8001`) is reachable only from `wg0`: `8001` must show `filtered` in step 1.
 
+Redis over `wg0` (`10.8.0.1:6379`) is open to the home box only. From a **second** WireGuard peer
+(your laptop, not the home box):
+
+```sh
+nc -vz -w 3 10.8.0.1 6379       # times out: the DOCKER-USER rule drops it
+```
+
+From the home box the same probe connects and `PING` answers with its `/srv/madar/.env` password.
+
 ## 4. Record
 
 Paste the `nmap` output and the header checks into the notes for T065 (or the PR that ticks it), with the date. If anything is open that shouldn't be, stop and fix it before you go on: [firewall-changes.md](firewall-changes.md) for iptables, [provision-host.md §1](provision-host.md#1-reserve-the-ip-and-create-the-vm) for the security list.

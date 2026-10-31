@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 from app.adapters.base import (
     DateWindow,
     FixtureLink,
+    LayoutChanged,
     NormalizedFixture,
     ParsedFixture,
     RawPage,
@@ -39,10 +40,6 @@ class BridgeNotConfigured(RuntimeError):
     """SATAIR_FIREBASE_PROJECT_ID and SATAIR_FIREBASE_API_KEY are missing from the environment."""
 
 
-class LayoutChanged(Exception):
-    """The document is not the shape the bridge reads: the source changed."""
-
-
 class SatairBridgeAdapter:
     name = "legacy"
     allowed_hosts = ALLOWED_HOSTS
@@ -51,6 +48,8 @@ class SatairBridgeAdapter:
         self.fetcher = fetcher
         self._project_id = project_id
         self._api_key = api_key
+        # The pages fetched so far: the fetch task saves them when the next day fails (B2-R1-9).
+        self.pages: list[RawPage] = []
 
     def _credentials(self) -> tuple[str, str]:
         if self._project_id and self._api_key:
@@ -72,10 +71,15 @@ class SatairBridgeAdapter:
             raise RuntimeError("the bridge needs a fetcher to fetch")
         _, api_key = self._credentials()
         pages: list[RawPage] = []
+        self.pages = pages
         for day in window:
             url = self.document_url(day)
             try:
-                page = self.fetcher.get(url, allowed_hosts=self.allowed_hosts, params={"key": api_key})
+                # The key travels in a header, never in the URL: httpx logs the URL at INFO and a
+                # 2 MB body's error message carries it too (B2-R2-5, D15).
+                page = self.fetcher.get(
+                    url, allowed_hosts=self.allowed_hosts, headers={"X-Goog-Api-Key": api_key}
+                )
             except FetchError as exc:
                 if exc.status == 404:  # the old app has no document for that day
                     pages.append(RawPage(url=f"{url}#{day.isoformat()}", status=404, body=b""))

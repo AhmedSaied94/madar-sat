@@ -38,7 +38,7 @@ services:
   # (RAW_ROOT=/srv/raw, data-model §Raw pages).
   worker-imports:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "imports", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "imports", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
     environment:
       RAW_ROOT: ${RAW_ROOT:-/srv/raw}
     volumes:
@@ -48,20 +48,20 @@ services:
   # (`scrape_home`); switch with YSSCORES_FETCH_QUEUE=scrape if ysscores stops blocking VPS IPs.
   worker-scrape:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
   worker-live:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
   worker-notify:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "notifications", "-n", "worker@%h", "-c", "2", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "notifications", "-n", "worker@%h", "-c", "2", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
   # Cleanup, media copy, dataset versions. `adapters.prune_raw_pages` needs the raw disk.
   worker-maintenance:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "maintenance", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "maintenance", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
     environment:
       RAW_ROOT: ${RAW_ROOT:-/srv/raw}
     volumes:

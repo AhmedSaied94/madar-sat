@@ -84,7 +84,7 @@ must answer `PONG`.
 On the VM:
 
 ```bash
-sudo ./madar-infra/scripts/check-firewall.sh; echo "exit $?"     # exit 0
+sudo ./madar-infra/scripts/check-firewall.sh --role vps1; echo "exit $?"   # or vps2; exit 0
 sudo iptables -S INPUT
 sudo iptables -S DOCKER-USER
 curl -fsS http://127.0.0.1:8000/healthz                           # VPS-1: the API is back

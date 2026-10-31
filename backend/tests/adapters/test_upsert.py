@@ -107,6 +107,47 @@ def test_a_locked_kickoff_survives_even_when_the_lock_commits_after_the_run_star
     assert kept.locked_fields == ["kickoff_at"]
 
 
+def _stored(sync_session: Session, external_id: str) -> Match:
+    return sync_session.execute(
+        select(Match)
+        .join(MatchExternalId, MatchExternalId.match_id == Match.id)
+        .where(MatchExternalId.external_id == external_id)
+    ).scalar_one()
+
+
+def test_a_postponed_item_clears_the_kickoff_and_sets_time_tbd(sync_session: Session, loaded_snapshot) -> None:
+    """B2-R1-10: the fixture stays, and its old time stops being shown as a schedule."""
+    pipeline(sync_session).run([fixture()])
+    before = _stored(sync_session, "ys-1001")
+    assert (before.kickoff_at, before.time_tbd) == (KICKOFF, False)
+
+    outcome = pipeline(sync_session).run([fixture(kickoff_at=None, time_tbd=True, postponed=True)])
+
+    sync_session.expire_all()
+    after = _stored(sync_session, "ys-1001")
+    assert (after.kickoff_at, after.time_tbd) == (None, True)
+    assert outcome.postponed == [{"ref": "ys-1001"}]
+
+
+def test_a_locked_kickoff_with_a_tbd_item_keeps_the_pair_valid(sync_session: Session, loaded_snapshot) -> None:
+    """B2-R1-11: writing ``time_tbd`` under a locked kickoff would trip ``ck_matches_time_tbd``."""
+    pipeline(sync_session).run([fixture()])
+    match = _stored(sync_session, "ys-1001")
+    other = Session(bind=sync_session.connection(), join_transaction_mode="create_savepoint")
+    try:
+        other.execute(update_match(match.id).values(kickoff_at=KICKOFF, locked_fields=["kickoff_at"]))
+        other.commit()
+    finally:
+        other.close()
+
+    outcome = pipeline(sync_session).run([fixture(kickoff_at=None, time_tbd=True, postponed=True)])
+
+    sync_session.expire_all()
+    kept = _stored(sync_session, "ys-1001")
+    assert (kept.kickoff_at, kept.time_tbd) == (KICKOFF, False)  # the editor's kickoff wins, and stays consistent
+    assert outcome.skipped == []  # the item's other fields still updated
+
+
 def update_match(match_id: int):
     from sqlalchemy import update
 
@@ -224,6 +265,54 @@ def test_links_follow_the_importer_rules(sync_session: Session, loaded_snapshot)
     assert rows[manual].is_hidden is True  # untouched, and not re-added as the importer's
 
 
+def test_a_source_link_that_matches_an_editors_hidden_link_leaves_it_alone(
+    sync_session: Session, loaded_snapshot
+) -> None:
+    """The re-add path: the source lists the channel, but the editor's hidden link stays theirs."""
+    cyr = channel_id(sync_session, "ch-cyr")
+    pipeline(sync_session, "legacy").run([fixture(**source_legacy(links=(FixtureLink(channel_ref="ch-cyr"),)))])
+    match_id = sync_session.execute(select(Match.id).where(Match.legacy_id == "sat-1")).scalar_one()
+    sync_session.execute(
+        MatchChannel.__table__.delete().where(
+            MatchChannel.match_id == match_id, MatchChannel.channel_id == cyr, MatchChannel.source == "legacy"
+        )
+    )
+    sync_session.flush()
+    sync_session.add(MatchChannel(match_id=match_id, channel_id=cyr, source="manual", is_hidden=True))
+    sync_session.flush()
+
+    outcome = pipeline(sync_session, "legacy").run(
+        [fixture(**source_legacy(links=(FixtureLink(channel_ref="ch-cyr"),)))],
+    )
+
+    rows = sync_session.execute(select(MatchChannel).where(MatchChannel.match_id == match_id)).scalars().all()
+    assert [(row.channel_id, row.source, row.is_hidden) for row in rows] == [(cyr, "manual", True)]
+    assert outcome.created + outcome.updated == 0
+    # The guard skips the insert quietly: without it the row falls into a failed savepoint and the
+    # item lands in `skipped` (B2-R2-18).
+    assert outcome.skipped == []
+
+
+def test_a_normalize_error_skips_one_item_inside_its_savepoint(sync_session: Session, loaded_snapshot) -> None:
+    """B2-R1-12: normalising runs in the item's savepoint, so one bad value is one skipped item."""
+    from app.adapters.base import ParsedFixture
+
+    items = [
+        ParsedFixture(external_id="ys-ok", match_date=DAY, home="الزمالك", away="مان سيتي", wall_time="10:00 م"),
+        ParsedFixture(external_id="ys-bad", match_date=DAY, home="الأهلي", away="الزمالك", wall_time="12:99 م"),
+    ]
+
+    def normalize(item):
+        if item.external_id == "ys-bad":
+            raise ValueError("12:99 م")
+        return fixture(external_id=item.external_id)
+
+    outcome = pipeline(sync_session).run(items, normalize=normalize)
+
+    assert outcome.created == 1
+    assert outcome.skipped == [{"ref": "ys-bad", "reason": "error"}]
+
+
 def test_a_bad_item_marks_the_run_partial_and_the_rest_lands(sync_session: Session, loaded_snapshot) -> None:
     outcome = pipeline(sync_session).run(
         [
@@ -331,3 +420,95 @@ def test_a_raw_sql_reader_sees_the_same_row(sync_session: Session, loaded_snapsh
         text("select count(*) from match_external_ids where external_id = 'ys-1001'")
     ).scalar_one()
     assert stored == 1
+
+
+def test_a_ysscores_run_keeps_the_links_the_snapshot_gave_it(sync_session: Session, loaded_snapshot) -> None:
+    """B2-R1-2, FR-022: ysscores supplies no links, so its run must not delete any.
+
+    The snapshot stored the old app's imported links with ``source='ysscores'``. Treating "no links
+    in the item" as "no links on the match" wiped every channel of every match on the first run.
+    """
+    match_id, external_id, home, away, kickoff, match_date = sync_session.execute(
+        select(
+            Match.id,
+            MatchExternalId.external_id,
+            Match.home_team_name,
+            Match.away_team_name,
+            Match.kickoff_at,
+            Match.match_date,
+        )
+        .join(MatchExternalId, MatchExternalId.match_id == Match.id)
+        .join(MatchChannel, MatchChannel.match_id == Match.id)
+        .where(MatchExternalId.source == "ysscores", MatchChannel.source == "ysscores")
+        .order_by(Match.id)
+        .limit(1)
+    ).one()
+    before = set(
+        sync_session.execute(select(MatchChannel.channel_id).where(MatchChannel.match_id == match_id)).scalars()
+    )
+    assert before
+
+    pipeline(sync_session).run(
+        [
+            fixture(
+                external_id=external_id,
+                home=home,
+                away=away,
+                kickoff_at=kickoff,
+                match_date=match_date,
+                competition=None,
+            )
+        ]
+    )
+
+    after = set(
+        sync_session.execute(select(MatchChannel.channel_id).where(MatchChannel.match_id == match_id)).scalars()
+    )
+    assert after == before
+
+
+def test_the_run_takes_the_row_lock_before_it_reads(sync_session: Session, loaded_snapshot) -> None:
+    """B2-R1-16: the run locks the row first, so a concurrent editor's save is waited for, never lost.
+
+    Another connection holds the row (as an editor's PATCH does). With the `FOR UPDATE` the run
+    blocks and its item is rolled back into `skipped`; without it, the run would read a stale copy
+    and the item would simply look unchanged. That difference is what this test asserts.
+    """
+    import os
+
+    import psycopg
+    from sqlalchemy import text
+
+    match = sync_session.execute(
+        select(Match, MatchExternalId.external_id)
+        .join(MatchExternalId, MatchExternalId.match_id == Match.id)
+        .where(MatchExternalId.source == "ysscores", Match.kickoff_at.is_not(None))
+        .order_by(Match.id)
+        .limit(1)
+    ).one()
+    row, external_id = match[0], match[1]
+
+    url = os.environ["DATABASE_URL_SYNC"].replace("postgresql+psycopg://", "postgresql://")
+    other = psycopg.connect(url)
+    try:
+        other.execute("SELECT id FROM matches WHERE id = %s FOR UPDATE", (row.id,))
+        sync_session.execute(text("SET LOCAL lock_timeout = '300ms'"))
+
+        outcome = pipeline(sync_session).run(
+            [
+                fixture(
+                    external_id=external_id,
+                    home=row.home_team_name,
+                    away=row.away_team_name,
+                    kickoff_at=row.kickoff_at,
+                    match_date=row.match_date,
+                    competition=row.competition_name,
+                    stage=row.competition_stage,
+                )
+            ]
+        )
+    finally:
+        other.rollback()
+        other.close()
+
+    assert outcome.skipped == [{"ref": external_id, "reason": "error"}]

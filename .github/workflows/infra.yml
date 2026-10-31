@@ -44,18 +44,110 @@ jobs:
           systemd-analyze verify infra/scripts/home-box-update.service infra/scripts/home-box-update.timer \
             || { echo "::error::the home-box units don't verify"; exit 1; }
 
-      # The ACL file is rendered at deploy time (deploy.sh). Every password in it must be a
-      # ${...} placeholder, so no secret can reach the repository (constitution V, FR-052).
+      # The ACL file is rendered at deploy time (deploy.sh). Every password argument (`>...`) on
+      # every `user` line must be one of the two placeholders, wherever it sits on the line: a
+      # regex anchored at the end of the line missed `user default on >literal ~* &* +@all`
+      # (B2-R1-17). The two bad fixtures below must be rejected, or this step can't fail.
       - name: The Redis ACL template holds placeholders only
         run: |
-          if grep -E '>[^[:space:]]*[^[:space:]}][[:space:]]*$' infra/redis/users.acl.tmpl \
-            | grep -vE '>\$\{[A-Z_]+\}'; then
-            echo "::error::infra/redis/users.acl.tmpl has a literal password; use a \${...} placeholder"
+          # The two placeholders, built without a single-quoted `${...}`, which shellcheck flags as
+          # SC2016 (the same reason deploy.sh's envsubst line carries a directive).
+          default_token=">\${REDIS_PASSWORD}"
+          homebox_token=">\${REDIS_HOMEBOX_PASSWORD}"
+          check_template() {
+            local file=$1 token
+            while IFS= read -r token; do
+              case $token in
+                "$default_token" | "$homebox_token") ;;
+                *)
+                  echo "::error::$file has a literal password ($token); use a \${...} placeholder"
+                  return 1
+                  ;;
+              esac
+            done < <(grep -E '^[[:space:]]*user[[:space:]]' "$file" | grep -oE '>[^[:space:]]+')
+          }
+          check_template infra/redis/users.acl.tmpl
+          grep -qF "user homebox on $homebox_token" infra/redis/users.acl.tmpl \
+            || { echo "::error::the template lost the homebox user"; exit 1; }
+
+          bad=$(mktemp -d)
+          printf '%s\n' 'user default on >hunter2 ~* &* +@all' > "$bad/mid-line.acl"
+          printf '%s\n' "user homebox on $homebox_token >literal-password ~* &* +@all" > "$bad/second.acl"
+          for fixture in "$bad"/*.acl; do
+            if check_template "$fixture"; then
+              echo "::error::the placeholder check accepted $fixture"
+              exit 1
+            fi
+          done
+
+      # B2-R1-1 / B2-R2-1: mode 600 owned by deploy made redis:7.4.12 abort with "Permission
+      # denied", and so did a 640 file in a 700 directory. The check renders through the deploy's own
+      # script, refuses a 700 directory, and rotates the password once (B2-R2-11).
+      - name: redis reads the rendered ACL as uid 999
+        run: infra/scripts/check-redis-acl.sh
+
+      # B2-R2-10: `getent` exits 2 for a gid that has no group, and under `pipefail` that killed the
+      # bootstrap before its `groupadd` branch. The lookup must tolerate a missing gid.
+      - name: the bootstrap's gid lookup survives a gid with no group
+        run: |
+          set -euo pipefail
+          awk '/^group_for_gid\(\)/,/^}/' infra/scripts/bootstrap-vps.sh > "$RUNNER_TEMP/gid.sh"
+          source "$RUNNER_TEMP/gid.sh"
+          unused=54321
+          getent group "$unused" >/dev/null && { echo "::error::gid $unused is taken on the runner"; exit 1; }
+          found=$(group_for_gid "$unused")
+          [[ -z $found ]] || { echo "::error::a gid with no group answered '$found'"; exit 1; }
+          [[ "$(group_for_gid 0)" == root ]] || { echo "::error::the lookup lost an existing gid"; exit 1; }
+
+      # B2-R1-6: the check must tell the two hosts apart: VPS-2 has no Redis rule to satisfy.
+      - name: the firewall check knows both roles
+        run: |
+          set -euo pipefail
+          # Built by hand: a single-quoted `${...}` list trips SC2016, and envsubst needs the names
+          # literally (the same reason deploy.sh's render line carries the directive).
+          names="\${VCN_IP} \${PEER_VCN_IP} \${HOME_BOX_WG_IP}"
+          render() {
+            VCN_IP=10.0.0.2 PEER_VCN_IP=10.0.0.1 HOME_BOX_WG_IP=192.0.2.10 \
+              envsubst "$names" < "infra/firewall/$1.rules" > "$2"
+          }
+          render vps1 "$RUNNER_TEMP/vps1.rules"
+          render vps2 "$RUNNER_TEMP/vps2.rules"
+          infra/scripts/check-firewall.sh --role vps1 --expectations "$RUNNER_TEMP/vps1.rules"
+          infra/scripts/check-firewall.sh --role vps2 --expectations "$RUNNER_TEMP/vps2.rules"
+          # A VPS-1 set without the home-box Redis rule must fail.
+          if infra/scripts/check-firewall.sh --role vps1 --expectations "$RUNNER_TEMP/vps2.rules"; then
+            echo "::error::the check accepted a VPS-1 ruleset without the home-box Redis rule"
             exit 1
           fi
-          # shellcheck disable=SC2016 # the ${...} name must stay literal here
-          grep -q 'user homebox on >\${REDIS_HOMEBOX_PASSWORD}' infra/redis/users.acl.tmpl \
-            || { echo "::error::the template lost the homebox user"; exit 1; }
+
+      # B2-R1-5: Docker would create a missing bind source as root:root, and the uid-10001 workers
+      # could not write a raw page. The bootstrap must create it for them.
+      - name: the bootstrap creates /srv/raw on VPS-2
+        run: |
+          awk '/^ensure_dirs\(\)/,/^}/' infra/scripts/bootstrap-vps.sh > "$RUNNER_TEMP/ensure_dirs.sh"
+          grep -q 'role == vps2' "$RUNNER_TEMP/ensure_dirs.sh"
+          awk '/role == vps2/,/^  fi/' "$RUNNER_TEMP/ensure_dirs.sh" | grep -q '/srv/raw'
+
+      # B2-R1-4 / B2-R2-7: `ssh -i key -J deploy@10.8.0.1` gives the jump host none of those options.
+      # The config file must give both hops the key, BatchMode and the pinned known_hosts, and VPS-2's
+      # key must be listed under the address ssh connects to (its VCN IP, not an alias).
+      - name: the ssh config gives the jump host the same key
+        run: |
+          set -euo pipefail
+          dir=$(mktemp -d); chmod 700 "$dir"
+          (umask 077 && printf 'not-a-real-key\n' > "$dir/id"
+            printf '10.8.0.1 ssh-ed25519 AAAA\n10.0.0.5 ssh-ed25519 BBBB\n' > "$dir/known_hosts")
+          infra/scripts/ssh-config.sh "$dir" 10.0.0.5
+          out=$(ssh -G -F "$dir/config" vps2)
+          grep -qx 'user deploy' <<<"$out"
+          grep -qx 'proxyjump vps1' <<<"$out"
+          grep -qx 'hostname 10.0.0.5' <<<"$out"
+          grep -qx "identityfile $dir/id" <<<"$out"
+          grep -qx 'identitiesonly yes' <<<"$out"
+          grep -qx 'stricthostkeychecking true' <<<"$out"
+          grep -qx "userknownhostsfile $dir/known_hosts" <<<"$out"
+          grep -q '^10.0.0.5 ' "$dir/known_hosts"  # the key ssh will look up for vps2
+          grep -qx "identityfile $dir/id" <<<"$(ssh -G -F "$dir/config" vps1)"
 
       - name: Validate the Caddyfile
         run: |
@@ -63,9 +155,121 @@ jobs:
             -v "$PWD/infra:/etc/madar/infra:ro" \
             caddy:2.11.7 caddy validate --config /etc/madar/infra/Caddyfile --adapter caddyfile
 
+      # B2-R2-2: the action called `$GITHUB_ACTION_PATH/../../infra/scripts/ssh-config.sh`, which
+      # resolves to .github/infra/... and exits 127, so deploy, deploy-vps2 and sync all failed.
+      - name: the deploy action calls ssh-config.sh where it lives
+        run: |
+          set -euo pipefail
+          action=.github/actions/vps1-sync/action.yml
+          call=$(grep -oE "[$](GITHUB_WORKSPACE|GITHUB_ACTION_PATH)[^\"]*ssh-config[.]sh" "$action" | head -1)
+          [[ -n $call ]] || { echo "::error::$action calls no resolved ssh-config.sh path"; exit 1; }
+          resolved=${call//\$GITHUB_WORKSPACE/$PWD}
+          resolved=${resolved//\$GITHUB_ACTION_PATH/$PWD/.github/actions/vps1-sync}
+          [[ -f $resolved ]] || { echo "::error::the action calls $call, which resolves to $resolved"; exit 1; }
+          [[ -x $resolved ]] || { echo "::error::$resolved is not executable"; exit 1; }
+          # Run the resolved path the way the action does, so a broken script fails here too.
+          dir=$(mktemp -d); chmod 700 "$dir"
+          (umask 077 && printf 'not-a-real-key\n' > "$dir/id" && printf 'ssh-ed25519 AAAA\n' > "$dir/known_hosts")
+          "$resolved" "$dir" "" >/dev/null
+          grep -qx 'Host vps1' "$dir/config"
+
+      # B2-R2-12: VPS-2's `up -d` ran under `set -e`, so a failed start exited without rolling back.
+      # The function is extracted and driven with stubs: a failing `up -d` must reach the restore.
+      - name: a failed VPS-2 start rolls back
+        run: |
+          set -euo pipefail
+          awk '/^deploy_vps2\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/deploy_vps2.sh"
+          source "$RUNNER_TEMP/deploy_vps2.sh"
+          state_dir=$RUNNER_TEMP/state
+          install -d "$state_dir"
+          # shellcheck disable=SC2034 # GHCR_TOKEN, workers_timeout and vps2_compose are read by the
+          # extracted deploy_vps2.
+          GHCR_TOKEN=ci-token
+          # shellcheck disable=SC2034 # read by the extracted deploy_vps2
+          workers_timeout=1
+          log() { printf '[deploy] %s\n' "$*"; }
+          die() { printf '[deploy] error: %s\n' "$*" >&2; exit 1; }
+          env_get() { printf 'ci-owner\n'; }
+          running_tag() { printf 'previous-tag\n'; }
+          healthy_services() { return 1; }
+          docker() { return 0; }
+          # `$1` is the compose verb; failing `up` is what the guards are about. (A `case` on `$*`
+          # with a leading space never matches, which silently tested the healthy path.)
+          compose_stub() {
+            [[ ${1:-} == up ]] && return 1
+            return 0
+          }
+          # shellcheck disable=SC2034 # read by the extracted deploy_vps2
+          vps2_compose=(compose_stub)
+          out=$RUNNER_TEMP/vps2-deploy.log
+          set +e
+          # `set -e` inside the subshell: it is exactly what a deploy runs under, and a conditional
+          # call would disable errexit and hide the bug this step exists to catch.
+          ( set -e; deploy_vps2 new-tag ) > "$out" 2>&1
+          status=$?
+          set -e
+          cat "$out"
+          [[ $status -ne 0 ]] || { echo "::error::the failed deploy exited 0"; exit 1; }
+          grep -q 'restoring previous-tag' "$out" \
+            || { echo "::error::a failed up -d exited before the rollback (B2-R2-12)"; exit 1; }
+          grep -q 'rolled back to previous-tag' "$out" \
+            || { echo "::error::the rollback never reported its result"; exit 1; }
+
+      # B2-R3-2: a failed `up -d --wait` recreates Redis on a refused ACL *before* the reload runs.
+      # `apply_stateful_infra` must put the previous file back and retry, or Redis stays down.
+      - name: a refused ACL during the infra up restores the previous one
+        run: |
+          set -euo pipefail
+          awk '/^apply_stateful_infra\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/apply_infra.sh"
+          awk '/^restore_previous_acl\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/restore_acl.sh"
+          source "$RUNNER_TEMP/restore_acl.sh"
+          source "$RUNNER_TEMP/apply_infra.sh"
+          state_dir=$RUNNER_TEMP/state
+          acl_dir=$state_dir/redis
+          acl_target=$acl_dir/users.acl
+          acl_previous=$acl_dir/users.acl.prev
+          # shellcheck disable=SC2034 # all three are read by the extracted functions
+          acl_gid=$(id -g)
+          # shellcheck disable=SC2034 # read by the extracted apply_stateful_infra
+          redis_acl_changed=1
+          # shellcheck disable=SC2034 # read by the extracted apply_stateful_infra
+          vps1_stateful=(redis)
+          # shellcheck disable=SC2034 # read by the extracted apply_stateful_infra
+          vps1_compose=(compose_stub)
+          log() { printf '[deploy] %s\n' "$*"; }
+          die() { printf '[deploy] error: %s\n' "$*" >&2; exit 1; }
+          install -d "$acl_dir"
+          printf 'previous-acl\n' > "$acl_previous"
+          up_fails=1
+
+          # `$1` is the compose verb; failing `up` is what the guards are about. (A `case` on `$*`
+          # with a leading space never matches, which silently tested the healthy path.)
+          compose_stub() {
+            [[ $up_fails == 1 && ${1:-} == up ]] && return 1
+            return 0
+          }
+          printf 'refused-acl\n' > "$acl_target"
+          out=$RUNNER_TEMP/infra-up.log
+          set +e
+          ( set -e; apply_stateful_infra ) > "$out" 2>&1
+          status=$?
+          set -e
+          cat "$out"
+          [[ $status -ne 0 ]] || { echo "::error::a failed up exited 0"; exit 1; }
+          [[ "$(cat "$acl_target")" == previous-acl ]] \
+            || { echo "::error::the refused ACL was not replaced by the previous one"; exit 1; }
+          grep -q 'previous one is back' "$out" \
+            || { echo "::error::the restore did not report its result"; exit 1; }
+
+          # The same call with a working compose leaves the new file in place.
+          printf 'accepted-acl\n' > "$acl_target"
+          up_fails=0
+          apply_stateful_infra
+          [[ "$(cat "$acl_target")" == accepted-acl ]] \
+            || { echo "::error::a healthy up restored an ACL it did not need to"; exit 1; }
+
       - name: shellcheck
         run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources infra/scripts/*.sh
-
       - name: actionlint
         run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.12 -color
 
@@ -93,7 +297,7 @@ jobs:
           SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
         run: |
           read -ra ssh <<<"$SSH_COMMAND"
-          "${ssh[@]}" deploy@10.8.0.1 /srv/madar/infra/scripts/deploy.sh --infra-only < /dev/null
+          "${ssh[@]}" vps1 /srv/madar/infra/scripts/deploy.sh --infra-only < /dev/null
       - name: Leave WireGuard
         if: always()
         run: |

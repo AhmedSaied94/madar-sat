@@ -16,6 +16,7 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "infra/compose/**"  # the api-admin command check parses infra/compose/vps1.yml (B2-R2-14)
       - ".github/workflows/backend.yml"
   workflow_dispatch:
     inputs:
@@ -82,6 +83,28 @@ jobs:
         run: uv run mypy --strict app
       - name: pytest
         run: uv run pytest --cov --cov-report=term-missing
+
+      # B2-R1-3: `--proxy-headers` is a uvicorn flag and gunicorn's strict argparse exits 2 on it, so
+      # api-admin could not start and a rollback kept the same command. The command comes from the
+      # Compose file itself, so a bad flag fails here.
+      - name: The api-admin command is one gunicorn accepts
+        run: |
+          mapfile -t command < <(
+            awk '/^  api-admin:/ { service=1 }
+                 service && /^    command:/ { collecting=1; next }
+                 collecting && /^      - / { sub(/^      - /, ""); gsub(/"/, ""); print; next }
+                 collecting { exit }' ../infra/compose/vps1.yml
+          )
+          [[ ${#command[@]} -gt 0 ]] || { echo "::error::no api-admin command in infra/compose/vps1.yml"; exit 1; }
+          # The Compose list starts with the binary; gunicorn itself is the executable here.
+          [[ ${command[0]} == gunicorn ]] && command=("${command[@]:1}")
+          env ADMIN_JWT_SECRET=ci-only-admin-jwt-secret-0123456789abcdef \
+            DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres \
+            DATABASE_URL_SYNC=postgresql+psycopg://postgres:postgres@localhost:5432/postgres \
+            REDIS_URL=redis://localhost:6379/0 \
+            MEDIA_BASE_URL=https://media.example.com MEDIA_ROOT=/tmp/madar-media \
+            MEDIA_REHOST_ALLOWED_HOSTS=media.example.com CORS_ORIGINS=https://example.web.app \
+            uv run gunicorn --check-config "${command[@]}"
 
   openapi:
     runs-on: ubuntu-24.04
@@ -299,7 +322,7 @@ jobs:
         run: |
           read -ra ssh <<<"$SSH_COMMAND"
           printf '%s\n' "$GHCR_TOKEN" \
-            | "${ssh[@]}" deploy@10.8.0.1 "HEALTHZ_FORCE_FAIL=$FORCE_FAIL /srv/madar/infra/scripts/deploy.sh $GITHUB_SHA"
+            | "${ssh[@]}" vps1 "HEALTHZ_FORCE_FAIL=$FORCE_FAIL /srv/madar/infra/scripts/deploy.sh $GITHUB_SHA"
       - name: Leave WireGuard
         if: always()
         run: |
@@ -322,23 +345,26 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Refuse to deploy VPS-2 without its address
+        env:
+          VPS2_VCN_IP: ${{ vars.VPS2_VCN_IP }}
+        run: '[[ -n $VPS2_VCN_IP ]] || { echo "::error::set the VPS2_VCN_IP repository variable"; exit 1; }'
       - id: sync
         uses: ./.github/actions/vps1-sync
         with:
           wg-config: ${{ secrets.WG_CI_CONFIG }}
           ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
           known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          vps2-host: ${{ vars.VPS2_VCN_IP }}
       - name: Sync infra to VPS-2 and deploy ${{ github.sha }}
         env:
           SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VPS2_VCN_IP: ${{ vars.VPS2_VCN_IP }}
         run: |
-          [[ -n $VPS2_VCN_IP ]] || { echo "::error::set the VPS2_VCN_IP repository variable"; exit 1; }
-          read -ra ssh <<<"$SSH_COMMAND -J deploy@10.8.0.1"
-          rsync -a --delete -e "${ssh[*]}" infra/ "deploy@$VPS2_VCN_IP:/srv/madar/infra/"
+          read -ra ssh <<<"$SSH_COMMAND"
+          rsync -a --delete -e "$SSH_COMMAND" infra/ vps2:/srv/madar/infra/
           printf '%s\n' "$GHCR_TOKEN" \
-            | "${ssh[@]}" "deploy@$VPS2_VCN_IP" "/srv/madar/infra/scripts/deploy.sh --host vps2 $GITHUB_SHA"
+            | "${ssh[@]}" vps2 "/srv/madar/infra/scripts/deploy.sh --host vps2 $GITHUB_SHA"
       - name: Leave WireGuard
         if: always()
         run: |

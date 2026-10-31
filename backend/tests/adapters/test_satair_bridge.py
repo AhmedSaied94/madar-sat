@@ -39,11 +39,17 @@ def channel_id(session: Session, legacy_id: str) -> int:
 
 class TestFetch:
     def test_the_request_is_one_get_per_day_to_the_match_days_document(self) -> None:
-        calls: list[tuple[str, dict[str, str]]] = []
+        calls: list[tuple[str, dict[str, str], dict[str, str]]] = []
 
         class Recorder:
-            def get(self, url: str, allowed_hosts: frozenset[str], params: dict[str, str] | None = None):
-                calls.append((url, params or {}))
+            def get(
+                self,
+                url: str,
+                allowed_hosts: frozenset[str],
+                params: dict[str, str] | None = None,
+                headers: dict[str, str] | None = None,
+            ) -> RawPage:
+                calls.append((url, params or {}, headers or {}))
                 assert allowed_hosts == frozenset({"firestore.googleapis.com"})
                 return RawPage(url=url, status=200, body=b'{"fields": {}}')
 
@@ -51,18 +57,27 @@ class TestFetch:
 
         bridge = SatairBridgeAdapter(fetcher=Recorder(), project_id="p-1", api_key="k-1")  # type: ignore[arg-type]
         bridge.fetch(DateWindow(days=(date(2026, 10, 31), date(2026, 11, 1))))
-        assert [url for url, _ in calls] == [
+        assert [url for url, _, _ in calls] == [
             "https://firestore.googleapis.com/v1/projects/p-1/databases/(default)/documents/matchDays/2026-10-31",
             "https://firestore.googleapis.com/v1/projects/p-1/databases/(default)/documents/matchDays/2026-11-01",
         ]
-        assert all(params == {"key": "k-1"} for _, params in calls)
+        # The key travels in a header, never a query parameter: the URL is logged at INFO (B2-R2-5).
+        assert all(params == {} for _, params, _ in calls)
+        assert [headers.get("X-Goog-Api-Key") for _, _, headers in calls] == ["k-1", "k-1"]
+        assert not any("key" in url for url, _, _ in calls)
 
     def test_a_missing_document_is_an_empty_day(self) -> None:
         from app.adapters.base import DateWindow
         from app.adapters.fetcher import FetchError
 
         class Missing:
-            def get(self, url: str, allowed_hosts: frozenset[str], params: dict[str, str] | None = None):
+            def get(
+                self,
+                url: str,
+                allowed_hosts: frozenset[str],
+                params: dict[str, str] | None = None,
+                headers: dict[str, str] | None = None,
+            ):
                 raise FetchError(f"{url} answered 404", status=404)
 
         bridge = SatairBridgeAdapter(fetcher=Missing(), project_id="p-1", api_key="k-1")  # type: ignore[arg-type]
@@ -141,7 +156,7 @@ class TestUpsert:
     def test_an_orphan_channel_is_skipped_and_the_rest_linked(self, sync_session: Session, loaded_snapshot) -> None:
         adapter = SatairBridgeAdapter(fetcher=None, project_id="p", api_key="k")  # type: ignore[arg-type]
         items = [adapter.normalize(i) for i in adapter.parse(_page())]
-        UpsertPipeline(sync_session, source="legacy").run(items)
+        outcome = UpsertPipeline(sync_session, source="legacy").run(items)
 
         match_id = sync_session.execute(select(Match.id).where(Match.legacy_id == "bridge-new-1")).scalar_one()
         rows = {
@@ -151,8 +166,9 @@ class TestUpsert:
         assert set(rows) == {channel_id(sync_session, "ch-cyr"), channel_id(sync_session, "ch-hidden")}
         assert rows[channel_id(sync_session, "ch-hidden")].is_hidden is True
         assert rows[channel_id(sync_session, "ch-cyr")].commentator_id is not None
-        # The orphan id exists nowhere, so it is not linked to another channel.
+        # The orphan id exists nowhere, so it is not linked to another channel, and the run records it.
         assert all(row.source == "legacy" and row.imported_by == "legacy" for row in rows.values())
+        assert {"ref": "orphan-channel-1", "reason": "channel_not_published"} in outcome.skipped
 
     def test_a_new_commentator_name_creates_one_row(self, sync_session: Session, loaded_snapshot) -> None:
         adapter = SatairBridgeAdapter(fetcher=None, project_id="p", api_key="k")  # type: ignore[arg-type]
@@ -187,3 +203,52 @@ class TestUpsert:
         assert after.source == "ysscores"
         links = sync_session.execute(select(MatchChannel).where(MatchChannel.match_id == after.id)).scalars().all()
         assert links and all(link.source == "legacy" for link in links)
+
+
+class TestTheKeyStaysOutOfTheLogs:
+    def test_no_log_line_or_error_message_carries_the_api_key(self, capsys) -> None:
+        """httpx logs every URL at INFO, and an oversize body used to put the query in the error (B2-R2-5)."""
+        import logging
+
+        import httpx
+
+        from app.adapters.base import DateWindow
+        from app.adapters.fetcher import HttpFetcher, ResponseTooLarge
+        from app.workers import logs
+
+        key = "SECRETKEY123"
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if len(requests) == 1:
+                return httpx.Response(200, json={"fields": {}})
+            return httpx.Response(200, content=b"x" * (5 * 1024 * 1024 + 1))  # the fetcher's cap
+
+        class Allowed:
+            def take(self, host: str, now: float | None = None) -> bool:
+                return True
+
+        fetcher = HttpFetcher(
+            limiter=Allowed(),
+            user_agent="MadarSat/test",
+            client=httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False),
+        )
+        bridge = SatairBridgeAdapter(fetcher=fetcher, project_id="p-1", api_key=key)
+
+        root = logging.getLogger()
+        before = (list(root.handlers), root.level)
+        try:
+            logs.setup_logging("INFO")
+            assert bridge.fetch(DateWindow.next_days(date(2026, 10, 31), span=1))[0].status == 200
+            with pytest.raises(ResponseTooLarge) as raised:
+                bridge.fetch(DateWindow(days=(date(2026, 11, 1),)))
+        finally:
+            root.handlers[:] = before[0]
+            root.setLevel(before[1])
+            fetcher.close()
+
+        assert key not in capsys.readouterr().out
+        assert key not in str(raised.value)
+        assert requests[0].headers["x-goog-api-key"] == key
+        assert requests[0].url.query == b""  # nothing in the URL to log

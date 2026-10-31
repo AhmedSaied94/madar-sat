@@ -30,11 +30,17 @@ def _png(color: tuple[int, int, int] = (200, 30, 30), size: tuple[int, int] = (8
 
 @pytest.fixture
 def redis_client() -> redis.Redis:
+    """Cleared only of the media locks: the test Redis is shared with the other lanes' tests."""
     client = redis.Redis.from_url(get_worker_settings().broker_url, decode_responses=True)
-    client.flushdb()
+    _clear(client)
     yield client
-    client.flushdb()
+    _clear(client)
     client.close()
+
+
+def _clear(client: redis.Redis) -> None:
+    for key in client.scan_iter(match="lock:media:*"):
+        client.delete(key)
 
 
 @pytest.fixture
@@ -108,7 +114,7 @@ def test_an_allowlisted_logo_fills_an_empty_field_and_is_audited(
     asset = sync_session.execute(select(MediaAsset).where(MediaAsset.id == result["asset_id"])).scalar_one()
     assert asset.kind == "logo" and asset.mime == "image/webp"
     assert asset.original_url == URL
-    assert (Path(wire_media_root(asset))).exists() or asset.path
+    assert Path(wire_media_root(asset)).is_file()  # the bytes are stored where the row says
 
     audit = (
         sync_session.execute(select(AuditLog).where(AuditLog.entity == "teams", AuditLog.entity_id == team.id))

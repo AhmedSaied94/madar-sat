@@ -19,7 +19,7 @@ services:
     environment:
       REDIS_URL: ${REDIS_URL:?set REDIS_URL to redis://homebox:<password>@10.8.0.1:6379/0}
       SCRAPE_USER_AGENT: ${SCRAPE_USER_AGENT:?set SCRAPE_USER_AGENT}
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape_home", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape_home", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
     security_opt:
       - no-new-privileges:true
     cap_drop:

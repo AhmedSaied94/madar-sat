@@ -27,16 +27,24 @@ from app.workers.config import get_worker_settings
 from tests.adapters.test_upsert import fixture
 
 BACKEND = Path(__file__).resolve().parents[2]
+REDIS_PREFIXES = ("lock:fetch:", "lock:ingest:", "lock:media:", "ratelimit:")
+
+
+def _clear(client: redis.Redis) -> None:
+    for prefix in REDIS_PREFIXES:
+        for key in client.scan_iter(match=f"{prefix}*"):
+            client.delete(key)
 SAVED_PAGE = Path(__file__).resolve().parents[1] / "fixtures" / "ysscores" / "2026-10-30.html"
 NOW = datetime(2026, 10, 31, 3, 0, tzinfo=UTC)
 
 
 @pytest.fixture
 def redis_client() -> redis.Redis:
+    """The test Redis, cleared only of the keys these tasks own (never FLUSHDB: other lanes share it)."""
     client = redis.Redis.from_url(get_worker_settings().broker_url, decode_responses=True)
-    client.flushdb()
+    _clear(client)
     yield client
-    client.flushdb()
+    _clear(client)
     client.close()
 
 
@@ -322,7 +330,7 @@ def test_the_home_box_path_loads_neither_the_database_nor_the_app_settings(tmp_p
         page = Path(sys.argv[1]).read_bytes()
 
         class Allowed:
-            def take(self, host):
+            def take(self, host, now=None):
                 return True
 
         def transport_page(source: str) -> HttpFetcher:
@@ -385,7 +393,7 @@ def test_a_day_without_fixtures_still_reports(redis_client: redis.Redis) -> None
                 body='<div class="no-matches-wrapper">لا توجد مباريات</div>'.encode(),
             )
 
-        def get(self, url: str, allowed_hosts, params=None):  # pragma: no cover - not used here
+        def get(self, url: str, allowed_hosts, params=None, headers=None):  # pragma: no cover - not used here
             raise AssertionError
 
         def close(self) -> None:
@@ -401,3 +409,341 @@ def test_a_day_without_fixtures_still_reports(redis_client: redis.Redis) -> None
         importlib.reload(module)
     assert result["items"] == 0
     assert sent and sent[0].pages and sent[0].error is None
+
+
+# --- the fetch task's failure paths (B2-R1-9) -----------------------------------------------------
+
+
+class TestFetchFailures:
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, handler) -> list:
+        import httpx
+
+        from app.adapters import tasks as module
+        from app.adapters.fetcher import HttpFetcher
+
+        class Allowed:
+            def take(self, host: str, now: float | None = None) -> bool:
+                return True
+
+        sent: list = []
+        monkeypatch.setattr(
+            module,
+            "http_fetcher",
+            lambda: HttpFetcher(
+                limiter=Allowed(),
+                user_agent="MadarSat/test",
+                client=httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False),
+            ),
+        )
+        monkeypatch.setattr(module, "send_ingest", sent.append)
+        return sent
+
+    def test_a_403_on_every_attempt_ends_in_a_failed_result(self, redis_client, monkeypatch) -> None:
+        """Six attempts: the five retries are Celery's, and the last one is recorded."""
+        import httpx
+
+        from app.adapters.tasks import fetch
+
+        attempts: list[int] = []
+
+        def blocked(request):
+            attempts.append(1)
+            return httpx.Response(403, text="blocked")
+
+        sent = self._patch(monkeypatch, blocked)
+
+        summary = fetch.apply(args=("ysscores", "2026-10-30")).get()  # eager mode runs the retries
+
+        assert summary["items"] == 0
+        assert len(attempts) == fetch.max_retries + 1  # 5 retries, then the last attempt
+        assert len(sent) == 1
+        assert sent[0].error == "retries_exhausted"
+        assert sent[0].http_errors == 1
+
+    def test_a_404_is_recorded_with_its_status_and_no_retry(self, redis_client, monkeypatch) -> None:
+        import httpx
+
+        from app.adapters.tasks import fetch
+
+        sent = self._patch(monkeypatch, lambda request: httpx.Response(404, text="gone"))
+
+        summary = fetch.apply(args=("ysscores", "2026-10-30")).get()  # no Retryable, no retry
+
+        assert summary["items"] == 0
+        assert sent[0].error == "fetch_failed"
+        assert sent[0].http_errors == 1
+
+    def test_a_page_without_the_wrapper_is_a_layout_change(self, redis_client, monkeypatch) -> None:
+        import httpx
+
+        from app.adapters.tasks import fetch
+
+        sent = self._patch(monkeypatch, lambda request: httpx.Response(200, text="<html>blocked</html>"))
+
+        fetch.apply(args=("ysscores", "2026-10-30")).get()
+
+        assert sent[0].error == "layout_changed"
+        assert sent[0].http_errors == 0
+        assert len(sent[0].pages) == 4  # the whole window was fetched; it is saved with the run
+
+    def test_a_transport_error_on_every_attempt_ends_in_a_failed_result(self, redis_client, monkeypatch) -> None:
+        """B2-R2-6: `autoretry_for` retries a connect error; the last attempt still writes the row."""
+        import httpx
+
+        from app.adapters.tasks import fetch
+
+        attempts: list[int] = []
+
+        def unreachable(request):
+            attempts.append(1)
+            raise httpx.ConnectError("no route to host", request=request)
+
+        sent = self._patch(monkeypatch, unreachable)
+
+        with pytest.raises(httpx.TransportError):
+            fetch.apply(args=("ysscores", "2026-10-30")).get()
+
+        assert len(attempts) == fetch.max_retries + 1
+        assert len(sent) == 1
+        assert sent[0].error == "transport_error"
+        assert sent[0].pages == []
+
+    def test_an_empty_200_is_a_layout_change_and_not_a_silent_quiet_day(self, redis_client, monkeypatch) -> None:
+        """lxml raises ParserError on an empty body, which used to escape with no run row (B2-R2-6)."""
+        import httpx
+
+        from app.adapters.tasks import fetch
+
+        sent = self._patch(monkeypatch, lambda request: httpx.Response(200, content=b""))
+
+        fetch.apply(args=("ysscores", "2026-10-30")).get()
+
+        assert sent[0].error == "layout_changed"
+        assert len(sent[0].pages) == 4
+
+    def test_an_oversize_page_is_recorded_as_a_fetch_failure(self, redis_client, monkeypatch) -> None:
+        """`ResponseTooLarge` names the URL without its query and reaches the run row (B2-R2-5/6)."""
+        import httpx
+
+        from app.adapters.tasks import fetch
+
+        sent = self._patch(monkeypatch, lambda request: httpx.Response(200, content=b"x" * (6 * 1024 * 1024)))
+
+        fetch.apply(args=("ysscores", "2026-10-30")).get()
+
+        assert sent[0].error == "fetch_failed"
+        assert sent[0].pages == []
+
+    def test_pages_that_do_not_fit_the_message_still_record_a_failure(self, redis_client, monkeypatch) -> None:
+        """A successful fetch whose `ScrapeResult` is over 2 MB must not vanish (B2-R2-6)."""
+        import base64
+        import os
+
+        import httpx
+
+        from app.adapters.messages import MessageTooLarge
+        from app.adapters.tasks import fetch
+
+        # A page that parses (a wrapper, no fixtures) and does not compress: four of them are 2.4 MB.
+        noise = base64.b64encode(os.urandom(600 * 1024)).decode()
+        body = f'<div class="matches-wrapper" champ_title="كأس">{noise}</div>'.encode()
+        sent = self._patch(monkeypatch, lambda request: httpx.Response(200, content=body))
+
+        with pytest.raises(MessageTooLarge):
+            fetch.apply(args=("ysscores", "2026-10-30")).get()
+
+        assert len(sent) == 1
+        assert sent[0].error == "fetch_error"
+        assert sent[0].pages == []  # the pages are dropped; the failure is what has to arrive
+
+
+# --- the ingest task's failure path (B2-R1-12) ----------------------------------------------------
+
+
+class TestIngestFailures:
+    def _prepare(self, monkeypatch: pytest.MonkeyPatch, sync_session, tmp_path: Path) -> None:
+        from sqlalchemy.orm import Session
+
+        import app.db.session as db_session
+
+        monkeypatch.setenv("RAW_ROOT", str(tmp_path))
+        from app.adapters.config import get_adapter_settings
+
+        get_adapter_settings.cache_clear()
+
+        def factory() -> Session:
+            return Session(bind=sync_session.connection(), join_transaction_mode="create_savepoint")
+
+        monkeypatch.setattr(db_session, "SyncSession", factory)
+
+    def _result_with(self, wall_time: str) -> ScrapeResult:
+        from app.adapters.base import ParsedFixture
+
+        page = RawPage(
+            url="https://www.ysscores.com/ar/match_date_to#2026-10-30",
+            status=200,
+            body=SAVED_PAGE.read_bytes(),
+        )
+        items = [
+            ParsedFixture(
+                external_id="ys-bad",
+                competition="الدوري",
+                home="الأهلي",
+                away="الزمالك",
+                wall_time=wall_time,
+                match_date=date(2026, 10, 30),
+            )
+        ]
+        return ScrapeResult.build(
+            source="ysscores",
+            run_id="r-bad-time",
+            started_at=NOW,
+            finished_at=NOW,
+            fetched_on="home-box",
+            pages=[page],
+            items=items,
+        )
+
+    def test_a_bad_time_skips_one_item_and_the_run_is_partial(
+        self, sync_session, loaded_snapshot, monkeypatch, tmp_path: Path
+    ) -> None:
+        self._prepare(monkeypatch, sync_session, tmp_path)
+
+        summary = ingest.apply(args=(self._result_with("12:99 م").as_task_arg(),)).get()
+
+        from app.db.models import ImportRun
+
+        run = sync_session.query(ImportRun).order_by(ImportRun.id.desc()).first()
+        assert summary["status"] == "partial"
+        assert run.status == "partial" and run.finished_at is not None
+        run_json = json.loads((Path(run.raw_path) / "run.json").read_text(encoding="utf-8"))
+        assert run_json["skipped"] == [{"ref": "ys-bad", "reason": "error"}]
+
+    def test_a_refused_raw_write_marks_the_run_failed_and_reraises(
+        self, sync_session, loaded_snapshot, monkeypatch, tmp_path: Path
+    ) -> None:
+        self._prepare(monkeypatch, sync_session, tmp_path)
+
+        def refuse(*args, **kwargs):
+            raise PermissionError("raw root is not writable")
+
+        monkeypatch.setattr("app.adapters.raw_store.RawStore.save", refuse)
+
+        with pytest.raises(PermissionError):
+            ingest.apply(args=(self._result_with("10:00 م").as_task_arg(),)).get()
+
+        from app.db.models import ImportRun
+
+        run = sync_session.query(ImportRun).order_by(ImportRun.id.desc()).first()
+        assert run.status == "failed"
+        assert run.finished_at is not None
+        assert "PermissionError" in (run.error or "")
+
+
+class TestRunJson:
+    def _prepare(self, monkeypatch: pytest.MonkeyPatch, sync_session, tmp_path: Path) -> None:
+        from sqlalchemy.orm import Session
+
+        import app.db.session as db_session
+
+        monkeypatch.setenv("RAW_ROOT", str(tmp_path))
+        from app.adapters.config import get_adapter_settings
+
+        get_adapter_settings.cache_clear()
+
+        def factory() -> Session:
+            return Session(bind=sync_session.connection(), join_transaction_mode="create_savepoint")
+
+        monkeypatch.setattr(db_session, "SyncSession", factory)
+
+    def test_the_run_json_lists_the_postponed_items(self, sync_session, loaded_snapshot, monkeypatch, tmp_path) -> None:
+        """`outcome.postponed` is asserted nowhere else: dropping it would go unnoticed (B2-R2-18)."""
+        from app.adapters.base import ParsedFixture
+
+        self._prepare(monkeypatch, sync_session, tmp_path)
+        page = RawPage(
+            url="https://www.ysscores.com/ar/match_date_to#2026-10-30",
+            status=200,
+            body=SAVED_PAGE.read_bytes(),
+        )
+        item = ParsedFixture(
+            external_id="ys-postponed-1",
+            competition="الدوري",
+            home="الأهلي",
+            away="الزمالك",
+            wall_time="10:00 م",
+            match_date=date(2026, 10, 30),
+            postponed=True,
+        )
+        result = ScrapeResult.build(
+            source="ysscores",
+            run_id="r-postponed",
+            started_at=NOW,
+            finished_at=NOW,
+            fetched_on="home-box",
+            pages=[page],
+            items=[item],
+        )
+
+        summary = ingest.apply(args=(result.as_task_arg(),)).get()
+
+        from app.db.models import ImportRun
+
+        run = sync_session.query(ImportRun).order_by(ImportRun.id.desc()).first()
+        assert summary["status"] == "succeeded"
+        run_json = json.loads((Path(run.raw_path) / "run.json").read_text(encoding="utf-8"))
+        assert run_json["postponed"] == [{"ref": "ys-postponed-1"}]
+
+
+class TestFetchSetupFailures:
+    def _prepare(self, monkeypatch: pytest.MonkeyPatch, sync_session, tmp_path: Path) -> None:
+        from sqlalchemy.orm import Session
+
+        import app.db.session as db_session
+
+        monkeypatch.setenv("RAW_ROOT", str(tmp_path))
+        from app.adapters.config import get_adapter_settings
+
+        get_adapter_settings.cache_clear()
+
+        def factory() -> Session:
+            return Session(bind=sync_session.connection(), join_transaction_mode="create_savepoint")
+
+        monkeypatch.setattr(db_session, "SyncSession", factory)
+
+    def test_a_missing_user_agent_still_writes_a_failed_run(
+        self, redis_client, sync_session, loaded_snapshot, monkeypatch, tmp_path
+    ) -> None:
+        """B2-R3-1: the fetcher is built inside the guard, so a missing setting is a failed run too."""
+        from app.adapters.config import get_adapter_settings
+        from app.adapters.tasks import fetch
+        from app.db.models import ImportRun
+
+        monkeypatch.delenv("SCRAPE_USER_AGENT", raising=False)
+        self._prepare(monkeypatch, sync_session, tmp_path)
+        try:
+            with pytest.raises(RuntimeError, match="SCRAPE_USER_AGENT"):
+                fetch.apply(args=("ysscores", "2026-10-30")).get()
+
+            run = sync_session.query(ImportRun).order_by(ImportRun.id.desc()).first()
+            assert run is not None, "a setup error left no import_runs row"
+            assert run.status == "failed"
+            assert run.error == "fetch_error"
+            assert run.finished_at is not None
+        finally:
+            get_adapter_settings.cache_clear()
+
+    def test_a_bad_start_argument_still_writes_a_failed_run(
+        self, redis_client, sync_session, loaded_snapshot, monkeypatch, tmp_path
+    ) -> None:
+        from app.adapters.tasks import fetch
+        from app.db.models import ImportRun
+
+        monkeypatch.setenv("SCRAPE_USER_AGENT", "MadarSat/test")
+        self._prepare(monkeypatch, sync_session, tmp_path)
+
+        with pytest.raises(ValueError):
+            fetch.apply(args=("ysscores", "not-a-date")).get()
+
+        run = sync_session.query(ImportRun).order_by(ImportRun.id.desc()).first()
+        assert run is not None and run.status == "failed" and run.error == "fetch_error"

@@ -14,19 +14,24 @@ Deploys are automatic. A push to `master` that changes `backend/**` (or `backend
 | `build` | Builds `linux/arm64` with buildx and QEMU (or on `vars.ARM_RUNNER`) and pushes `ghcr.io/ahmedsaied94/madar-backend:<sha>` | No |
 | `build-amd64` | Builds `linux/amd64` natively on `ubuntu-24.04` and pushes `ghcr.io/ahmedsaied94/madar-backend-amd64:<sha>`, the home box's image | No |
 | `deploy` | Joins WireGuard as `ci`, pins VPS-1's host key, `rsync`s `infra/` to `/srv/madar/infra/`, then runs `deploy.sh <sha>` as `deploy@10.8.0.1`, with the job's `GITHUB_TOKEN` on stdin | No |
-| `deploy-vps2` | Same WireGuard step, then rsyncs `infra/` and runs `deploy.sh --host vps2 <sha>` through `ssh -J deploy@10.8.0.1` ([workers.md](workers.md)) | No |
+| `deploy-vps2` | Same WireGuard step, then rsyncs `infra/` and runs `deploy.sh --host vps2 <sha>` through the ssh config's `vps1` jump (`ProxyJump`, no `-J` on the command line) ([workers.md](workers.md)) | No |
 | `stable` | Moves `madar-backend-amd64:stable` to `<sha>`, so the home box picks the release only after both hosts are healthy | No |
 | `retention` | Keeps the newest 3 versions of `madar-backend` and of `madar-backend-amd64` in GHCR ("Images in GHCR" below) | No |
 
 `deploy.sh <sha>`, in order:
 
-1. renders `/srv/madar/redis/users.acl` from `infra/redis/users.acl.tmpl` and `/srv/madar/.env` (mode 600), then `docker compose up -d --wait caddy postgres redis` (only services whose definition changed are recreated), then `caddy reload`;
+1. renders `/srv/madar/redis/users.acl` from `infra/redis/users.acl.tmpl` and `/srv/madar/.env` through `render-redis-acl.sh` (file mode 640, directory 750, group 999, so the redis user can read it), then `docker compose up -d --wait caddy postgres redis` (only services whose definition changed are recreated), then `caddy reload`. A changed ACL restarts Redis and pings as both `default` and `homebox`; a refused ACL puts the previous file back, both when the `up` recreates Redis and when the reload restarts it (B2-R3-2);
 2. writes the running tag to `/srv/madar/previous_tag`;
 3. logs in to GHCR with the token from stdin, pulls, and logs out (also on exit), so no registry credential stays on the host;
 4. runs `alembic upgrade head` in a one-off `migrate` container. If it fails, it stops **before** touching the running APIs;
 5. starts `api-public`, `api-admin` and `worker-media` on the new tag;
 6. polls `http://127.0.0.1:8000/healthz`, `http://10.8.0.1:8001/admin/api/healthz` and `worker-media`'s healthcheck for 60 s;
 7. on success, writes the tag to `/srv/madar/current_tag`. On failure, starts the previous tag again (the media worker included), checks it, and exits non-zero.
+
+VPS-2's deploy is shorter because nothing there owns state: no Caddy, no migrations, no Redis. It
+records the running tag, pulls, runs `compose --profile workers up -d` for `worker-imports`,
+`worker-scrape`, `worker-maintenance` and `beat`, waits up to 90 s for all four healthchecks, and — like
+VPS-1 — rolls back to the previous tag when the start or the check fails ([workers.md](workers.md)).
 
 Deploys never overlap. `backend.yml`'s `deploy` and `infra.yml`'s `sync` share the concurrency group `deploy-vps1`, `deploy-vps2` has its own group, and `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
 

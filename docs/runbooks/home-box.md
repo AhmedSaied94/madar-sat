@@ -55,15 +55,19 @@ The peer's address is what limits Redis to this box:
    `infra/firewall/vps1.rules` with the new address, restarts Docker, and runs
    `check-firewall.sh`, which now fails if the Redis rule is missing or if any rule still accepts
    6379 from every `wg0` peer ([firewall-changes.md](firewall-changes.md)).
-3. Deploy the ACL (any deploy does it): the rendered `/srv/madar/redis/users.acl` defines
-   `homebox`, and Compose restarts Redis to read it ([deploy-and-rollback.md](deploy-and-rollback.md)).
+3. Deploy the ACL (any deploy does it): `deploy.sh` renders `/srv/madar/redis/users.acl` through
+   `infra/scripts/render-redis-acl.sh` (file 640, directory 750, group 999), restarts Redis because
+   the file changed, and checks both the `default` and the `homebox` password before it touches the
+   APIs; it puts the previous ACL back if Redis refuses the new one
+   ([deploy-and-rollback.md](deploy-and-rollback.md), [secrets.md](secrets.md#rotate-the-home-box-redis-password)).
 
 ## Start and check the worker
 
 ```sh
-cd /srv/madar && docker compose --env-file /srv/madar/.env -f infra/compose/home-box.yml up -d
-docker compose -f infra/compose/home-box.yml ps
-docker compose -f infra/compose/home-box.yml logs -f worker-scrape
+cd /srv/madar
+sudo docker compose --env-file /srv/madar/.env -f infra/compose/home-box.yml up -d
+sudo docker compose --env-file /srv/madar/.env -f infra/compose/home-box.yml ps
+sudo docker compose --env-file /srv/madar/.env -f infra/compose/home-box.yml logs -f worker-scrape
 ```
 
 Healthy means the container reports `healthy` (its healthcheck runs `celery inspect ping`) and the
@@ -71,9 +75,16 @@ log line names the `scrape_home` queue. Then start a run by hand from VPS-2 and 
 `import_runs` ([imports-and-sources.md](imports-and-sources.md)): the fetch is on this box, the
 ingest is on VPS-2.
 
-The ACL allows only `celery:*`, `ratelimit:*` and `lock:fetch:*`. If the log shows `NOPERM`, the
-box is touching a key it should not (or the ACL file on VPS-1 is stale): check
-`docker exec madar-redis redis-cli -a "$REDIS_PASSWORD" ACL LIST` on VPS-1, and re-deploy.
+The ACL allows only `celery:*`, `ratelimit:*` and `lock:fetch:*` (keys and channels). If the log
+shows `NOPERM`, the box is touching a key or channel it should not (or the ACL file on VPS-1 is
+stale). List the users from VPS-1, reading the password inside the container so it never reaches
+your shell history (the same form as the container's own health check):
+
+```sh
+ssh ubuntu@10.8.0.1 "sudo -iu deploy docker exec madar-redis-1 sh -c 'REDISCLI_AUTH=\"\$REDIS_PASSWORD\" redis-cli ACL LIST'"
+```
+
+Then re-deploy (the deploy restarts Redis when the ACL file changed).
 
 ## Updates
 
@@ -94,7 +105,7 @@ on the next tick.
 ## Take it offline
 
 ```sh
-cd /srv/madar && docker compose --env-file /srv/madar/.env -f infra/compose/home-box.yml down
+cd /srv/madar && sudo docker compose --env-file /srv/madar/.env -f infra/compose/home-box.yml down
 sudo systemctl disable --now home-box-update.timer
 ```
 

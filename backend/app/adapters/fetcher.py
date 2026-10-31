@@ -7,13 +7,17 @@ Guarantees, all tested in ``tests/adapters/test_fetcher.py``:
 - at most three redirects;
 - a 5 s connect timeout, a 20 s read timeout and a 5 MB streaming cap;
 - 429, 403 and 5xx raise ``Retryable`` so Celery backs off with jitter; other 4xx fail the run;
-- one request per host per the Redis token bucket, or ``Retryable`` when the bucket is empty.
+- one request per host per the Redis token bucket: the fetcher waits for the next token, up to
+  ``wait_budget`` seconds, instead of failing the whole run (B2-R1-8);
+- ``http_errors`` counts every response of 400 or more, for the run row (B2-R1-9).
 """
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from types import TracebackType
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
 
@@ -27,6 +31,9 @@ READ_TIMEOUT = 20.0
 MAX_BYTES = 5 * 1024 * 1024
 MAX_REDIRECTS = 3
 RETRYABLE_STATUSES = frozenset({403, 429})
+# A four-day ysscores run needs two burst tokens and one more every 4 s, so it waits about 8 s.
+WAIT_BUDGET = 60.0
+POLL_SECONDS = 0.25
 
 
 class FetchError(Exception):
@@ -57,6 +64,12 @@ def host_of(url: str) -> str:
     return urlsplit(url).hostname or ""
 
 
+def _without_query(url: str) -> str:
+    """The URL with its query and fragment dropped, for messages that end up in a log (B2-R2-5)."""
+    parts = urlsplit(url)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
 class HttpFetcher:
     def __init__(
         self,
@@ -65,6 +78,10 @@ class HttpFetcher:
         client: httpx.Client | None = None,
         max_bytes: int = MAX_BYTES,
         max_redirects: int = MAX_REDIRECTS,
+        clock: Callable[[], float] = time.time,
+        sleep: Callable[[float], None] = time.sleep,
+        wait_budget: float = WAIT_BUDGET,
+        poll_seconds: float = POLL_SECONDS,
     ) -> None:
         self.client = client or httpx.Client(
             follow_redirects=False,
@@ -74,6 +91,12 @@ class HttpFetcher:
         self.user_agent = user_agent
         self.max_bytes = max_bytes
         self.max_redirects = max_redirects
+        self.clock = clock
+        self.sleep = sleep
+        self.wait_budget = wait_budget
+        self.poll_seconds = poll_seconds
+        # Every 4xx/5xx the source answered, so a failed run records how often (B2-R1-9).
+        self.http_errors = 0
 
     def __enter__(self) -> HttpFetcher:
         return self
@@ -94,8 +117,9 @@ class HttpFetcher:
         url: str,
         allowed_hosts: frozenset[str],
         params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> RawPage:
-        return self._request("GET", url, allowed_hosts=allowed_hosts, params=params)
+        return self._request("GET", url, allowed_hosts=allowed_hosts, params=params, headers=headers)
 
     def post(
         self,
@@ -119,8 +143,7 @@ class HttpFetcher:
         redirects = 0
         while True:
             self._check_host(current, allowed_hosts)
-            if not self.limiter.take(host_of(current)):
-                raise Retryable(f"rate limit reached for {host_of(current)}")
+            self._wait_for_token(host_of(current))
 
             with self.client.stream(
                 method,
@@ -144,6 +167,8 @@ class HttpFetcher:
                     params = None
                     continue
 
+                if response.status_code >= 400:
+                    self.http_errors += 1
                 body = self._read_capped(response)
                 page = RawPage(
                     url=str(response.url),
@@ -158,13 +183,26 @@ class HttpFetcher:
                 raise FetchError(f"{current} answered {page.status}", status=page.status)
             return page
 
+    def _wait_for_token(self, host: str) -> None:
+        """Wait for the host's next token, up to the budget, instead of aborting the fetch (B2-R1-8).
+
+        The bucket holds two tokens and refills one every four seconds, so a four-day run that used
+        its burst waits about eight seconds. Past the budget the run is retried, as before.
+        """
+        deadline = self.clock() + self.wait_budget
+        while not self.limiter.take(host, now=self.clock()):
+            if self.clock() >= deadline:
+                raise Retryable(f"rate limit reached for {host}")
+            self.sleep(self.poll_seconds)
+
     def _read_capped(self, response: httpx.Response) -> bytes:
         chunks: list[bytes] = []
         total = 0
         for chunk in response.iter_bytes():
             total += len(chunk)
             if total > self.max_bytes:
-                raise ResponseTooLarge(f"{response.url} is over the {self.max_bytes} byte cap")
+                # No query string: the bridge's key travelled there until B2-R2-5.
+                raise ResponseTooLarge(f"{_without_query(str(response.url))} is over the {self.max_bytes} byte cap")
             chunks.append(chunk)
         return b"".join(chunks)
 

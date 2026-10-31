@@ -65,7 +65,17 @@ Each `.env` names the other VM's private IP, so create both VMs before you boots
 1. **The CI peer, the deploy key and the pinned host key**, on VPS-1: [provision-host.md §8](provision-host.md#8-deploy-peer-and-keys). `gh secret list` then shows four secrets.
 2. **Reboot check**, on both VMs: [provision-host.md §9](provision-host.md#9-reboot-check). That completes T064.
 
-### 4. First deploys
+### 4. The home box's peer (before the first deploy)
+
+The firewall rule and the `homebox` Redis user have to exist before anything starts, and
+`bootstrap-vps.sh vps1` is what writes them (T080–T084). Do this now, not after the merges:
+
+1. **Add the box to `wg0`** (`wg-add-peer.sh home-box`), write `HOME_BOX_WG_IP` on VPS-1, and **re-run
+   `bootstrap-vps.sh vps1`** so the firewall carries its Redis rule and `deploy` joins gid 999. Then
+   write the box's `.env` and install its timer: [home-box.md](home-box.md). Don't start
+   `worker-scrape` yet: before the first deploy there is no `madar-backend-amd64:stable` image.
+
+### 5. First deploys
 
 1. **Merge Lane B2** (`infra/`) to `master`. `infra.yml`'s `sync` job starts Caddy, PostgreSQL and Redis on VPS-1 ([deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra)). If it ran before stage 3 and failed, re-run it ([ci-workflows.md "Re-running"](ci-workflows.md#re-running)).
 2. **Certificates:** [tls-certificates.md "First issuance"](tls-certificates.md#first-issuance). That completes T058.
@@ -77,7 +87,7 @@ Each `.env` names the other VM's private IP, so create both VMs before you boots
 8. **Secret-scan proof:** [ci-workflows.md "Prove the secret scan"](ci-workflows.md#prove-the-secret-scan) (T067, first half).
 9. **Once Lanes A and M have merged:** the PWA preview and its CORS origin ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)), then a green `master` run for every workflow (T067, second half).
 10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
-11. **The home box:** the peer, its `.env`, the Redis ACL and firewall rule, and the timer ([home-box.md](home-box.md)). It is optional for the platform but required for ysscores: without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
+11. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
 12. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
 13. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
 14. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import base64
 import gzip
+import json
 import warnings
+import zlib
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, Self
@@ -21,6 +23,13 @@ from app.adapters.base import ParsedFixture, RawPage
 CURRENT_SCHEMA = 1
 MAX_BYTES = 2 * 1024 * 1024
 MAX_ERROR = 120
+# The fetcher's per-page cap. The compressed message is capped at 2 MB, but gzip can inflate
+# 1.5 MB into gigabytes, so the inflate itself is bounded (B2-R1-13).
+MAX_PAGE_BYTES = 5 * 1024 * 1024
+# A window (today to +3) is at most four pages, and the whole run is bounded too: 250 small pages
+# fit under 2 MB compressed and still inflate to gigabytes (B2-R2-16).
+MAX_PAGES = 4
+MAX_TOTAL_BYTES = 16 * 1024 * 1024
 
 
 class MessageTooLarge(Exception):
@@ -86,6 +95,16 @@ with warnings.catch_warnings():
                 raise MessageTooLarge(f"the message is over the {MAX_BYTES} byte cap; split the run")
             return self
 
+        @model_validator(mode="before")
+        @classmethod
+        def _refuse_before_parsing(cls, data: Any) -> Any:
+            """Check the wire size before pydantic copies the payload into models (B2-R2-16)."""
+            if isinstance(data, dict):
+                encoded = json.dumps(data, ensure_ascii=False, default=str)
+                if len(encoded.encode("utf-8")) > MAX_BYTES:
+                    raise MessageTooLarge(f"the message is over the {MAX_BYTES} byte cap; split the run")
+            return data
+
         @classmethod
         def build(
             cls,
@@ -100,6 +119,10 @@ with warnings.catch_warnings():
             http_errors: int = 0,
             error: str | None = None,
         ) -> ScrapeResult:
+            if len(pages) > MAX_PAGES:
+                raise MessageTooLarge(
+                    f"the message carries {len(pages)} pages; a window is at most {MAX_PAGES} (B2-R2-16)"
+                )
             return cls(
                 schema=CURRENT_SCHEMA,
                 source=source,
@@ -139,19 +162,35 @@ with warnings.catch_warnings():
             )
 
         def raw_pages(self) -> list[RawPage]:
-            return [
-                RawPage(
-                    url=page.url,
-                    status=page.status,
-                    body=gzip.decompress(base64.b64decode(page.gz_b64)),
-                    fetched_at=page.fetched_at,
-                )
-                for page in self.pages
-            ]
+            if len(self.pages) > MAX_PAGES:
+                raise MessageTooLarge(f"the message carries {len(self.pages)} pages; at most {MAX_PAGES} are expected")
+            pages: list[RawPage] = []
+            total = 0
+            for page in self.pages:
+                body = _inflate(page)
+                total += len(body)
+                if total > MAX_TOTAL_BYTES:
+                    # Each page is under its own cap; a run of many pages is still a bomb (B2-R2-16).
+                    raise MessageTooLarge(f"the run inflates past the {MAX_TOTAL_BYTES} byte total cap")
+                pages.append(RawPage(url=page.url, status=page.status, body=body, fetched_at=page.fetched_at))
+            return pages
 
         def as_task_arg(self) -> dict[str, Any]:
             """The payload ``adapters.ingest`` receives (JSON-serialisable)."""
             return self.model_dump(mode="json")
+
+
+def _inflate(page: PageMessage) -> bytes:
+    """Inflate one page, refusing more than the fetcher's cap (B2-R1-13).
+
+    ``zlib.decompressobj.decompress(data, max_length)`` stops at ``max_length`` and keeps the rest in
+    ``unconsumed_tail``: a bomb therefore costs 5 MB, not the gigabytes it would expand to.
+    """
+    inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)  # 16: gzip framing
+    body = inflater.decompress(base64.b64decode(page.gz_b64), MAX_PAGE_BYTES + 1)
+    if len(body) > MAX_PAGE_BYTES or inflater.unconsumed_tail:
+        raise MessageTooLarge(f"{page.url} inflates past the {MAX_PAGE_BYTES} byte page cap")
+    return body
 
 
 def _encode_page(page: RawPage) -> PageMessage:

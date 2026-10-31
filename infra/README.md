@@ -15,12 +15,14 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 | `compose/home-box.yml` | The owner's x86-64 box: one `worker-scrape` on `scrape_home`, from `madar-backend-amd64:stable`, with no database credentials |
 | `compose/dev.yml` | Local development: PostgreSQL 16, Redis 7 and a `tls internal` Caddy at `https://localhost:8443` |
 | `compose/example.env` | Every variable name the Compose files, Caddyfile and scripts use, with fake values |
-| `redis/users.acl.tmpl` | The `default` and `homebox` Redis users; `deploy.sh` renders it with the two passwords |
+| `redis/users.acl.tmpl` | The `default` and `homebox` Redis users; `scripts/render-redis-acl.sh` renders it with the two passwords (file 640, directory 750, group 999) |
 | `Caddyfile` | The public sites `api.`, `media.` and `app.130.110.117.215.sslip.io`, and the admin site `https://10.8.0.1` on `wg0` |
 | `firewall/vps1.rules`, `vps2.rules`, `rules.v6` | iptables templates, rendered into `/etc/iptables/rules.v4` and `rules.v6` |
 | `wireguard/wg0.conf.tmpl`, `peer.conf.tmpl` | The hub and peer configs, with key placeholders only |
 | `scripts/bootstrap-vps.sh` | Idempotent host setup (Docker, WireGuard, the `deploy` user, `/srv` folders, firewall) |
 | `scripts/check-firewall.sh` | Prints the active and persisted rules, fails if they differ, and checks the Redis rules |
+| `scripts/render-redis-acl.sh` | Renders `redis/users.acl.tmpl` into `/srv/madar/redis/users.acl` (640, directory 750, group 999) and keeps the previous file; `--check` proves the modes (B2-R2-1, B2-R2-11) |
+| `scripts/check-redis-acl.sh` | CI: renders through `render-redis-acl.sh`, refuses a 700 directory, boots `redis:7.4.12` as uid 999 and rotates the password once |
 | `scripts/wg-add-peer.sh` | Adds a WireGuard peer; generates its keys on the host |
 | `scripts/deploy.sh` | Runs on VPS-1 (APIs and `worker-media`) or on VPS-2 (`--host vps2`: workers and `beat`): pull, roll out, health-check, roll back |
 | `scripts/home-box-update.sh`, `.service`, `.timer` | Pull `madar-backend-amd64:stable` on the home box every 10 minutes and recreate the worker if it moved |
@@ -121,9 +123,9 @@ Two rules from them that apply to every change here:
 
 | Workflow | Runs on | Does |
 | --- | --- | --- |
-| `infra.yml` | `infra/**`, `.github/workflows/**`, `.github/actions/**` | `docker compose config -q` for each Compose file (including `home-box.yml`), `systemd-analyze verify` on the home-box units, the ACL placeholder check, `caddy validate`, shellcheck, actionlint; on `master`, the `sync` job |
+| `infra.yml` | `infra/**`, `.github/workflows/**`, `.github/actions/**` | `docker compose config -q` for each Compose file (including `home-box.yml`), `systemd-analyze verify` on the home-box units, the ACL placeholder check, the ACL render-and-rotate check, the bootstrap gid lookup, the action's `ssh-config.sh` path, the VPS-2 rollback dry run, `caddy validate`, shellcheck, actionlint; on `master`, the `sync` job |
 | `gitleaks.yml` | Every PR and push | gitleaks over the whole history, with redacted output |
-| `backend.yml` | `backend/**` | ruff, mypy, pytest; OpenAPI export and breaking-change check; client regeneration; on `master`, build both architectures, deploy VPS-1 and VPS-2, move `stable`, retention |
+| `backend.yml` | `backend/**`; `infra/compose/**` on PRs only (the api-admin command check) | ruff, mypy, pytest; OpenAPI export and breaking-change check; client regeneration; on `master`, build both architectures, deploy VPS-1 and VPS-2, move `stable`, retention |
 | `app.yml` | `app/**`, `backend/openapi/public.json`, `madar-design/**` | `flutter analyze`, the token and literal checks, `flutter test`, the `prod` debug APK artifact |
 | `pwa.yml` | `app/**` or `infra/firebase/**` on `master`, manual | Web build → Firebase Hosting preview channel `master` (30 days) |
 | `admin.yml` | `admin/**`, `backend/openapi/admin.json`, `madar-design/**` | typecheck, lint, test, build, the literal and token checks |

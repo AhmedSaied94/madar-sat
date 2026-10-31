@@ -17,7 +17,7 @@ USER_AGENT = "MadarSat/1.0 (+https://example.test; test)"
 class AllowAll:
     """A limiter that always grants a token: the fetcher tests are not about the bucket."""
 
-    def take(self, host: str) -> bool:
+    def take(self, host: str, now: float | None = None) -> bool:
         return True
 
 
@@ -144,21 +144,44 @@ def test_the_fetched_page_carries_the_url_status_and_body() -> None:
     assert page.fetched_at.tzinfo is not None
 
 
-def test_a_rate_limited_host_raises_retryable_without_a_request() -> None:
+def test_a_rate_limited_host_waits_out_its_budget_without_a_request() -> None:
+    """B2-R2-17: a fake clock, so the 60 s budget costs nothing and the poll count is asserted."""
     calls: list[httpx.Request] = []
 
     class Denied:
-        def take(self, host: str) -> bool:
+        def take(self, host: str, now: float | None = None) -> bool:
             return False
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, text="ok")
+
+    now = [1_700_000_000.0]
+    sleeps: list[float] = []
+
+    def clock() -> float:
+        return now[0]
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        now[0] += seconds
 
     fetcher = HttpFetcher(
         limiter=Denied(),
         user_agent=USER_AGENT,
-        client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200)), follow_redirects=False),
+        client=httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False),
+        clock=clock,
+        sleep=sleep,
+        wait_budget=1.0,
+        poll_seconds=0.25,
     )
+
     with pytest.raises(Retryable):
         fetcher.get("https://www.ysscores.com/x", allowed_hosts=ALLOWED)
-    assert calls == []
+
+    assert calls == []  # the request was never sent while the bucket was empty
+    assert len(sleeps) == 4  # one poll per 250 ms of the 1 s budget
+    assert sum(sleeps) == pytest.approx(1.0)
 
 
 def test_a_post_body_goes_out_as_a_form() -> None:
@@ -174,3 +197,55 @@ def test_a_post_body_goes_out_as_a_form() -> None:
         allowed_hosts=ALLOWED,
     )
     assert seen == [b"get_date=October+31%2C2026"]
+
+
+def test_a_four_day_fetch_waits_for_the_bucket_instead_of_failing() -> None:
+    """B2-R1-8: the burst is two POSTs, then one every 4 s. A run waits ~8 s, not a retry from day 0."""
+    import os
+    from datetime import date
+
+    import redis as redis_module
+
+    from app.adapters.base import DateWindow
+    from app.adapters.fetcher import WAIT_BUDGET
+    from app.adapters.ratelimit import YSSCORES_BUCKET, RateLimiter
+    from app.adapters.ysscores import YsscoresAdapter
+
+    client = redis_module.Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
+    try:
+        for key in client.scan_iter(match="ratelimit:*"):
+            client.delete(key)
+        limiter = RateLimiter(client, limits={"www.ysscores.com": YSSCORES_BUCKET})
+
+        now = [1_700_000_000.0]
+
+        def clock() -> float:
+            return now[0]
+
+        def sleep(seconds: float) -> None:
+            now[0] += seconds
+
+        calls: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls.append(request)
+            return httpx.Response(200, text="<div class='matches-wrapper'></div>")
+
+        fetcher = HttpFetcher(
+            limiter=limiter,
+            user_agent=USER_AGENT,
+            client=httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False),
+            clock=clock,
+            sleep=sleep,
+        )
+        window = DateWindow.next_days(date(2026, 10, 31))
+        pages = YsscoresAdapter(fetcher).fetch(window)
+
+        assert len(pages) == 4 and len(calls) == 4
+        waited = now[0] - 1_700_000_000.0
+        assert 0 < waited <= WAIT_BUDGET
+        assert waited < 60  # the plan's one minute per run
+    finally:
+        for key in client.scan_iter(match="ratelimit:*"):
+            client.delete(key)
+        client.close()

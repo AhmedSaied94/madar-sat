@@ -19,15 +19,15 @@ delete only rows whose ``source`` is this adapter, and never touch a ``manual`` 
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, timedelta
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.adapters.base import NormalizedFixture
+from app.adapters.base import NormalizedFixture, ParsedFixture
 from app.adapters.resolve import ResolveResult, resolve_competition, resolve_team
 from app.db.models import (
     AuditLog,
@@ -72,6 +72,7 @@ class RunOutcome:
     kickoff_changed: bool = False
     skipped: list[dict[str, str]] = field(default_factory=list)
     unresolved: list[dict[str, str | None]] = field(default_factory=list)
+    postponed: list[dict[str, str]] = field(default_factory=list)
     logo_jobs: list[LogoJob] = field(default_factory=list)
 
     @property
@@ -95,23 +96,35 @@ class UpsertPipeline:
 
     # --- the run ------------------------------------------------------------------------
 
-    def run(self, items: Sequence[NormalizedFixture]) -> RunOutcome:
+    def run(
+        self,
+        items: Sequence[NormalizedFixture | ParsedFixture],
+        normalize: Callable[[Any], NormalizedFixture] | None = None,
+    ) -> RunOutcome:
+        """Apply each item in its own savepoint.
+
+        ``normalize`` runs inside that savepoint too, so a page value that can't become a fixture
+        ("12:99 م") is one skipped item, not a failed run (B2-R1-12).
+        """
         outcome = RunOutcome(items_found=len(items))
-        for item in items:
+        for raw in items:
             try:
                 with self.session.begin_nested():
+                    item = normalize(raw) if normalize is not None else cast(NormalizedFixture, raw)
                     created, changed, kickoff_changed = self._apply(item, outcome)
             except SkipItem as exc:
-                outcome.skipped.append(_skipped(item, exc.reason))
+                outcome.skipped.append(_skipped(raw, exc.reason))
                 continue
             except Exception as exc:  # one bad item must not fail the run (R18); its savepoint is gone
                 log.warning(
                     "item_failed",
-                    extra={"ref": _ref(item), "source": self.source, "why": repr(exc)},
+                    extra={"ref": _ref(raw), "source": self.source, "why": repr(exc)},
                     exc_info=True,
                 )
-                outcome.skipped.append(_skipped(item, "error"))
+                outcome.skipped.append(_skipped(raw, "error"))
                 continue
+            if item.postponed:
+                outcome.postponed.append({"ref": _ref(item)})
             if created:
                 outcome.created += 1
             elif changed:
@@ -171,7 +184,10 @@ class UpsertPipeline:
         locked, changed_fields, kickoff_changed = self._write_fields(
             match_id, item, competition, home_team, away_team, created=created
         )
-        link_changes = self._reconcile_links(match_id, item, created=created)
+        # Only an adapter that supplied a link set may reconcile them (B2-R1-2, FR-022).
+        link_changes: dict[str, Any] = {}
+        if item.links is not None:
+            link_changes = self._reconcile_links(match_id, item, created=created, outcome=outcome)
         self._record_external_ids(match_id, item)
 
         changed = created or bool(changed_fields) or bool(link_changes)
@@ -316,9 +332,12 @@ class UpsertPipeline:
                 match.updated_at = func.now()
             return locked, identity, False
 
+        # A locked kickoff wins, and `time_tbd` follows whatever kickoff ends up stored: the CHECK
+        # `ck_matches_time_tbd` refuses the pair otherwise (B2-R1-11).
+        kickoff = match.kickoff_at if "kickoff_at" in locked else item.kickoff_at
         wanted: dict[str, Any] = {
-            "kickoff_at": item.kickoff_at,
-            "time_tbd": item.time_tbd,
+            "kickoff_at": kickoff,
+            "time_tbd": kickoff is None,
             "competition_id": competition.entity_id,
             "competition_name": item.competition or "",
             "competition_stage": item.stage,
@@ -358,8 +377,10 @@ class UpsertPipeline:
         ).scalar_one()
         return bool(owned)
 
-    def _reconcile_links(self, match_id: int, item: NormalizedFixture, *, created: bool) -> dict[str, Any]:
-        desired = self._desired_links(item)
+    def _reconcile_links(
+        self, match_id: int, item: NormalizedFixture, *, created: bool, outcome: RunOutcome
+    ) -> dict[str, Any]:
+        desired = self._desired_links(item, outcome)
         existing = {
             row.channel_id: row
             for row in self.session.execute(select(MatchChannel).where(MatchChannel.match_id == match_id)).scalars()
@@ -405,13 +426,17 @@ class UpsertPipeline:
             return {}
         return {"added": sorted(added), "removed": sorted(removed), "changed": sorted(changed)}
 
-    def _desired_links(self, item: NormalizedFixture) -> dict[int, tuple[bool, int | None, int | None]]:
+    def _desired_links(
+        self, item: NormalizedFixture, outcome: RunOutcome
+    ) -> dict[int, tuple[bool, int | None, int | None]]:
         """``{channel_id: (hidden, commentator_id, commentator2_id)}`` from the item's references."""
         desired: dict[int, tuple[bool, int | None, int | None]] = {}
-        for link in item.links:
+        for link in item.links or ():
             channel = self._channel_id(link.channel_ref)
             if channel is None:
-                continue  # an orphan channel id: skipped and logged (R19)
+                # The old data names a channel Madar doesn't have: recorded, so run.json shows it (R19).
+                outcome.skipped.append({"ref": link.channel_ref, "reason": "channel_not_published"})
+                continue
             first = self._commentator_id(link.commentator)
             second = self._commentator_id(link.commentator2)
             if second is not None and (first is None or second == first):
@@ -510,9 +535,9 @@ def _host(url: str) -> str:
     return urlsplit(url).hostname or ""
 
 
-def _skipped(item: NormalizedFixture, reason: str) -> dict[str, str]:
+def _skipped(item: NormalizedFixture | ParsedFixture, reason: str) -> dict[str, str]:
     return {"ref": _ref(item), "reason": reason}
 
 
-def _ref(item: NormalizedFixture) -> str:
+def _ref(item: NormalizedFixture | ParsedFixture) -> str:
     return item.external_id or item.legacy_id or (item.url or "?")

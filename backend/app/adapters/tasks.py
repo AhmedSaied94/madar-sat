@@ -20,18 +20,20 @@ from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from typing import Any
 
+import httpx
 import redis
 
-from app.adapters.base import DateWindow, SourceAdapter
+from app.adapters.base import DateWindow, LayoutChanged, SourceAdapter
 from app.adapters.config import get_adapter_settings
-from app.adapters.fetcher import HttpFetcher
-from app.adapters.messages import ScrapeResult
+from app.adapters.fetcher import FetchError, HttpFetcher
+from app.adapters.messages import MessageTooLarge, ScrapeResult
 from app.adapters.ratelimit import RateLimiter
-from app.adapters.satair_bridge import BridgeNotConfigured, LayoutChanged, SatairBridgeAdapter
+from app.adapters.satair_bridge import BridgeNotConfigured, SatairBridgeAdapter
 from app.adapters.ysscores import YsscoresAdapter
 from app.domain.time import CAIRO
 from app.workers import app as celery_app
 from app.workers import task
+from app.workers.base import Retryable
 from app.workers.config import get_worker_settings
 from app.workers.locks import redis_lock
 
@@ -119,15 +121,19 @@ def send_ingest(result: ScrapeResult) -> None:
 def fetch(self: Any, source: str, start: str | None = None) -> dict[str, Any]:
     """Fetch and parse one source, then hand a ``ScrapeResult`` to ``ingest`` (R15, R16, R19)."""
     started = now_utc()
-    today = date.fromisoformat(start) if start else datetime.now(CAIRO).date()
     with redis_lock(f"lock:fetch:{source}", FETCH_LOCK_TTL, client=redis_client()) as acquired:
         if not acquired:
             log.info("skipped", extra={"task": "adapters.fetch", "source": source, "why": "lock_held"})
             return {"source": source, "skipped": True}
 
-        fetcher = http_fetcher()
-        pages = []
+        # The setup is inside the guard too: a missing `SCRAPE_USER_AGENT`, a bad `start` or an
+        # unknown source is a failed run, and it still owes the `import_runs` row (B2-R3-1).
+        fetcher: HttpFetcher | None = None
+        adapter: SourceAdapter | None = None
+        pages: list[Any] = []
         try:
+            today = date.fromisoformat(start) if start else datetime.now(CAIRO).date()
+            fetcher = http_fetcher()
             adapter = adapter_for(source, fetcher)
             window = DateWindow.next_days(today=today)
             pages = list(adapter.fetch(window))
@@ -142,13 +148,45 @@ def fetch(self: Any, source: str, start: str | None = None) -> dict[str, Any]:
                 items=items,
             )
         except LayoutChanged as exc:
-            result = _failed(source, started, pages, http_errors=0, error="layout_changed")
-            log.warning("layout_changed", extra={"source": source, "why": str(exc)})
+            # Every adapter's layout change lands here, with the pages it did fetch (B2-R1-9).
+            result = _failed(
+                source, started, _pages_of(adapter), http_errors=_http_errors_of(fetcher), error="layout_changed"
+            )
+            log.warning(
+                "layout_changed", extra={"source": source, "why": str(exc), "pages": len(_pages_of(adapter))}
+            )
         except BridgeNotConfigured:
-            result = _failed(source, started, pages, http_errors=0, error="bridge_not_configured")
+            result = _failed(source, started, _pages_of(adapter), http_errors=0, error="bridge_not_configured")
             log.error("bridge_not_configured", extra={"source": source})
+        except Retryable as exc:
+            if self.request.retries < self.max_retries:
+                raise  # Celery backs off and runs the fetch again (403, 429, 5xx, an empty bucket)
+            result = _failed(
+                source, started, _pages_of(adapter), http_errors=_http_errors_of(fetcher), error="retries_exhausted"
+            )
+            log.error("retries_exhausted", extra={"source": source, "why": str(exc)})
+        except httpx.TransportError as exc:
+            # `autoretry_for` retries these; the last attempt still owes the run row (B2-R2-6).
+            if self.request.retries < self.max_retries:
+                raise
+            log.error("transport_error", extra={"source": source, "why": repr(exc)})
+            _send_failure(source, started, _pages_of(adapter), _http_errors_of(fetcher), "transport_error")
+            raise
+        except FetchError as exc:
+            # A 404/400, a host off the allowlist, an oversized body or too many redirects: no retry.
+            result = _failed(
+                source, started, _pages_of(adapter), http_errors=_http_errors_of(fetcher), error="fetch_failed"
+            )
+            log.error("fetch_failed", extra={"source": source, "why": str(exc), "status": exc.status})
+        except Exception as exc:
+            # A bug, a pydantic ValidationError, a message over its cap, a missing setting: the run
+            # row must say so.
+            log.error("fetch_error", extra={"source": source, "why": repr(exc)}, exc_info=True)
+            _send_failure(source, started, _pages_of(adapter), _http_errors_of(fetcher), "fetch_error")
+            raise
         finally:
-            fetcher.close()
+            if fetcher is not None:
+                fetcher.close()
 
         send_ingest(result)
         log.info(
@@ -158,19 +196,45 @@ def fetch(self: Any, source: str, start: str | None = None) -> dict[str, Any]:
         return {"source": source, "run_id": result.run_id, "pages": len(result.pages), "items": len(result.items)}
 
 
+def _pages_of(adapter: SourceAdapter | None) -> list[Any]:
+    return list(adapter.pages) if adapter is not None else []
+
+
+def _http_errors_of(fetcher: HttpFetcher | None) -> int:
+    return fetcher.http_errors if fetcher is not None else 0
+
+
 def _failed(source: str, started: datetime, pages: Sequence[Any], *, http_errors: int, error: str) -> ScrapeResult:
-    """A failed fetch still travels, with the pages it did collect, so the run row records it (R15)."""
-    return ScrapeResult.build(
-        source=source,
-        run_id=run_id(source, started),
-        started_at=started,
-        finished_at=now_utc(),
-        fetched_on=socket.gethostname(),
-        pages=list(pages),
-        items=[],
-        http_errors=http_errors,
-        error=error,
-    )
+    """A failed fetch still travels, with the pages it did collect, so the run row records it (R15).
+
+    The pages are dropped when they would trip the message's caps: the failure is what must arrive
+    (B2-R2-6).
+    """
+    for candidates in (list(pages), []):
+        try:
+            return ScrapeResult.build(
+                source=source,
+                run_id=run_id(source, started),
+                started_at=started,
+                finished_at=now_utc(),
+                fetched_on=socket.gethostname(),
+                pages=candidates,
+                items=[],
+                http_errors=http_errors,
+                error=error,
+            )
+        except MessageTooLarge:
+            log.warning(
+                "failed_result_too_large",
+                extra={"source": source, "error": error, "pages": len(candidates)},
+            )
+            continue
+    raise RuntimeError("a failed result with no pages cannot exceed the caps")  # unreachable
+
+
+def _send_failure(source: str, started: datetime, pages: Sequence[Any], http_errors: int, error: str) -> None:
+    """Record a failure on a path that re-raises, so Celery still sees the error (B2-R2-6)."""
+    send_ingest(_failed(source, started, pages, http_errors=http_errors, error=error))
 
 
 @task(name="adapters.ingest")
@@ -202,35 +266,56 @@ def ingest(self: Any, result: dict[str, Any]) -> dict[str, Any]:
             )
             session.add(run)
             session.commit()
-
-            run_dir = store.save(
-                source=data.source,
-                run_day=data.started_at.date(),
-                run_id=data.run_id,
-                pages=data.raw_pages(),
-                run_info={"counts": {"items_found": len(data.items), "http_errors": data.http_errors}},
-            )
-            run.raw_path = str(run_dir)
-
-            adapter = adapter_for(data.source)
             outcome = None
-            if data.error or not data.pages:
-                run.status = "failed"
-            elif _source_is_paused(session, data.source):
-                run.status = "succeeded"
-                log.info("source_paused", extra={"source": data.source, "run": data.run_id})
-            else:
-                normalized = [adapter.normalize(item) for item in data.items]
-                pipeline = UpsertPipeline(session, source=data.source, media_hosts=settings.media_rehost_allowed_hosts)
-                outcome = pipeline.run(normalized)
-                run.status = "partial" if outcome.skipped else "succeeded"
-                run.items_upserted = outcome.items_upserted
-                run.matches_imported = outcome.items_upserted
-                run.items_found = outcome.items_found
+            jobs: list[Any] = []
 
-            _write_run_json(store, run_dir, data, outcome)
-            session.commit()
-            jobs = outcome.logo_jobs if outcome is not None else []
+            try:
+                run_dir = store.save(
+                    source=data.source,
+                    run_day=data.started_at.date(),
+                    run_id=data.run_id,
+                    pages=data.raw_pages(),
+                    run_info={"counts": {"items_found": len(data.items), "http_errors": data.http_errors}},
+                )
+                run.raw_path = str(run_dir)
+
+                adapter = adapter_for(data.source)
+                if data.error or not data.pages:
+                    run.status = "failed"
+                elif _source_is_paused(session, data.source):
+                    run.status = "succeeded"
+                    log.info("source_paused", extra={"source": data.source, "run": data.run_id})
+                else:
+                    pipeline = UpsertPipeline(
+                        session, source=data.source, media_hosts=settings.media_rehost_allowed_hosts
+                    )
+                    # Normalising runs per item inside its savepoint: a bad value skips one item (B2-R1-12).
+                    outcome = pipeline.run(data.items, normalize=adapter.normalize)
+                    run.status = "partial" if outcome.skipped else "succeeded"
+                    run.items_upserted = outcome.items_upserted
+                    run.matches_imported = outcome.items_upserted
+                    run.items_found = outcome.items_found
+
+                _write_run_json(store, run_dir, data, outcome)
+                run.finished_at = now_utc()
+                session.commit()
+                jobs = outcome.logo_jobs if outcome is not None else []
+            except Exception as exc:
+                # A full disk, a refused write, a bug: the run must not stay `running` (B2-R1-12).
+                session.rollback()
+                failed = session.get(ImportRun, run.id)
+                if failed is not None:
+                    failed.status = "failed"
+                    failed.error = f"{type(exc).__name__}: {exc}"[:500]
+                    failed.finished_at = now_utc()
+                    session.commit()
+                log.error(
+                    "ingest_failed",
+                    extra={"source": data.source, "run": data.run_id, "why": repr(exc)},
+                    exc_info=True,
+                )
+                raise
+
             log.info(
                 "ingested",
                 extra={
@@ -287,6 +372,7 @@ def _write_run_json(store: Any, run_dir: Any, data: ScrapeResult, outcome: Any) 
         },
         "skipped": outcome.skipped if outcome is not None else [],
         "unresolved": outcome.unresolved if outcome is not None else [],
+        "postponed": outcome.postponed if outcome is not None else [],
         "error": data.error,
     }
     (run_dir / "run.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")

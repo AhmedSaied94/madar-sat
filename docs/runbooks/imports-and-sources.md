@@ -36,19 +36,22 @@ On VPS-2, inside the worker image (the repo is at `/srv/madar/infra`, the env fi
 
 ```sh
 # ysscores: fetch and parse on the home box, then ingest on VPS-2
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
-  'docker compose -p madar exec -T worker-scrape celery -A app.workers call adapters.fetch --args "[\"ysscores\"]"'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose -p madar exec -T worker-scrape celery -A app.workers call adapters.fetch --queue scrape_home --args "[\"ysscores\"]"'
 
 # the bridge, on the same host
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
-  'docker compose -p madar exec -T worker-scrape celery -A app.workers call adapters.fetch --args "[\"legacy\"]"'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose -p madar exec -T worker-scrape celery -A app.workers call adapters.fetch --queue scrape --args "[\"legacy\"]"'
 ```
+
+`--queue` is explicit because `celery call` imports only `app.workers`: the routing table is
+resolved lazily, and naming the queue makes the destination true even if that changes (B2-R1-19).
 
 `celery call` only queues the task; the worker runs it. To see the queue back up:
 
 ```sh
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
-  'docker compose -p madar exec -T worker-imports celery -A app.workers inspect active'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose -p madar exec -T worker-imports celery -A app.workers inspect active'
 ```
 
 The home box fetches only when it is online. If it is off, start the ysscores run on VPS-2 instead
@@ -57,17 +60,20 @@ by switching `YSSCORES_FETCH_QUEUE` (below), or accept that day from the bridge 
 ## Read what a run did
 
 ```sh
-psql "$DATABASE_URL_SYNC" -c "
+dc exec postgres psql -U madar -d madar -c "
   select id, source, status, started_at, finished_at, items_found, items_upserted, http_errors, error, raw_path
   from import_runs order by started_at desc limit 10"
 ```
+
+`dc` is the VPS-1 Compose helper ([deploy-and-rollback.md](deploy-and-rollback.md#working-on-vps-1)):
+`docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps1.yml`.
 
 | `status` | Means |
 | --- | --- |
 | `running` | `ingest` started and has not finished; a row stuck here after 10 minutes means the worker died |
 | `succeeded` | every item was upserted |
 | `partial` | some items failed in their savepoint; the reasons are in `run.json` |
-| `failed` | the fetch or the layout failed; `error` holds a short reason (`layout_changed`, a status) |
+| `failed` | the fetch or the layout failed; `error` holds a short reason: `layout_changed`, `retries_exhausted` (403/429/5xx after six attempts), `fetch_failed` (a 404 or another non-retryable answer), `bridge_not_configured`, or `TypeError: …` from an ingest that crashed |
 
 `items_upserted` counts rows created or changed. A second run on unchanged fixtures reports `0`
 (SC-004), which is the normal quiet result.
@@ -76,25 +82,27 @@ The pages of a run are on VPS-2 at `import_runs.raw_path`
 (`/srv/raw/<source>/<YYYY-MM-DD>/<run_id>/`), with `run.json` beside them:
 
 ```sh
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" 'cat /srv/raw/ysscores/2026-10-30/*/run.json'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'sudo -iu deploy cat /srv/raw/ysscores/2026-10-30/*/run.json'
 ```
 
-`run.json` holds `counts`, `skipped[{ref, reason}]` and `unresolved[{name, competition, match_ref}]`.
+`run.json` holds `counts`, `skipped[{ref, reason}]`, `postponed[{ref}]` and
+`unresolved[{name, competition, match_ref}]`.
 An unresolved team is not a bug: v0 never guesses (research R17). The alias tables and the queue
 that resolves names arrive on D5; until then the name keeps its text, so the app still shows it.
 Folders older than 5 days are deleted nightly.
 
-A layout change on the site marks the run `failed` with `layout_changed`, and the page is saved.
-The parser did not guess; check the saved page before touching
-`backend/app/adapters/ysscores.py`.
+A layout change marks the run `failed` with `layout_changed`, and every page the run had already
+fetched is saved with it. A failed fetch is recorded the same way: the pages it collected, its
+HTTP error count and a short `error` (B2-R1-9). The parser did not guess; check the saved page
+before touching `backend/app/adapters/ysscores.py` ([`base.LayoutChanged`](../../backend/app/adapters/base.py)).
 
 ## Pause a source
 
 `sources.is_enabled` and `sources.paused_until` are what `ingest` reads:
 
 ```sh
-psql "$DATABASE_URL_SYNC" -c "update sources set is_enabled = false where name = 'ysscores'"
-psql "$DATABASE_URL_SYNC" -c "update sources set is_enabled = true  where name = 'ysscores'"
+dc exec postgres psql -U madar -d madar -c "update sources set is_enabled = false where name = 'ysscores'"
+dc exec postgres psql -U madar -d madar -c "update sources set is_enabled = true  where name = 'ysscores'"
 ```
 
 The check lives in `ingest`, on VPS-2, because the home box has no database. So a paused source is
@@ -112,8 +120,9 @@ same rows through `(source, external_id)` and the 45-minute duplicate probe.
 `YSSCORES_FETCH_QUEUE` is read by the schedule and by `adapters.fetch`:
 
 1. On VPS-2, set `YSSCORES_FETCH_QUEUE=scrape` in `/srv/madar/.env` (mode 600, owner `deploy`).
-2. Restart the workers and `beat` so the new value is read:
-   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f infra/compose/vps2.yml --profile workers up -d`
+2. Restart the four services (not `flower`, `worker-live` or `worker-notify`, which stay down on
+   D2) so the new value is read:
+   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f infra/compose/vps2.yml --profile workers up -d worker-imports worker-scrape worker-maintenance beat`
 3. Check the next run's `import_runs.source` and that `worker-scrape` handled it.
 
 Set it back to `scrape_home` when ysscores stops blocking VPS IPs (it answers `403` to a plain

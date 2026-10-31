@@ -20,6 +20,7 @@ from lxml.html import HtmlElement  # type: ignore[import-untyped]
 
 from app.adapters.base import (
     DateWindow,
+    LayoutChanged,
     NormalizedFixture,
     ParsedFixture,
     RawPage,
@@ -50,10 +51,6 @@ _MONTHS = (
     "November",
     "December",
 )
-
-
-class LayoutChanged(Exception):
-    """The response has no ``.matches-wrapper``: the page changed and the run must fail."""
 
 
 def date_param(day: date) -> str:
@@ -95,6 +92,8 @@ class YsscoresAdapter:
 
     def __init__(self, fetcher: HttpFetcher | None) -> None:
         self.fetcher = fetcher
+        # The pages fetched so far: the fetch task saves them when a later day fails (B2-R1-9).
+        self.pages: list[RawPage] = []
 
     # --- fetch ---------------------------------------------------------------------------
 
@@ -102,6 +101,7 @@ class YsscoresAdapter:
         if self.fetcher is None:
             raise RuntimeError("the ysscores adapter needs a fetcher to fetch")
         pages: list[RawPage] = []
+        self.pages = pages
         for day in window:
             page = self.fetcher.post(
                 DAY_URL,
@@ -123,6 +123,9 @@ class YsscoresAdapter:
     # --- parse (pure) --------------------------------------------------------------------
 
     def parse(self, page: RawPage) -> list[ParsedFixture]:
+        if not page.body.strip():
+            # An empty 200 is not a quiet day: the endpoint answered nothing (B2-R2-6).
+            raise LayoutChanged("the response is empty")
         # Decode first: the endpoint answers an HTML fragment with no <meta charset>, and lxml
         # would otherwise guess Latin-1 and mangle every Arabic name.
         doc = lxml_html.fromstring(page.body.decode("utf-8", errors="replace"))
@@ -150,6 +153,9 @@ class YsscoresAdapter:
                     continue
                 wall_time = _wall_time(time_element)
                 href = _attr(anchor, "href")
+                # `match-postponed` / `data-status="14"` with «تأجلت» instead of a score: the old
+                # app keeps the fixture but its time is no longer known (R16, B2-R1-10).
+                postponed = _has_class(anchor, "match-postponed") or _attr(anchor, "data-status") == "14"
                 items.append(
                     ParsedFixture(
                         external_id=_attr(anchor, "match_id") or _id_from_href(href, "match"),
@@ -165,6 +171,7 @@ class YsscoresAdapter:
                         away_external_id=_id_from_href(_attr(anchor, "away_link"), "team"),
                         wall_time=wall_time,
                         match_date=day,
+                        postponed=postponed,
                     )
                 )
         return items

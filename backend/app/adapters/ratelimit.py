@@ -70,7 +70,7 @@ return allowed
 
 
 class TokenBucket(Protocol):
-    def take(self, host: str) -> bool: ...
+    def take(self, host: str, now: float | None = None) -> bool: ...
 
 
 class RateLimiter:

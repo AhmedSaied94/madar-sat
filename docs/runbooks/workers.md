@@ -24,17 +24,20 @@ themselves. It is deployed with the APIs and rolled back with them.
 
 ## Check the fleet
 
+The VMs take SSH as `ubuntu`; the Compose commands run as `deploy`, so each line is
+`ssh … 'sudo -iu deploy <command>'` from your machine (`deploy` holds only CI's key).
+
 ```sh
 # VPS-1
-ssh deploy@10.8.0.1 'docker compose -p madar ps --format "{{.Service}} {{.Status}}"'
+ssh ubuntu@10.8.0.1 'sudo -iu deploy docker compose -p madar ps --format "{{.Service}} {{.Status}}"'
 
 # VPS-2 (SSH only from VPS-1)
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
-  'docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers ps'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers ps'
 
 # the queues and what is in flight
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" \
-  'docker compose -p madar exec -T worker-imports celery -A app.workers inspect active'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose -p madar exec -T worker-imports celery -A app.workers inspect active'
 ```
 
 A worker that is `unhealthy` but `running` usually cannot reach Redis or PostgreSQL: read its log
@@ -47,20 +50,23 @@ consumer: check `celery -A app.workers inspect registered` and the `import_runs`
 
 ## Deploy VPS-2
 
-CI does it: `backend.yml`'s `deploy-vps2` runs after the VPS-1 deploy, reaches VPS-2 through
-`ssh -J deploy@10.8.0.1 deploy@<VPS2_VCN_IP>`, rsyncs `infra/` to `/srv/madar/infra/`, and runs
+CI does it: `backend.yml`'s `deploy-vps2` runs after the VPS-1 deploy, reaches VPS-2 through a
+`ProxyJump` from VPS-1, rsyncs `infra/` to `/srv/madar/infra/`, and runs
 `deploy.sh --host vps2 <sha>`. It needs the `VPS2_VCN_IP` repository variable and VPS-2's host key
-in `DEPLOY_KNOWN_HOSTS`.
+in `DEPLOY_KNOWN_HOSTS` ([provision-host.md §8](provision-host.md#8-deploy-peer-and-keys)).
+`vps1-sync` writes one ssh config for both hops ([`infra/scripts/ssh-config.sh`](../../infra/scripts/ssh-config.sh)),
+because command-line options are not passed to a `-J` jump host.
 
 By hand, from your machine (the token goes on stdin, never as an argument):
 
 ```sh
 read -rs GHCR_TOKEN                                  # a token with read:packages
 sha=$(git rev-parse HEAD)
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" 'mkdir -p /srv/madar/infra'
-rsync -a --delete -e "ssh -J deploy@10.8.0.1" infra/ deploy@"$VPS2_VCN_IP":/srv/madar/infra/
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'sudo -iu deploy mkdir -p /srv/madar/infra'
+rsync -a --delete -e "ssh -J ubuntu@10.8.0.1" --rsync-path="sudo -u deploy rsync" \
+  infra/ ubuntu@"$VPS2_VCN_IP":/srv/madar/infra/
 printf '%s\n' "$GHCR_TOKEN" \
-  | ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" "/srv/madar/infra/scripts/deploy.sh --host vps2 $sha"
+  | ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" "sudo -iu deploy /srv/madar/infra/scripts/deploy.sh --host vps2 $sha"
 ```
 
 The script pulls the four services, starts them, and waits up to 90 s for each to report healthy.
@@ -74,9 +80,10 @@ The script rolls back by itself when the new tag does not get healthy: it starts
 with the earlier tag:
 
 ```sh
-cat /srv/madar/previous_tag                        # on VPS-2
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'sudo -iu deploy cat /srv/madar/previous_tag'
 printf '%s\n' "$GHCR_TOKEN" \
-  | ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" "/srv/madar/infra/scripts/deploy.sh --host vps2 <tag>"
+  | ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+    "sudo -iu deploy /srv/madar/infra/scripts/deploy.sh --host vps2 <tag>"
 ```
 
 Rolling back VPS-2 alone is safe while the schema is expand-only (D2's `0003` adds two nullable
@@ -98,8 +105,8 @@ An existing logo is never replaced. A host outside the allowlist, an oversize fi
 failure is logged and dropped with the logo still NULL; network errors and 5xx retry with backoff.
 
 ```sh
-ssh deploy@10.8.0.1 'docker compose -p madar logs --tail 100 worker-media'
-ssh deploy@10.8.0.1 'docker compose -p madar exec -T worker-media celery -A app.workers inspect active'
+ssh ubuntu@10.8.0.1 'sudo -iu deploy docker compose -p madar logs --tail 100 worker-media'
+ssh ubuntu@10.8.0.1 'sudo -iu deploy docker compose -p madar exec -T worker-media celery -A app.workers inspect active'
 ```
 
 Check the URL the app serves: a rehosted logo answers on `media.<VPS1_IP>.sslip.io`, never on the
@@ -109,10 +116,12 @@ source's host.
 
 `ingest` writes `/srv/raw/<source>/<YYYY-MM-DD>/<run_id>/` on VPS-2 (mounted read-write into
 `worker-imports` and `worker-maintenance`), and `import_runs.raw_path` points at it. The nightly
-`prune-raw-pages` (03:15 UTC) deletes run folders older than 5 days.
+`prune-raw-pages` (03:15 UTC) deletes run folders older than 5 days. `bootstrap-vps.sh vps2`
+creates `/srv/raw` for uid 10001; without that, Docker would create it as `root:root` and every
+ingest would fail with `PermissionError` (B2-R1-5).
 
 ```sh
-ssh -J deploy@10.8.0.1 deploy@"$VPS2_VCN_IP" 'du -sh /srv/raw/*; find /srv/raw -maxdepth 2 -type d | head'
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'sudo -iu deploy sh -c "du -sh /srv/raw/*; find /srv/raw -maxdepth 2 -type d | head"'
 ```
 
 Disk pressure means the prune is not running: check `worker-maintenance`'s log and

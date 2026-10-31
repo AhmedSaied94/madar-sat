@@ -8,8 +8,11 @@
 #   deploy.sh --infra-only                VPS-1 only: applies infra services and reloads Caddy
 #
 # VPS-1, steps for <image-tag>:
-#   1. render the Redis ACL from infra/redis/users.acl.tmpl and /srv/madar/.env (mode 600), then
-#      apply the synced infra: `compose up -d caddy postgres redis` and `caddy reload`;
+#   1. render the Redis ACL from infra/redis/users.acl.tmpl and /srv/madar/.env (the file mode 640
+#      and its directory 750, group 999, so the redis user in the container can read it), apply the
+#      synced infra (`compose up -d caddy postgres redis` and `caddy reload`), and restart Redis
+#      when the file changed, then prove both passwords work (B2-R2-1, B2-R2-11). Both the `up` and
+#      the reload put the previous ACL back when Redis refuses the new one (B2-R3-2);
 #   2. record the running tag in /srv/madar/previous_tag;
 #   3. log in to GHCR with the token from stdin, pull, log out (also on exit);
 #   4. run `alembic upgrade head` as a one-off container, and stop before touching any running
@@ -33,11 +36,15 @@ set -Eeuo pipefail
 infra_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 env_file=/srv/madar/.env
 state_dir=/srv/madar
-acl_target=$state_dir/redis/users.acl
+acl_dir=$state_dir/redis
+acl_target=$acl_dir/users.acl
+acl_previous=$acl_dir/users.acl.prev
 caddy_config=/etc/madar/infra/Caddyfile # where vps1.yml mounts $infra_dir inside the caddy container
 health_urls=(http://127.0.0.1:8000/healthz http://10.8.0.1:8001/admin/api/healthz)
 health_timeout=60
 workers_timeout=90
+acl_gid=999  # the `redis` user's gid in redis:7.4.12, and the group bootstrap-vps.sh gives deploy
+redis_acl_changed=0
 api_services=(api-public api-admin)
 media_service=worker-media
 vps1_stateful=(postgres redis caddy)
@@ -113,29 +120,90 @@ start_apis() {
 }
 
 # Render the Redis ACL file from the template, so the passwords come from .env and never the repo.
-# Redis' ACL file accepts `user` lines only (a `#` line aborts startup), so the template's comments
-# are dropped here.
+# The directory, the file's mode and its group all come from infra/scripts/render-redis-acl.sh, the
+# same script CI runs: a 640 file in a 700 directory still made Redis abort (B2-R2-1).
 render_redis_acl() {
-  local redis_password homebox_password tmp
+  local result
+  result=$("$infra_dir/scripts/render-redis-acl.sh" --out "$acl_dir" --env-file "$env_file" --group "$acl_gid") \
+    || die "could not render $acl_target"
+  case $result in
+    changed)
+      redis_acl_changed=1
+      log "rendered $acl_target"
+      ;;
+    unchanged) redis_acl_changed=0 ;;
+    *) die "render-redis-acl.sh answered '$result'" ;;
+  esac
+}
+
+# A password never goes on a command line: it would sit in the host's process list (B2-R2-23).
+acl_ping() {
+  local user=$1 password=$2
+  "${vps1_compose[@]}" exec -T -e REDISCLI_AUTH="$password" redis \
+    redis-cli --user "$user" --no-auth-warning ping 2>/dev/null | grep -qx PONG
+}
+
+# Both users, because a wrong REDIS_HOMEBOX_PASSWORD is what breaks the home box (B2-R2-11).
+acl_answers() {
+  local redis_password homebox_password deadline
   redis_password=$(env_get REDIS_PASSWORD)
   homebox_password=$(env_get REDIS_HOMEBOX_PASSWORD)
-  [[ -n $redis_password ]] || die "REDIS_PASSWORD is empty in $env_file"
-  [[ -n $homebox_password ]] || die "REDIS_HOMEBOX_PASSWORD is empty in $env_file (the home box's user)"
-  install -d -m 700 "$state_dir/redis"
-  tmp=$(mktemp)
-  # shellcheck disable=SC2016 # envsubst takes the variable names literally
-  (umask 077 && REDIS_PASSWORD=$redis_password REDIS_HOMEBOX_PASSWORD=$homebox_password \
-    envsubst '${REDIS_PASSWORD} ${REDIS_HOMEBOX_PASSWORD}' < "$infra_dir/redis/users.acl.tmpl" \
-    | sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' > "$tmp")
-  if ! cmp -s "$tmp" "$acl_target"; then
-    install -m 600 "$tmp" "$acl_target"
-    log "rendered $acl_target"
+  deadline=$((SECONDS + 30))
+  while ((SECONDS < deadline)); do
+    if acl_ping default "$redis_password" && acl_ping homebox "$homebox_password"; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+# Put back the ACL the last render replaced, so Redis can start on it (B2-R2-11, B2-R3-2).
+restore_previous_acl() {
+  [[ -f $acl_previous ]] || return 1
+  log "restoring $acl_previous"
+  install -m 640 -g "$acl_gid" "$acl_previous" "$acl_target"
+}
+
+# Redis reads an ACL file only at start-up, and Compose recreates a container only when its
+# definition changes, not when a mounted file's content does. So a changed file means a restart, and
+# then both passwords must work before anything else is deployed (B2-R1-7).
+reload_redis_acl() {
+  ((redis_acl_changed)) || return 0
+  log "restarting Redis to load the new ACL"
+  "${vps1_compose[@]}" restart redis >/dev/null || true
+  if acl_answers; then
+    log "Redis accepted the new ACL (default and homebox)"
+    return 0
   fi
-  rm -f "$tmp"
+  if restore_previous_acl; then
+    "${vps1_compose[@]}" restart redis >/dev/null || true
+    die "Redis rejected the new ACL; the previous one is back at $acl_target. Check REDIS_PASSWORD and REDIS_HOMEBOX_PASSWORD, and 'compose logs redis'"
+  fi
+  die "Redis did not accept $acl_target; check the passwords, the directory's group (gid $acl_gid) and 'compose logs redis'"
+}
+
+# The stateful services (caddy, postgres, redis) with the ACL restore around them: this `up` is what
+# recreates Redis on a changed definition, before `reload_redis_acl` runs, so a file Redis refuses
+# would leave it down with the good one still in `users.acl.prev` (B2-R3-2).
+apply_stateful_infra() {
+  local failed=0
+  "${vps1_compose[@]}" up -d --wait --wait-timeout 120 "${vps1_stateful[@]}" || failed=1
+  if ((failed == 0)); then
+    return 0
+  fi
+  # Only when this deploy wrote a new file: `users.acl.prev` is then exactly what was in place
+  # before it. An unchanged render that fails to start is not an ACL-content problem.
+  if ((redis_acl_changed)) && restore_previous_acl; then
+    log "infra did not come up; retrying with the previous ACL"
+    "${vps1_compose[@]}" up -d --wait --wait-timeout 120 "${vps1_stateful[@]}" || true
+    die "the stateful services did not come up with the new ACL; the previous one is back at $acl_target. Check 'compose ps' and 'compose logs redis'"
+  fi
+  die "the stateful services did not come up; check 'compose ps' and 'compose logs redis'"
 }
 
 deploy_vps1() {
-  local tag=$1 previous current
+  local tag=$1 previous current started
   exec 9>"$state_dir/.deploy.lock"
   flock -n 9 || die "another deploy is running"
 
@@ -143,9 +211,10 @@ deploy_vps1() {
   # Step 1 doesn't touch the APIs; the tag is only needed to interpolate vps1.yml.
   export IMAGE_TAG=${current:-none} HEALTHZ_FORCE_FAIL=false
 
-  # 1. Render the ACL and apply the synced infra.
+  # 1. Render the ACL, apply the synced infra, and load a changed ACL before the APIs move.
   render_redis_acl
-  "${vps1_compose[@]}" up -d --wait --wait-timeout 120 "${vps1_stateful[@]}"
+  apply_stateful_infra
+  reload_redis_acl
   "${vps1_compose[@]}" exec -T caddy caddy reload --config "$caddy_config" --adapter caddyfile
 
   # 2. Record the running tag; it is the rollback target.
@@ -170,10 +239,12 @@ deploy_vps1() {
     die "migration failed; the running containers were not touched (still ${current:-none})"
   fi
 
-  # 5–6. Roll out and check health, including the media worker.
+  # 5–6. Roll out and check health, including the media worker. A failed `up` rolls back too:
+  # under `set -e` it would otherwise exit before the rollback branch (B2-R1-24).
   log "starting $tag"
-  start_apis "$tag" "$force_fail"
-  if healthy_apis && healthy_services vps1 "$health_timeout" "$media_service"; then
+  started=1
+  start_apis "$tag" "$force_fail" || started=0
+  if ((started)) && healthy_apis && healthy_services vps1 "$health_timeout" "$media_service"; then
     printf '%s\n' "$tag" > "$state_dir/current_tag"
     log "deployed $tag"
     return 0
@@ -192,7 +263,7 @@ deploy_vps1() {
 }
 
 deploy_vps2() {
-  local tag=$1 previous current owner token
+  local tag=$1 previous current owner token started
   exec 9>"$state_dir/.deploy.lock"
   flock -n 9 || die "another deploy is running"
 
@@ -212,8 +283,10 @@ deploy_vps2() {
   docker logout ghcr.io >/dev/null
 
   log "starting vps2 services on $tag"
-  IMAGE_TAG=$tag "${vps2_compose[@]}" up -d "${vps2_services[@]}"
-  if healthy_services vps2 "$workers_timeout" "${vps2_services[@]}"; then
+  # Guarded like VPS-1: under `set -e` a failed `up -d` would exit before the rollback (B2-R2-12).
+  started=1
+  IMAGE_TAG=$tag "${vps2_compose[@]}" up -d "${vps2_services[@]}" || started=0
+  if ((started)) && healthy_services vps2 "$workers_timeout" "${vps2_services[@]}"; then
     printf '%s\n' "$tag" > "$state_dir/current_tag"
     log "deployed $tag to vps2"
     return 0
@@ -225,7 +298,7 @@ deploy_vps2() {
     die "no previous tag to roll back to; $tag is left running for inspection"
   fi
   log "restoring $previous on vps2"
-  IMAGE_TAG=$previous "${vps2_compose[@]}" up -d "${vps2_services[@]}"
+  IMAGE_TAG=$previous "${vps2_compose[@]}" up -d "${vps2_services[@]}" || true
   healthy_services vps2 "$workers_timeout" "${vps2_services[@]}" \
     && die "rolled back to $previous on vps2, which is healthy"
   die "rolled back to $previous on vps2, but it is not healthy either"
@@ -270,7 +343,8 @@ trap 'docker logout ghcr.io >/dev/null 2>&1 || true; unset GHCR_TOKEN' EXIT
 if [[ $mode == --infra-only ]]; then
   render_redis_acl
   export IMAGE_TAG=${IMAGE_TAG:-none} HEALTHZ_FORCE_FAIL=false
-  "${vps1_compose[@]}" up -d --wait --wait-timeout 120 "${vps1_stateful[@]}"
+  apply_stateful_infra
+  reload_redis_acl
   "${vps1_compose[@]}" exec -T caddy caddy reload --config "$caddy_config" --adapter caddyfile
   log "infra applied"
   exit 0

@@ -18,6 +18,14 @@ from pydantic import BaseModel, ConfigDict
 from app.domain.time import cairo_to_utc, parse_cairo_wall_clock
 
 WINDOW_DAYS = 4  # today to +3 (FR-021, R16)
+
+
+class LayoutChanged(Exception):
+    """The document is not the shape the adapter reads: the source changed.
+
+    One class for every adapter, so the fetch task records the failure the same way whichever
+    source broke (B2-R1-9).
+    """
 _DOUBLED_SLASH = re.compile(r"^(.+?)\s+/\s+\1$")
 _DOUBLED_SPACE = re.compile(r"^(.+?)\s+\1$")
 
@@ -83,9 +91,13 @@ class ParsedFixture(BaseModel):
     away_external_id: str | None = None
     wall_time: str = ""
     match_date: date
-    links: tuple[FixtureLink, ...] = ()
+    # None means "this source says nothing about links", which is not the same as an empty list
+    # (B2-R1-2): the upsert must not delete links it did not bring.
+    links: tuple[FixtureLink, ...] | None = None
     ys_match_id: str | None = None
     legacy_id: str | None = None
+    # The source marks the fixture postponed: no kickoff is known any more (R16, B2-R1-10).
+    postponed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,9 +119,10 @@ class NormalizedFixture:
     home_external_id: str | None = None
     away_external_id: str | None = None
     sport: str = "football"
-    links: tuple[FixtureLink, ...] = ()
+    links: tuple[FixtureLink, ...] | None = None  # None: no link information from this source
     ys_match_id: str | None = None
     legacy_id: str | None = None
+    postponed: bool = False
 
 
 @runtime_checkable
@@ -118,6 +131,8 @@ class SourceAdapter(Protocol):
 
     name: str
     allowed_hosts: frozenset[str]
+    # The pages fetched so far, so the fetch task can save them when a later day fails (B2-R1-9).
+    pages: list[RawPage]
 
     def fetch(self, window: DateWindow) -> Sequence[RawPage]: ...
 
@@ -165,11 +180,12 @@ def normalize_fixture(item: ParsedFixture) -> NormalizedFixture:
     Cairo wall clock to UTC, ``"--:--"`` to ``time_tbd`` with no kickoff, placeholders to NULL,
     doubled stage text cleaned, and a logo kept only from an allowlisted host.
     """
-    wall = parse_cairo_wall_clock(item.wall_time)
+    wall = None if item.postponed else parse_cairo_wall_clock(item.wall_time)
     return NormalizedFixture(
         match_date=item.match_date,
         kickoff_at=None if wall is None else cairo_to_utc(item.match_date, wall),
         time_tbd=wall is None,
+        postponed=item.postponed,
         home=clean_text(item.home),
         away=clean_text(item.away),
         competition=clean_text(item.competition),

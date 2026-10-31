@@ -13,11 +13,17 @@ from app.adapters.ratelimit import FIREBASE_BUCKET, YSSCORES_BUCKET, Bucket, Rat
 
 @pytest.fixture
 def client() -> redis.Redis:
+    """Cleared only of ``ratelimit:*``: the test Redis is shared with the other lanes' tests."""
     r = redis.Redis.from_url(os.environ["REDIS_URL"], decode_responses=True)
-    r.flushdb()
+    _clear(r)
     yield r
-    r.flushdb()
+    _clear(r)
     r.close()
+
+
+def _clear(client: redis.Redis) -> None:
+    for key in client.scan_iter(match="ratelimit:*"):
+        client.delete(key)
 
 
 @pytest.fixture
