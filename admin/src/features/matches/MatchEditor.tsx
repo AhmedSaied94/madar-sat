@@ -413,6 +413,15 @@ export function MatchEditor(): ReactElement {
   const [state, setState] = useState<EditorState>(emptyState);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Error toasts stay until dismissed, but a failed save's toast is about this editor's last save: it
+  // goes when the next save starts or the editor closes, so it never follows the editor elsewhere.
+  const saveToast = useRef<{ id: number | null }>({ id: null });
+  useEffect(() => {
+    const held = saveToast.current;
+    return () => {
+      if (held.id !== null) toast.dismiss(held.id);
+    };
+  }, [toast]);
 
   const match = useGetMatch(matchId ?? 0, {
     query: {
@@ -531,6 +540,8 @@ export function MatchEditor(): ReactElement {
   async function save(): Promise<EditorBaseline | null> {
     if (baseline === null) return null;
     setSaveError(null);
+    if (saveToast.current.id !== null) toast.dismiss(saveToast.current.id);
+    saveToast.current.id = null;
     setSaving(true);
 
     try {
@@ -576,7 +587,11 @@ export function MatchEditor(): ReactElement {
       if (failure.code === 'edit_conflict') {
         await openConflict(failure);
       } else {
-        toast.show({ kind: 'error', title: toastCopy.saveFailed, description: copyForErrorCode(failure.code) });
+        saveToast.current.id = toast.show({
+          kind: 'error',
+          title: toastCopy.saveFailed,
+          description: copyForErrorCode(failure.code),
+        });
       }
       return null;
     } finally {
@@ -705,6 +720,7 @@ export function MatchEditor(): ReactElement {
           // «تجاهل تعديلاتي» really drops them: the form goes back to the version it loaded (A-R1-5).
           if (baseline !== null) setState(baseline.state);
           setConflict(null);
+          setSaveError(null);
         }}
       />
 
