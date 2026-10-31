@@ -733,6 +733,8 @@ describe('MatchEditor (A4)', () => {
 
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(screen.getByLabelText('الوقت بتوقيت القاهرة')).toHaveValue('19:30');
+    // The 409's message belonged to the edits just dropped, so it goes with them.
+    expect(screen.queryByText('عُدّل هذا العنصر من شخص آخر. راجع التغييرات قبل الحفظ')).not.toBeInTheDocument();
   });
 
   it('saves under the version a changed refetch returned, after «إعادة التحميل»', async () => {
@@ -950,6 +952,31 @@ describe('MatchEditor (A4)', () => {
 
     expect(await screen.findByText('حدث خطأ في الخادم. حاول مرة أخرى بعد قليل')).toBeInTheDocument();
     expect(screen.queryByText('تم الحفظ')).not.toBeInTheDocument();
+  });
+
+  it('keeps one failed-save toast per editor, and takes it away when the editor closes', async () => {
+    const router = renderEditor();
+    await waitForEditor();
+
+    server.use(
+      mswHttp.patch('*/admin/api/matches/48213', () => HttpResponse.json(errorBody('internal_error'), { status: 500 })),
+    );
+
+    await userEvent.clear(screen.getByLabelText('الوقت بتوقيت القاهرة'));
+    await userEvent.type(screen.getByLabelText('الوقت بتوقيت القاهرة'), '21:00');
+    await userEvent.click(saveButton());
+    expect(await screen.findByText('فشل الحفظ')).toBeInTheDocument();
+
+    // A second failure replaces the first toast instead of stacking another.
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(screen.getAllByText('فشل الحفظ')).toHaveLength(1));
+
+    await router.navigate('/matches');
+    const guard = await screen.findByRole('alertdialog', { name: 'لديك تغييرات غير محفوظة' });
+    await userEvent.click(within(guard).getByRole('button', { name: 'غادر دون حفظ' }));
+
+    expect(await screen.findByText('قائمة المباريات')).toBeInTheDocument();
+    expect(screen.queryByText('فشل الحفظ')).not.toBeInTheDocument();
   });
 
   it('blocks leaving with unsaved changes, and says «ابقَ» and «احفظ وغادر»', async () => {
