@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 
-import type { Status } from '../../../api/generated/admin.schemas';
+import type { Period, Status } from '../../../api/generated/admin.schemas';
 import { Button } from '../../../components/Button/Button';
 import { editor as copy, matchStatus } from '../../../i18n/ar';
 import { penaltiesAllowed, scoreAllowed, type EditorState } from '../MatchEditor';
@@ -18,6 +18,16 @@ const STATUSES: readonly Status[] = [
   'cancelled',
   'abandoned',
 ];
+
+const PERIODS: readonly Period[] = ['1H', '2H', 'ET1', 'ET2'];
+
+/** The period a manual status carries, so a live edit keeps the half it is in (A-R1-9). */
+const periodLabels: Record<Period, string> = {
+  '1H': copy.periodFirstHalf,
+  '2H': copy.periodSecondHalf,
+  ET1: copy.periodExtraFirst,
+  ET2: copy.periodExtraSecond,
+};
 
 interface StatusSectionProps {
   state: EditorState;
@@ -84,6 +94,37 @@ export function StatusSection({ state, onChange, onReset }: StatusSectionProps):
             disabled={!allowed}
             value={state.scoreAway}
             onChange={(event) => onChange({ scoreAway: event.target.value })}
+            className="text-body h-12 w-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong disabled:opacity-50"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="text-caption font-semibold text-text-secondary">{copy.period}</span>
+          <select
+            aria-label={copy.period}
+            disabled={!manual}
+            value={state.period}
+            onChange={(event) => onChange({ period: event.target.value as EditorState['period'] })}
+            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong disabled:opacity-50"
+          >
+            <option value="">—</option>
+            {PERIODS.map((period) => (
+              <option key={period} value={period}>
+                {periodLabels[period]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="text-caption font-semibold text-text-secondary">{copy.minute}</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            aria-label={copy.minute}
+            disabled={!manual}
+            value={state.minute}
+            onChange={(event) => onChange({ minute: event.target.value })}
             className="text-body h-12 w-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong disabled:opacity-50"
           />
         </label>

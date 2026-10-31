@@ -30,6 +30,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [exposure-check.md](exposure-check.md) | What the internet can reach, and the certificates and headers (T065) |
 | [tls-certificates.md](tls-certificates.md) | Let's Encrypt on sslip.io, failed issuance, a changed public IP |
 | [staff-accounts.md](staff-accounts.md) | Creating admin and editor accounts, password resets, deactivating an account, a suspected token leak |
+| [admin-access.md](admin-access.md) | Running the admin app on an editor's machine: `pnpm dev:wg` over WireGuard, Caddy's root CA, the Prism mock and its `?mock=` states |
 | [secrets.md](secrets.md) | Where every secret lives, rotating them, gitleaks failures and leaks |
 | [local-dev.md](local-dev.md) | PostgreSQL, Redis and HTTPS Caddy on your machine; the test settings |
 | [ci-workflows.md](ci-workflows.md) | What each workflow checks, common failures, re-runs, the T067 proofs |
@@ -100,6 +101,7 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A deploy key leaked or needs replacing | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
 | A new editor, a forgotten password, someone leaves, or an admin session may have leaked | [staff-accounts.md](staff-accounts.md) |
+| An editor needs the admin app on their machine, or the mock's states | [admin-access.md](admin-access.md) |
 | A device needs the private network, or one is lost | [private-network.md "Peers"](private-network.md#peers) |
 | A browser warns about the admin's certificate | [private-network.md "Install the admin CA root"](private-network.md#install-the-admin-ca-root) |
 | WireGuard or SSH doesn't let you into a VM | [break-glass.md](break-glass.md) |
@@ -117,7 +119,6 @@ Later days add these. Each arrives with the change that builds the part it cover
 
 | Runbook | Covers | From |
 | --- | --- | --- |
-| `staff-accounts.md` | Admin accounts and roles, password resets, lockouts | D2; TOTP on D16 |
 | `push-notifications.md` | FCM, the outbox and its dispatcher, the admin composer | D3, D6 |
 | `backup-and-restore.md` | Nightly backups, the restore drill, the monthly routine | D3; drill and runbook v1 on D8 |
 | `monitoring.md` | Uptime Kuma, alert routing, the monitoring review | D3, D7, D12 |

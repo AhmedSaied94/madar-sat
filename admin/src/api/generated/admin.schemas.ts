@@ -198,6 +198,11 @@ export interface AdminMatchRow {
   commentator: AdminMatchRowCommentator;
   competition: CompetitionRef;
   estimated: boolean;
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
   home: TeamRef;
   id: number;
   kickoff_at: AdminMatchRowKickoffAt;

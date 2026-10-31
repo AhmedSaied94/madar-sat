@@ -23,6 +23,7 @@ import 'package:madar_sat/design/components/filter_chip_row.dart';
 import 'package:madar_sat/design/components/match_row.dart';
 import 'package:madar_sat/design/components/skeleton.dart';
 import 'package:madar_sat/design/components/stale_hint.dart';
+import 'package:madar_sat/design/components/status_block.dart' show LiveDot;
 import 'package:madar_sat/features/live/live_poller.dart';
 import 'package:madar_sat/features/matches/presentation/matches_page.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
@@ -222,7 +223,12 @@ class _Harness {
     );
   }
 
-  Future<void> pump(WidgetTester tester, {bool settle = true}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    bool settle = true,
+    Brightness brightness = Brightness.dark,
+    double textScale = 1,
+  }) async {
     // 360 x 1600 logical pixels: a phone width, tall enough that no row is lazily skipped.
     tester.view
       ..physicalSize = const Size(1080, 4800)
@@ -245,11 +251,14 @@ class _Harness {
           locale: const Locale('ar'),
           supportedLocales: const [Locale('ar')],
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          theme: MadarTheme.dark,
+          theme: brightness == Brightness.dark ? MadarTheme.dark : MadarTheme.light,
           builder: (context, child) => Directionality(
             textDirection: TextDirection.rtl,
             child: MediaQuery(
-              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              data: MediaQuery.of(context).copyWith(
+                disableAnimations: true,
+                textScaler: TextScaler.linear(textScale),
+              ),
               child: child ?? const SizedBox.shrink(),
             ),
           ),
@@ -371,8 +380,20 @@ void main() {
 
       // The phone slept through midnight with the app open.
       h.clock = DateTime(2026, 10, 29, 0, 5);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      for (final state in const [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      for (final state in const [
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
       await tester.pumpAndSettle();
 
       expect(find.text('الخميس 29 أكتوبر'), findsOneWidget);
@@ -456,6 +477,7 @@ void main() {
   group('filter chips', () {
     testWidgets('«الكل» and «مباشر ‹count›» count the live rows of the selected day',
         (tester) async {
+      h.live = [_liveState(1, score: _score(1, 0), minute: '34'), _liveState(2)];
       h.serve([
         _match(1, status: Status.live, score: _score(1, 0), clockMinute: '34'),
         _match(2, status: Status.halftime, score: _score(0, 0)),
@@ -475,18 +497,29 @@ void main() {
       );
     });
 
-    testWidgets('the live count is hidden at zero', (tester) async {
+    testWidgets('the live count and its red dot are hidden at zero', (tester) async {
       h.serve([_match(1), _match(2, status: Status.finished, score: _score(2, 1))]);
       await h.pump(tester);
 
       expect(find.descendant(of: _chips, matching: find.text('مباشر')), findsOneWidget);
       final live = _chipItems(tester).last;
       expect(live.count ?? 0, 0);
+      expect(live.isLive, isFalse, reason: 'the dot is for live matches only (US3 scenario 1)');
+      expect(find.descendant(of: _chips, matching: find.byType(LiveDot)), findsNothing);
       expect(find.descendant(of: _chips, matching: find.text('0')), findsNothing);
+    });
+
+    testWidgets('the live chip draws its dot once something is live', (tester) async {
+      h.live = [_liveState(1)];
+      h.serve([_match(1, status: Status.live)]);
+      await h.pump(tester);
+
+      expect(find.descendant(of: _chips, matching: find.byType(LiveDot)), findsOneWidget);
     });
 
     testWidgets('the live chip filters the day to live rows and drops groups left empty',
         (tester) async {
+      h.live = [_liveState(1)];
       h.serve([
         _match(1, status: Status.live),
         _match(2, competition: _asia, status: Status.finished, score: _score(1, 1)),
@@ -582,13 +615,14 @@ void main() {
     testWidgets('show every StatusBlock variant', (tester) async {
       h.live = [
         _liveState(3, score: _score(2, 1), minute: '67'),
+        _liveState(4, estimated: true),
         _liveState(5, status: Status.halftime, score: _score(1, 1)),
       ];
       h.serve([
         _match(1, hour: 21), // scheduled
         _match(2, hour: 18, minute: 25), // imminent: 25 minutes after the pinned 18:00
         _match(3, status: Status.live, score: _score(9, 9), clockMinute: '12'), // live
-        _match(4, status: Status.live), // estimated: no live state answers for it
+        _match(4, status: Status.live), // estimated live, from /v1/live
         _match(5, status: Status.live), // halftime, from the live state
         _match(6, hour: 14, status: Status.finished, score: _score(3, 0)),
         _match(7, status: Status.postponed),
@@ -605,7 +639,7 @@ void main() {
       final liveScore = tester.widget<ScoreParts>(_inRow(3, find.byType(ScoreParts)));
       expect((liveScore.home, liveScore.away), ('2', '1'));
       expect(_inRow(3, find.text('12′')), findsNothing);
-      // estimated live: «مباشر» only, no score and no minute
+      // estimated live, from /v1/live: «مباشر» only, no score and no minute
       expect(_inRow(4, find.text('مباشر')), findsOneWidget);
       expect(_inRow(4, find.byType(ScoreParts)), findsNothing);
       expect(_inRow(4, find.textContaining('′')), findsNothing);
@@ -622,7 +656,8 @@ void main() {
       expect(_inRow(8, find.text('لم يُحدد')), findsOneWidget);
     });
 
-    testWidgets('never show a cached in-play row as live: «مباشر» with no score or minute (SC-008)',
+    testWidgets(
+        'a cached in-play row is never shown as live: it gets its kickoff time and no count (SC-008)',
         (tester) async {
       // /v1/live answers nothing, so none of the cached states can be confirmed.
       h.serve([
@@ -637,18 +672,21 @@ void main() {
 
       for (final id in [1, 2, 3, 4]) {
         final row = tester.widget<MatchRow>(_row(id));
-        expect(row.match.status, Status.live, reason: 'match $id');
-        expect(row.match.estimated, isTrue, reason: 'match $id');
+        expect(row.match.status, Status.scheduled, reason: 'match $id');
         expect(row.match.score, isNull, reason: 'match $id');
         expect(row.match.minute, isNull, reason: 'match $id');
-        expect(_inRow(id, find.text('مباشر')), findsOneWidget, reason: 'match $id');
+        expect(_inRow(id, find.text('مباشر')), findsNothing, reason: 'match $id');
+        expect(_inRow(id, find.text('9:00 م')), findsOneWidget, reason: 'match $id');
         expect(_inRow(id, find.byType(ScoreParts)), findsNothing, reason: 'match $id');
         expect(_inRow(id, find.textContaining('′')), findsNothing, reason: 'match $id');
         final label = tester.getSemantics(_row(id)).label;
+        expect(label, isNot(contains('مباشر')), reason: 'match $id');
         expect(label, isNot(contains('النتيجة')), reason: 'match $id');
         expect(label, isNot(contains('الدقيقة')), reason: 'match $id');
-        expect(label, isNot(contains('استراحة')), reason: 'match $id');
       }
+      // None of them counts as live, so the chip stays quiet.
+      expect(_chipItems(tester).last.count ?? 0, 0);
+      expect(find.descendant(of: _chips, matching: find.byType(LiveDot)), findsNothing);
       semantics.dispose();
     });
 
@@ -664,6 +702,30 @@ void main() {
       expect(_inRow(1, find.text('مباشر')), findsOneWidget);
       expect(_inRow(1, find.byType(ScoreParts)), findsNothing);
       expect(_inRow(1, find.text('70′')), findsNothing);
+    });
+
+    testWidgets('the light theme at 1.3× draws the same day without an overflow', (tester) async {
+      h.serve([
+        _match(1, status: Status.live, score: _score(2, 1), clockMinute: '67'),
+        _match(2, status: Status.finished, score: _score(3, 0)),
+        _match(3, timeTbd: true),
+      ]);
+      await h.pump(tester, brightness: Brightness.light, textScale: 1.3);
+
+      expect(tester.takeException(), isNull, reason: 'no RenderFlex overflow at 1.3×');
+      expect(find.text('مباشر'), findsWidgets);
+      expect(find.text('انتهت'), findsOneWidget);
+      expect(_row(1), findsOneWidget);
+      expect(_row(3), findsOneWidget);
+    });
+
+    testWidgets('the dark theme at 1.3× draws the same day without an overflow', (tester) async {
+      h.serve([_match(1), _match(2, hour: 23, competition: _asia)]);
+      await h.pump(tester, textScale: 1.3);
+
+      expect(tester.takeException(), isNull);
+      expect(_row(1), findsOneWidget);
+      expect(_row(2), findsOneWidget);
     });
 
     testWidgets('put the «موعد لم يُحدد» group at the end of the day', (tester) async {
@@ -941,6 +1003,7 @@ void main() {
 
   group('navigation', () {
     testWidgets('coming back from a match keeps the day and the chip', (tester) async {
+      h.live = [_liveState(3)];
       h.serve([_match(1)]);
       h.serve([_match(3, dayOffset: 2, status: Status.live), _match(4, dayOffset: 2)],
           dayOffset: 2);

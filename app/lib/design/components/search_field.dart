@@ -81,47 +81,60 @@ class _SearchFieldState extends State<SearchField> {
     return Semantics(
       container: true,
       label: widget.hint,
-      child: Container(
-        height: widget.dense ? MadarSpace.s8 + MadarSpace.s2 : MadarLayout.touchMin,
-        padding: const EdgeInsetsDirectional.only(start: MadarSpace.s3),
-        decoration: BoxDecoration(
-          color: focused ? colors.surface1 : colors.surface2,
-          borderRadius: BorderRadius.circular(MadarRadii.lg),
-          border: focused ? Border.all(color: colors.focusRing, width: _ring) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.search, size: MadarText.textBody.fontSize, color: colors.textTertiary),
-            const SizedBox(width: MadarSpace.s2),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focus,
-                autofocus: widget.autofocus,
-                onChanged: widget.onChanged,
-                onSubmitted: widget.onSubmitted,
-                textInputAction: TextInputAction.search,
-                style: MadarText.textBody.copyWith(color: colors.textPrimary),
-                cursorColor: colors.accentText,
-                decoration: InputDecoration.collapsed(
-                  hintText: widget.hint,
-                  hintStyle: MadarText.textBody.copyWith(color: colors.textTertiary),
-                ),
+      child: GestureDetector(
+        // The dense field draws 40 dp inside the constitution's 48 dp target: a tap on the
+        // band around it still puts the cursor in the field.
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _focus.requestFocus(),
+        child: ConstrainedBox(
+          key: const ValueKey('search-field-target'),
+          constraints: const BoxConstraints(minHeight: MadarLayout.touchMin),
+          child: Center(
+            child: Container(
+              height: widget.dense ? MadarSpace.s8 + MadarSpace.s2 : MadarLayout.touchMin,
+              padding: const EdgeInsetsDirectional.only(start: MadarSpace.s3),
+              decoration: BoxDecoration(
+                color: focused ? colors.surface1 : colors.surface2,
+                borderRadius: BorderRadius.circular(MadarRadii.lg),
+                border: focused ? Border.all(color: colors.focusRing, width: _ring) : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, size: MadarText.textBody.fontSize, color: colors.textTertiary),
+                  const SizedBox(width: MadarSpace.s2),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focus,
+                      autofocus: widget.autofocus,
+                      onChanged: widget.onChanged,
+                      onSubmitted: widget.onSubmitted,
+                      textInputAction: TextInputAction.search,
+                      style: MadarText.textBody.copyWith(color: colors.textPrimary),
+                      cursorColor: colors.accentText,
+                      decoration: InputDecoration.collapsed(
+                        hintText: widget.hint,
+                        hintStyle: MadarText.textBody.copyWith(color: colors.textTertiary),
+                      ),
+                    ),
+                  ),
+                  if (_controller.text.isNotEmpty)
+                    IconButton(
+                      onPressed: _clear,
+                      tooltip: l.clearSearch,
+                      icon: Icon(Icons.close,
+                          size: MadarText.textBody.fontSize, color: colors.textTertiary),
+                      constraints: const BoxConstraints(
+                        minWidth: MadarLayout.touchMin,
+                        minHeight: MadarLayout.touchMin,
+                      ),
+                    )
+                  else
+                    const SizedBox(width: MadarSpace.s3),
+                ],
               ),
             ),
-            if (_controller.text.isNotEmpty)
-              IconButton(
-                onPressed: _clear,
-                tooltip: l.clearSearch,
-                icon: Icon(Icons.close, size: MadarText.textBody.fontSize, color: colors.textTertiary),
-                constraints: const BoxConstraints(
-                  minWidth: MadarLayout.touchMin,
-                  minHeight: MadarLayout.touchMin,
-                ),
-              )
-            else
-              const SizedBox(width: MadarSpace.s3),
-          ],
+          ),
         ),
       ),
     );

@@ -38,11 +38,13 @@ flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-
 - `dart run swagger_parser` reads `../backend/openapi/public.json` (the `contract-v1`
   tag) and writes `lib/core/network/generated/` — Retrofit client plus Freezed models.
   `use_freezed3: true` is required: Freezed 3/4 model classes are `abstract`.
-- `dart run build_runner build -d` generates Freezed, json_serializable, drift and
-  Retrofit parts. Run it after any change to a model, table or `@riverpod` provider.
+  `original_http_response: true` makes each operation return `HttpResponse<Envelope…>`, so a
+  caller can read the status and the `ETag`.
+- `dart run build_runner build -d` generates Freezed, json_serializable, drift, Retrofit
+  and `@riverpod` parts. Run it after any change to a model, table or annotated provider.
 - Generated folders are `lib/core/network/generated/`, `lib/l10n/`,
-  `lib/core/db/*.g.dart` and `lib/core/theme/madar_tokens.dart`. CI regenerates and
-  fails on a diff; never edit them by hand.
+  `lib/core/db/*.g.dart`, `lib/core/theme/madar_tokens.dart` and every `*.g.dart` beside an
+  annotated provider. CI regenerates and fails on a diff; never edit them by hand.
 
 ## Tokens and fonts
 
@@ -90,7 +92,10 @@ Every variant is RTL × {light, dark} × text scale {1.0, 1.3}; the harness sets
 ## Data: stale-while-revalidate (D2, FR-046)
 
 Every D2 screen reads through `SwrRepository` (`lib/core/network/swr_repository.dart`,
-`swrRepositoryProvider`), never through Dio or the generated client directly.
+`swrRepositoryProvider`), never through Dio directly. Every request goes through the
+**generated client** (`MadarApiClient`): the paths and query names are the contract's, so a
+renamed operation breaks the build. `test/core/network/generated_client_test.dart` fails on
+a hand-written `/v1` path or a raw `Dio.get` anywhere in `lib/` outside `generated/`.
 
 - A stream emits the drift copy first, then revalidates with `If-None-Match`. A `200`
   replaces the data and its ETag in one transaction and emits again. A `304` only moves
@@ -101,8 +106,13 @@ Every D2 screen reads through `SwrRepository` (`lib/core/network/swr_repository.
   Arabic copy). Screen providers set `retry: (_, _) => null`: Riverpod's automatic retry
   would hold the state at loading for about 38 s and hide the error copy, and every error
   state has its own «إعادة المحاولة».
-- ETags live in drift, so the repository's requests opt out of `EtagInterceptor`'s memory
-  cache (`EtagInterceptor.bypassKey`). Calls that are not cached in drift keep it.
+- The ETag lives in drift, so each request gets a one-shot Dio (`_requestDio`) carrying only
+  its own `If-None-Match`: two screens revalidating at once never swap headers, and
+  `EtagInterceptor`'s memory cache is not involved. Calls that are not cached in drift keep
+  it.
+- Errors: `DioException` and `ApiFailure` are mapped to the envelope's `error.code`; any
+  other throw (a `TypeError` from contract drift, a storage failure) is logged through
+  `dart:developer` and still yields the fetched data, never a silent empty state.
 - Matches are typed rows (`matches` + `match_windows`) per **device-local day**, grouped
   with `LocalDays` from `kickoff_at`, never from `match_date`. Everything else (match
   detail, `/v1/satellites`, a satellite's channels, S4's satellite-filtered day) is a JSON
@@ -114,9 +124,14 @@ Every D2 screen reads through `SwrRepository` (`lib/core/network/swr_repository.
   `SwrSnapshot.staleAge(freshness, now:)`, which returns the age to show or null; every
   screen uses it, so a failed revalidation of a copy still inside its target says nothing.
 - Live states from `/v1/live` stay in memory (`liveStatesProvider`) and are never written
-  to drift. They expire `PollIntervals.liveStateTtl` (60 s) after the last answer, so a feed
-  that stops answering cannot keep an old score on screen. A cached in-play row with no live state renders as the quiet estimated
-  «مباشر» with no score or minute (`applyLiveStates`): no cached state is ever shown as live.
+  to drift. They expire `PollIntervals.liveStateTtl` (60 s) after the last answer. **Live
+  states come only from `/v1/live`:** a cached row whose stored status is in play, with no
+  current live state, is shown by its kickoff time — no «مباشر», no score, no minute, not
+  counted in «مباشر ‹n›», not in the live filter (`withLiveState`; constitution II, SC-008).
+  A screen decides whether to poll `/v1/live` from the **cached** rows, before the merge.
+- Domain is pure: no file under `features/**/domain/` imports `data/`, drift, Dio or
+  Riverpod (`test/architecture/domain_imports_test.dart`). Cache keys, freshness targets and
+  the kept-days window live in `core/` (`swr_snapshot.dart`, `format/retention.dart`).
 
 ## Drift schema
 
@@ -125,16 +140,40 @@ a table means: bump the version, add the step to `onUpgrade`, run
 `dart run build_runner build -d`, and add a migration test that builds the previous
 version's DDL by hand, opens it at the new version and checks the rows survived
 (`test/core/db/migration_v2_test.dart` is the pattern). Local days outside
-today−1 … today+6 (and documents not revalidated for 14 days) are pruned every time the
-database opens.
+today−1 … today+6 and documents not revalidated for 14 days are pruned every time the
+database opens (`core/format/retention.dart`).
+
+On the web the database needs two assets in `web/`, served from the app's own host (no CDN):
+`sqlite3.wasm` and `drift_worker.js`. Both are copied from drift 2.35.3
+(`$PUB_CACHE/hosted/pub.dev/drift-2.35.3/extension/devtools/build/sqlite3.wasm` and
+`.../drift-2.35.3/drift_worker.js`); re-copy them when drift is upgraded, and keep
+`test/core/db/web_assets_test.dart` green. `AppDatabase.open()` passes them as
+`DriftWebOptions`; without them `drift_flutter` throws and every screen shows the
+load-failed state in the PWA.
+
+## Providers
+
+Every provider in `lib/` is generated with `@riverpod` (or `@Riverpod(keepAlive: true)`),
+D1's included; never hand-write `Provider(`, `NotifierProvider(`, `StreamProvider(` or
+`FutureProvider(`. The generated base lives in the `*.g.dart` beside the file, so
+`dart run build_runner build -d` runs after every provider change. `app/tool/` will carry a
+check for hand-written providers once Lane B2 wires it into `app.yml`.
 
 ## Polling
 
 Matches revalidate every 60 s and `/v1/live` is polled every 30 s, only while the screen's
 route is visible, the app is `resumed`, and (for `/v1/live`) a live or imminent match is on
-screen. `LivePollingScope` is the one place that runs these timers; wrap a screen's body
-in it, and never start a periodic timer in a provider or a page. The intervals are bundled
-defaults (`PollIntervals`) until Remote Config arrives on D3.
+screen. The policy is a provider (`livePollingProvider`, `features/live/live_poller.dart`);
+`LivePollingScope` only feeds it visibility (`TickerMode`), lifecycle (`AppLifecycleListener`)
+and whether a live answer matters. Never start a periodic timer in a widget.
+
+A screen's data provider exposes both entry points:
+
+- `revalidate()` — the poll and a retry: `invalidateSelf`, one conditional request;
+- `refresh()` — pull to refresh: runs the whole cache, revalidate and write cycle and waits
+  for the server before asking the provider to read again.
+
+The intervals are bundled defaults (`PollIntervals`) until Remote Config arrives on D3.
 
 ## Links
 

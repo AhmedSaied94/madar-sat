@@ -97,6 +97,28 @@ class MatchHero extends StatelessWidget {
                 ),
               ],
             ),
+            // Before the last hour the status block only shows the time, so the hero says
+            // how long the wait is; inside the hour the block's «بعد 25 د» takes over.
+            if (_countdown(l) case final countdown?) ...[
+              const SizedBox(height: MadarSpace.s2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    size: MadarText.textCaption.fontSize,
+                    color: colors.accentText,
+                  ),
+                  const SizedBox(width: MadarSpace.s2),
+                  Flexible(
+                    child: Text(
+                      countdown,
+                      style: MadarText.textCaption.copyWith(color: colors.accentText),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -105,6 +127,21 @@ class MatchHero extends StatelessWidget {
 
   /// The kickoff on the device's calendar. A match with no time still has its day.
   DateTime get _localDay => (match.kickoffAt ?? match.matchDate).toLocal();
+
+  /// «تبدأ بعد 3 ساعات» while the kickoff is more than an hour away; null inside the hour
+  /// (the status block counts it), once it has passed, or when there is no time to count.
+  String? _countdown(AppLocalizations l) {
+    final kickoff = match.kickoffAt;
+    final now = this.now;
+    if (now == null || kickoff == null || match.timeTbd || match.status != Status.scheduled) {
+      return null;
+    }
+    final minutes = MadarTime.minutesUntil(kickoff, now: now);
+    if (minutes <= 60) return null;
+    if (minutes >= 24 * 60) return l.s3StartsInDays(minutes ~/ (24 * 60));
+    if (minutes >= 120) return l.s3StartsInHours(minutes ~/ 60);
+    return l.s3StartsInMinutes(minutes);
+  }
 
   String _dateAndTime(AppLocalizations l) {
     final time = match.timeTbd
@@ -154,6 +191,7 @@ class MatchHero extends StatelessWidget {
     parts.add(match.competition.name);
     if (match.competition.stage != null) parts.add(match.competition.stage!);
     parts.add(MadarDates.full(l, _localDay));
+    if (_countdown(l) case final countdown?) parts.add(countdown);
     return parts.join(l.listSeparator);
   }
 }

@@ -36,8 +36,9 @@ const rows = [
     broadcaster_count: 0,
     missing_channels: false,
     commentator: { id: 7, name: 'مدحت شلبي' },
-    sources: ['ysscores', 'legacy'],
+    sources: ['ysscores', 'livesoccertv'],
     locked: true,
+    etag: '"row-48213"',
   },
   {
     id: 48214,
@@ -54,8 +55,9 @@ const rows = [
     broadcaster_count: 0,
     missing_channels: true,
     commentator: null,
-    sources: ['kickoff'],
+    sources: ['yallakora', 'legacy'],
     locked: false,
+    etag: '"row-48214"',
   },
   {
     id: 48215,
@@ -74,6 +76,7 @@ const rows = [
     commentator: { id: 9, name: 'حسن العيدروس' },
     sources: ['manual'],
     locked: false,
+    etag: '"row-48215"',
   },
 ];
 
@@ -185,6 +188,13 @@ describe('MatchesPage (A3)', () => {
     const live = screen.getByTestId('match-row-48214');
     expect(live).toHaveTextContent('مباشر · تقديري');
     expect(live).toHaveTextContent('0');
+    // The real source names, not the old placeholders: yallakora is YK, and an unknown origin keeps
+    // its own name instead of borrowing another source's code (A-R1-13).
+    expect(live).toHaveTextContent('YK');
+    expect(live).toHaveTextContent('legacy');
+
+    // A match with no kickoff yet says so rather than showing a dash (A-R1-24).
+    expect(screen.getByTestId('match-row-48215')).toHaveTextContent('لم يُحدد');
   });
 
   it('shows the skeleton while loading and the empty state when the day has no matches', async () => {
@@ -205,15 +215,16 @@ describe('MatchesPage (A3)', () => {
 
   it('changes the competition of the selection for an editor, with each row version', async () => {
     let sent: Record<string, unknown> | null = null;
+    let detailReads = 0;
     renderPage('editor');
     await waitForRows();
 
     server.use(
-      mswHttp.get('*/admin/api/matches/:id', ({ request }) =>
-        HttpResponse.json(envelope({}), {
-          headers: { ETag: `"etag-${new URL(request.url).pathname.split('/').at(-1)}"` },
-        }),
-      ),
+      // A bulk action must not read every match first: the list already carried the version (A-R1-3).
+      mswHttp.get('*/admin/api/matches/:id', () => {
+        detailReads += 1;
+        return HttpResponse.json(envelope({}), { headers: { ETag: '"fresh"' } });
+      }),
       mswHttp.post('*/admin/api/matches/bulk', async ({ request }) => {
         sent = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(envelope({ updated: [{ id: 48213, etag: '"new"' }] }));
@@ -230,13 +241,49 @@ describe('MatchesPage (A3)', () => {
     expect(sent).toMatchObject({
       action: 'change_competition',
       competition_id: 40,
-      items: [{ id: 48213, etag: '"etag-48213"' }],
+      items: [{ id: 48213, etag: '"row-48213"' }],
     });
+    expect(detailReads).toBe(0);
   });
 
-  it('keeps channel removal for an admin, behind the typed phrase', async () => {
+  it('names the stale rows when a bulk write answers 409', async () => {
+    renderPage('editor');
+    await waitForRows();
+
+    server.use(
+      mswHttp.post('*/admin/api/matches/bulk', () =>
+        HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code: 'edit_conflict', message: 'x' },
+            meta: { stale_ids: [48213] },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    await userEvent.click(within(screen.getByTestId('match-row-48213')).getByRole('checkbox'));
+    await userEvent.click(screen.getByRole('button', { name: 'تغيير البطولة' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'تغيير بطولة المباريات المحددة' });
+    await userEvent.selectOptions(within(dialog).getByLabelText('البطولة'), '40');
+    await userEvent.click(screen.getByRole('button', { name: 'تغيير' }));
+
+    expect(await within(screen.getByRole('toolbar')).findByText(/تغيّرت هذه المباريات منذ عرض القائمة: 48213/)).toBeInTheDocument();
+  });
+
+  it('keeps channel removal for an admin, behind the typed phrase, and sends it', async () => {
+    let sent: Record<string, unknown> | null = null;
     renderPage('admin');
     await waitForRows();
+
+    server.use(
+      mswHttp.post('*/admin/api/matches/bulk', async ({ request }) => {
+        sent = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(envelope({ updated: [{ id: 48213, etag: '"new"' }] }));
+      }),
+    );
 
     await userEvent.click(within(screen.getByTestId('match-row-48213')).getByRole('checkbox'));
     await userEvent.click(screen.getByRole('button', { name: 'إزالة القنوات' }));
@@ -247,6 +294,14 @@ describe('MatchesPage (A3)', () => {
 
     await userEvent.type(within(dialog).getByLabelText(/للتأكيد اكتب/), 'إزالة القنوات من 1');
     expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent).toMatchObject({
+      action: 'remove_channels',
+      channel_ids: null,
+      items: [{ id: 48213, etag: '"row-48213"' }],
+    });
   });
 
   it('hides channel removal from an editor', async () => {

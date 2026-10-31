@@ -1,4 +1,4 @@
-import { useId, useState, type ReactElement } from 'react';
+import { useId, useState, type ReactElement, type ReactNode } from 'react';
 
 import { formatCairoTime } from '../../lib/cairoTime';
 import { dialogs } from '../../i18n/ar';
@@ -27,12 +27,13 @@ export interface ConflictParty {
 
 interface ConflictDialogProps {
   open: boolean;
-  /** What was being edited: «ميلان × بولونيا». */
-  subject: string;
+  /** What was being edited: «ميلان × بولونيا», with each Latin name in its own direction island. */
+  subject: ReactNode;
   changedBy: ConflictParty;
   changes: readonly ConflictChange[];
   onReload: () => void;
-  onClose: () => void;
+  /** «تجاهل تعديلاتي»: the form goes back to the version it loaded. */
+  onDiscard: () => void;
 }
 
 export function ConflictDialog({
@@ -41,7 +42,7 @@ export function ConflictDialog({
   changedBy,
   changes,
   onReload,
-  onClose,
+  onDiscard,
 }: ConflictDialogProps): ReactElement {
   const headingId = useId();
   const [showing, setShowing] = useState(false);
@@ -50,7 +51,7 @@ export function ConflictDialog({
     changedBy.kind === 'admin' ? dialogs.conflictTitleAdminPrefix : dialogs.conflictTitleSourcePrefix;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onDiscard} labelledBy={headingId}>
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
@@ -65,7 +66,9 @@ export function ConflictDialog({
             {dialogs.conflictTitleSuffix}
           </h2>
           <p className="text-body text-text-secondary">
-            {dialogs.conflictBody(subject, formatCairoTime(changedBy.at))}
+            {dialogs.conflictBodyBefore}
+            <bdi>{subject}</bdi>
+            {dialogs.conflictBodyAfter(formatCairoTime(changedBy.at))}
           </p>
         </div>
       </div>
@@ -98,7 +101,7 @@ export function ConflictDialog({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button variant="ghost" size="sm" onClick={onDiscard}>
           {dialogs.discard}
         </Button>
         <span className="flex-1" />

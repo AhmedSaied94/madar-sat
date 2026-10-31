@@ -354,7 +354,7 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('a cached live row shows no score, a live state from /v1/live shows its minute',
+    testWidgets('a cached in-play row shows its kickoff, never a live score or «مباشر»',
         (tester) async {
       final live = satelliteMatch(
         id: 5,
@@ -371,7 +371,8 @@ void main() {
       await _pump(tester, env);
 
       expect(find.textContaining('68'), findsNothing, reason: 'a cached copy is never shown as live');
-      expect(find.text('مباشر'), findsWidgets);
+      expect(find.text('مباشر'), findsNothing, reason: 'SC-008: only /v1/live may say live');
+      expect(find.text('6:00 م'), findsOneWidget, reason: 'its kickoff time stands in');
 
       env.live = [
         LiveState(

@@ -1,9 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../links/url_opener.dart';
 import 'just_audio_clip_engine.dart';
+
+part 'clip_controller.g.dart';
 
 /// Where a clip is in its life: nothing, loading, playing, or failed to load.
 enum ClipPhase { idle, loading, playing, error }
@@ -53,15 +55,17 @@ abstract interface class ClipEngine {
   Future<void> dispose();
 }
 
-final clipEngineProvider = Provider<ClipEngine>((ref) {
+@Riverpod(keepAlive: true)
+ClipEngine clipEngine(Ref ref) {
   final engine = JustAudioClipEngine();
   ref.onDispose(engine.dispose);
   return engine;
-});
+}
 
 /// The one player for the whole app (research R26): starting a clip stops the other, and a
 /// clip only ever starts from a tap (web blocks anything else).
-class ClipController extends Notifier<ClipState> {
+@Riverpod(keepAlive: true)
+class ClipController extends _$ClipController {
   int _generation = 0;
   StreamSubscription<ClipEvent>? _events;
 
@@ -119,5 +123,3 @@ class ClipController extends Notifier<ClipState> {
     }
   }
 }
-
-final clipControllerProvider = NotifierProvider<ClipController, ClipState>(ClipController.new);

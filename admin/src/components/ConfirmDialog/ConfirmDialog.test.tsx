@@ -100,7 +100,7 @@ describe('ConflictDialog (If-Match failed)', () => {
         changedBy={changedByAdmin}
         changes={changes}
         onReload={onReload}
-        onClose={vi.fn()}
+        onDiscard={vi.fn()}
       />,
     );
 
@@ -126,7 +126,7 @@ describe('ConflictDialog (If-Match failed)', () => {
         changedBy={changedBySource}
         changes={changes}
         onReload={vi.fn()}
-        onClose={vi.fn()}
+        onDiscard={vi.fn()}
       />,
     );
 

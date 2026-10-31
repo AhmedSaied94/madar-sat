@@ -21,7 +21,9 @@ import 'matches_selection.dart';
 ///
 /// The pages sit in a `PageView` inside the app's RTL `Directionality`, so day 0 is on the
 /// right and a swipe toward the right reveals the next day. The strip, the date in words and
-/// the page are three views of one selection (`matchesSelectionProvider`).
+/// the page are three views of one selection (`matchesSelectionProvider`); the days
+/// themselves come from `matchesWindowProvider`, which a resume past midnight recomputes so
+/// no `setState` keeps a stale «اليوم».
 class MatchesPage extends ConsumerStatefulWidget {
   const MatchesPage({super.key});
 
@@ -29,45 +31,33 @@ class MatchesPage extends ConsumerStatefulWidget {
   ConsumerState<MatchesPage> createState() => _MatchesPageState();
 }
 
-class _MatchesPageState extends ConsumerState<MatchesPage> with WidgetsBindingObserver {
+class _MatchesPageState extends ConsumerState<MatchesPage> {
   late final PageController _pager = PageController(initialPage: MatchesDays.todayIndex);
-  late DateTime _today = _dayOf(ref.read(clockProvider)());
-  late List<DateTime> _days = MatchesDays.kept(_today);
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    _lifecycle.dispose();
     _pager.dispose();
     super.dispose();
   }
 
-  static DateTime _dayOf(DateTime instant) => DateTime(instant.year, instant.month, instant.day);
-
-  /// A phone left with the app open past midnight comes back on yesterday's «اليوم» and a
-  /// window of days that starts a day late, so on resume a new date opens the new today.
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
-    final today = _dayOf(ref.read(clockProvider)());
-    if (today == _today) return;
-    setState(() {
-      _today = today;
-      _days = MatchesDays.kept(today);
-    });
-    ref.read(matchesSelectionProvider.notifier).selectDay(MatchesDays.todayIndex);
-    if (_pager.hasClients) _pager.jumpToPage(MatchesDays.todayIndex);
+  /// A phone left with the app open past midnight comes back on yesterday's «اليوم»; asking
+  /// for the window again is enough, and [build]'s listener moves the selection if it moved.
+  void _onLifecycle(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) ref.invalidate(matchesWindowProvider);
   }
 
   /// A tap on the strip or on «اليوم». Neighbours slide; farther days jump, so the days in
   /// between are never built and never requested.
-  void _select(DateTime day) {
-    final target = _days.indexOf(day);
+  void _select(List<DateTime> days, DateTime day) {
+    final target = days.indexOf(day);
     if (target < 0 || !_pager.hasClients) return;
     ref.read(matchesSelectionProvider.notifier).selectDay(target);
     final current = _pager.page?.round() ?? target;
@@ -87,18 +77,31 @@ class _MatchesPageState extends ConsumerState<MatchesPage> with WidgetsBindingOb
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
+    final window = ref.watch(matchesWindowProvider);
+    final days = window.days;
+
+    ref.listen(matchesWindowProvider, (previous, next) {
+      if (previous == null || previous.today == next.today) return;
+      ref.read(matchesSelectionProvider.notifier).selectDay(MatchesDays.todayIndex);
+      if (_pager.hasClients) _pager.jumpToPage(MatchesDays.todayIndex);
+    });
+
     final selection = ref.watch(matchesSelectionProvider);
-    final selected = _days[selection.dayIndex];
+    final selected = days[selection.dayIndex.clamp(0, days.length - 1)];
     final state = ref.watch(matchesDayStateProvider(selected));
     final view = state is DayLoaded ? state.view : null;
+    // The cached rows, before the live merge: a day whose copy says "in play" is exactly
+    // the day to ask `/v1/live` about (FR-047).
+    final cachedRows = view?.snapshot.data;
     final now = ref.watch(clockProvider)();
 
     return Scaffold(
       backgroundColor: colors.bg,
       body: SafeArea(
         child: LivePollingScope(
-          hasLiveOrImminent: view != null && hasLiveOrImminent(view.rows, now: now),
-          onRevalidate: () => ref.invalidate(matchesDayProvider(selected)),
+          hasLiveOrImminent:
+              cachedRows != null && hasLiveOrImminent(cachedRows, now: now),
+          onRevalidate: () => ref.read(matchesDayProvider(selected).notifier).revalidate(),
           // Stretch: a horizontal scroller (the chips) otherwise shrinks to its content and
           // centres itself.
           child: Column(
@@ -111,10 +114,10 @@ class _MatchesPageState extends ConsumerState<MatchesPage> with WidgetsBindingOb
                   vertical: MadarSpace.s2,
                 ),
                 child: DateStrip(
-                  days: MatchesDays.stripWindow(_days, selection.dayIndex),
+                  days: MatchesDays.stripWindow(days, selection.dayIndex),
                   selected: selected,
-                  today: _today,
-                  onSelect: _select,
+                  today: window.today,
+                  onSelect: (day) => _select(days, day),
                 ),
               ),
               Padding(
@@ -131,7 +134,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> with WidgetsBindingOb
                       ),
                       if (selection.dayIndex != MatchesDays.todayIndex)
                         TextButton(
-                          onPressed: () => _select(_today),
+                          onPressed: () => _select(days, window.today),
                           style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
                           child: Text(l.today),
                         ),
@@ -146,7 +149,9 @@ class _MatchesPageState extends ConsumerState<MatchesPage> with WidgetsBindingOb
                     value: MatchesFilter.live,
                     label: l.live,
                     count: view?.liveCount,
-                    isLive: true,
+                    // The dot means "something is on": with nothing live the chip is quiet
+                    // (US3 scenario 1, constitution IV).
+                    isLive: (view?.liveCount ?? 0) > 0,
                   ),
                 ],
                 selected: selection.filter,
@@ -155,11 +160,11 @@ class _MatchesPageState extends ConsumerState<MatchesPage> with WidgetsBindingOb
               Expanded(
                 child: PageView.builder(
                   controller: _pager,
-                  itemCount: _days.length,
+                  itemCount: days.length,
                   onPageChanged: ref.read(matchesSelectionProvider.notifier).selectDay,
                   itemBuilder: (context, index) => DayPage(
-                    key: ValueKey(_days[index]),
-                    day: _days[index],
+                    key: ValueKey(days[index]),
+                    day: days[index],
                     filter: selection.filter,
                   ),
                 ),

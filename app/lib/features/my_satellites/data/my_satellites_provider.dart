@@ -1,44 +1,68 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/network/api_failure.dart';
 import '../../../core/network/generated/models/satellite.dart';
-import '../../../core/network/generated/models/satellite_ref.dart';
 import '../../../core/network/swr_providers.dart';
 import '../../../core/network/swr_repository.dart';
+import '../domain/default_satellites.dart';
 
-/// "My satellites" until D3 stores the user's choice (O10, FR-043): Nilesat 7.0W and Badr,
-/// found by slug because ids are assigned by the database.
-abstract final class MySatellites {
-  static const Set<String> defaultSlugs = {'nilesat-7-0w', 'badr-26-0e'};
-
-  /// True when [satellite] is one of my satellites; a carriage without one is not.
-  static bool isMine(SatelliteRef? satellite) =>
-      satellite != null && defaultSlugs.contains(satellite.slug);
-}
-
-List<Satellite> parseSatellites(Object? data) => [
-      for (final item in data! as List<Object?>)
-        Satellite.fromJson((item! as Map).cast<String, Object?>()),
-    ];
+part 'my_satellites_provider.g.dart';
 
 /// `/v1/satellites`, stale-while-revalidate (24 h freshness). Shared by S4, S5.1 and the
 /// satellite resolution below. No automatic retry: Riverpod would hold the state at loading
 /// for about 38 s, hiding the error copy of a screen that has its own «إعادة المحاولة».
-final satellitesProvider = StreamProvider<SwrSnapshot<List<Satellite>>>(
-  (ref) => ref.watch(swrRepositoryProvider).watchDocument<List<Satellite>>(
-        key: DocumentKeys.satellites,
-        path: '/v1/satellites',
-        parse: parseSatellites,
-      ),
-  retry: (retryCount, error) => null,
-);
+@Riverpod(retry: _never)
+class Satellites extends _$Satellites {
+  @override
+  Stream<SwrSnapshot<List<Satellite>>> build() =>
+      ref.watch(swrRepositoryProvider).watchSatellites();
+
+  /// The poll: read again through the provider's own stream.
+  void revalidate() => ref.invalidateSelf();
+
+  /// Pull to refresh: the whole cache, revalidate and write cycle, then a re-read.
+  Future<void> refresh() async {
+    try {
+      await ref.read(swrRepositoryProvider).watchSatellites().drain<void>();
+    } on ApiFailure {
+      // The state keeps the cached copy or its error; the screen says which.
+    }
+    ref.invalidateSelf();
+  }
+}
 
 /// The ids of my satellites, resolved from [satellitesProvider]. Empty until the list has
 /// loaded (or when the server lists neither), never a guess.
-final mySatelliteIdsProvider = Provider<Set<int>>((ref) {
+@riverpod
+Set<int> mySatelliteIds(Ref ref) {
   final satellites = ref.watch(satellitesProvider).value?.data;
   if (satellites == null) return const {};
   return {
     for (final satellite in satellites)
       if (MySatellites.defaultSlugs.contains(satellite.slug)) satellite.id,
   };
-});
+}
+
+/// My satellites as the catalogue lists them, in its order.
+@riverpod
+List<Satellite> mySatelliteEntries(Ref ref) {
+  final satellites = ref.watch(satellitesProvider).value?.data;
+  if (satellites == null) return const [];
+  return [
+    for (final satellite in satellites)
+      if (MySatellites.defaultSlugs.contains(satellite.slug)) satellite,
+  ];
+}
+
+/// Their Arabic names, for a title that names them: «على نايل سات وبدر».
+@riverpod
+List<String> mySatelliteNames(Ref ref) =>
+    [for (final satellite in ref.watch(mySatelliteEntriesProvider)) satellite.nameAr];
+
+/// The satellites the user chose, or null until D3 stores a choice. While it is null the
+/// O10 default set stands in, and S3 titles it by name rather than as «على أقمارك»
+/// (constitution I: the screen may not call two bundled defaults "yours").
+@Riverpod(keepAlive: true)
+Set<int>? chosenSatelliteIds(Ref ref) => null;
+
+Duration? _never(int retryCount, Object error) => null;

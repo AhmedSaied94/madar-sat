@@ -128,8 +128,10 @@ export const dialogs = {
   conflictTitleAdminPrefix: 'عدّل',
   conflictTitleSourcePrefix: 'حدّث',
   conflictTitleSuffix: 'هذا العنصر',
-  conflictBody: (subject: string, cairoTime: string): string =>
-    `حُفظت نسخة أحدث من «${subject}» في ${cairoTime} بتوقيت القاهرة. تعديلاتك لم تُحفظ بعد.`,
+  /** The other side's save, with the subject as its own island: «حُفظت نسخة أحدث من «…» في …». */
+  conflictBodyBefore: 'حُفظت نسخة أحدث من «',
+  conflictBodyAfter: (cairoTime: string): string =>
+    `» في ${cairoTime} بتوقيت القاهرة. تعديلاتك لم تُحفظ بعد.`,
   showChanges: 'اعرض التغييرات',
   hideChanges: 'أخفِ التغييرات',
   reload: 'إعادة التحميل',
@@ -193,6 +195,8 @@ export const matches = {
     competitionTitle: 'تغيير بطولة المباريات المحددة',
     competitionBody: 'ستنتقل كل المباريات المحددة إلى البطولة التي تختارها.',
     confirm: 'تغيير',
+    /** A `409` from a bulk write names the rows whose version moved (A-R1-3). */
+    stale: (ids: string): string => `تغيّرت هذه المباريات منذ عرض القائمة: ${ids}. حدّث القائمة ثم أعد المحاولة`,
   },
   empty: {
     title: 'لا مباريات في هذا اليوم',
@@ -204,6 +208,8 @@ export const matches = {
   showing: (shown: number, total: number): string => `عرض ${shown} من ${total}`,
   keyboard: 'للتنقل',
   statusHint: 'تقديري',
+  /** A row with no kickoff the sources know yet (A-R1-24). */
+  timeUnknown: 'لم يُحدد',
 } as const;
 
 /** A4 (admin board "Match editor"). */
@@ -213,6 +219,9 @@ export const editor = {
   preview: 'معاينة',
   save: 'حفظ',
   saving: 'جارٍ الحفظ',
+  loading: 'جارٍ تحميل المباراة',
+  loadFailedBody: 'تحقق من الاتصال ثم أعد المحاولة، أو ارجع إلى القائمة.',
+  backToMatches: 'رجوع إلى المباريات',
   discard: 'تجاهل',
   detailsTab: 'التفاصيل',
   historyTab: 'السجل',
@@ -234,6 +243,8 @@ export const editor = {
   addChannel: 'إضافة قناة',
   searchChannel: 'ابحث عن قناة',
   category: 'التصنيف',
+  satellite: 'القمر',
+  noSatellite: 'منصات بلا قمر',
   all: 'الكل',
   sports: 'رياضة',
   entertainment: 'ترفيه',
@@ -247,7 +258,9 @@ export const editor = {
   hiddenAlways: 'مخفية دائماً',
   show: 'إظهار',
   hidePhrase: 'إخفاء دائماً',
-  hideTitle: (name: string): string => `إخفاء «${name}» دائماً؟`,
+  /** «إخفاء «<name>» دائماً؟» built from its parts, so the Latin name stays its own island (A-R1-18). */
+  hideTitleBefore: 'إخفاء ',
+  hideTitleAfter: ' دائماً؟',
   hideBody: 'لن تظهر هذه القناة في أي مباراة بعد الآن، ولن يعيدها أي مصدر.',
   commentator: (slot: number): string => `المعلق ${slot}`,
   none: 'بدون معلق',
@@ -262,9 +275,15 @@ export const editor = {
   home: 'صاحب الأرض',
   away: 'الضيف',
   scoreLabel: 'النتيجة',
+  scoreRequired: 'أدخل نتيجة المباراة كاملة قبل الحفظ',
   penalties: 'ركلات الترجيح',
   scoreNotAllowed: 'لا نتيجة لهذه الحالة',
-  lockedFields: 'الحقول المقفلة',
+  period: 'الشوط',
+  periodFirstHalf: 'الشوط الأول',
+  periodSecondHalf: 'الشوط الثاني',
+  periodExtraFirst: 'إضافي أول',
+  periodExtraSecond: 'إضافي ثانٍ',
+  minute: 'الدقيقة',
   lockedHint: 'لن تغيّر المصادر هذه الحقول. يُقفل الحقل تلقائياً عند تعديله يدوياً.',
   unsaved: 'لديك تغييرات غير محفوظة',
   unsavedBody: 'إذا غادرت الآن ستفقد تعديلات القنوات والمرحلة.',

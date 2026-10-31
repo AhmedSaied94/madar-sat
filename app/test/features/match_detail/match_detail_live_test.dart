@@ -43,16 +43,33 @@ void main() {
     expect(merged.minute, isNull);
   });
 
-  test('a cached in-play match with no live state is the quiet estimated «مباشر»', () {
+  test('a cached in-play match with no live state is shown by its kickoff, never as live', () {
     final merged = detailWithLiveState(
       sampleMatchDetail(status: Status.live, score: cachedScore, minute: '88'),
       null,
     );
 
-    expect(merged.status, Status.live);
-    expect(merged.estimated, isTrue);
+    // Only /v1/live may say a match is being played (constitution II, SC-008): with no live
+    // state the row falls back to its kickoff time, with no score and no minute.
+    expect(merged.status, Status.scheduled);
+    expect(merged.statusLabel, isNull);
+    expect(merged.period, isNull);
     expect(merged.score, isNull);
     expect(merged.minute, isNull);
+    expect(merged.kickoffAt, isNotNull);
+  });
+
+  test('every in-play status falls back the same way: halftime, extra time, penalties', () {
+    for (final status in const [Status.halftime, Status.extraTime, Status.penalties]) {
+      final merged = detailWithLiveState(
+        sampleMatchDetail(status: status, score: cachedScore, minute: '60'),
+        null,
+      );
+
+      expect(merged.status, Status.scheduled, reason: '$status');
+      expect(merged.score, isNull, reason: '$status');
+      expect(merged.minute, isNull, reason: '$status');
+    }
   });
 
   test('a match that is not in play is left as cached', () {

@@ -1,5 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+part 'url_opener.g.dart';
 
 /// Opens a link outside the app (the reception video). The one place feature code reaches
 /// `url_launcher`, so a test answers without leaving the app.
@@ -24,7 +26,8 @@ class UrlLauncherOpener implements UrlOpener {
   }
 }
 
-final urlOpenerProvider = Provider<UrlOpener>((ref) => const UrlLauncherOpener());
+@Riverpod(keepAlive: true)
+UrlOpener urlOpener(Ref ref) => const UrlLauncherOpener();
 
 const int _maxAddressLength = 2048;
 

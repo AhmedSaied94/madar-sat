@@ -14,3 +14,5 @@ swagger_parser:
   export_file: true
   mark_files_as_generated: true
   put_clients_in_folder: false
+  # The SWR layer reads the status and `ETag` from `HttpResponse` (research R25).
+  original_http_response: true

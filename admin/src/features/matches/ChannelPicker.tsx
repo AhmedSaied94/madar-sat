@@ -1,12 +1,13 @@
-import { useState, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 
-import { useListChannels } from '../../api/generated/admin';
-import type { AdminChannelCategory, ChannelItem } from '../../api/generated/admin.schemas';
+import { useListChannels, useListSatellites } from '../../api/generated/admin';
+import type { AdminChannelCategory, AdminSatellite, ChannelItem, Kind } from '../../api/generated/admin.schemas';
 import { Button } from '../../components/Button/Button';
 import { editor as copy } from '../../i18n/ar';
 
-// A4's channel picker: search, then filter by category, and add the channel to this match's links.
-// The satellite and frequency are on every row: two channels can share a name across positions.
+// A4's channel picker: search, then filter by category, satellite or platform, and add the channel to
+// this match's links. The satellite and frequency are on every row: two channels can share a name
+// across positions (A-R1-7).
 interface ChannelPickerProps {
   onAdd: (channel: ChannelItem) => void;
 }
@@ -14,9 +15,19 @@ interface ChannelPickerProps {
 export function ChannelPicker({ onAdd }: ChannelPickerProps): ReactElement {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<AdminChannelCategory | ''>('');
+  const [satelliteId, setSatelliteId] = useState<string>('');
+  const { data: satellites } = useListSatellites();
+  const satelliteList: readonly AdminSatellite[] = useMemo(() => satellites?.data ?? [], [satellites]);
+
+  // «منصات بلا قمر» is the platform filter: no satellite, no frequency.
+  const platformOnly = satelliteId === 'platform';
+  const kind: Kind | null = platformOnly ? 'platform' : null;
+
   const { data, isFetching } = useListChannels({
     q: q.trim() === '' ? null : q.trim(),
     category: category === '' ? null : category,
+    kind,
+    satellite_id: platformOnly || satelliteId === '' ? null : Number(satelliteId),
     limit: 20,
   });
   const channels: readonly ChannelItem[] = data?.data ?? [];
@@ -41,6 +52,20 @@ export function ChannelPicker({ onAdd }: ChannelPickerProps): ReactElement {
           <option value="">{`${copy.category}: ${copy.all}`}</option>
           <option value="sports">{copy.sports}</option>
           <option value="entertainment">{copy.entertainment}</option>
+        </select>
+        <select
+          aria-label={copy.satellite}
+          value={satelliteId}
+          onChange={(event) => setSatelliteId(event.target.value)}
+          className="text-label h-8 rounded-md bg-bg px-2 text-text-primary ring-1 ring-inset ring-divider-strong"
+        >
+          <option value="">{`${copy.satellite}: ${copy.all}`}</option>
+          <option value="platform">{copy.noSatellite}</option>
+          {satelliteList.map((satellite) => (
+            <option key={satellite.id} value={satellite.id}>
+              {satellite.name_ar} · {satellite.orbital_position === null ? '—' : `${satellite.orbital_position}°`}
+            </option>
+          ))}
         </select>
       </div>
 

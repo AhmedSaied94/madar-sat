@@ -78,7 +78,7 @@ void main() {
       expect(withLiveState(cached, null), cached);
     });
 
-    test('a cached live row with no live state is NOT shown as live with a score', () {
+    test('a cached live row with no live state is never shown as live', () {
       final cached = sampleMatch(
         status: Status.live,
         minute: '34',
@@ -87,9 +87,12 @@ void main() {
 
       final merged = withLiveState(cached, null);
 
-      expect(merged.estimated, isTrue, reason: 'nothing confirms it, so it is the quiet state');
+      // Non-live treatment: its kickoff time stands in, with no score and no minute.
+      expect(merged.status, Status.scheduled);
+      expect(merged.kickoffAt, cached.kickoffAt);
       expect(merged.score, isNull);
       expect(merged.minute, isNull);
+      expect(merged.estimated, isFalse);
     });
 
     test('every cached in-play status is treated the same way', () {
@@ -103,9 +106,11 @@ void main() {
           null,
         );
 
-        expect(merged.status, Status.live, reason: '$status');
-        expect(merged.estimated, isTrue, reason: '$status');
+        expect(merged.status, Status.scheduled, reason: '$status');
         expect(merged.score, isNull, reason: '$status');
+        expect(merged.minute, isNull, reason: '$status');
+        expect(merged.period, isNull, reason: '$status');
+        expect(isInPlayStatus(merged.status), isFalse, reason: '$status: it counts as live nowhere');
       }
     });
   });

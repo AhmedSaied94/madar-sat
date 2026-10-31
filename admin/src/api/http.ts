@@ -50,6 +50,26 @@ import {
 export const NETWORK_ERROR = 'network_error';
 export const INVALID_RESPONSE = 'invalid_response';
 
+/**
+ * The `ETag` a response carried, kept on its envelope (A-R1-2). Every write and read goes through this
+ * mutator, so the version travels with the body the UI already holds instead of a second `GET`.
+ */
+const RESPONSE_ETAG: unique symbol = Symbol('madar.responseEtag');
+
+/** The `ETag` of the response whose envelope this is, or null when it carried none. */
+export function etagOf(envelope: unknown): string | null {
+  if (typeof envelope !== 'object' || envelope === null) return null;
+  const value = (envelope as Record<symbol, unknown>)[RESPONSE_ETAG];
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+function withEtag<T>(body: T, etag: string | null): T {
+  if (typeof body === 'object' && body !== null) {
+    Object.defineProperty(body, RESPONSE_ETAG, { value: etag, configurable: true });
+  }
+  return body;
+}
+
 export class ApiError extends Error {
   override readonly name = 'ApiError';
 
@@ -183,11 +203,16 @@ function sessionHeaders(method: string): Record<string, string> {
 
 async function refreshOnce(): Promise<Session> {
   const csrf = csrfCookie();
-  const response = await http.request<unknown>({
-    method: 'POST',
-    url: REFRESH_URL,
-    headers: csrf ? { [CSRF_HEADER]: csrf } : {},
-  });
+  const response = await http
+    .request<unknown>({
+      method: 'POST',
+      url: REFRESH_URL,
+      headers: csrf ? { [CSRF_HEADER]: csrf } : {},
+    })
+    // A refusal is an `ApiError` with its status, so only a 401/403 ends the session (A-R1-19).
+    .catch((error: unknown) => {
+      throw toApiError(error);
+    });
   const body = refreshResponse.safeParse(response.data);
   if (!body.success) throw new ApiError(INVALID_RESPONSE, response.status);
   const session = body.data.data as Session;
@@ -198,16 +223,35 @@ async function refreshOnce(): Promise<Session> {
 
 /** One refresh at a time: every caller that arrived while it ran awaits the same promise. */
 export function refreshSession(): Promise<Session> {
-  refreshInFlight ??= refreshOnce()
+  refreshInFlight ??= refreshWithRetry()
     .catch((error: unknown) => {
-      accessToken = null;
-      handlers.onExpired?.();
-      throw error instanceof ApiError ? error : new ApiError(NETWORK_ERROR, null);
+      const failure = error instanceof ApiError ? error : new ApiError(NETWORK_ERROR, null);
+      // Only a definitive refusal ends the session (A-R1-19): a blip during a refresh must not sign
+      // the editor out of A4 and throw away unsaved work.
+      if (failure.status === 401 || failure.status === 403) {
+        accessToken = null;
+        handlers.onExpired?.();
+      }
+      throw failure;
     })
     .finally(() => {
       refreshInFlight = null;
     });
   return refreshInFlight;
+}
+
+/** A refresh whose network failed is tried once more before the editor hears about it. */
+async function refreshWithRetry(): Promise<Session> {
+  const attempts = 2;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await refreshOnce();
+    } catch (error) {
+      const failure = error instanceof ApiError ? error : new ApiError(NETWORK_ERROR, null);
+      if (failure.code === NETWORK_ERROR && attempt < attempts) continue;
+      throw failure;
+    }
+  }
 }
 
 /** Ends the session server-side (it clears both cookies); the caller drops the in-memory one. */
@@ -218,28 +262,25 @@ export async function endSession(): Promise<void> {
 }
 
 /**
- * An entity's `ETag` from a `GET` (contract: single-entity reads carry it). A3 has no per-row version
- * in the list, so a bulk action reads each selected match's version before sending `If-Match` items.
- */
-export async function getEntityEtag(url: string): Promise<string> {
-  const response = await http.get<unknown>(url).catch((error: unknown) => {
-    throw toApiError(error);
-  });
-  const etag = response.headers.etag;
-  if (typeof etag !== 'string' || etag === '') throw new ApiError(INVALID_RESPONSE, response.status);
-  return etag;
-}
-
-/**
  * Dev builds only: `?mock=<example>` asks Prism for that named example of the spec (research R15).
- * Only operations that declare the example get the header; Prism also needs the example's status.
+ * The example is looked up by the operation's template (`PATCH /admin/api/matches/{}`), because the
+ * spec never declares a literal id, so a page on `/matches/48213` can still ask for `edit_conflict`.
  */
 function mockPreferHeader(method: string, url: string): Record<string, string> {
   if (!import.meta.env.DEV) return {};
   const example = new URLSearchParams(window.location.search).get('mock');
-  const operation = `${method} ${url}`;
-  const status = example ? __MOCK_EXAMPLE_STATUSES__[operation]?.[example] : undefined;
+  const operation = operationTemplate(method, url);
+  const status = example && operation ? __MOCK_EXAMPLE_STATUSES__[operation]?.[example] : undefined;
   return example && status ? { Prefer: `code=${status}, example=${example}` } : {};
+}
+
+/** The `<METHOD> <path>` template of a request, with `{}` for each path parameter, if one is known. */
+export function operationTemplate(method: string, url: string): string | undefined {
+  for (const key of Object.keys(responseSchemas)) {
+    const space = key.indexOf(' ');
+    if (key.slice(0, space) === method && pathMatches(key.slice(space + 1), url)) return key;
+  }
+  return undefined;
 }
 
 function toApiError(error: unknown): ApiError {
@@ -286,16 +327,20 @@ async function requestWithRetry<T>(
     });
     const body = schema.safeParse(response.data);
     if (!body.success) throw new ApiError(INVALID_RESPONSE, response.status);
+    const etag = response.headers.etag;
     // The schema was generated from the same operation as T, so the parsed body has T's shape.
-    return body.data as T;
+    return withEtag(body.data as T, typeof etag === 'string' ? etag : null);
   } catch (error) {
     const apiError = toApiError(error);
     // An expired token is refreshed once, shared by every waiting request, then the call retries once.
     if (!retried && apiError.code === 'token_expired' && url !== REFRESH_URL) {
       try {
         await refreshSession();
-      } catch {
-        throw apiError;
+      } catch (refreshError) {
+        // A definitive refusal is reported as itself (`refresh_invalid`), not as the 401 that led here;
+        // a blip keeps the original error and the session (A-R1-19).
+        const failure = refreshError instanceof ApiError ? refreshError : apiError;
+        throw failure.status === 401 || failure.status === 403 ? failure : apiError;
       }
       return requestWithRetry<T>(config, options, method, url, schema, true);
     }

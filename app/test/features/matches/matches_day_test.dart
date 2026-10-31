@@ -110,6 +110,24 @@ void main() {
     test('an empty day is empty', () {
       expect(groupDay(day, const []).isEmpty, isTrue);
     });
+
+    test('a group shows a round only when every match in it shares one', () {
+      final round5 = egypt.copyWith(stage: 'الجولة 5');
+      final round8 = egypt.copyWith(stage: 'الجولة 8');
+
+      final mixed = groupDay(day, [
+        _match(1, round5, hour: 18),
+        _match(2, round8, hour: 20),
+        _match(3, round8, hour: 22),
+      ]);
+      expect(mixed.competitions.single.stage, isNull, reason: 'no single round to name');
+
+      final same = groupDay(day, [
+        _match(4, round8, hour: 18),
+        _match(5, round8, hour: 20),
+      ]);
+      expect(same.competitions.single.stage, 'الجولة 8');
+    });
   });
 
   group('live rows', () {

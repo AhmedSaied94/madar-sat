@@ -2,7 +2,7 @@ import { HttpResponse, http as mswHttp } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server } from '../test/server';
-import { adminHttp, ApiError, bindSession, getAccessToken, setAccessToken } from './http';
+import { adminHttp, ApiError, bindSession, etagOf, getAccessToken, operationTemplate, setAccessToken } from './http';
 
 // The mutator's own rules (T095): the CSRF header, one shared refresh behind two expired requests,
 // a refresh that fails, and a body that does not match its Zod schema.
@@ -114,7 +114,7 @@ describe('adminHttp', () => {
     expect(calls).toBe(2);
   });
 
-  it('clears the token and reports an expired session when the refresh fails', async () => {
+  it('clears the token and reports the refusal when the refresh is refused', async () => {
     setAccessToken('expired');
     const onExpired = vi.fn();
     bindSession({ onExpired });
@@ -124,9 +124,53 @@ describe('adminHttp', () => {
       mswHttp.post('*/admin/api/matches/bulk', () => HttpResponse.json(errorBody('token_expired'), { status: 401 })),
     );
 
-    await expect(bulk()).rejects.toMatchObject({ code: 'token_expired' });
+    // The refusal is reported as itself, not as the 401 that led to it (A-R1-19).
+    await expect(bulk()).rejects.toMatchObject({ code: 'refresh_invalid' });
     expect(getAccessToken()).toBeNull();
     expect(onExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the session when the refresh only fails on the network', async () => {
+    setAccessToken('expired');
+    const onExpired = vi.fn();
+    bindSession({ onExpired });
+    let refreshes = 0;
+
+    server.use(
+      mswHttp.post('*/admin/api/auth/refresh', () => {
+        refreshes += 1;
+        return HttpResponse.error();
+      }),
+      mswHttp.post('*/admin/api/matches/bulk', () => HttpResponse.json(errorBody('token_expired'), { status: 401 })),
+    );
+
+    await expect(bulk()).rejects.toMatchObject({ code: 'token_expired' });
+    // The refresh is tried once more before the editor hears about it, and nobody is signed out.
+    expect(refreshes).toBe(2);
+    expect(getAccessToken()).toBe('expired');
+    expect(onExpired).not.toHaveBeenCalled();
+  });
+
+  it('carries the response ETag on the envelope it returns', async () => {
+    server.use(
+      mswHttp.get('*/admin/api/sources', () =>
+        HttpResponse.json(envelope([{ name: 'ysscores', kind: 'scraper', is_enabled: true }]), {
+          headers: { ETag: '"v7"' },
+        }),
+      ),
+    );
+
+    const body = await adminHttp<Record<string, unknown>>({ method: 'GET', url: '/admin/api/sources' });
+
+    expect(etagOf(body)).toBe('"v7"');
+    expect(etagOf({ success: true })).toBeNull();
+  });
+
+  it('matches a literal id to the operation template Prism names its examples by', () => {
+    // `?mock=edit_conflict` on `/matches/48213` must find `PATCH /admin/api/matches/{}` (A-R1-17).
+    expect(operationTemplate('PATCH', '/admin/api/matches/48213')).toBe('PATCH /admin/api/matches/{}');
+    expect(operationTemplate('GET', '/admin/api/matches')).toBe('GET /admin/api/matches');
+    expect(operationTemplate('GET', '/admin/api/unknown/1')).toBeUndefined();
   });
 
   it('rejects a body that fails its Zod schema instead of passing it through', async () => {

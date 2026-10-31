@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
 import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/features/my_satellites/data/my_satellites_provider.dart';
+import 'package:madar_sat/features/my_satellites/domain/default_satellites.dart';
 
 import '../../fixtures/sample_models.dart';
 
@@ -20,14 +21,20 @@ Satellite _satellite(int id, String slug) => Satellite(
       receptionUrl: null,
     );
 
+/// [satellitesProvider] answered without a server.
+class _FakeSatellites extends Satellites {
+  _FakeSatellites(this.satellites);
+
+  final List<Satellite>? satellites;
+
+  @override
+  Stream<SwrSnapshot<List<Satellite>>> build() => satellites == null
+      ? const Stream<SwrSnapshot<List<Satellite>>>.empty()
+      : Stream.value(SwrSnapshot(data: satellites));
+}
+
 ProviderContainer _container(List<Satellite>? satellites) => ProviderContainer(
-      overrides: [
-        satellitesProvider.overrideWith(
-          (ref) => satellites == null
-              ? const Stream<SwrSnapshot<List<Satellite>>>.empty()
-              : Stream.value(SwrSnapshot(data: satellites)),
-        ),
-      ],
+      overrides: [satellitesProvider.overrideWith(() => _FakeSatellites(satellites))],
     );
 
 /// Holds a listener, as a screen would: Riverpod 3 pauses a provider nobody listens to.

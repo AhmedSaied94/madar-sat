@@ -1,10 +1,11 @@
+import { clsx } from 'clsx';
 import { useMemo, useState, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { AdminMatchRow, ListMatchesParams, Status } from '../../api/generated/admin.schemas';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { Icon } from '../../components/Icon/Icon';
-import { SourceChip } from '../../components/StatusChip/StatusChip';
+import { SourceChip, type SourceCode } from '../../components/StatusChip/StatusChip';
 import { focusRing } from '../../components/focus';
 import { useSession } from '../../features/auth/session';
 import { cairoDay, cairoDayBounds, formatCairoClock, formatCairoDayLabel, shiftCairoDay } from '../../lib/cairoTime';
@@ -28,22 +29,26 @@ const API_STATUSES: readonly Status[] = [
   'abandoned',
 ];
 
-const SOURCE_CODES: Readonly<Record<string, string>> = {
+/** The board's short codes for the sources that have one (A-R1-13). */
+const SOURCE_CODES: Readonly<Record<string, SourceCode>> = {
   ysscores: 'YSS',
-  legacy: 'LST',
-  kickoff: 'YK',
-  satair_bridge: 'SEZ',
+  livesoccertv: 'LST',
+  sporteventz: 'SEZ',
+  yallakora: 'YK',
+  api_football: 'API',
+  manual: 'manual',
 };
 
-/** The board's short source codes; an unknown source keeps its own name as its badge. */
+/** A known source goes through the shared `SourceChip`; an unknown one keeps its own name. */
 function SourceBadge({ name }: { name: string }): ReactElement {
-  if (name === 'manual') return <SourceChip source="manual" />;
+  const code = SOURCE_CODES[name];
+  if (code) return <SourceChip source={code} />;
   return (
     <span
       dir="ltr"
       className="text-micro rounded-xs bg-surface-2 px-2 py-1 font-mono tracking-wide text-text-secondary ring-1 ring-inset ring-divider"
     >
-      {SOURCE_CODES[name] ?? name.slice(0, 3).toUpperCase()}
+      {name}
     </span>
   );
 }
@@ -174,7 +179,10 @@ export function MatchesPage(): ReactElement {
         <span className="flex-1" />
         <Link
           to="/matches/new"
-          className={`text-label inline-flex h-8 min-h-12 items-center gap-2 rounded-lg bg-accent px-3 font-semibold text-on-accent ${focusRing}`}
+          className={clsx(
+            'text-label inline-flex h-8 min-h-12 items-center gap-2 rounded-lg bg-accent px-3 font-semibold text-on-accent',
+            focusRing,
+          )}
         >
           <Icon name="plus" size="sm" />
           {copy.add}
@@ -192,9 +200,11 @@ export function MatchesPage(): ReactElement {
                 setDay(tab.day);
                 setSelected(new Set());
               }}
-              className={`text-caption h-8 rounded-sm px-3 font-semibold ${
-                day === tab.day ? 'bg-segmented-on text-text-primary' : 'text-text-secondary hover:bg-surface-2'
-              } ${focusRing}`}
+              className={clsx(
+                'text-caption h-8 rounded-sm px-3 font-semibold',
+                day === tab.day ? 'bg-segmented-on text-text-primary' : 'text-text-secondary hover:bg-surface-2',
+                focusRing,
+              )}
             >
               {tab.label}
             </button>
@@ -257,9 +267,11 @@ export function MatchesPage(): ReactElement {
             type="button"
             aria-pressed={missingOnly}
             onClick={() => setMissingOnly((current) => !current)}
-            className={`text-caption inline-flex h-8 items-center gap-2 rounded-md px-2 font-semibold ring-1 ring-inset ${
-              missingOnly ? 'bg-accent-container text-accent-text ring-accent' : 'bg-surface-1 text-text-secondary ring-divider'
-            } ${focusRing}`}
+            className={clsx(
+              'text-caption inline-flex h-8 items-center gap-2 rounded-md px-2 font-semibold ring-1 ring-inset',
+              missingOnly ? 'bg-accent-container text-accent-text ring-accent' : 'bg-surface-1 text-text-secondary ring-divider',
+              focusRing,
+            )}
           >
             <Icon name="check" size="sm" />
             {copy.missingOnly}
@@ -346,7 +358,7 @@ export function MatchesPage(): ReactElement {
                     </td>
                     <td className="px-2 py-2">
                       {row.time_tbd || !row.kickoff_at ? (
-                        <span className="text-caption text-text-tertiary">—</span>
+                        <span className="text-caption text-text-tertiary">{copy.timeUnknown}</span>
                       ) : (
                         <span className="text-label font-semibold text-text-primary">
                           <time dateTime={row.kickoff_at}>{formatCairoClock(row.kickoff_at).time}</time>{' '}
@@ -354,7 +366,7 @@ export function MatchesPage(): ReactElement {
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2">
+                    <td id={`match-teams-${row.id}`} className="px-2 py-2">
                       <span className="flex items-center gap-2">
                         <Crest logo={row.home.logo} name={row.home.name} />
                         <bdi className="text-label text-text-primary">{row.home.name}</bdi>
@@ -397,10 +409,14 @@ export function MatchesPage(): ReactElement {
                       ) : null}
                     </td>
                     <td className="px-2 py-2">
+                      <span id={`edit-${row.id}`} hidden>{copy.columns.edit}</span>
                       <Link
                         to={`/matches/${row.id}`}
-                        aria-label={`${copy.columns.edit} ${row.home.name} × ${row.away.name}`}
-                        className={`inline-flex size-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-3 ${focusRing}`}
+                        aria-labelledby={`edit-${row.id} match-teams-${row.id}`}
+                        className={clsx(
+                          'inline-flex size-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-3',
+                          focusRing,
+                        )}
                       >
                         <Icon name="edit" size="sm" />
                       </Link>

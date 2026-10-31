@@ -38,6 +38,7 @@ class WhereToWatchSlivers {
     required this.shown,
     required this.state,
     required this.controller,
+    required this.mineTitle,
     required this.receptionOf,
     required this.onWatchReception,
     required this.onRefresh,
@@ -52,6 +53,10 @@ class WhereToWatchSlivers {
   final WhereToWatch shown;
   final WhereToWatchState state;
   final WhereToWatchController controller;
+
+  /// The first part's title: «على أقمارك» once the user has chosen satellites, otherwise
+  /// «على نايل سات وبدر», the two defaults the screen is really showing.
+  final String mineTitle;
 
   /// The reception video of a satellite, or null when it has none.
   final Uri? Function(SatelliteRef? satellite) receptionOf;
@@ -86,7 +91,7 @@ class WhereToWatchSlivers {
         _group(
           id: GroupIds.mine,
           defaultOpen: true,
-          title: l.onMySatellites,
+          title: mineTitle,
           subtitle: _mineNames(shown.mine),
           leading: const _GlyphTile(icon: Icons.satellite_alt, accent: true),
           highlighted: true,

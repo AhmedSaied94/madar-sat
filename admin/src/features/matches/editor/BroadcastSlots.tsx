@@ -1,9 +1,12 @@
-import type { ReactElement } from 'react';
+import { useId, useMemo, type ReactElement } from 'react';
 
+import { useListBroadcastPresets } from '../../../api/generated/admin';
 import { editor as copy } from '../../../i18n/ar';
 import type { EditorBroadcast } from '../MatchEditor';
 
-// A4's "البث اليدوي": two broadcaster slots beside the channel links. An empty label clears the slot.
+// A4's "البث اليدوي": two broadcaster slots beside the channel links. Each slot offers the broadcast
+// presets, and choosing one carries its logo asset, so a later edit never clears it (A-R1-8). An empty
+// label clears the slot.
 interface BroadcastSlotsProps {
   broadcasts: readonly EditorBroadcast[];
   commentators: readonly { id: number; name: string }[];
@@ -11,8 +14,17 @@ interface BroadcastSlotsProps {
 }
 
 export function BroadcastSlots({ broadcasts, commentators, onChange }: BroadcastSlotsProps): ReactElement {
+  const listId = useId();
+  const { data } = useListBroadcastPresets();
+  const presets = useMemo(() => data?.data ?? [], [data]);
+
   const at = (slot: 1 | 2): EditorBroadcast =>
-    broadcasts.find((broadcast) => broadcast.slot === slot) ?? { slot, label: '', commentatorId: null };
+    broadcasts.find((broadcast) => broadcast.slot === slot) ?? {
+      slot,
+      label: '',
+      logoAssetId: null,
+      commentatorId: null,
+    };
 
   function update(slot: 1 | 2, patch: Partial<EditorBroadcast>): void {
     const current = at(slot);
@@ -21,13 +33,30 @@ export function BroadcastSlots({ broadcasts, commentators, onChange }: Broadcast
     onChange([...others, next].sort((a, b) => a.slot - b.slot));
   }
 
+  /** A preset's name is the label; its logo travels with the slot, so the API keeps it. Typing a label
+   *  keeps the slot's existing logo instead of silently clearing it (A-R1-8). */
+  function choosePreset(slot: 1 | 2, value: string): void {
+    const preset = presets.find((candidate) => candidate.name === value);
+    if (preset) {
+      update(slot, { label: preset.name, logoAssetId: preset.id });
+      return;
+    }
+    update(slot, { label: value, logoAssetId: value === '' ? null : at(slot).logoAssetId });
+  }
+
   return (
     <section aria-label={copy.manualBroadcast} className="flex flex-col gap-4 rounded-xl bg-surface-1 p-4 ring-1 ring-inset ring-divider">
       <h2 className="text-label font-semibold text-text-primary">{copy.manualBroadcast}</h2>
 
+      <datalist id={`${listId}-presets`}>
+        {presets.map((preset) => (
+          <option key={preset.id} value={preset.name} />
+        ))}
+      </datalist>
+
       {([1, 2] as const).map((slot) => {
         const broadcast = at(slot);
-        const labelId = `broadcast-${slot}`;
+        const labelId = `${listId}-broadcast-${slot}`;
         return (
           <div key={slot} className="flex flex-wrap items-end gap-3">
             <label htmlFor={labelId} className="flex min-w-0 flex-1 flex-col gap-2">
@@ -38,9 +67,10 @@ export function BroadcastSlots({ broadcasts, commentators, onChange }: Broadcast
                 id={labelId}
                 type="text"
                 dir="ltr"
+                list={`${listId}-presets`}
                 placeholder={copy.pickFromList}
                 value={broadcast.label}
-                onChange={(event) => update(slot, { label: event.target.value })}
+                onChange={(event) => choosePreset(slot, event.target.value)}
                 className="text-body h-12 min-w-0 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
               />
             </label>

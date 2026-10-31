@@ -33,6 +33,18 @@ export function formatCairoTime(instant: string): string {
   return timeFormat.format(new Date(instant));
 }
 
+const utcTimeFormat = new Intl.DateTimeFormat(LATN_DIGITS, {
+  timeZone: 'UTC',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** `HH:mm` UTC, Western digits: the hint under A4's Cairo time field says what is stored (A-R1-12). */
+export function formatUtcTime(instant: string): string {
+  return utcTimeFormat.format(new Date(instant));
+}
+
 const clockFormat = new Intl.DateTimeFormat(LATN_DIGITS, {
   timeZone: ADMIN_TIME_ZONE,
   hour: 'numeric',

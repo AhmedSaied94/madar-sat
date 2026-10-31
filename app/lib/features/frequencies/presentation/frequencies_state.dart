@@ -1,60 +1,42 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/generated/models/category.dart';
 
+part 'frequencies_state.g.dart';
+
 /// The text typed in S5.1's search field.
-class SatelliteSearch extends Notifier<String> {
+@riverpod
+class SatelliteSearch extends _$SatelliteSearch {
   @override
   String build() => '';
 
   void set(String query) => state = query;
 }
-
-final satelliteSearchProvider =
-    NotifierProvider.autoDispose<SatelliteSearch, String>(SatelliteSearch.new);
 
 /// S5.2's per-satellite screen state. They are families keyed by the satellite, so one
 /// satellite's search or open row never leaks into another's.
-class ChannelSearch extends Notifier<String> {
-  ChannelSearch(this.satelliteId);
-
-  final int satelliteId;
-
+@riverpod
+class ChannelSearch extends _$ChannelSearch {
   @override
-  String build() => '';
+  String build(int satelliteId) => '';
 
   void set(String query) => state = query;
 }
 
-final channelSearchProvider =
-    NotifierProvider.autoDispose.family<ChannelSearch, String, int>(ChannelSearch.new);
-
 /// The tab S5.2 is on. The page view and the segmented control both write it.
-class SelectedCategory extends Notifier<Category> {
-  SelectedCategory(this.satelliteId);
-
-  final int satelliteId;
-
+@riverpod
+class SelectedCategory extends _$SelectedCategory {
   @override
-  Category build() => Category.sports;
+  Category build(int satelliteId) => Category.sports;
 
   void select(Category category) => state = category;
 }
 
-final selectedCategoryProvider = NotifierProvider.autoDispose
-    .family<SelectedCategory, Category, int>(SelectedCategory.new);
-
 /// The channel whose row is open, if any. One at a time (CarriageRow README).
-class ExpandedChannel extends Notifier<int?> {
-  ExpandedChannel(this.satelliteId);
-
-  final int satelliteId;
-
+@riverpod
+class ExpandedChannel extends _$ExpandedChannel {
   @override
-  int? build() => null;
+  int? build(int satelliteId) => null;
 
   void toggle(int channelId) => state = state == channelId ? null : channelId;
 }
-
-final expandedChannelProvider =
-    NotifierProvider.autoDispose.family<ExpandedChannel, int?, int>(ExpandedChannel.new);

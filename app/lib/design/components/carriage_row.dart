@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/format/bidi.dart';
 import '../../core/format/digits.dart';
-import '../../core/theme/madar_tokens.dart';
 import '../../core/network/generated/models/access.dart';
 import '../../core/network/generated/models/category.dart';
 import '../../core/network/generated/models/channel_carriage.dart';
 import '../../core/network/generated/models/frequency.dart';
 import '../../core/network/generated/models/polarization.dart';
+import '../../core/theme/madar_tokens.dart';
+import '../../features/frequencies/domain/orbital_position.dart';
 import '../../l10n/app_localizations.dart';
 import 'badges.dart';
 import 'frequency_readout.dart';
@@ -18,7 +22,7 @@ import 'logo.dart';
 ///
 /// The collapsed row is one merged semantics node giving the channel, free or encrypted,
 /// the satellite and the frequency.
-class CarriageRow extends StatelessWidget {
+class CarriageRow extends StatefulWidget {
   const CarriageRow({
     super.key,
     required this.carriage,
@@ -32,6 +36,8 @@ class CarriageRow extends StatelessWidget {
   final ChannelCarriage carriage;
   final bool expanded;
   final VoidCallback? onTap;
+
+  /// The follow action; it shows only once follows exist (D3).
   final VoidCallback? onFollow;
   final VoidCallback? onOpenChannel;
 
@@ -39,9 +45,28 @@ class CarriageRow extends StatelessWidget {
   final VoidCallback? onWatchReception;
 
   @override
+  State<CarriageRow> createState() => _CarriageRowState();
+}
+
+class _CarriageRowState extends State<CarriageRow> {
+  /// The readout's copied state: the `success` outline, until the toast is gone.
+  static const Duration _copiedFor = Duration(seconds: 2);
+
+  bool _copied = false;
+  Timer? _reset;
+
+  @override
+  void dispose() {
+    _reset?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
+    final carriage = widget.carriage;
+    final expanded = widget.expanded;
     final satellite = carriage.satellite;
     final frequency = carriage.frequency;
 
@@ -54,12 +79,12 @@ class CarriageRow extends StatelessWidget {
           // `excludeSemantics`, so a screen reader can still reach each of them.
           Semantics(
             label: _semantics(l),
-            button: onTap != null,
+            button: widget.onTap != null,
             expanded: expanded,
-            onTap: onTap,
+            onTap: widget.onTap,
             excludeSemantics: true,
             child: InkWell(
-              onTap: onTap,
+              onTap: widget.onTap,
               child: Padding(
                 padding: expanded
                     ? const EdgeInsetsDirectional.only(
@@ -101,7 +126,9 @@ class CarriageRow extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (!expanded && (satellite != null || frequency != null)) ...[
+                    // The readout stays on the row open or closed: it is the answer the
+                    // screen exists for, and tapping it copies (CarriageRow README).
+                    if (satellite != null || frequency != null || carriage.frequencyNote != null) ...[
                       const SizedBox(height: MadarSpace.s1),
                       Row(
                         children: [
@@ -112,6 +139,10 @@ class CarriageRow extends StatelessWidget {
                               mhz: frequency.mhz,
                               polarization: frequency.pol,
                               symbolRate: frequency.sr,
+                              state: _copied
+                                  ? FrequencyReadoutState.good
+                                  : FrequencyReadoutState.ok,
+                              onTap: () => _copyFrequency(context, frequency),
                             )
                           else if (carriage.frequencyNote != null)
                             FrequencyReadout(
@@ -148,15 +179,26 @@ class CarriageRow extends StatelessWidget {
                       label: l.copyFrequency,
                       onTap: () => _copyFrequency(context, frequency),
                     ),
-                  if (onWatchReception != null)
+                  if (widget.onWatchReception != null)
                     _Action(
                       icon: Icons.ondemand_video_outlined,
                       label: l.receptionVideo,
-                      onTap: onWatchReception,
+                      onTap: widget.onWatchReception,
                     ),
-                  _Action(icon: Icons.notifications_outlined, label: l.follow, onTap: onFollow),
-                  if (onOpenChannel != null)
-                    _Action(icon: Icons.open_in_new, label: l.details, onTap: onOpenChannel),
+                  // A follow action that does nothing would be a lie (constitution I): it
+                  // appears only when a caller can actually follow the channel.
+                  if (widget.onFollow != null)
+                    _Action(
+                      icon: Icons.notifications_outlined,
+                      label: l.follow,
+                      onTap: widget.onFollow,
+                    ),
+                  if (widget.onOpenChannel != null)
+                    _Action(
+                      icon: Icons.open_in_new,
+                      label: l.details,
+                      onTap: widget.onOpenChannel,
+                    ),
                 ],
               ),
             ),
@@ -165,7 +207,7 @@ class CarriageRow extends StatelessWidget {
     );
   }
 
-  /// Copies `11843 H 27500` and says so (the «تم نسخ التردد» toast).
+  /// Copies `11843 H 27500`, says so, and outlines the readout in `success` for a moment.
   Future<void> _copyFrequency(BuildContext context, Frequency frequency) async {
     final message = AppLocalizations.of(context).copiedFrequency;
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -178,10 +220,17 @@ class CarriageRow extends StatelessWidget {
         ].join(' '),
       ),
     );
+    if (!mounted) return;
+    setState(() => _copied = true);
+    _reset?.cancel();
+    _reset = Timer(_copiedFor, () {
+      if (mounted) setState(() => _copied = false);
+    });
     messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _semantics(AppLocalizations l) {
+    final carriage = widget.carriage;
     final parts = <String>[carriage.name];
     parts.add(carriage.access == Access.free ? l.free : l.encrypted);
     if (carriage.satellite != null) parts.add(carriage.satellite!.nameAr);
@@ -195,6 +244,9 @@ class CarriageRow extends StatelessWidget {
   }
 }
 
+/// The expanded details: the satellite with its English name and orbital position, the
+/// tuning in words, access with its provider and package, and the category. Latin names and
+/// the position are LTR islands inside the Arabic labels (constitution III).
 class _DetailsGrid extends StatelessWidget {
   const _DetailsGrid({required this.carriage});
 
@@ -206,54 +258,65 @@ class _DetailsGrid extends StatelessWidget {
     final colors = context.madarColors;
     final satellite = carriage.satellite;
     final frequency = carriage.frequency;
-    final rows = <(String, String)>[
-      if (satellite != null)
-        (
-          l.satellite,
-          satellite.orbitalPosition == null
-              ? satellite.nameAr
-              : '${satellite.nameAr} · ${MadarDigits.decimal(satellite.orbitalPosition!)}',
-        ),
-      if (frequency != null) (l.frequency, '${MadarDigits.plain(frequency.mhz)} MHz'),
-      if (frequency != null) (l.polarization, _polarizationWord(l, frequency.pol)),
-      if (frequency != null) (l.symbolRate, MadarDigits.plain(frequency.sr)),
-      if (carriage.country != null) (l.country, carriage.country!),
-    ];
+    final valueStyle = MadarText.textLabel.copyWith(color: colors.textPrimary);
+    final latinStyle = valueStyle.copyWith(color: colors.textSecondary);
+
     return Column(
       children: [
-        for (final row in rows)
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
-            child: Row(
+        if (satellite != null)
+          _DetailRow(
+            label: l.satellite,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: MadarSpace.s1,
+              runSpacing: MadarSpace.s1,
               children: [
-                Expanded(
-                  child: Text(
-                    row.$1,
-                    style: MadarText.textCaption.copyWith(color: colors.textTertiary),
-                  ),
-                ),
-                EntityName(
-                  row.$2,
-                  style: MadarText.textLabel.copyWith(color: colors.textPrimary),
-                ),
+                Text(satellite.nameAr, style: valueStyle),
+                LtrIsland(satellite.nameEn, style: latinStyle),
+                if (OrbitalPosition.label(satellite.orbitalPosition) case final position?)
+                  LtrIsland(position, style: latinStyle),
               ],
             ),
           ),
+        if (frequency != null)
+          _DetailRow(
+            label: l.frequency,
+            child: Text('${MadarDigits.plain(frequency.mhz)} MHz', style: valueStyle),
+          ),
+        if (frequency != null)
+          _DetailRow(
+            label: l.polarization,
+            child: Text(_polarizationWord(l, frequency.pol), style: valueStyle),
+          ),
+        if (frequency != null)
+          _DetailRow(
+            label: l.symbolRate,
+            child: Text(MadarDigits.plain(frequency.sr), style: valueStyle),
+          ),
+        _DetailRow(
+          label: l.access,
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: MadarSpace.s1,
+            runSpacing: MadarSpace.s1,
+            children: [
+              AccessBadge(
+                access: carriage.access ?? Access.$unknown,
+                provider: carriage.provider,
+              ),
+              if (carriage.package case final package?) EntityName(package, style: latinStyle),
+            ],
+          ),
+        ),
         if (carriage.category != null)
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l.details,
-                    style: MadarText.textCaption.copyWith(color: colors.textTertiary),
-                  ),
-                ),
-                CategoryBadge(sports: carriage.category == Category.sports),
-              ],
-            ),
+          _DetailRow(
+            label: l.category,
+            child: CategoryBadge(sports: carriage.category == Category.sports),
           ),
+        if (carriage.country != null)
+          _DetailRow(label: l.country, child: Text(carriage.country!, style: valueStyle)),
       ],
     );
   }
@@ -265,6 +328,33 @@ class _DetailsGrid extends StatelessWidget {
         Polarization.r => l.polRight,
         _ => '',
       };
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.madarColors;
+    return Padding(
+      padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: MadarText.textCaption.copyWith(color: colors.textTertiary),
+            ),
+          ),
+          Flexible(child: child),
+        ],
+      ),
+    );
+  }
 }
 
 class _Action extends StatelessWidget {

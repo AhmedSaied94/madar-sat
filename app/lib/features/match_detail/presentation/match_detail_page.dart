@@ -13,7 +13,7 @@ import '../../../core/links/url_opener.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/network/generated/models/match_detail.dart';
 import '../../../core/network/generated/models/satellite_ref.dart';
-import '../../../core/network/swr_repository.dart';
+import '../../../core/network/swr_snapshot.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/empty_state.dart';
 import '../../../design/components/skeleton.dart';
@@ -125,12 +125,9 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
 
   void _back() => context.canPop() ? context.pop() : context.go('/');
 
-  void _revalidate() {
-    ref.invalidate(matchDetailProvider(widget.matchId));
-    // The catalogue feeds the reception links. If its first load failed (opened offline),
-    // nothing else asks again, and the links would stay off for the whole session.
-    if (ref.read(satellitesProvider).hasError) ref.invalidate(satellitesProvider);
-  }
+  /// The poll and «تحديث»: the provider owns the cycle, including asking the catalogue
+  /// again when its first load failed.
+  void _revalidate() => ref.read(matchDetailProvider(widget.matchId).notifier).revalidate();
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +168,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
             Expanded(
               child: LivePollingScope(
                 hasLiveOrImminent:
-                    shown != null && hasLiveOrImminent([summaryOfDetail(shown)], now: now),
+                    match != null && hasLiveOrImminent([summaryOfDetail(match)], now: now),
                 onRevalidate: _revalidate,
                 child: body,
               ),
@@ -208,6 +205,15 @@ class _Loaded extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final state = ref.watch(whereToWatchProvider(match.id));
     final receptionUrls = ref.watch(receptionUrlsProvider);
+    // Two bundled defaults are not "yours": until D3 stores a choice, the part is titled
+    // by their names (constitution I, US3 scenario 4).
+    final mineNames = ref.watch(mySatelliteNamesProvider);
+    final mineTitle = ref.watch(chosenSatelliteIdsProvider) != null
+        ? l.onMySatellites
+        : mineNames.isEmpty
+            ? l.s3OnDefaultSatellites
+            // «على نايل سات وبدر»: the names joined as the design writes them.
+            : l.s3OnSatellites(mineNames.join(' و'));
 
     final all = orderCarriages(carriages: match.carriages, platforms: match.platforms);
     final shown = filterWhereToWatch(all, freeOnly: state.freeOnly, query: state.query);
@@ -220,6 +226,7 @@ class _Loaded extends ConsumerWidget {
       shown: shown,
       state: state,
       controller: ref.read(whereToWatchProvider(match.id).notifier),
+      mineTitle: mineTitle,
       receptionOf: (SatelliteRef? satellite) =>
           satellite == null ? null : receptionUrls[satellite.id],
       onWatchReception: (url) => _open(context, ref, url),

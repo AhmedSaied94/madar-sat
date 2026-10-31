@@ -6,7 +6,7 @@ import '../../../core/format/clock.dart';
 import '../../../core/l10n/error_copy.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/network/generated/models/match_summary.dart';
-import '../../../core/network/swr_repository.dart';
+import '../../../core/network/swr_snapshot.dart';
 import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/bottom_nav.dart';
@@ -17,7 +17,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../live/live_merge.dart';
 import '../../live/live_poller.dart';
 import '../data/my_satellites_provider.dart';
-import '../data/satellite_matches_repository.dart';
+import '../data/satellite_matches_provider.dart';
 import '../data/satellite_selection.dart';
 import '../domain/competition_groups.dart';
 import 'competition_header.dart';
@@ -164,10 +164,11 @@ class _DayOfMatches extends ConsumerWidget {
     final items = _items(rows);
 
     return LivePollingScope(
-      hasLiveOrImminent: hasLiveOrImminent(rows, now: now),
-      onRevalidate: () => ref.invalidate(satelliteMatchesProvider(query)),
+      // The cached rows, before the merge: a copy that says "in play" is the signal.
+      hasLiveOrImminent: hasLiveOrImminent(snapshot.data ?? const <MatchSummary>[], now: now),
+      onRevalidate: () => ref.read(satelliteMatchesProvider(query).notifier).revalidate(),
       child: RefreshIndicator(
-        onRefresh: () => _refresh(ref, query),
+        onRefresh: () => ref.read(satelliteMatchesProvider(query).notifier).refresh(),
         child: CustomScrollView(
           // The list can be shorter than the screen and must still pull to refresh.
           physics: const AlwaysScrollableScrollPhysics(),
@@ -210,19 +211,6 @@ class _DayOfMatches extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  /// Runs the whole cache, revalidate and write cycle, then asks the screen to read it again.
-  /// A failure with nothing cached leaves the screen as it is: it already says what it has.
-  static Future<void> _refresh(WidgetRef ref, SatelliteMatchesQuery query) async {
-    try {
-      await ref.read(satelliteMatchesRepositoryProvider).watch(query).drain<void>();
-    } on ApiFailure {
-      // Nothing to add: the provider below shows the cached copy or the error.
-    }
-    // The user may have left the tab while this ran, and a disposed `ref` throws.
-    if (!ref.context.mounted) return;
-    ref.invalidate(satelliteMatchesProvider(query));
   }
 }
 

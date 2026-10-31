@@ -1,12 +1,14 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../domain/matches_day.dart';
+
+part 'matches_selection.g.dart';
 
 /// What the user has picked on S2: a day among the kept days, and a chip.
 class MatchesSelection {
   const MatchesSelection({required this.dayIndex, required this.filter});
 
-  /// An index into `MatchesDays.kept`.
+  /// An index into the kept days (`matchesWindowProvider`).
   final int dayIndex;
   final MatchesFilter filter;
 
@@ -14,7 +16,9 @@ class MatchesSelection {
       MatchesSelection(dayIndex: dayIndex ?? this.dayIndex, filter: filter ?? this.filter);
 }
 
-class MatchesSelectionNotifier extends Notifier<MatchesSelection> {
+/// Lives as long as the screen does: leaving S2 for a root tab starts again on today.
+@Riverpod(name: 'matchesSelectionProvider')
+class MatchesSelectionNotifier extends _$MatchesSelectionNotifier {
   @override
   MatchesSelection build() =>
       const MatchesSelection(dayIndex: MatchesDays.todayIndex, filter: MatchesFilter.all);
@@ -27,9 +31,3 @@ class MatchesSelectionNotifier extends Notifier<MatchesSelection> {
     if (filter != state.filter) state = state.copyWith(filter: filter);
   }
 }
-
-/// Lives as long as the screen does: leaving S2 for a root tab starts again on today.
-final matchesSelectionProvider =
-    NotifierProvider.autoDispose<MatchesSelectionNotifier, MatchesSelection>(
-  MatchesSelectionNotifier.new,
-);

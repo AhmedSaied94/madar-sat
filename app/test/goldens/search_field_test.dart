@@ -32,6 +32,14 @@ void main() {
     );
   });
 
+  testWidgets('the dense field draws 40 but its target is 48 dp tall', (tester) async {
+    await tester.pumpWidget(testApp(const SearchField(hint: 'بحث', dense: true)));
+
+    final target = tester.getSize(find.byKey(const ValueKey('search-field-target')));
+    expect(target.height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(find.byType(TextField)).height, lessThan(48));
+  });
+
   testWidgets('the clear button appears with text and empties the field', (tester) async {
     final controller = TextEditingController();
     String? last;

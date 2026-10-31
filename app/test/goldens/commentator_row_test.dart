@@ -52,7 +52,7 @@ void main() {
       ),
     );
 
-    expect(find.bySemanticsLabel('المعلّق، عصام الشوالي، يُشغَّل الآن'), findsOneWidget);
+    expect(find.bySemanticsLabel('المعلّق، عصام الشوالي، جاري التشغيل...'), findsOneWidget);
     handle.dispose();
   });
 }

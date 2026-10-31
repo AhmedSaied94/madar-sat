@@ -1,6 +1,8 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/generated/models/carriage_entry.dart';
+
+part 'where_to_watch_state.g.dart';
 
 /// The ids of S3's collapsible groups.
 abstract final class GroupIds {
@@ -36,7 +38,8 @@ class WhereToWatchState {
 
   bool get isFiltering => freeOnly || query.trim().isNotEmpty;
 
-  /// A filter shows what it found, so every group is open while one is on.
+  /// A filter shows what it found, so every group is open while one is on. Similarly, one
+  /// row is expanded at a time (CarriageRow README): opening another closes the first.
   bool isOpen(String groupId, {required bool byDefault}) =>
       isFiltering || (groupOpen[groupId] ?? byDefault);
 
@@ -54,19 +57,17 @@ class WhereToWatchState {
       );
 }
 
-class WhereToWatchController extends Notifier<WhereToWatchState> {
-  WhereToWatchController(this.matchId);
-
-  /// The match this state belongs to: each match's screen has its own.
-  final int matchId;
-
+/// Each match's screen has its own: the family key is the match id.
+@Riverpod(name: 'whereToWatchProvider')
+class WhereToWatchController extends _$WhereToWatchController {
   @override
-  WhereToWatchState build() => const WhereToWatchState();
+  WhereToWatchState build(int matchId) => const WhereToWatchState();
 
   void toggleGroup(String groupId, {required bool currentlyOpen}) {
     state = state.copyWith(groupOpen: {...state.groupOpen, groupId: !currentlyOpen});
   }
 
+  /// One row open at a time (CarriageRow README).
   void toggleCarriage(String key) {
     final expanded = {...state.expanded};
     if (!expanded.remove(key)) expanded.add(key);
@@ -77,6 +78,3 @@ class WhereToWatchController extends Notifier<WhereToWatchState> {
 
   void setQuery(String query) => state = state.copyWith(query: query);
 }
-
-final whereToWatchProvider = NotifierProvider.autoDispose
-    .family<WhereToWatchController, WhereToWatchState, int>(WhereToWatchController.new);

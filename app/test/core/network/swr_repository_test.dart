@@ -314,30 +314,29 @@ void main() {
   });
 
   group('documents (match detail, satellites, channels, S4)', () {
-    const key = 'satellites';
+    final ids = {2, 5};
+    final key = DocumentKeys.matchesBySatellites(day, ids);
 
-    List<String> parse(Object? data) => [for (final item in data! as List<Object?>) '$item'];
+    Stream<SwrSnapshot<List<MatchSummary>>> watch() =>
+        repository.watchMatchesBySatellites(day: day, satelliteIds: ids);
 
     test('stores the body and the ETag, then serves them from the cache next time', () async {
-      http.enqueueData(['a', 'b'], etag: '"s1"');
-      final first = await repository
-          .watchDocument(key: key, path: '/v1/satellites', parse: parse)
-          .toList();
-      expect(first.single.data, ['a', 'b']);
+      http.enqueueData([_json(first)], etag: '"s1"');
+      final firstEvents = await watch().toList();
+      expect(firstEvents.single.data!.map((m) => m.id), [1]);
 
       http.enqueueNotModified(etag: '"s1"');
-      final second = <SwrSnapshot<List<String>>>[];
+      final second = <SwrSnapshot<List<MatchSummary>>>[];
       var requestsAtFirstEvent = -1;
-      await for (final event
-          in repository.watchDocument(key: key, path: '/v1/satellites', parse: parse)) {
+      await for (final event in watch()) {
         if (second.isEmpty) requestsAtFirstEvent = http.requests.length;
         second.add(event);
       }
 
       expect(requestsAtFirstEvent, 1, reason: 'only the first call used the network so far');
       expect(second, hasLength(2), reason: 'the cache, then the cache as confirmed by the 304');
-      expect(second.first.data, ['a', 'b']);
-      expect(second.last.data, ['a', 'b']);
+      expect(second.first.data!.map((m) => m.id), [1]);
+      expect(second.last.data!.map((m) => m.id), [1]);
       expect(second.last.fetchedAt, clock.toUtc());
       expect(second.last.failure, isNull);
       expect(http.ifNoneMatch(1), '"s1"');
@@ -347,18 +346,16 @@ void main() {
       await database.putDocument(
         key: key,
         etag: '"s1"',
-        body: jsonEncode(['old']),
+        body: jsonEncode([_json(first)]),
         fetchedAt: clock.toUtc(),
       );
-      http.enqueueData(['new'], etag: '"s2"');
+      http.enqueueData([_json(second)], etag: '"s2"');
 
-      final events = await repository
-          .watchDocument(key: key, path: '/v1/satellites', parse: parse)
-          .toList();
+      final events = await watch().toList();
 
-      expect(events.map((e) => e.data), [
-        ['old'],
-        ['new'],
+      expect(events.map((e) => e.data!.map((m) => m.id).toList()), [
+        [1],
+        [2],
       ]);
       expect((await database.documentFor(key))!.etag, '"s2"');
     });
@@ -367,47 +364,34 @@ void main() {
       await database.putDocument(
         key: key,
         etag: '"s1"',
-        body: jsonEncode(['old']),
+        body: jsonEncode([_json(first)]),
         fetchedAt: clock.toUtc(),
       );
       http.enqueueOffline();
 
-      final events = await repository
-          .watchDocument(key: key, path: '/v1/satellites', parse: parse)
-          .toList();
+      final events = await watch().toList();
 
-      expect(events.last.data, ['old']);
+      expect(events.last.data!.map((m) => m.id), [1]);
       expect(events.last.failure, isA<ApiFailure>());
     });
 
     test('S4 isolation: its filtered day leaves S2 rows and the window ETag unchanged', () async {
       await seedDay([first, second]);
-      const s4Key = 'matches:2026-10-28:sat:2,5';
       http.enqueueData([_json(second)], etag: '"filtered"');
 
-      final events = await repository
-          .watchDocument<List<MatchSummary>>(
-            key: s4Key,
-            path: '/v1/matches',
-            query: {
-              'from': '2026-10-27T21:00:00.000Z',
-              'to': '2026-10-28T21:00:00.000Z',
-              'satellite_ids': '2,5',
-            },
-            parse: (data) => [
-              for (final item in data! as List<Object?>)
-                MatchSummary.fromJson(item! as Map<String, Object?>),
-            ],
-          )
-          .toList();
+      final events = await watch().toList();
 
       expect(events.single.data!.map((m) => m.id), [2]);
-      expect((await database.documentFor(s4Key))!.etag, '"filtered"');
+      expect((await database.documentFor(key))!.etag, '"filtered"');
       // The unfiltered day is exactly as it was.
       expect((await database.readAll()).map((m) => m.id).toSet(), {1, 2});
       final window = (await database.windowFor(dayKey))!;
       expect(window.etag, '"v1"');
       expect(window.fetchedAt, DateTime(2026, 10, 28, 12).toUtc());
+      // The request asked for exactly those satellites, through the generated client.
+      final query = http.requests.single.uri.queryParameters;
+      expect(query['satellite_ids'], '2,5');
+      expect(query['from'], '2026-10-27T21:00:00.000Z');
     });
 
     test('document keys are stable', () {
@@ -420,6 +404,56 @@ void main() {
       );
     });
   });
+
+  group('a storage failure after a good 200 (M-R1-15)', () {
+    test('a document that cannot be written is still emitted', () async {
+      final failing = _FailingWrites(NativeDatabase.memory(), now: () => clock);
+      addTearDown(failing.close);
+      final repo = SwrRepository(dio: fakeDio(http), database: failing);
+      http.enqueueData([_json(first)], etag: '"s1"');
+
+      final events =
+          await repo.watchMatchesBySatellites(day: day, satelliteIds: {2}).toList();
+
+      expect(events.single.data!.map((m) => m.id), [1], reason: 'the answer still stands');
+      expect(events.single.failure, isNull);
+    });
+
+    test('a day that cannot be written is still emitted', () async {
+      final failing = _FailingWrites(NativeDatabase.memory(), now: () => clock);
+      addTearDown(failing.close);
+      final repo = SwrRepository(dio: fakeDio(http), database: failing);
+      http.enqueueData([_json(first)], etag: '"s1"');
+
+      final events = await repo.watchDay(day).toList();
+
+      expect(events.single.data!.map((m) => m.id), [1]);
+      expect(events.single.failure, isNull);
+    });
+  });
+}
+
+/// A database whose writes fail, as a full disk or a locked file would (M-R1-15).
+class _FailingWrites extends AppDatabase {
+  _FailingWrites(super.e, {super.now});
+
+  @override
+  Future<void> putDocument({
+    required String key,
+    required String? etag,
+    required String body,
+    required DateTime fetchedAt,
+  }) async =>
+      throw StateError('disk full');
+
+  @override
+  Future<void> replaceDay(
+    DateTime day,
+    List<MatchSummary> rows, {
+    required String? etag,
+    required DateTime fetchedAt,
+  }) async =>
+      throw StateError('disk full');
 }
 
 Map<String, Object?> _json(MatchSummary match) =>

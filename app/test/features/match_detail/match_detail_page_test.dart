@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:madar_sat/core/audio/clip_controller.dart';
@@ -23,6 +24,7 @@ import 'package:madar_sat/design/components/skeleton.dart';
 import 'package:madar_sat/design/components/stale_hint.dart';
 import 'package:madar_sat/features/live/live_poller.dart';
 import 'package:madar_sat/features/match_detail/presentation/match_detail_page.dart';
+import 'package:madar_sat/features/my_satellites/data/my_satellites_provider.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
 import '../../fixtures/fake_clip_engine.dart';
@@ -85,7 +87,14 @@ void main() {
 
   /// Opens S3 on a phone-wide view. The default is tall enough to build everything in the
   /// standard match; the long-list tests pass the real 800 so virtualization shows.
-  Future<void> open(WidgetTester tester, {bool settle = true, double height = 2400}) async {
+  Future<void> open(
+    WidgetTester tester, {
+    bool settle = true,
+    double height = 2400,
+    Brightness brightness = Brightness.dark,
+    double textScale = 1,
+    List<Override> overrides = const [],
+  }) async {
     tester.view
       ..physicalSize = Size(360, height)
       ..devicePixelRatio = 1;
@@ -108,17 +117,21 @@ void main() {
           clipEngineProvider.overrideWithValue(engine),
           urlOpenerProvider.overrideWithValue(opener),
           liveFetcherProvider.overrideWithValue(() async => liveAnswer),
+          ...overrides,
         ],
         child: MaterialApp.router(
           routerConfig: router,
           locale: const Locale('ar'),
           supportedLocales: const [Locale('ar')],
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          theme: MadarTheme.dark,
+          theme: brightness == Brightness.dark ? MadarTheme.dark : MadarTheme.light,
           builder: (context, child) => Directionality(
             textDirection: TextDirection.rtl,
             child: MediaQuery(
-              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              data: MediaQuery.of(context).copyWith(
+                disableAnimations: true,
+                textScaler: TextScaler.linear(textScale),
+              ),
               child: child ?? const SizedBox.shrink(),
             ),
           ),
@@ -225,6 +238,15 @@ void main() {
       expect(find.text('الأربعاء 28 أكتوبر · 9:00 م'), findsOneWidget);
     });
 
+    testWidgets('three hours before kickoff the hero counts down to it', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+
+      // The pinned clock says 18:00 and the kickoff 21:00, outside the status block's hour.
+      expect(find.text('تبدأ بعد 3 ساعات'), findsOneWidget);
+    });
+
     testWidgets('the home team sits on the right in RTL', (tester) async {
       answerSatellites();
       answerDetail(standard());
@@ -252,7 +274,9 @@ void main() {
       await open(tester);
 
       expect(
-        find.bySemanticsLabel('الأهلي ضد الزمالك، 9:00 م، الدوري المصري الممتاز، الجولة 9، الأربعاء 28 أكتوبر'),
+        find.bySemanticsLabel(
+          'الأهلي ضد الزمالك، 9:00 م، الدوري المصري الممتاز، الجولة 9، الأربعاء 28 أكتوبر، تبدأ بعد 3 ساعات',
+        ),
         findsOneWidget,
       );
       handle.dispose();
@@ -293,7 +317,7 @@ void main() {
       expect(find.descendant(of: score, matching: find.text('0')), findsOneWidget);
     });
 
-    testWidgets('a cached in-play match with no live state is the quiet «مباشر»: no score, no minute',
+    testWidgets('a cached in-play match with no live state shows its kickoff, never «مباشر»',
         (tester) async {
       // The detail says live with a score, but only /v1/live may say that (SC-008).
       answerSatellites();
@@ -306,9 +330,11 @@ void main() {
       );
       await open(tester);
 
-      expect(find.text('مباشر'), findsOneWidget);
+      expect(find.text('مباشر'), findsNothing);
       expect(find.text('88′'), findsNothing);
       expect(find.byType(ScoreParts), findsNothing);
+      // The hero still says when it was due to start.
+      expect(find.text('الأربعاء 28 أكتوبر · 9:00 م'), findsOneWidget);
     });
 
     testWidgets('an estimated live state from /v1/live shows no score and no minute', (tester) async {
@@ -334,6 +360,28 @@ void main() {
     });
   });
 
+  group('both themes at 1.3× (FR-048)', () {
+    testWidgets('the light theme draws S3 without an overflow', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester, brightness: Brightness.light, textScale: 1.3);
+
+      expect(tester.takeException(), isNull, reason: 'no RenderFlex overflow at 1.3×');
+      expect(find.text('الأهلي'), findsOneWidget);
+      expect(find.text('أين تشاهد'), findsOneWidget);
+      expect(find.byType(CarriageRow), findsWidgets);
+    });
+
+    testWidgets('the dark theme draws S3 without an overflow', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester, textScale: 1.3);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('الزمالك'), findsOneWidget);
+    });
+  });
+
   group('where to watch', () {
     testWidgets('the toolbar names the section and counts every way to watch', (tester) async {
       answerSatellites();
@@ -354,7 +402,7 @@ void main() {
 
       final mine = tester.getTopLeft(find.byKey(const ValueKey('group:mine'))).dy;
       final hotbird = tester.getTopLeft(find.byKey(ValueKey('group:sat:${hotbirdSatellite.id}'))).dy;
-      expect(find.text('على أقمارك'), findsOneWidget);
+      expect(find.text('على نايل سات وبدر'), findsOneWidget);
       expect(find.text('نايل سات · بدر'), findsOneWidget);
       expect(find.text('أقمار أخرى'), findsOneWidget);
       expect(find.text('3 قنوات على قمرين'), findsOneWidget);
@@ -364,6 +412,15 @@ void main() {
         tester.getTopLeft(find.text('أقمار أخرى')).dy,
         lessThan(tester.getTopLeft(find.text('منصات وقنوات أخرى')).dy),
       );
+    });
+
+    testWidgets('once the user has chosen satellites the part reads «على أقمارك»', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester, overrides: [chosenSatelliteIdsProvider.overrideWithValue({2, 5})]);
+
+      expect(find.text('على أقمارك'), findsOneWidget);
+      expect(find.text('على نايل سات وبدر'), findsNothing);
     });
 
     testWidgets('free before encrypted inside my satellites', (tester) async {
@@ -518,7 +575,7 @@ void main() {
       expect(find.text('نسخ التردد'), findsNothing);
     });
 
-    testWidgets('expanded it shows the details and the actions, and the readout gives way',
+    testWidgets('expanded it keeps the readout and adds the details and the actions',
         (tester) async {
       answerSatellites();
       answerDetail(standard());
@@ -527,10 +584,20 @@ void main() {
       await tester.tap(find.text('ON Sport HD'));
       await tester.pumpAndSettle();
 
+      // The readout stays on the open row: it is the answer the screen exists for.
+      expect(find.text('11977'), findsOneWidget);
+      // The details: the satellite with its English name and position, the tuning in words,
+      // access, then the category.
       expect(find.text('11977 MHz'), findsOneWidget);
       expect(find.text('معدل الترميز'), findsOneWidget);
+      expect(find.text('نايل سات'), findsWidgets);
+      expect(find.text('Nilesat 7.0W'), findsOneWidget);
+      expect(find.text('7.0W'), findsOneWidget);
+      expect(find.text('الوصول'), findsOneWidget);
+      expect(find.text('الفئة'), findsOneWidget);
       expect(find.text('نسخ التردد'), findsOneWidget);
-      expect(find.text('11977'), findsNothing);
+      // No follow action exists before D3, so none is drawn.
+      expect(find.text('تابع'), findsNothing);
 
       await tester.tap(find.text('ON Sport HD'));
       await tester.pumpAndSettle();

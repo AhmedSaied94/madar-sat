@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
 import 'package:madar_sat/core/theme/madar_tokens.dart';
 import 'package:madar_sat/design/components/carriage_row.dart';
+import 'package:madar_sat/design/components/frequency_readout.dart';
 
 import '../fixtures/sample_models.dart';
 import '../fixtures/test_app.dart';
@@ -66,6 +67,53 @@ void main() {
     await tester.tap(find.text('فيديو الاستقبال'));
 
     expect(opened, 1);
+  });
+
+  testWidgets('the expanded row names the satellite, its English name and its position',
+      (tester) async {
+    await tester.pumpWidget(testApp(CarriageRow(carriage: sampleCarriage(), expanded: true)));
+
+    expect(find.text('نايل سات'), findsWidgets);
+    expect(find.text('Nilesat 7.0W'), findsOneWidget);
+    expect(find.text('7.0W'), findsOneWidget, reason: 'E/W, never the signed -7');
+    expect(find.text('-7'), findsNothing);
+    expect(find.text('الوصول'), findsOneWidget);
+    expect(find.text('الفئة'), findsOneWidget);
+    expect(find.text('رياضة'), findsOneWidget);
+  });
+
+  testWidgets('the follow action shows only when a caller can follow', (tester) async {
+    await tester.pumpWidget(testApp(CarriageRow(carriage: sampleCarriage(), expanded: true)));
+    expect(find.text('تابع'), findsNothing);
+
+    await tester.pumpWidget(
+      testApp(CarriageRow(carriage: sampleCarriage(), expanded: true, onFollow: () {})),
+    );
+    expect(find.text('تابع'), findsOneWidget);
+  });
+
+  testWidgets('tapping the readout copies it and outlines it in success', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copied = (call.arguments as Map<Object?, Object?>)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    await tester.pumpWidget(testApp(CarriageRow(carriage: sampleCarriage(), expanded: true)));
+
+    await tester.tap(find.byType(FrequencyReadout));
+    await tester.pump();
+
+    expect(copied, '11843 H 27500');
+    expect(find.text('تم نسخ التردد'), findsOneWidget);
+    expect(
+      tester.widget<FrequencyReadout>(find.byType(FrequencyReadout)).state,
+      FrequencyReadoutState.good,
+    );
   });
 
   testWidgets('a collapsed row is one merged Arabic label', (tester) async {

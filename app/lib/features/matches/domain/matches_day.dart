@@ -1,23 +1,27 @@
-import '../../../core/db/app_database.dart';
 import '../../../core/format/local_day.dart';
+import '../../../core/format/retention.dart';
 import '../../../core/network/generated/models/competition_ref.dart';
 import '../../../core/network/generated/models/match_summary.dart';
-import '../../../core/network/swr_repository.dart';
+import '../../../core/network/swr_snapshot.dart';
 import '../../live/live_merge.dart';
 
 /// The chips above the list: every match of the day, or only the ones in play.
 enum MatchesFilter { all, live }
 
 /// A match in play, as the user may see it. Apply the live states first
-/// (`applyLiveStates`): a cached in-play row has already become the estimated «مباشر».
+/// (`applyLiveStates`): with no live state a cached in-play row is no longer live at all.
 bool isInPlay(MatchSummary match) => isInPlayStatus(match.status);
 
 /// One competition's matches of a day, in kickoff order.
 class CompetitionGroup {
-  const CompetitionGroup({required this.competition, required this.matches});
+  const CompetitionGroup({required this.competition, required this.matches, this.stage});
 
   final CompetitionRef competition;
   final List<MatchSummary> matches;
+
+  /// The round for the header, only when every match of the group is in the same round: a
+  /// group of round 5 and round 8 matches has no single round to name (constitution II).
+  final String? stage;
 }
 
 /// A local day as S2 lists it: competition groups, then the matches with no kickoff.
@@ -48,10 +52,18 @@ DayGroups groupDay(DateTime day, Iterable<MatchSummary> rows) {
     (byCompetition[_competitionKey(match.competition)] ??= []).add(match);
   }
   final groups = [
-    for (final matches in byCompetition.values)
-      CompetitionGroup(competition: matches.first.competition, matches: matches),
+    for (final matches in byCompetition.values) _group(matches),
   ]..sort(_byPriorityThenKickoff);
   return DayGroups(competitions: groups, tbd: local.tbd);
+}
+
+CompetitionGroup _group(List<MatchSummary> matches) {
+  final stages = {for (final match in matches) match.competition.stage};
+  return CompetitionGroup(
+    competition: matches.first.competition,
+    matches: matches,
+    stage: stages.length == 1 ? stages.single : null,
+  );
 }
 
 /// An id is the identity of a competition; one without an id is told apart by its name.
@@ -75,13 +87,13 @@ int _byPriorityThenKickoff(CompetitionGroup a, CompetitionGroup b) {
 /// The days S2 pages through and the strip that shows them.
 abstract final class MatchesDays {
   /// Where today sits among the kept days (yesterday comes first).
-  static const int todayIndex = AppDatabase.daysBack;
+  static const int todayIndex = Retention.daysBack;
 
   static const int stripCells = 7;
 
   /// Yesterday through today + 6: the local days drift keeps (FR-046), earliest first.
   static List<DateTime> kept(DateTime today) => [
-        for (var offset = -AppDatabase.daysBack; offset <= AppDatabase.daysAhead; offset++)
+        for (var offset = -Retention.daysBack; offset <= Retention.daysAhead; offset++)
           LocalDays.add(today, offset),
       ];
 

@@ -106,12 +106,26 @@ void main() {
     await tester.pump();
     final callsBefore = liveCalls;
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    // The lifecycle listener follows the platform's state machine, so backgrounding goes
+    // through each step, as a real device reports it.
+    for (final state in const [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
     await elapse(tester, const Duration(seconds: 180));
     expect(liveCalls, callsBefore);
     expect(revalidations, 0);
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    for (final state in const [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
     await tester.pump();
     expect(liveCalls, callsBefore + 1, reason: 'resuming fetches the live state again');
     await elapse(tester, const Duration(seconds: 60));
@@ -218,6 +232,46 @@ void main() {
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%live%'")
         .get();
     expect(tables, isEmpty);
+  });
+
+  testWidgets('the poll policy is a notifier: its timers follow the three inputs',
+      (tester) async {
+    var liveCalls = 0;
+    var revalidations = 0;
+    final container = ProviderContainer(
+      overrides: [
+        liveFetcherProvider.overrideWithValue(() async {
+          liveCalls += 1;
+          return [_state(1)];
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    // A listener, as a screen has: Riverpod 3 pauses a provider nobody listens to.
+    container.listen(livePollingProvider, (previous, next) {});
+
+    container.read(livePollingProvider.notifier).sync(
+          visible: true,
+          resumed: true,
+          hasLiveOrImminent: true,
+          onRevalidate: () => revalidations += 1,
+        );
+    await tester.pump();
+    expect(liveCalls, 1, reason: 'the live state is fetched as soon as it is wanted');
+
+    await tester.pump(const Duration(seconds: 60));
+    expect(revalidations, 1);
+
+    container.read(livePollingProvider.notifier).sync(
+          visible: false,
+          resumed: true,
+          hasLiveOrImminent: true,
+        );
+    final callsAtHide = liveCalls;
+    final revalidationsAtHide = revalidations;
+    await tester.pump(const Duration(seconds: 180));
+    expect(liveCalls, callsAtHide, reason: 'a covered route polls nothing');
+    expect(revalidations, revalidationsAtHide);
   });
 
   testWidgets('a failed live fetch keeps the last states and the next tick tries again',

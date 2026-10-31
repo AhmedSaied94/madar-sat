@@ -158,6 +158,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get frequencyNote => 'ملاحظة التردد';
 
   @override
+  String get access => 'الوصول';
+
+  @override
+  String get category => 'الفئة';
+
+  @override
   String get details => 'التفاصيل';
 
   @override
@@ -369,7 +375,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentatorLoading => 'جارٍ تحميل المقطع';
 
   @override
-  String get commentatorPlaying => 'يُشغَّل الآن';
+  String get commentatorPlaying => 'جاري التشغيل...';
 
   @override
   String get commentatorError => 'تعذّر تشغيل المقطع';
@@ -388,6 +394,53 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get s3WhereToWatch => 'أين تشاهد';
+
+  @override
+  String s3OnSatellites(String satellites) {
+    return 'على $satellites';
+  }
+
+  @override
+  String get s3OnDefaultSatellites => 'على نايل سات وبدر';
+
+  @override
+  String s3StartsInMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تبدأ بعد $count دقيقة',
+      few: 'تبدأ بعد $count دقائق',
+      two: 'تبدأ بعد دقيقتين',
+      one: 'تبدأ بعد دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String s3StartsInHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تبدأ بعد $count ساعة',
+      few: 'تبدأ بعد $count ساعات',
+      two: 'تبدأ بعد ساعتين',
+      one: 'تبدأ بعد ساعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String s3StartsInDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تبدأ بعد $count يوم',
+      few: 'تبدأ بعد $count أيام',
+      two: 'تبدأ بعد يومين',
+      one: 'تبدأ بعد يوم',
+    );
+    return '$_temp0';
+  }
 
   @override
   String s3ChannelsCount(int count) {

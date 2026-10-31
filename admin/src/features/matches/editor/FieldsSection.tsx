@@ -1,13 +1,17 @@
+import { clsx } from 'clsx';
 import type { ReactElement } from 'react';
 
+import { formatUtcTime, cairoWallTimeToUtc } from '../../../lib/cairoTime';
+import { Field } from '../../../components/Field/Field';
 import { Icon } from '../../../components/Icon/Icon';
 import { TeamPicker } from '../TeamPicker';
-import { cairoWallTimeToUtc, formatCairoTime } from '../../../lib/cairoTime';
 import { editor as copy } from '../../../i18n/ar';
 import type { EditorState } from '../MatchEditor';
 
 // A4's "الفريقان والموعد": both teams, the Cairo kickoff and the competition. A locked field says so,
 // because an importer will not change it — the editor still can (data-model, locked_fields).
+// Every input is the shared `Field`, so focus, error, locked and disabled look the same as the rest
+// of the admin (A-R1-10).
 interface EditorSectionsProps {
   state: EditorState;
   competitions: readonly { id: number; name: string }[];
@@ -15,16 +19,9 @@ interface EditorSectionsProps {
   onChange: (next: Partial<EditorState>) => void;
 }
 
-function LockBadge({ locked }: { locked: boolean }): ReactElement | null {
-  return locked ? (
-    <span className="ms-auto inline-flex text-postponed" title={copy.lockedHint}>
-      <Icon name="lock" size="sm" label={copy.lockedHint} />
-    </span>
-  ) : null;
-}
-
 export function EditorSections({ state, competitions, lockedFields, onChange }: EditorSectionsProps): ReactElement {
   const utc = state.date !== '' && state.time !== '' ? cairoWallTimeToUtc(`${state.date}T${state.time}`) : null;
+  const locked = (field: string): boolean => lockedFields.includes(field);
 
   return (
     <section aria-label={copy.teamsAndTime} className="flex flex-col gap-4 rounded-xl bg-surface-1 p-4 ring-1 ring-inset ring-divider">
@@ -46,38 +43,33 @@ export function EditorSections({ state, competitions, lockedFields, onChange }: 
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-2">
-          <span className="text-caption flex items-center gap-2 font-semibold text-text-secondary">
-            {copy.date}
-            <LockBadge locked={lockedFields.includes('match_date')} />
-          </span>
-          <input
+        <div className="min-w-0">
+          <Field
+            label={copy.date}
             type="date"
+            locked={locked('match_date')}
+            // A time to be confirmed still has a day, and the day stays editable: only the clock is
+            // unknown (A-R1-4).
             value={state.date}
-            disabled={state.timeTbd}
             onChange={(event) => onChange({ date: event.target.value })}
-            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
           />
-        </label>
+        </div>
 
-        <label className="flex flex-col gap-2">
-          <span className="text-caption flex items-center gap-2 font-semibold text-text-secondary">
-            {copy.time}
-            <LockBadge locked={lockedFields.includes('kickoff_at')} />
-          </span>
-          <input
+        <div className="min-w-0">
+          <Field
+            label={`${copy.time} ${copy.cairoNote}`}
             type="time"
-            aria-label={`${copy.time} ${copy.cairoNote}`}
+            ltr
+            locked={locked('kickoff_at')}
             value={state.time}
             disabled={state.timeTbd}
             onChange={(event) => onChange({ time: event.target.value })}
-            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
           />
-        </label>
+        </div>
 
         <p className="text-caption text-text-tertiary">
           {copy.cairoNote}
-          {utc ? ` · ${copy.savedAs(formatCairoTime(utc))}` : null}
+          {utc ? ` · ${copy.savedAs(formatUtcTime(utc))}` : null}
         </p>
 
         <label className="text-label flex items-center gap-2 text-text-secondary">
@@ -95,13 +87,22 @@ export function EditorSections({ state, competitions, lockedFields, onChange }: 
         <label className="flex min-w-0 flex-1 flex-col gap-2">
           <span className="text-caption flex items-center gap-2 font-semibold text-text-secondary">
             {copy.competition}
-            <LockBadge locked={lockedFields.includes('competition_id')} />
+            {locked('competition_id') ? (
+              <span className="inline-flex text-postponed">
+                <Icon name="lock" size="sm" label={copy.lockedHint} />
+              </span>
+            ) : null}
           </span>
           <select
             aria-label={copy.competition}
+            data-state={locked('competition_id') ? 'locked' : 'default'}
             value={state.competitionId}
             onChange={(event) => onChange({ competitionId: event.target.value })}
-            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
+            className={clsx(
+              'text-body h-12 rounded-md px-3 ring-1 ring-inset',
+              locked('competition_id') ? 'bg-postponed-container ring-postponed' : 'bg-bg ring-divider-strong',
+              'text-text-primary',
+            )}
           >
             <option value="">—</option>
             {competitions.map((competition) => (
@@ -112,25 +113,23 @@ export function EditorSections({ state, competitions, lockedFields, onChange }: 
           </select>
         </label>
 
-        <label className="flex min-w-0 flex-col gap-2">
-          <span className="text-caption font-semibold text-text-secondary">{copy.stage}</span>
-          <input
-            type="text"
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Field
+            label={copy.stage}
+            locked={locked('competition_stage')}
             value={state.stage}
             onChange={(event) => onChange({ stage: event.target.value })}
-            className="text-body h-12 min-w-0 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
           />
-        </label>
+        </div>
 
-        <label className="flex min-w-0 flex-col gap-2">
-          <span className="text-caption font-semibold text-text-secondary">{copy.stadium}</span>
-          <input
-            type="text"
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Field
+            label={copy.stadium}
+            locked={locked('stadium')}
             value={state.stadium}
             onChange={(event) => onChange({ stadium: event.target.value })}
-            className="text-body h-12 min-w-0 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
           />
-        </label>
+        </div>
       </div>
     </section>
   );

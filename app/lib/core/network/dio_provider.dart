@@ -1,13 +1,16 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../config/app_config.dart';
 import 'etag_interceptor.dart';
 import 'generated/export.dart';
 
+part 'dio_provider.g.dart';
+
 /// One Dio for the app: base URL from the bundled flavor config, timeouts, and the
 /// ETag interceptor (research R17).
-final dioProvider = Provider<Dio>((ref) {
+@Riverpod(keepAlive: true)
+Dio dio(Ref ref) {
   AppConfig.ensureConfigured();
   return Dio(
     BaseOptions(
@@ -17,13 +20,11 @@ final dioProvider = Provider<Dio>((ref) {
       headers: const {'Accept': 'application/json'},
     ),
   )..interceptors.add(EtagInterceptor());
-});
+}
 
 /// The generated client (swagger_parser, never hand-edited).
-final madarApiProvider = Provider<MadarApi>(
-  (ref) => MadarApi(ref.watch(dioProvider)),
-);
+@Riverpod(keepAlive: true)
+MadarApi madarApi(Ref ref) => MadarApi(ref.watch(dioProvider));
 
-final madarApiClientProvider = Provider<MadarApiClient>(
-  (ref) => ref.watch(madarApiProvider).madarApi,
-);
+@Riverpod(keepAlive: true)
+MadarApiClient madarApiClient(Ref ref) => ref.watch(madarApiProvider).madarApi;

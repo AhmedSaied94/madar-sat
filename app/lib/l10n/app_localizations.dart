@@ -382,6 +382,18 @@ abstract class AppLocalizations {
   /// **'ملاحظة التردد'**
   String get frequencyNote;
 
+  /// No description provided for @access.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول'**
+  String get access;
+
+  /// No description provided for @category.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفئة'**
+  String get category;
+
   /// No description provided for @details.
   ///
   /// In ar, this message translates to:
@@ -763,7 +775,7 @@ abstract class AppLocalizations {
   /// No description provided for @commentatorPlaying.
   ///
   /// In ar, this message translates to:
-  /// **'يُشغَّل الآن'**
+  /// **'جاري التشغيل...'**
   String get commentatorPlaying;
 
   /// No description provided for @commentatorError.
@@ -801,6 +813,36 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أين تشاهد'**
   String get s3WhereToWatch;
+
+  /// No description provided for @s3OnSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'على {satellites}'**
+  String s3OnSatellites(String satellites);
+
+  /// No description provided for @s3OnDefaultSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'على نايل سات وبدر'**
+  String get s3OnDefaultSatellites;
+
+  /// No description provided for @s3StartsInMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تبدأ بعد دقيقة} =2{تبدأ بعد دقيقتين} few{تبدأ بعد {count} دقائق} other{تبدأ بعد {count} دقيقة}}'**
+  String s3StartsInMinutes(int count);
+
+  /// No description provided for @s3StartsInHours.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تبدأ بعد ساعة} =2{تبدأ بعد ساعتين} few{تبدأ بعد {count} ساعات} other{تبدأ بعد {count} ساعة}}'**
+  String s3StartsInHours(int count);
+
+  /// No description provided for @s3StartsInDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تبدأ بعد يوم} =2{تبدأ بعد يومين} few{تبدأ بعد {count} أيام} other{تبدأ بعد {count} يوم}}'**
+  String s3StartsInDays(int count);
 
   /// No description provided for @s3ChannelsCount.
   ///

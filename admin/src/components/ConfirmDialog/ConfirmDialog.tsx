@@ -1,3 +1,4 @@
+import { clsx } from 'clsx';
 import { useEffect, useId, useState, type ReactElement, type ReactNode } from 'react';
 
 import { dialogs } from '../../i18n/ar';
@@ -11,12 +12,14 @@ import { Modal } from './Modal';
 
 interface ConfirmDialogProps {
   open: boolean;
-  title: string;
+  title: ReactNode;
   /** The scope and consequence, in numbers. */
   body: string;
   /** What must be typed: «حذف 20». Left out for a confirmation that is not destructive. */
   phrase?: string;
   confirmLabel: string;
+  /** The way out. «ابقَ» on A4's unsaved prompt, as `Dialogs.png` has it; «إلغاء» by default. */
+  cancelLabel?: string;
   destructive?: boolean;
   loading?: boolean;
   /** Extra content between the copy and the actions, such as a competition picker. */
@@ -31,6 +34,7 @@ export function ConfirmDialog({
   body,
   phrase,
   confirmLabel,
+  cancelLabel,
   destructive = false,
   loading = false,
   children,
@@ -52,9 +56,10 @@ export function ConfirmDialog({
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
-          className={`flex size-12 flex-none items-center justify-center rounded-md ${
-            destructive ? 'bg-error-container text-error' : 'bg-accent-container text-accent-text'
-          }`}
+          className={clsx(
+            'flex size-12 flex-none items-center justify-center rounded-md',
+            destructive ? 'bg-error-container text-error' : 'bg-accent-container text-accent-text',
+          )}
         >
           <Icon name={destructive ? 'trash' : 'alert'} size="lg" />
         </span>
@@ -78,7 +83,7 @@ export function ConfirmDialog({
 
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          {dialogs.cancel}
+          {cancelLabel ?? dialogs.cancel}
         </Button>
         <span className="flex-1" />
         <Button

@@ -12,8 +12,8 @@ import {
 } from './cairoTime';
 
 // Egypt's 2026 daylight-saving change: +03:00 from Friday 24 April to Thursday 29 October, +02:00
-// either side of it. The module never reads the machine's zone, so these assertions hold under any
-// TZ (CI runs the suite under TZ=UTC and TZ=Asia/Riyadh).
+// either side of it. The module never reads the machine's zone: the test below stubs `TZ` to UTC,
+// Asia/Riyadh and America/New_York and gets the same answers, so no CI matrix is needed (A-R1-22).
 describe('cairoTime', () => {
   describe('a Cairo wall time to a UTC instant', () => {
     it('stores 12:00 Cairo as 09:00Z while DST is on (April)', () => {

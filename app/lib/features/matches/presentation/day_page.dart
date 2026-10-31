@@ -6,7 +6,6 @@ import '../../../core/format/clock.dart';
 import '../../../core/l10n/error_copy.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/network/generated/models/match_summary.dart';
-import '../../../core/network/swr_providers.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/empty_state.dart';
 import '../../../design/components/skeleton.dart';
@@ -33,7 +32,7 @@ class DayPage extends ConsumerWidget {
     return switch (ref.watch(matchesDayStateProvider(day))) {
       DayLoading() => const Skeleton(),
       DayFailed(:final failure, :final isRetrying) => _Pullable(
-          onRefresh: () => _refresh(ref),
+          onRefresh: () => ref.read(matchesDayProvider(day).notifier).refresh(),
           color: colors.textPrimary,
           background: colors.surface2,
           slivers: [
@@ -47,7 +46,7 @@ class DayPage extends ConsumerWidget {
           ],
         ),
       DayLoaded(:final view) => _Pullable(
-          onRefresh: () => _refresh(ref),
+          onRefresh: () => ref.read(matchesDayProvider(day).notifier).refresh(),
           color: colors.textPrimary,
           background: colors.surface2,
           slivers: _loadedSlivers(context, ref, view),
@@ -112,20 +111,6 @@ class DayPage extends ConsumerWidget {
           ),
         ),
     ];
-  }
-
-  /// Pull to refresh: run the whole cache, revalidate, write cycle and wait for the answer,
-  /// then re-read drift so the screen shows what was written (R25). A failure with nothing
-  /// cached is shown by the day's own error state after the re-read.
-  Future<void> _refresh(WidgetRef ref) async {
-    try {
-      await ref.read(swrRepositoryProvider).watchDay(day).drain<void>();
-    } on ApiFailure {
-      // Shown below: with a cache the day keeps its rows and the age, without one it
-      // fails again on the re-read.
-    }
-    if (!ref.context.mounted) return;
-    ref.invalidate(matchesDayProvider(day));
   }
 }
 

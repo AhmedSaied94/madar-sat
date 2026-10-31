@@ -74,9 +74,11 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
     if (!session) return;
     timer.current = setTimeout(
       () => {
+        // A refresh that fails on the network keeps the session (and A4's unsaved work) mounted; only a
+        // definitive refusal ends it, through `bindSession`'s `onExpired` (A-R1-19).
         refreshSession()
           .then(setSession)
-          .catch(() => setSession(null));
+          .catch(() => undefined);
       },
       Math.max(session.expires_in - REFRESH_LEAD_S, 0) * 1000,
     );

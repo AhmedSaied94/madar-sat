@@ -48,6 +48,19 @@ void main() {
     expect(picked, 'entertainment');
   });
 
+  testWidgets('every segment is a 48 dp target, though it draws 36', (tester) async {
+    await tester.pumpWidget(
+      testApp(Segmented<String>(options: two, selected: 'sports', onChanged: (_) {})),
+    );
+
+    for (final label in ['رياضة', 'ترفيه']) {
+      final target = tester.getSize(
+        find.ancestor(of: find.text(label), matching: find.byType(InkWell)).first,
+      );
+      expect(target.height, greaterThanOrEqualTo(48), reason: label);
+    }
+  });
+
   testWidgets('the selected segment is announced as selected', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(

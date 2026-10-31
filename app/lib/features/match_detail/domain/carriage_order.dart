@@ -2,7 +2,7 @@ import '../../../core/network/generated/models/access.dart';
 import '../../../core/network/generated/models/carriage_entry.dart';
 import '../../../core/network/generated/models/platform_group.dart';
 import '../../../core/network/generated/models/satellite_ref.dart';
-import '../../my_satellites/data/my_satellites_provider.dart';
+import '../../my_satellites/domain/default_satellites.dart';
 
 /// The carriages on one satellite that is not mine, in S3's order.
 class SatelliteGroup {

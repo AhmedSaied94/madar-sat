@@ -7,8 +7,7 @@ import '../../../core/format/digits.dart';
 import '../../../core/l10n/error_copy.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/network/generated/models/satellite.dart';
-import '../../../core/network/swr_providers.dart';
-import '../../../core/network/swr_repository.dart';
+import '../../../core/network/swr_snapshot.dart';
 import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/bottom_nav.dart';
@@ -167,24 +166,7 @@ class _SatelliteList extends ConsumerWidget {
     ];
 
     return RefreshIndicator(
-      onRefresh: () async {
-        // The whole cache, revalidate and write cycle, so the spinner waits for the server.
-        try {
-          await ref
-              .read(swrRepositoryProvider)
-              .watchDocument<List<Satellite>>(
-                key: DocumentKeys.satellites,
-                path: '/v1/satellites',
-                parse: parseSatellites,
-              )
-              .drain<void>();
-        } on ApiFailure {
-          // Nothing cached and no answer: the screen keeps showing what it shows.
-        }
-        // The user may have left the tab while this ran, and a disposed `ref` throws.
-        if (!ref.context.mounted) return;
-        ref.invalidate(satellitesProvider);
-      },
+      onRefresh: () => ref.read(satellitesProvider.notifier).refresh(),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [

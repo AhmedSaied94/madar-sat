@@ -28,7 +28,9 @@ class CompetitionSection extends StatelessWidget {
     return _GroupSection(
       header: _GroupHeader(
         title: competition.name,
-        stage: competition.stage,
+        // The group's own stage, only when every match in it shares one: the first match's
+        // round must not label a group that mixes rounds (constitution II).
+        stage: group.stage,
         leading: LogoTile(
           kind: LogoTileKind.competition,
           logo: logo == null ? null : NetworkImage(logo),

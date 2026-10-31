@@ -134,6 +134,8 @@ export const listBroadcastPresetsResponse = zod.object({
  */
 export const listChannelsQueryQMaxOne = 64;
 
+
+export const listChannelsQueryQRegExpOne = new RegExp('^[^\\x00]\*$');
 export const listChannelsQuerySatelliteIdMaxOne = 9223372036854776000;
 
 export const listChannelsQueryCursorMaxOne = 200;
@@ -144,7 +146,7 @@ export const listChannelsQueryLimitMax = 100;
 
 
 export const listChannelsQueryParams = zod.object({
-  "q": zod.union([zod.string().min(1).max(listChannelsQueryQMaxOne),zod.null()]).optional(),
+  "q": zod.union([zod.string().min(1).max(listChannelsQueryQMaxOne).regex(listChannelsQueryQRegExpOne),zod.null()]).optional(),
   "satellite_id": zod.union([zod.number().min(1).max(listChannelsQuerySatelliteIdMaxOne),zod.null()]).optional(),
   "category": zod.union([zod.enum(['sports', 'entertainment']),zod.null()]).optional(),
   "kind": zod.union([zod.enum(['satellite', 'terrestrial', 'platform']),zod.null()]).optional(),
@@ -404,6 +406,8 @@ export const patchChannelResponse = zod.object({
  */
 export const listCommentatorsQueryQMaxOne = 64;
 
+
+export const listCommentatorsQueryQRegExpOne = new RegExp('^[^\\x00]\*$');
 export const listCommentatorsQueryCursorMaxOne = 200;
 
 export const listCommentatorsQueryLimitDefault = 50;
@@ -412,7 +416,7 @@ export const listCommentatorsQueryLimitMax = 100;
 
 
 export const listCommentatorsQueryParams = zod.object({
-  "q": zod.union([zod.string().min(1).max(listCommentatorsQueryQMaxOne),zod.null()]).optional(),
+  "q": zod.union([zod.string().min(1).max(listCommentatorsQueryQMaxOne).regex(listCommentatorsQueryQRegExpOne),zod.null()]).optional(),
   "cursor": zod.union([zod.string().max(listCommentatorsQueryCursorMaxOne),zod.null()]).optional(),
   "limit": zod.number().min(1).max(listCommentatorsQueryLimitMax).default(listCommentatorsQueryLimitDefault)
 })
@@ -774,9 +778,11 @@ export const addHiddenChannelNameResponse = zod.object({
 export const removeHiddenChannelNamePathNameMax = 120;
 
 
+export const removeHiddenChannelNamePathNameRegExp = new RegExp('^[^\\x00]\*$');
+
 
 export const removeHiddenChannelNameParams = zod.object({
-  "name": zod.string().min(1).max(removeHiddenChannelNamePathNameMax)
+  "name": zod.string().min(1).max(removeHiddenChannelNamePathNameMax).regex(removeHiddenChannelNamePathNameRegExp)
 })
 
 export const removeHiddenChannelNameResponse = zod.object({
@@ -810,6 +816,11 @@ export const listMatchesQueryParams = zod.object({
   "status": zod.union([zod.enum(['scheduled', 'live', 'halftime', 'extra_time', 'penalties', 'finished', 'postponed', 'cancelled', 'abandoned']),zod.null()]).optional().describe('The derived status the app would show')
 })
 
+export const listMatchesResponseDataItemEtagMin = 3;
+export const listMatchesResponseDataItemEtagMax = 80;
+
+
+
 export const listMatchesResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
   "away": zod.object({
@@ -831,6 +842,7 @@ export const listMatchesResponse = zod.object({
   "stage": zod.union([zod.string(),zod.null()])
 }),
   "estimated": zod.boolean(),
+  "etag": zod.string().min(listMatchesResponseDataItemEtagMin).max(listMatchesResponseDataItemEtagMax),
   "home": zod.object({
   "id": zod.union([zod.number(),zod.null()]),
   "logo": zod.union([zod.string(),zod.null()]),
@@ -1591,6 +1603,8 @@ export const listSourcesResponse = zod.object({
  */
 export const listTeamsQueryQMaxOne = 64;
 
+
+export const listTeamsQueryQRegExpOne = new RegExp('^[^\\x00]\*$');
 export const listTeamsQueryCompetitionIdMaxOne = 9223372036854776000;
 
 export const listTeamsQueryCursorMaxOne = 200;
@@ -1601,7 +1615,7 @@ export const listTeamsQueryLimitMax = 100;
 
 
 export const listTeamsQueryParams = zod.object({
-  "q": zod.union([zod.string().min(1).max(listTeamsQueryQMaxOne),zod.null()]).optional(),
+  "q": zod.union([zod.string().min(1).max(listTeamsQueryQMaxOne).regex(listTeamsQueryQRegExpOne),zod.null()]).optional(),
   "competition_id": zod.union([zod.number().min(1).max(listTeamsQueryCompetitionIdMaxOne),zod.null()]).optional(),
   "missing_logo": zod.union([zod.boolean(),zod.null()]).optional(),
   "cursor": zod.union([zod.string().max(listTeamsQueryCursorMaxOne),zod.null()]).optional(),

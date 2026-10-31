@@ -38,7 +38,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-litera
 
 - `pnpm test`: Vitest + Testing Library + MSW (jsdom). `pnpm test:watch` while working. Render with `renderRtl` from `src/test/render.tsx`, which wraps the RTL root, a query client and a memory router; MSW runs from `src/test/setup.ts` and fails on unhandled requests.
 - Tests come first and are seen failing before the code they cover (constitution, Test-first). Every state in a component's README has a test.
-- Playwright smoke tests arrive on D11 (delivery-plan §7); until then screens are checked by screenshots against the PNG boards.
+- Playwright smoke tests arrive on D4 (delivery-plan §7); until then screens are checked by screenshots against the PNG boards.
 
 ## Generated code: never edit by hand
 

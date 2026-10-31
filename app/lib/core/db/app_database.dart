@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../format/local_day.dart';
+import '../format/retention.dart';
 import '../format/time.dart';
 import '../network/generated/models/broadcast.dart';
 import '../network/generated/models/commentator_ref.dart';
@@ -112,19 +113,26 @@ class AppDatabase extends _$AppDatabase {
     this._offsetAt,
   }) : now = now ?? DateTime.now;
 
-  AppDatabase.open() : this(driftDatabase(name: 'madar'));
+  /// Opens the app's database. The web needs both assets shipped in `web/` (no CDN): the
+  /// SQLite WebAssembly module and drift's worker (see `app/CLAUDE.md`).
+  AppDatabase.open()
+      : this(
+          driftDatabase(
+            name: 'madar',
+            web: DriftWebOptions(
+              sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+              driftWorker: Uri.parse('drift_worker.js'),
+            ),
+          ),
+        );
 
   /// The device's local wall clock.
   final DateTime Function() now;
   final Duration Function(DateTime local)? _offsetAt;
 
-  /// Local days kept: yesterday through today + 6 (R25).
-  static const int daysBack = 1;
-  static const int daysAhead = 6;
-
   /// A document nobody has revalidated for this long is dropped on start, so match-detail
   /// copies of long-gone matches do not pile up.
-  static const Duration documentRetention = Duration(days: 14);
+  static const Duration documentRetention = Retention.documents;
 
   @override
   int get schemaVersion => 2;
@@ -243,8 +251,8 @@ class AppDatabase extends _$AppDatabase {
   /// Drops matches, windows and day-keyed documents outside yesterday … today + 6, and
   /// documents that have not been revalidated within [documentRetention].
   Future<void> pruneOutsideWindow() async {
-    final first = LocalDays.add(today, -daysBack);
-    final last = LocalDays.add(today, daysAhead);
+    final first = LocalDays.add(today, -Retention.daysBack);
+    final last = LocalDays.add(today, Retention.daysAhead);
     final from = dayWindow(first).from;
     final to = dayWindow(last).to;
     final firstKey = LocalDays.key(first);

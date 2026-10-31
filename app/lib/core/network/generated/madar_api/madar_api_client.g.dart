@@ -21,12 +21,12 @@ class _MadarApiClient implements MadarApiClient {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<EnvelopeHealthStatus> healthEndpointHealthzGet() async {
+  Future<HttpResponse<EnvelopeHealthStatus>> healthEndpointHealthzGet() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeHealthStatus>(
+    final _options = _setStreamType<HttpResponse<EnvelopeHealthStatus>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -44,18 +44,19 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeChannelDetail> getChannelV1ChannelsChannelIdGet({
+  Future<HttpResponse<EnvelopeChannelDetail>> getChannelV1ChannelsChannelIdGet({
     required int channelId,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeChannelDetail>(
+    final _options = _setStreamType<HttpResponse<EnvelopeChannelDetail>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -73,11 +74,12 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeCommentatorDetail>
+  Future<HttpResponse<EnvelopeCommentatorDetail>>
   getCommentatorV1CommentatorsCommentatorIdGet({
     required int commentatorId,
   }) async {
@@ -85,7 +87,7 @@ class _MadarApiClient implements MadarApiClient {
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeCommentatorDetail>(
+    final _options = _setStreamType<HttpResponse<EnvelopeCommentatorDetail>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -103,16 +105,18 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListCompetition> listCompetitionsV1CompetitionsGet() async {
+  Future<HttpResponse<EnvelopeListCompetition>>
+  listCompetitionsV1CompetitionsGet() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListCompetition>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListCompetition>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -130,11 +134,12 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeCompetitionDetail>
+  Future<HttpResponse<EnvelopeCompetitionDetail>>
   getCompetitionV1CompetitionsCompetitionIdGet({
     required int competitionId,
   }) async {
@@ -142,7 +147,7 @@ class _MadarApiClient implements MadarApiClient {
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeCompetitionDetail>(
+    final _options = _setStreamType<HttpResponse<EnvelopeCompetitionDetail>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -160,16 +165,17 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListLiveState> getLiveV1LiveGet() async {
+  Future<HttpResponse<EnvelopeListLiveState>> getLiveV1LiveGet() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListLiveState>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListLiveState>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -187,11 +193,12 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListMatchSummary> listMatchesV1MatchesGet({
+  Future<HttpResponse<EnvelopeListMatchSummary>> listMatchesV1MatchesGet({
     required DateTime from,
     required DateTime to,
     Sport? sport,
@@ -215,7 +222,7 @@ class _MadarApiClient implements MadarApiClient {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListMatchSummary>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListMatchSummary>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -233,18 +240,19 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeMatchDetail> getMatchV1MatchesMatchIdGet({
+  Future<HttpResponse<EnvelopeMatchDetail>> getMatchV1MatchesMatchIdGet({
     required int matchId,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeMatchDetail>(
+    final _options = _setStreamType<HttpResponse<EnvelopeMatchDetail>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -262,11 +270,13 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListRightsHolder> listRightsHoldersV1RightsHoldersGet({
+  Future<HttpResponse<EnvelopeListRightsHolder>>
+  listRightsHoldersV1RightsHoldersGet({
     int? satelliteId,
     int? competitionId,
   }) async {
@@ -278,7 +288,7 @@ class _MadarApiClient implements MadarApiClient {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListRightsHolder>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListRightsHolder>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -296,11 +306,12 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeRightsHolderDetail>
+  Future<HttpResponse<EnvelopeRightsHolderDetail>>
   getRightsHolderV1RightsHoldersRightsHolderIdGet({
     required int rightsHolderId,
   }) async {
@@ -308,7 +319,7 @@ class _MadarApiClient implements MadarApiClient {
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeRightsHolderDetail>(
+    final _options = _setStreamType<HttpResponse<EnvelopeRightsHolderDetail>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -326,16 +337,18 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListSatellite> listSatellitesV1SatellitesGet() async {
+  Future<HttpResponse<EnvelopeListSatellite>>
+  listSatellitesV1SatellitesGet() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListSatellite>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListSatellite>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -353,11 +366,12 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListChannelCarriage>
+  Future<HttpResponse<EnvelopeListChannelCarriage>>
   listSatelliteChannelsV1SatellitesSatelliteIdChannelsGet({
     required int satelliteId,
     Category? category,
@@ -368,7 +382,7 @@ class _MadarApiClient implements MadarApiClient {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListChannelCarriage>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListChannelCarriage>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -386,11 +400,12 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeListTeamSearchItem> searchTeamsV1TeamsGet({
+  Future<HttpResponse<EnvelopeListTeamSearchItem>> searchTeamsV1TeamsGet({
     required String q,
     String? cursor,
     int? limit = 20,
@@ -404,7 +419,7 @@ class _MadarApiClient implements MadarApiClient {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeListTeamSearchItem>(
+    final _options = _setStreamType<HttpResponse<EnvelopeListTeamSearchItem>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -422,18 +437,19 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   @override
-  Future<EnvelopeTeamDetail> getTeamV1TeamsTeamIdGet({
+  Future<HttpResponse<EnvelopeTeamDetail>> getTeamV1TeamsTeamIdGet({
     required int teamId,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<EnvelopeTeamDetail>(
+    final _options = _setStreamType<HttpResponse<EnvelopeTeamDetail>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -451,7 +467,8 @@ class _MadarApiClient implements MadarApiClient {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
-    return _value;
+    final httpResponse = HttpResponse(_value, _result);
+    return httpResponse;
   }
 
   RequestOptions _setStreamType<T>(RequestOptions requestOptions) {

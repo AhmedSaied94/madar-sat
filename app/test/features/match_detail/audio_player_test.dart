@@ -165,7 +165,7 @@ void main() {
       await tester.pump();
 
       expect(state().phaseOf(urlA), ClipPhase.playing);
-      expect(find.text('يُشغَّل الآن'), findsOneWidget);
+      expect(find.text('جاري التشغيل...'), findsOneWidget);
       expect(find.byTooltip('إيقاف المقطع'), findsOneWidget);
 
       await tester.tap(find.byTooltip('إيقاف المقطع'));
@@ -173,7 +173,7 @@ void main() {
       await tester.pump();
 
       expect(state().phase, ClipPhase.idle);
-      expect(find.text('يُشغَّل الآن'), findsNothing);
+      expect(find.text('جاري التشغيل...'), findsNothing);
     });
 
     testWidgets('a failed load shows the error state, and tapping retries', (tester) async {

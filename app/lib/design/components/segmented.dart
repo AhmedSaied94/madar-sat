@@ -75,33 +75,40 @@ class _Segment extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(MadarRadii.md),
-          child: Container(
-            height: MadarSpace.s8 + MadarSpace.s1,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? colors.segmentedOn : null,
-              borderRadius: BorderRadius.circular(MadarRadii.md),
-              boxShadow: selected ? context.madarShadows.shadowSubtle : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: MadarText.textBody.fontSize, color: foreground),
-                  const SizedBox(width: MadarSpace.s1),
-                ],
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: MadarText.textLabel.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+          // The visible box is 36 dp; the target is the constitution's 48 dp, the same
+          // 40-in-48 pattern `CommentatorRow` uses for its play button.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: MadarLayout.touchMin),
+            child: Center(
+              child: Container(
+                height: MadarSpace.s8 + MadarSpace.s1,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? colors.segmentedOn : null,
+                  borderRadius: BorderRadius.circular(MadarRadii.md),
+                  boxShadow: selected ? context.madarShadows.shadowSubtle : null,
                 ),
-              ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: MadarText.textBody.fontSize, color: foreground),
+                      const SizedBox(width: MadarSpace.s1),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MadarText.textLabel.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

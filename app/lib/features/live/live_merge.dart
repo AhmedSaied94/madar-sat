@@ -11,10 +11,12 @@ bool isInPlayStatus(Status status) => switch (status) {
 
 /// A cached row as the user may see it.
 ///
-/// Live states come only from `/v1/live`, in memory (FR-047). A copy from drift that says a
-/// match is in play is only what the server said some time ago, so with no live state to
-/// confirm it, it becomes the quiet clock-estimated «مباشر» with no score and no minute
-/// (constitution II, SC-008), never a live score that may be hours old.
+/// Live states come only from `/v1/live`, in memory (FR-047, constitution II: cached data is
+/// never presented as live). A copy from drift that says a match is in play is only what the
+/// server said some time ago, so with no live state to confirm it the row gets a non-live
+/// treatment: its kickoff time, no score and no minute, and it counts as live nowhere — not
+/// in «مباشر ‹n›», not in the live filter (SC-008). Even offline, hours after the match
+/// ended, nothing claims it is being played.
 MatchSummary withLiveState(MatchSummary match, LiveState? live) {
   if (live != null) {
     return match.copyWith(
@@ -29,12 +31,12 @@ MatchSummary withLiveState(MatchSummary match, LiveState? live) {
   }
   if (isInPlayStatus(match.status)) {
     return match.copyWith(
-      status: Status.live,
+      status: Status.scheduled,
       statusLabel: null,
       period: null,
       minute: null,
       score: null,
-      estimated: true,
+      estimated: false,
     );
   }
   return match;
@@ -47,6 +49,9 @@ List<MatchSummary> applyLiveStates(List<MatchSummary> rows, Map<int, LiveState> 
 
 /// True when something in [rows] is in play or kicks off within the hour, which is when
 /// `/v1/live` is worth polling (FR-047).
+///
+/// It reads the cached status, before [withLiveState]: a day whose cached rows say "in play"
+/// is exactly the day to ask `/v1/live` about.
 bool hasLiveOrImminent(Iterable<MatchSummary> rows, {required DateTime now}) => rows.any(
       (row) =>
           isInPlayStatus(row.status) ||
