@@ -19,7 +19,11 @@ void main() {
         children: [
           CarriageRow(carriage: sampleCarriage()),
           Divider(height: 1, color: context.madarColors.divider),
-          CarriageRow(carriage: sampleCarriage(), expanded: true),
+          // Open, with a provider and a package: the two lines the access row adds (M-R2-10).
+          CarriageRow(
+            carriage: sampleCarriage(provider: 'beIN', package: 'beIN Sports'),
+            expanded: true,
+          ),
           Divider(height: 1, color: context.madarColors.divider),
           CarriageRow(carriage: sampleCarriage(access: Access.free)),
           Divider(height: 1, color: context.madarColors.divider),
@@ -69,17 +73,71 @@ void main() {
     expect(opened, 1);
   });
 
-  testWidgets('the expanded row names the satellite, its English name and its position',
+  testWidgets('the expanded row names the satellite once, position included in its name',
       (tester) async {
     await tester.pumpWidget(testApp(CarriageRow(carriage: sampleCarriage(), expanded: true)));
 
     expect(find.text('نايل سات'), findsWidgets);
     expect(find.text('Nilesat 7.0W'), findsOneWidget);
-    expect(find.text('7.0W'), findsOneWidget, reason: 'E/W, never the signed -7');
-    expect(find.text('-7'), findsNothing);
+    expect(find.text('7.0W'), findsNothing, reason: 'the English name already carries it');
+    expect(find.text('-7'), findsNothing, reason: 'E/W, never the signed -7');
     expect(find.text('الوصول'), findsOneWidget);
     expect(find.text('الفئة'), findsOneWidget);
     expect(find.text('رياضة'), findsOneWidget);
+  });
+
+  testWidgets('a satellite whose name leaves the position out gets it, with its degree sign',
+      (tester) async {
+    await tester.pumpWidget(
+      testApp(
+        CarriageRow(
+          carriage: sampleCarriage().copyWith(
+            satellite: const SatelliteRef(
+              id: 7,
+              slug: 'hotbird-13-0e',
+              nameAr: 'هوت بيرد',
+              nameEn: 'Hotbird',
+              orbitalPosition: 13,
+            ),
+          ),
+          expanded: true,
+        ),
+      ),
+    );
+
+    expect(find.text('Hotbird'), findsOneWidget);
+    expect(find.text('13.0°E'), findsOneWidget, reason: 'islanded, east of the meridian');
+  });
+
+  testWidgets('the tuning line reads left to right: the number, then MHz', (tester) async {
+    await tester.pumpWidget(testApp(CarriageRow(carriage: sampleCarriage(), expanded: true)));
+
+    final text = find.text('11843 MHz');
+    expect(text, findsOneWidget);
+    expect(
+      Directionality.of(tester.element(text)),
+      TextDirection.ltr,
+      reason: 'a plain Text in the RTL row would draw «MHz 11843» (M-R2-1)',
+    );
+  });
+
+  testWidgets('the access row names the provider and the package when there are any',
+      (tester) async {
+    await tester.pumpWidget(
+      testApp(
+        CarriageRow(
+          carriage: sampleCarriage(provider: 'beIN', package: 'beIN Sports'),
+          expanded: true,
+        ),
+      ),
+    );
+
+    expect(find.textContaining('beIN'), findsWidgets);
+    expect(find.text('beIN Sports'), findsOneWidget, reason: 'the package, as a Latin island');
+    expect(
+      Directionality.of(tester.element(find.text('beIN Sports'))),
+      TextDirection.ltr,
+    );
   });
 
   testWidgets('the follow action shows only when a caller can follow', (tester) async {

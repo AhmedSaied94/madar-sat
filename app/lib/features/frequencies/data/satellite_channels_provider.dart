@@ -27,6 +27,8 @@ class SatelliteChannels extends _$SatelliteChannels {
     } on ApiFailure {
       // The state keeps what it has; the screen says so.
     }
+    // A disposed provider throws here; the screen that pulled may already be gone (M-R2-2).
+    if (!ref.mounted) return;
     ref.invalidateSelf();
   }
 }

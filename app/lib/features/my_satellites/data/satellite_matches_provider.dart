@@ -63,6 +63,8 @@ class SatelliteMatches extends _$SatelliteMatches {
     } on ApiFailure {
       // Nothing to add: the state shows the cached copy or the error.
     }
+    // A disposed provider throws here; the screen that pulled may already be gone (M-R2-2).
+    if (!ref.mounted) return;
     ref.invalidateSelf();
   }
 }

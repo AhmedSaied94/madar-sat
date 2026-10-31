@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/db/app_database.dart';
 import 'package:madar_sat/core/network/api_failure.dart';
+import 'package:madar_sat/core/network/etag_interceptor.dart';
 import 'package:madar_sat/core/network/generated/models/match_summary.dart';
 import 'package:madar_sat/core/network/swr_repository.dart';
 
@@ -216,8 +217,9 @@ void main() {
     });
 
     test('a 304 for a cache the interceptor already resolved reads as unchanged', () async {
-      // EtagInterceptor resolves a 304 itself when it holds the body in memory. The
-      // repository must read that the same as a raw 304.
+      // An interceptor may turn a 304 into a response holding the body it already has
+      // (`EtagInterceptor` does). The repository must read that the same as a raw 304: the
+      // request carries the app's interceptors (M-R2-5).
       await seedDay([first]);
       final dio = fakeDio(http)
         ..interceptors.add(
@@ -226,7 +228,12 @@ void main() {
               Response<dynamic>(
                 requestOptions: error.requestOptions,
                 statusCode: 304,
-                data: const <String, Object?>{},
+                data: const <String, Object?>{
+                  'success': true,
+                  'data': <Object?>[],
+                  'error': null,
+                  'meta': <String, Object?>{},
+                },
               ),
             ),
           ),
@@ -401,6 +408,43 @@ void main() {
       expect(
         DocumentKeys.matchesBySatellites(day, {5, 2}),
         'matches:2026-10-28:sat:2,5',
+      );
+    });
+  });
+
+  group("the app's Dio and its interceptors (M-R2-5)", () {
+    test("an interceptor added to the app's Dio sees a cached read", () async {
+      final seen = <RequestOptions>[];
+      final dio = fakeDio(http)
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              seen.add(options);
+              handler.next(options);
+            },
+          ),
+        );
+      http.enqueueData([_json(first)], etag: '"v1"');
+
+      await SwrRepository(dio: dio, database: database).watchDay(day).toList();
+
+      expect(seen, hasLength(1), reason: 'the cached read goes through the app\'s Dio');
+      expect(seen.single.uri.path, '/v1/matches');
+    });
+
+    test("EtagInterceptor's memory never decides what a cached read sends", () async {
+      final dio = fakeDio(http)..interceptors.add(EtagInterceptor());
+      // A plain call through the app's Dio leaves EtagInterceptor holding an ETag for it.
+      http.enqueueData(const [], etag: '"memory"');
+      await dio.get<Object?>('/v1/matches');
+
+      http.enqueueData([_json(first)], etag: '"v1"');
+      await SwrRepository(dio: dio, database: database).watchDay(day).toList();
+
+      expect(
+        http.ifNoneMatch(http.requests.length - 1),
+        isNull,
+        reason: 'nothing is in drift, so there is nothing to revalidate',
       );
     });
   });

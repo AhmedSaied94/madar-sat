@@ -69,7 +69,7 @@ final class SatelliteChannelsProvider
   }
 }
 
-String _$satelliteChannelsHash() => r'f9972b4d6948443201336abacea25948e09514b0';
+String _$satelliteChannelsHash() => r'890983cc9faf460dc423dd57e3a4408f302fbf85';
 
 /// `/v1/satellites/{id}/channels`, stale-while-revalidate (24 h freshness).
 ///

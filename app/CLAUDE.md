@@ -44,7 +44,12 @@ flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-
   and `@riverpod` parts. Run it after any change to a model, table or annotated provider.
 - Generated folders are `lib/core/network/generated/`, `lib/l10n/`,
   `lib/core/db/*.g.dart`, `lib/core/theme/madar_tokens.dart` and every `*.g.dart` beside an
-  annotated provider. CI regenerates and fails on a diff; never edit them by hand.
+  annotated provider. Never edit them by hand, and keep them current: the `.g.dart` beside a
+  provider carries a hash of its source and its doc comments, so a stale one shows up as an
+  unrelated diff in the next person's change. `backend.yml`'s `clients` job regenerates and
+  fails on a diff for the generated clients only; a check for `app/lib/**/*.g.dart` is still
+  Lane B2's open step in `app.yml` (M-R3-2), so run `dart run build_runner build -d` before
+  committing.
 
 ## Tokens and fonts
 
@@ -106,13 +111,16 @@ a hand-written `/v1` path or a raw `Dio.get` anywhere in `lib/` outside `generat
   Arabic copy). Screen providers set `retry: (_, _) => null`: Riverpod's automatic retry
   would hold the state at loading for about 38 s and hide the error copy, and every error
   state has its own «إعادة المحاولة».
-- The ETag lives in drift, so each request gets a one-shot Dio (`_requestDio`) carrying only
-  its own `If-None-Match`: two screens revalidating at once never swap headers, and
-  `EtagInterceptor`'s memory cache is not involved. Calls that are not cached in drift keep
-  it.
-- Errors: `DioException` and `ApiFailure` are mapped to the envelope's `error.code`; any
-  other throw (a `TypeError` from contract drift, a storage failure) is logged through
-  `dart:developer` and still yields the fetched data, never a silent empty state.
+- The ETag lives in drift, so each request gets a request-scoped view of the app's Dio
+  (`_requestDio`) carrying only its own `If-None-Match`: two screens revalidating at once
+  never swap headers, and `EtagInterceptor`'s memory cache is not involved. That view keeps
+  every other interceptor `dioProvider` carries (read at request time), so a token or a log
+  added there reaches the cached reads too. Calls that are not cached in drift keep
+  `EtagInterceptor`.
+- Errors: `DioException` and `ApiFailure` are mapped to the envelope's `error.code`, read
+  with the generated `ErrorEnvelope`; any other throw (a `TypeError` from contract drift, a
+  storage failure) is logged through `dart:developer` and still yields the fetched data,
+  never a silent empty state.
 - Matches are typed rows (`matches` + `match_windows`) per **device-local day**, grouped
   with `LocalDays` from `kickoff_at`, never from `match_date`. Everything else (match
   detail, `/v1/satellites`, a satellite's channels, S4's satellite-filtered day) is a JSON
@@ -154,10 +162,12 @@ load-failed state in the PWA.
 ## Providers
 
 Every provider in `lib/` is generated with `@riverpod` (or `@Riverpod(keepAlive: true)`),
-D1's included; never hand-write `Provider(`, `NotifierProvider(`, `StreamProvider(` or
-`FutureProvider(`. The generated base lives in the `*.g.dart` beside the file, so
-`dart run build_runner build -d` runs after every provider change. `app/tool/` will carry a
-check for hand-written providers once Lane B2 wires it into `app.yml`.
+D1's included; never hand-write `Provider(`, `NotifierProvider(`, `StreamProvider(`,
+`FutureProvider(`, `StateNotifierProvider(`, `ChangeNotifierProvider(` or their
+`.autoDispose`/`.family` forms. The generated base lives in the `*.g.dart` beside the file,
+so `dart run build_runner build -d` runs after every provider change.
+`test/architecture/providers_test.dart` fails on a hand-written one, as part of
+`flutter test`; no CI step of its own is needed.
 
 ## Polling
 
@@ -166,6 +176,11 @@ route is visible, the app is `resumed`, and (for `/v1/live`) a live or imminent 
 screen. The policy is a provider (`livePollingProvider`, `features/live/live_poller.dart`);
 `LivePollingScope` only feeds it visibility (`TickerMode`), lifecycle (`AppLifecycleListener`)
 and whether a live answer matters. Never start a periodic timer in a widget.
+
+Each mounted screen holds its **own claim** on that one policy (`sync`/`release`, keyed by
+an object the scope owns), and only the claims of visible, resumed screens drive the timers:
+covering S2 with S3 stops S2's claim and leaves S3 polling, and a screen that goes away
+releases its claim in `dispose`.
 
 A screen's data provider exposes both entry points:
 

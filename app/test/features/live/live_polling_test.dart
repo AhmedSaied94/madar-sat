@@ -166,6 +166,46 @@ void main() {
     expect(revalidations, greaterThan(revalidationsCovered));
   });
 
+  testWidgets('a screen pushed over another keeps its own polling (M-R2-3)', (tester) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    var detailRevalidations = 0;
+    await tester.pumpWidget(
+      scoped(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          home: LivePollingScope(
+            hasLiveOrImminent: true,
+            onRevalidate: () => revalidations += 1,
+            child: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(liveCalls, 1);
+
+    // S3 over S2, with the push transition finished: S2's tickers are off by now, and that
+    // is the moment the old shared controller let S2 switch S3's polling off.
+    navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(
+        builder: (_) => LivePollingScope(
+          hasLiveOrImminent: true,
+          onRevalidate: () => detailRevalidations += 1,
+          child: const SizedBox(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final callsAtPush = liveCalls;
+
+    await elapse(tester, const Duration(seconds: 30));
+    expect(liveCalls, callsAtPush + 1, reason: 'the visible screen still polls /v1/live');
+
+    await elapse(tester, const Duration(seconds: 30));
+    expect(detailRevalidations, 1, reason: 'the visible screen still revalidates');
+    expect(revalidations, 0, reason: 'the covered screen is silent');
+  });
+
   testWidgets('turning live off stops the live poll but not the matches', (tester) async {
     await tester.pumpWidget(scope(live: true));
     await tester.pump();
@@ -250,7 +290,9 @@ void main() {
     // A listener, as a screen has: Riverpod 3 pauses a provider nobody listens to.
     container.listen(livePollingProvider, (previous, next) {});
 
+    const scope = 'a-scope';
     container.read(livePollingProvider.notifier).sync(
+          scope,
           visible: true,
           resumed: true,
           hasLiveOrImminent: true,
@@ -263,6 +305,7 @@ void main() {
     expect(revalidations, 1);
 
     container.read(livePollingProvider.notifier).sync(
+          scope,
           visible: false,
           resumed: true,
           hasLiveOrImminent: true,

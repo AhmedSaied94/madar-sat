@@ -41,7 +41,7 @@ import '../../fixtures/sample_satellites.dart';
 
 final List<ChannelCarriage> _channels = [
   channelEntry(id: 1, name: 'beIN SPORTS 5', mhz: 12188, provider: 'beIN'),
-  channelEntry(id: 2, name: 'beIN SPORTS 1', mhz: 11013, provider: 'beIN'),
+  channelEntry(id: 2, name: 'beIN SPORTS 1', mhz: 11013, provider: 'beIN', package: 'beIN Sports'),
   channelEntry(
     id: 3,
     name: 'ON Sport HD',
@@ -651,7 +651,14 @@ void main() {
       expect(find.text('نسخ التردد'), findsOneWidget);
       expect(find.text('فيديو الاستقبال'), findsOneWidget);
       expect(find.text('11013 MHz'), findsOneWidget);
+      expect(
+        Directionality.of(tester.element(find.text('11013 MHz'))),
+        TextDirection.ltr,
+        reason: 'the number before its unit (M-R2-1)',
+      );
       expect(find.text('أفقي'), findsOneWidget);
+      expect(find.text('مشفرة · beIN'), findsWidgets);
+      expect(find.text('beIN Sports'), findsOneWidget, reason: 'the package (M-R2-10)');
 
       await tester.tap(find.text('ON Sport HD'));
       await tester.pumpAndSettle();

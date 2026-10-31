@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/native.dart';
@@ -78,6 +79,27 @@ void main() {
     expect((await database.windowFor('2026-10-28'))!.etag, '"v2"');
     expect(snapshots.last.data!.map((m) => m.id), [1]);
     expect(container.read(matchesDayStateProvider(day)), isA<DayLoaded>());
+  });
+
+  test('a refresh whose screen goes away mid-cycle does not throw (M-R2-2)', () async {
+    final pending = Completer<void>();
+    final http = FakeHttpAdapter()
+      ..enqueueData([_json(match)], etag: '"v1"')
+      ..enqueue((_) async {
+        await pending.future;
+        return FakeHttpAdapter.envelope([_json(match)], etag: '"v2"');
+      });
+    final repository = _CountingRepository(dio: fakeDio(http), database: database);
+    final (container, _) = listening(repository);
+
+    await container.read(matchesDayProvider(day).future);
+    final refresh = container.read(matchesDayProvider(day).notifier).refresh();
+    // The user leaves the screen while the cycle is in flight.
+    await Future<void>.delayed(Duration.zero);
+    container.dispose();
+    pending.complete();
+
+    await expectLater(refresh, completes);
   });
 
   test('a refresh that fails keeps the cached day and carries the failure', () async {

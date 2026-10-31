@@ -72,53 +72,73 @@ class LiveStates extends _$LiveStates {
 /// The poll policy (FR-047, research R26, constitution VIII: the timers live in a provider,
 /// not in a widget).
 ///
-/// While the screen's route is visible and the app is `resumed`:
+/// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
 /// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
 ///   but only while a live or imminent match is on screen.
 ///
-/// Both stop when the app is paused or another route covers this one, and restart when it
-/// is visible again. `LivePollingScope` feeds the three inputs; nothing about the policy
-/// lives in the widget.
+/// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
+/// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
+/// stops S2's claim only, and the visible screen keeps polling (M-R2-3). Both stop when the
+/// app is paused or when every claim is hidden, and restart when one is visible again.
+/// `LivePollingScope` feeds the three inputs; nothing about the policy lives in the widget.
 @riverpod
 class LivePolling extends _$LivePolling {
   Timer? _matchesTimer;
   Timer? _liveTimer;
-  bool _visible = true;
-  bool _resumed = true;
-  bool _hasLiveOrImminent = false;
-  VoidCallback? _onRevalidate;
+  final Map<Object, _Claim> _claims = {};
 
   @override
-  void build() => ref.onDispose(_stopAll);
+  void build() => ref.onDispose(() {
+        _stopAll();
+        _claims.clear();
+      });
 
-  /// The widget's inputs: whether its route is visible, whether the app is resumed, and
-  /// whether `/v1/live` is worth asking. [onRevalidate] refreshes the screen's own data.
-  void sync({
+  /// One screen's inputs: whether its route is visible, whether the app is resumed, whether
+  /// `/v1/live` is worth asking, and how to refresh the screen's own data.
+  void sync(
+    Object scope, {
     required bool visible,
     required bool resumed,
     required bool hasLiveOrImminent,
     VoidCallback? onRevalidate,
   }) {
-    _visible = visible;
-    _resumed = resumed;
-    _hasLiveOrImminent = hasLiveOrImminent;
-    _onRevalidate = onRevalidate ?? _onRevalidate;
+    if (!ref.mounted) return;
+    final claim = _claims.putIfAbsent(scope, _Claim.new);
+    claim
+      ..visible = visible
+      ..resumed = resumed
+      ..hasLiveOrImminent = hasLiveOrImminent
+      ..onRevalidate = onRevalidate ?? claim.onRevalidate;
     _apply();
   }
 
-  void _apply() {
-    final active = _visible && _resumed;
+  /// A screen that is gone polls nothing, and its callback is never called again.
+  void release(Object scope) {
+    if (!ref.mounted) return;
+    _claims.remove(scope);
+    _apply();
+  }
 
-    if (active) {
-      _matchesTimer ??= Timer.periodic(PollIntervals.matches, (_) => _onRevalidate?.call());
-    } else {
-      _matchesTimer?.cancel();
-      _matchesTimer = null;
+  /// Every claim of a screen that is on screen: only these drive the timers.
+  Iterable<_Claim> get _active => _claims.values.where((claim) => claim.visible && claim.resumed);
+
+  void _apply() {
+    if (!ref.mounted) return;
+    final active = _active.toList();
+    if (active.isEmpty) {
+      _stopAll();
+      return;
     }
 
-    if (active && _hasLiveOrImminent) {
+    _matchesTimer ??= Timer.periodic(PollIntervals.matches, (_) {
+      for (final claim in _active) {
+        claim.onRevalidate?.call();
+      }
+    });
+
+    if (active.any((claim) => claim.hasLiveOrImminent)) {
       if (_liveTimer == null) {
         _liveTimer = Timer.periodic(PollIntervals.live, (_) => unawaited(_fetchLive()));
         unawaited(_fetchLive());
@@ -155,6 +175,14 @@ class LivePolling extends _$LivePolling {
   }
 }
 
+/// One screen's inputs to [LivePolling].
+class _Claim {
+  bool visible = true;
+  bool resumed = true;
+  bool hasLiveOrImminent = false;
+  VoidCallback? onRevalidate;
+}
+
 /// Keeps one screen's data current while it can be seen. It adds nothing to the layout, and
 /// only feeds [LivePolling] the three things it cannot know: visibility, lifecycle and
 /// whether a live answer would matter.
@@ -178,6 +206,11 @@ class LivePollingScope extends ConsumerStatefulWidget {
 
 class _LivePollingScopeState extends ConsumerState<LivePollingScope> {
   late final AppLifecycleListener _lifecycle;
+
+  /// This screen's own claim on [LivePolling], so covering it never stops another screen's
+  /// timers (M-R2-3).
+  final Object _claim = Object();
+  LivePolling? _polling;
   bool _visible = true;
   bool _resumed = true;
 
@@ -212,15 +245,23 @@ class _LivePollingScopeState extends ConsumerState<LivePollingScope> {
   @override
   void dispose() {
     _lifecycle.dispose();
+    // The claim goes with the screen; if this was the last one, the policy's own dispose
+    // cancels the timers.
+    _polling?.release(_claim);
     super.dispose();
   }
 
-  void _sync() => ref.read(livePollingProvider.notifier).sync(
-        visible: _visible,
-        resumed: _resumed,
-        hasLiveOrImminent: widget.hasLiveOrImminent,
-        onRevalidate: widget.onRevalidate,
-      );
+  void _sync() {
+    final polling = ref.read(livePollingProvider.notifier);
+    _polling = polling;
+    polling.sync(
+      _claim,
+      visible: _visible,
+      resumed: _resumed,
+      hasLiveOrImminent: widget.hasLiveOrImminent,
+      onRevalidate: widget.onRevalidate,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -84,7 +84,7 @@ final class SatelliteMatchesProvider
   }
 }
 
-String _$satelliteMatchesHash() => r'4ffd197a90352e570b5498cb4270b4bb120c2019';
+String _$satelliteMatchesHash() => r'a663530c8129bfbf2351b1b94e06a8a0d5356736';
 
 /// S4's day, `/v1/matches?from&to&satellite_ids=…`, stale-while-revalidate.
 ///

@@ -66,7 +66,7 @@ final class MatchDetailSourceProvider
   }
 }
 
-String _$matchDetailSourceHash() => r'0ceabf9cef2509cec769a4c03396374736d1689c';
+String _$matchDetailSourceHash() => r'12b00265c96fa562c23bddba4de94ade3d11a696';
 
 /// `GET /v1/matches/{id}`, stale-while-revalidate from `cached_documents` (FR-046): the
 /// cached copy first, then the revalidated one.

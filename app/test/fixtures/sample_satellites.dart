@@ -83,6 +83,7 @@ ChannelCarriage channelEntry({
   Polarization pol = Polarization.h,
   int sr = 27500,
   String? provider,
+  String? package,
   String? frequencyNote,
 }) =>
     ChannelCarriage(
@@ -97,7 +98,7 @@ ChannelCarriage channelEntry({
       frequencyNote: frequencyNote,
       access: access,
       provider: provider,
-      package: null,
+      package: package,
       beam: Beam.wide,
       country: null,
       frequencyChangedAt: null,

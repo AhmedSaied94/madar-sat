@@ -36,6 +36,8 @@ class MatchDetailSource extends _$MatchDetailSource {
     } on ApiFailure {
       // The state keeps the cached copy or its error; the screen says which.
     }
+    // A disposed provider throws here; the screen that pulled may already be gone (M-R2-2).
+    if (!ref.mounted) return;
     ref.invalidateSelf();
   }
 }

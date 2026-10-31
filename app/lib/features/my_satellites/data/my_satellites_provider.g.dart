@@ -42,7 +42,7 @@ final class SatellitesProvider
   Satellites create() => Satellites();
 }
 
-String _$satellitesHash() => r'00b7b53ad59701380d73b775d0d96d4afe409e11';
+String _$satellitesHash() => r'108aaa2cbe69f4f8f3f7ca8171e003f93439c327';
 
 /// `/v1/satellites`, stale-while-revalidate (24 h freshness). Shared by S4, S5.1 and the
 /// satellite resolution below. No automatic retry: Riverpod would hold the state at loading

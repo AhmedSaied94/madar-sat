@@ -28,7 +28,10 @@ class Segmented<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.madarColors;
     return Container(
-      padding: const EdgeInsets.all(MadarSpace.s1),
+      // The track is the height of one segment's hit target, 48 dp; the 36 dp pill is
+      // centred inside it, so the control keeps the constitution's touch size without the
+      // track growing past it (M-R1-7, M-R2-9). The horizontal inset is the board's.
+      padding: const EdgeInsets.symmetric(horizontal: MadarSpace.s1),
       decoration: BoxDecoration(
         color: colors.surface2,
         borderRadius: BorderRadius.circular(MadarRadii.lg),

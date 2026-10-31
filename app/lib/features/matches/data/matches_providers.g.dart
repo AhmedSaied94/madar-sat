@@ -69,7 +69,7 @@ final class MatchesDayProvider
   }
 }
 
-String _$matchesDayHash() => r'bbe55c16546b538718ebb18f3e03e98125133ea5';
+String _$matchesDayHash() => r'56d2200b1e1a0260f589dbead729e9c24fde7159';
 
 /// One local day of matches from drift, revalidated against the server (FR-046).
 ///

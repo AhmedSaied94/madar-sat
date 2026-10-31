@@ -135,15 +135,17 @@ abstract class _$LiveStates extends $Notifier<Map<int, LiveState>> {
 /// The poll policy (FR-047, research R26, constitution VIII: the timers live in a provider,
 /// not in a widget).
 ///
-/// While the screen's route is visible and the app is `resumed`:
+/// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
 /// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
 ///   but only while a live or imminent match is on screen.
 ///
-/// Both stop when the app is paused or another route covers this one, and restart when it
-/// is visible again. `LivePollingScope` feeds the three inputs; nothing about the policy
-/// lives in the widget.
+/// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
+/// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
+/// stops S2's claim only, and the visible screen keeps polling (M-R2-3). Both stop when the
+/// app is paused or when every claim is hidden, and restart when one is visible again.
+/// `LivePollingScope` feeds the three inputs; nothing about the policy lives in the widget.
 
 @ProviderFor(LivePolling)
 final livePollingProvider = LivePollingProvider._();
@@ -151,28 +153,32 @@ final livePollingProvider = LivePollingProvider._();
 /// The poll policy (FR-047, research R26, constitution VIII: the timers live in a provider,
 /// not in a widget).
 ///
-/// While the screen's route is visible and the app is `resumed`:
+/// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
 /// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
 ///   but only while a live or imminent match is on screen.
 ///
-/// Both stop when the app is paused or another route covers this one, and restart when it
-/// is visible again. `LivePollingScope` feeds the three inputs; nothing about the policy
-/// lives in the widget.
+/// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
+/// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
+/// stops S2's claim only, and the visible screen keeps polling (M-R2-3). Both stop when the
+/// app is paused or when every claim is hidden, and restart when one is visible again.
+/// `LivePollingScope` feeds the three inputs; nothing about the policy lives in the widget.
 final class LivePollingProvider extends $NotifierProvider<LivePolling, void> {
   /// The poll policy (FR-047, research R26, constitution VIII: the timers live in a provider,
   /// not in a widget).
   ///
-  /// While the screen's route is visible and the app is `resumed`:
+  /// While a screen's route is visible and the app is `resumed`:
   ///
   /// * [onRevalidate] runs every [PollIntervals.matches];
   /// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
   ///   but only while a live or imminent match is on screen.
   ///
-  /// Both stop when the app is paused or another route covers this one, and restart when it
-  /// is visible again. `LivePollingScope` feeds the three inputs; nothing about the policy
-  /// lives in the widget.
+  /// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
+  /// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
+  /// stops S2's claim only, and the visible screen keeps polling (M-R2-3). Both stop when the
+  /// app is paused or when every claim is hidden, and restart when one is visible again.
+  /// `LivePollingScope` feeds the three inputs; nothing about the policy lives in the widget.
   LivePollingProvider._()
     : super(
         from: null,
@@ -200,20 +206,22 @@ final class LivePollingProvider extends $NotifierProvider<LivePolling, void> {
   }
 }
 
-String _$livePollingHash() => r'584e98156fbfc46031866a1883a0d94e299cc91c';
+String _$livePollingHash() => r'01aaed9aed18026ef9d1414cc1cf95a38d8a4a01';
 
 /// The poll policy (FR-047, research R26, constitution VIII: the timers live in a provider,
 /// not in a widget).
 ///
-/// While the screen's route is visible and the app is `resumed`:
+/// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
 /// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
 ///   but only while a live or imminent match is on screen.
 ///
-/// Both stop when the app is paused or another route covers this one, and restart when it
-/// is visible again. `LivePollingScope` feeds the three inputs; nothing about the policy
-/// lives in the widget.
+/// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
+/// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
+/// stops S2's claim only, and the visible screen keeps polling (M-R2-3). Both stop when the
+/// app is paused or when every claim is hidden, and restart when one is visible again.
+/// `LivePollingScope` feeds the three inputs; nothing about the policy lives in the widget.
 
 abstract class _$LivePolling extends $Notifier<void> {
   void build();

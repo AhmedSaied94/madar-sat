@@ -194,6 +194,7 @@ void main() {
             name: 'beIN SPORTS 1',
             satellite: badrSatellite,
             provider: 'beIN',
+            package: 'beIN Sports',
             frequency: const Frequency(mhz: 10810, pol: Polarization.h, sr: 27500),
             commentators: const [sampleCommentator],
           ),
@@ -586,13 +587,18 @@ void main() {
 
       // The readout stays on the open row: it is the answer the screen exists for.
       expect(find.text('11977'), findsOneWidget);
-      // The details: the satellite with its English name and position, the tuning in words,
-      // access, then the category.
+      // The details: the satellite with its English name (which carries the position), the
+      // tuning in words, access, then the category.
       expect(find.text('11977 MHz'), findsOneWidget);
       expect(find.text('معدل الترميز'), findsOneWidget);
       expect(find.text('نايل سات'), findsWidgets);
       expect(find.text('Nilesat 7.0W'), findsOneWidget);
-      expect(find.text('7.0W'), findsOneWidget);
+      expect(find.text('7.0W'), findsNothing, reason: 'the English name already carries it');
+      expect(
+        Directionality.of(tester.element(find.text('11977 MHz'))),
+        TextDirection.ltr,
+        reason: 'the number before its unit (M-R2-1)',
+      );
       expect(find.text('الوصول'), findsOneWidget);
       expect(find.text('الفئة'), findsOneWidget);
       expect(find.text('نسخ التردد'), findsOneWidget);
@@ -602,6 +608,28 @@ void main() {
       await tester.tap(find.text('ON Sport HD'));
       await tester.pumpAndSettle();
       expect(find.text('نسخ التردد'), findsNothing);
+    });
+
+    testWidgets('the access row names the provider and the package when there are any',
+        (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+
+      await tester.tap(find.text('beIN SPORTS 1'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('مشفرة · beIN'),
+        findsWidgets,
+        reason: 'the collapsed badge and the access row',
+      );
+      expect(find.text('beIN Sports'), findsOneWidget, reason: 'the package');
+      expect(
+        Directionality.of(tester.element(find.text('beIN Sports'))),
+        TextDirection.ltr,
+        reason: 'a Latin package is an island',
+      );
     });
 
     testWidgets('copy puts «11977 V 27500» on the clipboard and says so', (tester) async {

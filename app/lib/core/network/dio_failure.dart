@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'api_failure.dart';
+import 'generated/models/error_envelope.dart';
 
 /// Reads an [ApiFailure] out of a Dio error, and an `error.code` out of an envelope.
 ///
@@ -24,10 +25,16 @@ extension DioFailure on DioException {
 }
 
 /// The envelope's `error.code`, or null when the body is not one.
+///
+/// The body is read by the generated `ErrorEnvelope`, so a contract change breaks the build
+/// here instead of silently mapping every code to the generic copy (research R25, M-R2-4).
+/// A proxy page, a transport body or a body the model cannot read is not an envelope, and
+/// carries no code.
 String? errorCodeOf(Object? body) {
-  if (body is! Map) return null;
-  final error = body['error'];
-  if (error is! Map) return null;
-  final code = error['code'];
-  return code is String ? code : null;
+  if (body is! Map<String, Object?>) return null;
+  try {
+    return ErrorEnvelope.fromJson(body).error.code;
+  } on Object {
+    return null;
+  }
 }

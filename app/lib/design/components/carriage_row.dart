@@ -10,6 +10,7 @@ import '../../core/network/generated/models/category.dart';
 import '../../core/network/generated/models/channel_carriage.dart';
 import '../../core/network/generated/models/frequency.dart';
 import '../../core/network/generated/models/polarization.dart';
+import '../../core/network/generated/models/satellite_ref.dart';
 import '../../core/theme/madar_tokens.dart';
 import '../../features/frequencies/domain/orbital_position.dart';
 import '../../l10n/app_localizations.dart';
@@ -244,9 +245,10 @@ class _CarriageRowState extends State<CarriageRow> {
   }
 }
 
-/// The expanded details: the satellite with its English name and orbital position, the
-/// tuning in words, access with its provider and package, and the category. Latin names and
-/// the position are LTR islands inside the Arabic labels (constitution III).
+/// The expanded details: the satellite with its English name and, when the name leaves it
+/// out, its orbital position; the tuning in words, access with its provider and package, and
+/// the category. Latin names, frequencies and positions are LTR islands inside the Arabic
+/// labels (constitution III).
 class _DetailsGrid extends StatelessWidget {
   const _DetailsGrid({required this.carriage});
 
@@ -274,15 +276,17 @@ class _DetailsGrid extends StatelessWidget {
               children: [
                 Text(satellite.nameAr, style: valueStyle),
                 LtrIsland(satellite.nameEn, style: latinStyle),
-                if (OrbitalPosition.label(satellite.orbitalPosition) case final position?)
-                  LtrIsland(position, style: latinStyle),
+                if (_extraPosition(satellite) case final degrees?)
+                  LtrIsland(degrees, style: latinStyle),
               ],
             ),
           ),
         if (frequency != null)
           _DetailRow(
             label: l.frequency,
-            child: Text('${MadarDigits.plain(frequency.mhz)} MHz', style: valueStyle),
+            // The number and its Latin unit are one LTR island: in the RTL row a plain
+            // `Text` draws «MHz 11843», the unit first (M-R2-1).
+            child: LtrIsland('${MadarDigits.plain(frequency.mhz)} MHz', style: valueStyle),
           ),
         if (frequency != null)
           _DetailRow(
@@ -328,6 +332,17 @@ class _DetailsGrid extends StatelessWidget {
         Polarization.r => l.polRight,
         _ => '',
       };
+
+  /// The orbital position this row still has to draw, if any.
+  ///
+  /// `name_en` already carries it ("Nilesat 7.0W", "Hotbird 13.0E"), as the `Match-Channels`
+  /// board draws it, so the row names it once. It is added, with its degree sign, only when
+  /// the English name leaves it out (M-R2-8).
+  static String? _extraPosition(SatelliteRef satellite) {
+    final label = OrbitalPosition.label(satellite.orbitalPosition);
+    if (label == null || satellite.nameEn.contains(label)) return null;
+    return OrbitalPosition.degrees(satellite.orbitalPosition);
+  }
 }
 
 class _DetailRow extends StatelessWidget {

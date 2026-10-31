@@ -37,6 +37,10 @@ class MatchesDay extends _$MatchesDay {
       // Shown by the day's state below: with a cache it keeps its rows and its age, without
       // one it fails again on the re-read.
     }
+    // The screen may be gone while the cycle ran: `ref.invalidateSelf()` throws
+    // `UnmountedRefException` on a disposed provider, and the pull to refresh's future
+    // would fail with nothing to catch it (M-R2-2).
+    if (!ref.mounted) return;
     ref.invalidateSelf();
   }
 }

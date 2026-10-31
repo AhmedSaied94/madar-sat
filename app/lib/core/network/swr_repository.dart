@@ -9,6 +9,7 @@ import '../db/app_database.dart';
 import '../format/local_day.dart';
 import 'api_failure.dart';
 import 'dio_failure.dart';
+import 'etag_interceptor.dart';
 import 'generated/export.dart';
 import 'swr_snapshot.dart';
 
@@ -36,10 +37,10 @@ export 'swr_snapshot.dart';
 class SwrRepository {
   SwrRepository({required this._dio, required AppDatabase database}) : _db = database;
 
-  /// The app's Dio: only its base options, adapter and transformer are borrowed. The
-  /// requests below get a one-shot client of their own, because the ETag they send comes
-  /// from drift and not from `EtagInterceptor`'s memory, and two screens revalidating at
-  /// once must not swap headers.
+  /// The app's Dio. Each request below gets a request-scoped view of it ([_requestDio]) that
+  /// keeps its base options, adapter, transformer and interceptors, because the ETag it
+  /// sends comes from drift and not from `EtagInterceptor`'s memory, and two screens
+  /// revalidating at once must not swap headers.
   final Dio _dio;
   final AppDatabase _db;
 
@@ -259,6 +260,9 @@ class SwrRepository {
     final client = MadarApi(_requestDio(etag)).madarApi;
     try {
       final response = await send(client);
+      // A `304` an interceptor turned into a response (`EtagInterceptor` does, and the
+      // request carries the app's interceptors) is still "not modified" (M-R2-5).
+      if (response.response.statusCode == 304) return _Fetched<T>.notModified();
       final value = unwrap(response.data);
       if (value == null) throw const ApiFailure();
       return _Fetched.changed(
@@ -271,8 +275,15 @@ class SwrRepository {
     }
   }
 
-  /// A Dio with the app's base options, adapter and transformer, plus the one drift ETag
-  /// this request carries. It has no `EtagInterceptor`: the ETag lives in drift.
+  /// A request-scoped view of the app's Dio: its base options, adapter and transformer, and
+  /// every interceptor `dioProvider` carries at request time except [EtagInterceptor], plus
+  /// the one drift ETag this request sends (M-R2-5).
+  ///
+  /// The app's Dio cannot be used as it stands: the ETag comes from drift, not from
+  /// `EtagInterceptor`'s memory, and the generated client offers nowhere to set an extra on
+  /// a single request. Copying the interceptors, rather than building a bare Dio, is what
+  /// keeps a later addition to `dioProvider` (D3's `Authorization: Device` token, a log)
+  /// reaching these reads too.
   Dio _requestDio(String? etag) {
     final base = _dio.options;
     return Dio(
@@ -290,6 +301,9 @@ class SwrRepository {
     )
       ..httpClientAdapter = _dio.httpClientAdapter
       ..transformer = _dio.transformer
+      ..interceptors.addAll(
+        _dio.interceptors.where((interceptor) => interceptor is! EtagInterceptor),
+      )
       ..interceptors.add(_ConditionalEtag(etag));
   }
 
