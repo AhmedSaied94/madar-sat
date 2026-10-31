@@ -20,6 +20,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, deploy keys, infra updates |
 | [break-glass.md](break-glass.md) | Getting back into a VM when WireGuard or SSH doesn't work, and an instance Oracle stopped |
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
+| [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
 | [snapshot-load.md](snapshot-load.md) | Loading the Sat Air snapshot into VPS-1 and rehosting its media |
 | [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs` and `run.json`, pausing a source, switching the ysscores queue, the bridge's configuration |
@@ -78,6 +79,7 @@ Each `.env` names the other VM's private IP, so create both VMs before you boots
 11. **The home box:** the peer, its `.env`, the Redis ACL and firewall rule, and the timer ([home-box.md](home-box.md)). It is optional for the platform but required for ysscores: without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
 12. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
 13. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
+14. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
 
 Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [owner-actions.md](../owner-actions.md).
 
@@ -86,6 +88,7 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | When | Go to |
 | --- | --- |
 | Releasing, or a deploy failed | [deploy-and-rollback.md](deploy-and-rollback.md) |
+| Releasing the Android app, or a Play upload was refused | [store-releases.md](store-releases.md) |
 | No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
 | A worker on VPS-2 or `worker-media` is unhealthy | [workers.md](workers.md) |
 | The home box is offline, or a logo did not arrive | [home-box.md](home-box.md) |
@@ -119,7 +122,7 @@ Later days add these. Each arrives with the change that builds the part it cover
 | `backup-and-restore.md` | Nightly backups, the restore drill, the monthly routine | D3; drill and runbook v1 on D8 |
 | `monitoring.md` | Uptime Kuma, alert routing, the monitoring review | D3, D7, D12 |
 | `remote-config.md` | Maintenance mode, soft updates, moving hosts | D8 |
-| `store-releases.md` | Android closed testing and production; Codemagic, TestFlight and the App Store | D2, D12; iOS D13–D20 |
+| `store-releases.md` (grows) | Android production, then Codemagic, TestFlight and the App Store; the closed track is covered since D2 | D12; iOS D13–D20 |
 
 Existing runbooks grow too: `firebase-hosting.md` with the public PWA release and the VPS-1 mirror (D4) and the emergency install link (D10); `tls-certificates.md` with the domain move (O4); `secrets.md` with the Play service account (D27).
 

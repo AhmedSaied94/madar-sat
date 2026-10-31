@@ -57,6 +57,16 @@ void main() {
     );
   });
 
+  testWidgets('the extra-channel count is an LTR island, so «+» stays before the digits', (
+    tester,
+  ) async {
+    await tester.pumpWidget(testApp(MatchRow(match: sampleMatch())));
+
+    final count = find.text('+13');
+    expect(count, findsOneWidget);
+    expect(Directionality.of(tester.element(count)), TextDirection.ltr);
+  });
+
   testWidgets('MatchRow carries one merged Arabic label', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(

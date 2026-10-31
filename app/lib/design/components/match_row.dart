@@ -283,7 +283,8 @@ class _ChannelLine extends StatelessWidget {
         ),
         if (extra > 0) ...[
           const SizedBox(width: MadarSpace.s1),
-          Text(
+          // A count with a sign is an LTR island: in RTL text the `+` would land after the digits.
+          LtrIsland(
             l.channelsMore(MadarDigits.plain(extra)),
             style: MadarText.textMicro.copyWith(color: colors.textTertiary),
           ),

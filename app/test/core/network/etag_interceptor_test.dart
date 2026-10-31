@@ -126,6 +126,42 @@ void main() {
     );
   });
 
+  test('a request that opts out neither sends nor stores an ETag (the SWR repository)', () async {
+    final adapter = _ScriptedAdapter([
+      (status: 200, body: _json({'n': 1}), etag: 'W/"abc"'),
+      (status: 200, body: _json({'n': 2}), etag: 'W/"def"'),
+      (status: 200, body: _json({'n': 3}), etag: 'W/"ghi"'),
+    ]);
+    final dio = _dio(adapter);
+    final optOut = Options(extra: {EtagInterceptor.bypassKey: true});
+
+    await dio.get<dynamic>('/v1/matches', options: optOut);
+    await dio.get<dynamic>('/v1/matches', options: optOut);
+    // The opted-out calls stored nothing, so a normal call has no ETag to send either.
+    await dio.get<dynamic>('/v1/matches');
+
+    expect(adapter.seenHeaders[1].containsKey('If-None-Match'), isFalse);
+    expect(adapter.seenHeaders[2].containsKey('If-None-Match'), isFalse);
+  });
+
+  test('an opted-out 304 is left as an error for the caller to read', () async {
+    final adapter = _ScriptedAdapter([
+      (status: 200, body: _json({'n': 1}), etag: 'W/"abc"'),
+      (status: 304, body: '', etag: 'W/"abc"'),
+    ]);
+    final dio = _dio(adapter);
+
+    await dio.get<dynamic>('/v1/matches');
+
+    await expectLater(
+      dio.get<dynamic>(
+        '/v1/matches',
+        options: Options(extra: {EtagInterceptor.bypassKey: true}),
+      ),
+      throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'status', 304)),
+    );
+  });
+
   test('other errors pass through untouched', () async {
     final adapter = _ScriptedAdapter([
       (status: 200, body: _json({'n': 1}), etag: 'W/"abc"'),

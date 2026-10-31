@@ -1,11 +1,28 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:go_router/go_router.dart';
 
+import '../../features/frequencies/presentation/frequencies_page.dart';
+import '../../features/frequencies/presentation/satellite_channels_page.dart';
 import '../../features/gallery/presentation/gallery_page.dart';
+import '../../features/match_detail/presentation/match_detail_page.dart';
 import '../../features/matches/presentation/matches_page.dart';
+import '../../features/my_satellites/presentation/my_satellites_page.dart';
 import '../../features/shell/presentation/stub_page.dart';
 
-/// Every PB §8.4 route. Detail screens are stubs on D1; `/` is the matches route.
+/// Ids are positive whole numbers of at most ten digits. `int.tryParse` alone would also
+/// take `-5`, `+5`, ` 5` and `0x10`.
+final RegExp _idPattern = RegExp(r'^[1-9]\d{0,9}$');
+
+/// A path whose `:id` is not an id is a dead link: it goes home instead of building a
+/// screen with an id it cannot use.
+String? _requireIntegerId(BuildContext context, GoRouterState state) =>
+    _idPattern.hasMatch(state.pathParameters['id'] ?? '') ? null : '/';
+
+int _idOf(GoRouterState state) => int.parse(state.pathParameters['id']!);
+
+/// Every PB §8.4 route. `/`, `/match/:id`, `/my-satellites`, `/satellites` and
+/// `/satellites/:id` are the D2 screens (S2–S5); the rest are stubs until their day.
 ///
 /// `/gallery` is registered only in debug builds (FR-045).
 GoRouter createAppRouter({bool? includeGallery}) {
@@ -21,19 +38,15 @@ GoRouter createAppRouter({bool? includeGallery}) {
       ),
       GoRoute(
         path: '/match/:id',
-        builder: (context, state) => StubPage(title: '/match/${state.pathParameters['id']}'),
+        redirect: _requireIntegerId,
+        builder: (context, state) => MatchDetailPage(matchId: _idOf(state)),
       ),
-      GoRoute(
-        path: '/my-satellites',
-        builder: (context, state) => const StubPage(title: '/my-satellites'),
-      ),
-      GoRoute(
-        path: '/satellites',
-        builder: (context, state) => const StubPage(title: '/satellites'),
-      ),
+      GoRoute(path: '/my-satellites', builder: (context, state) => const MySatellitesPage()),
+      GoRoute(path: '/satellites', builder: (context, state) => const FrequenciesPage()),
       GoRoute(
         path: '/satellites/:id',
-        builder: (context, state) => StubPage(title: '/satellites/${state.pathParameters['id']}'),
+        redirect: _requireIntegerId,
+        builder: (context, state) => SatelliteChannelsPage(satelliteId: _idOf(state)),
       ),
       GoRoute(
         path: '/channel/:id',
