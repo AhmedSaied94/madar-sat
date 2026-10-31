@@ -163,7 +163,7 @@ These five tasks (T006, T007, T008, T009, T010), with T001, go to `master` in th
   - `backend/openapi/public.json` has no diff;
   - the D1 oasdiff loop ([001 quickstart](../001-d01-foundation/quickstart.md)) reports no breaking change against `contract-v1` for both specs;
   - `pnpm prism` in `admin/` serves every example above.
-- [ ] T015 [US1] Regenerate the admin client from the new `admin.json` (`cd admin && pnpm install && pnpm orval`) and commit `admin/src/api/generated/*` unedited; run `swagger_parser` too and confirm the app client has no diff (`public.json` is unchanged). Then open the contract PR from `d02-b1` with:
+- [X] T015 [US1] Regenerate the admin client from the new `admin.json` (`cd admin && pnpm install && pnpm orval`) and commit `admin/src/api/generated/*` unedited; run `swagger_parser` too and confirm the app client has no diff (`public.json` is unchanged). Then open the contract PR from `d02-b1` with:
   - the `admin.json` diff, the stub routers and the regenerated admin client;
   - B2's morning blockers: T001, T006, T007, T008, T009 and T010.
 
@@ -851,7 +851,7 @@ Checks: `pnpm typecheck`, `pnpm lint` (0 errors, the same 25 warnings), `pnpm te
 
 ### Validation (M)
 
-- [ ] T133 [US3] Validate in `app/`: `flutter analyze`, `./tool/check_token_copy.sh`, `./tool/check_literals.sh`, and `./tool/test_all_zones.sh` in the pinned golden image (all goldens pass, no changes between zones).
+- [X] T133 [US3] Validate in `app/`: `flutter analyze`, `./tool/check_token_copy.sh`, `./tool/check_literals.sh`, and `./tool/test_all_zones.sh` in the pinned golden image (all goldens pass, no changes between zones).
 - [X] T134 [US3] Write `docs/runbooks/store-releases.md` (FR-055): tagging `app-vX.Y.Z`, the `app-release.yml` artifact, enrolling in Play App Signing, the closed-track upload by hand, the testers list, backing up the upload keystore, and that the automated upload waits for the Play service account. Add it to `docs/runbooks/README.md`'s setup order and "After setup" table.
 - [ ] T135 [US3] After the merge, the owner tags `app-v0.2.0`; confirm `app-release.yml` produces a signed `prod` AAB with `versionCode` from the run number, and that the owner uploads it to the closed track and a tester installs it (SC-009).
 - [ ] T136 [US3] Walk the device steps of the [quickstart Lane M](quickstart.md#lane-m-app) on the closed-test build: S2 week paging, live filter and pull to refresh; S3 with 130 or more channels showing its answer in under 1 s and scrolling smoothly, a clip, copying a frequency, the reception video; S4 only Nilesat or Badr matches; S5.2 category switch and `11843` search; airplane mode showing cached copies with their age (SC-006 to SC-008). Take screenshots of each screen in both themes, compare them with the PNGs listed above, and attach them to the PR.
