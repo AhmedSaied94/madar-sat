@@ -283,7 +283,7 @@ The review found three HIGH and seven MEDIUM (M-R2-1 to M-R2-10); all are fixed 
 
 Round 3 is **approve with notes**: no CRITICAL and no HIGH; two MEDIUM and three LOW. Both MEDIUMs are fixed in `app/`; the LOWs (a dispose test per notifier, the substring that de-duplicates the orbital position, and a `304` read after the generated client has parsed the body) are still open and not tasked. The suite is 480 tests, green on the test box, and `flutter analyze` is clean.
 
-- [ ] **Ask Lane B2 for one more `app.yml` step** (M-R3-2): a stale-`*.g.dart` check. It runs `dart run build_runner build -d` in `app/`, then `git diff --exit-code` over `app/lib`; `backend.yml`'s `clients` job only compares `app/lib/core/network/generated` and the admin client, so a provider `*.g.dart` left behind by a source change passes CI today. B2 owns the workflow.
+- [x] **Ask Lane B2 for one more `app.yml` step** (M-R3-2). Done on 2026-10-31: the `check` job runs `build_runner build -d` after `flutter pub get` and fails on any change or new file under `app/lib`. What was asked: a stale-`*.g.dart` check. It runs `dart run build_runner build -d` in `app/`, then `git diff --exit-code` over `app/lib`; `backend.yml`'s `clients` job only compares `app/lib/core/network/generated` and the admin client, so a provider `*.g.dart` left behind by a source change passes CI today. B2 owns the workflow.
 
 
 ## Known for later features

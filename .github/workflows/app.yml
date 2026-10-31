@@ -61,6 +61,17 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends ripgrep
       - run: flutter pub get
+      # M-R3-2: backend.yml's `clients` job only compares the network client, so a provider
+      # *.g.dart left stale (or never committed) by a source change would pass. Fail on any diff.
+      - name: Check no generated *.g.dart is stale
+        run: |
+          dart run build_runner build -d
+          if [[ -n $(git status --porcelain -- lib) ]]; then
+            git status --short -- lib
+            git diff -- lib
+            echo "::error::build_runner changed app/lib; run it and commit the output"
+            exit 1
+          fi
       - run: flutter analyze
       - run: ./tool/check_token_copy.sh
       - run: ./tool/check_literals.sh
