@@ -2,16 +2,16 @@
 
 Each runbook covers one area. The first-time setup crosses several of them, so this page gives the order. Do the steps top to bottom. Each one links to the section that has the commands.
 
-Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN. VPS-1 is public; VPS-2 has nothing public and is reached through VPS-1:
+Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's x86-64 home box. VPS-1 is public; VPS-2 has nothing public and is reached through VPS-1; the home box reaches only Redis:
 
-| | VPS-1 "app" | VPS-2 "workers" |
-| --- | --- | --- |
-| Reserved public IP | `130.110.117.215` | `130.110.97.25` |
-| VCN private IP | `10.1.0.97` | `10.1.0.118` |
-| WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` |
-| Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None |
-| Admin | `https://10.8.0.1`, over WireGuard only | None |
-| Runs | Caddy, `api-public`, `api-admin`, PostgreSQL 16, Redis 7 | Celery workers, `beat`, Flower: off until D3. Uptime Kuma and backups later. |
+| | VPS-1 "app" | VPS-2 "workers" | Home box |
+| --- | --- | --- | --- |
+| Reserved public IP | `130.110.117.215` | `130.110.97.25` | none |
+| VCN private IP | `10.1.0.97` | `10.1.0.118` | none |
+| WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` | Peer, outbound only |
+| Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None | None |
+| Admin | `https://10.8.0.1`, over WireGuard only | None | None |
+| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7 | `worker-imports`, `worker-scrape`, `worker-maintenance`, `beat`; Flower off until D3. Uptime Kuma and backups later. | `worker-scrape -Q scrape_home` and a 10-minute update timer |
 
 | Runbook | What it covers |
 | --- | --- |
@@ -20,11 +20,17 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN. VPS-1 is public; 
 | [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, deploy keys, infra updates |
 | [break-glass.md](break-glass.md) | Getting back into a VM when WireGuard or SSH doesn't work, and an instance Oracle stopped |
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
+| [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
 | [snapshot-load.md](snapshot-load.md) | Loading the Sat Air snapshot into VPS-1 and rehosting its media |
+| [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs` and `run.json`, pausing a source, switching the ysscores queue, the bridge's configuration |
+| [home-box.md](home-box.md) | Joining the scrape box to `wg0`, its `.env`, the update timer, checking it, taking it offline |
+| [workers.md](workers.md) | VPS-2's services and `beat`, `worker-media` and logos, the VPS-2 deploy and rollback, raw-page retention |
 | [firewall-changes.md](firewall-changes.md) | Changing, testing and applying the iptables rules on either VM |
 | [exposure-check.md](exposure-check.md) | What the internet can reach, and the certificates and headers (T065) |
 | [tls-certificates.md](tls-certificates.md) | Let's Encrypt on sslip.io, failed issuance, a changed public IP |
+| [staff-accounts.md](staff-accounts.md) | Creating admin and editor accounts, password resets, deactivating an account, a suspected token leak |
+| [admin-access.md](admin-access.md) | Running the admin app on an editor's machine: `pnpm dev:wg` over WireGuard, Caddy's root CA, the Prism mock and its `?mock=` states |
 | [secrets.md](secrets.md) | Where every secret lives, rotating them, gitleaks failures and leaks |
 | [local-dev.md](local-dev.md) | PostgreSQL, Redis and HTTPS Caddy on your machine; the test settings |
 | [ci-workflows.md](ci-workflows.md) | What each workflow checks, common failures, re-runs, the T067 proofs |
@@ -59,18 +65,32 @@ Each `.env` names the other VM's private IP, so create both VMs before you boots
 1. **The CI peer, the deploy key and the pinned host key**, on VPS-1: [provision-host.md §8](provision-host.md#8-deploy-peer-and-keys). `gh secret list` then shows four secrets.
 2. **Reboot check**, on both VMs: [provision-host.md §9](provision-host.md#9-reboot-check). That completes T064.
 
-### 4. First deploys
+### 4. The home box's peer (before the first deploy)
+
+The firewall rule and the `homebox` Redis user have to exist before anything starts, and
+`bootstrap-vps.sh vps1` is what writes them (T080–T084). Do this now, not after the merges:
+
+1. **Add the box to `wg0`** (`wg-add-peer.sh home-box`), write `HOME_BOX_WG_IP` on VPS-1, and **re-run
+   `bootstrap-vps.sh vps1`** so the firewall carries its Redis rule and `deploy` joins gid 999. Then
+   write the box's `.env` and install its timer: [home-box.md](home-box.md). Don't start
+   `worker-scrape` yet: before the first deploy there is no `madar-backend-amd64:stable` image.
+
+### 5. First deploys
 
 1. **Merge Lane B2** (`infra/`) to `master`. `infra.yml`'s `sync` job starts Caddy, PostgreSQL and Redis on VPS-1 ([deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra)). If it ran before stage 3 and failed, re-run it ([ci-workflows.md "Re-running"](ci-workflows.md#re-running)).
 2. **Certificates:** [tls-certificates.md "First issuance"](tls-certificates.md#first-issuance). That completes T058.
 3. **Merge Lane B1** (`backend/`). `backend.yml` builds the image and deploys it ([deploy-and-rollback.md](deploy-and-rollback.md#how-a-release-reaches-vps-1)). The infra sync in step 1 runs `deploy.sh --infra-only`, which never starts the API. So if `backend/` reached `master` before the stage 3 secrets existed (as on 2026-10-29), nothing triggers `backend.yml` again: start it by hand with `gh workflow run backend.yml --ref master`. Until then Caddy answers `api.` with 502 (`dial tcp 127.0.0.1:8000: connect: connection refused`). Then give the repository access to the package: [deploy-and-rollback.md "Images in GHCR"](deploy-and-rollback.md#images-in-ghcr).
-4. **The admin site:** the CA root on your device, then `https://10.8.0.1` ([private-network.md](private-network.md#the-admin-site)).
+4. **The admin site:** the CA root on your device, then `https://10.8.0.1` ([private-network.md](private-network.md#the-admin-site)). **Then the first admin account**, and one account per editor ([staff-accounts.md](staff-accounts.md#create-an-account)); it needs `ADMIN_JWT_SECRET` in `/srv/madar/.env` first ([secrets.md](secrets.md#where-they-live)).
 5. **The snapshot:** [snapshot-load.md](snapshot-load.md) (B1's T048).
 6. **Exposure check:** [exposure-check.md](exposure-check.md) (T065).
 7. **Rollback drill:** [deploy-and-rollback.md "Rehearse the failure path"](deploy-and-rollback.md#rehearse-the-failure-path) (T066).
 8. **Secret-scan proof:** [ci-workflows.md "Prove the secret scan"](ci-workflows.md#prove-the-secret-scan) (T067, first half).
 9. **Once Lanes A and M have merged:** the PWA preview and its CORS origin ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)), then a green `master` run for every workflow (T067, second half).
-10. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
+10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
+11. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
+12. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
+13. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
+14. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
 
 Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [owner-actions.md](../owner-actions.md).
 
@@ -79,6 +99,10 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | When | Go to |
 | --- | --- |
 | Releasing, or a deploy failed | [deploy-and-rollback.md](deploy-and-rollback.md) |
+| Releasing the Android app, or a Play upload was refused | [store-releases.md](store-releases.md) |
+| No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
+| A worker on VPS-2 or `worker-media` is unhealthy | [workers.md](workers.md) |
+| The home box is offline, or a logo did not arrive | [home-box.md](home-box.md) |
 | A bad release is serving | [deploy-and-rollback.md "Roll back"](deploy-and-rollback.md#roll-back) |
 | `infra/` or `.github/` changed | [deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra) |
 | `/srv/madar/.env` changed | [deploy-and-rollback.md "Updating the edge or infra"](deploy-and-rollback.md#updating-the-edge-or-infra), the table |
@@ -86,6 +110,8 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A migration failed, or you need the schema's state | [database-migrations.md](database-migrations.md) |
 | A deploy key leaked or needs replacing | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
+| A new editor, a forgotten password, someone leaves, or an admin session may have leaked | [staff-accounts.md](staff-accounts.md) |
+| An editor needs the admin app on their machine, or the mock's states | [admin-access.md](admin-access.md) |
 | A device needs the private network, or one is lost | [private-network.md "Peers"](private-network.md#peers) |
 | A browser warns about the admin's certificate | [private-network.md "Install the admin CA root"](private-network.md#install-the-admin-ca-root) |
 | WireGuard or SSH doesn't let you into a VM | [break-glass.md](break-glass.md) |
@@ -103,15 +129,11 @@ Later days add these. Each arrives with the change that builds the part it cover
 
 | Runbook | Covers | From |
 | --- | --- | --- |
-| `staff-accounts.md` | Admin accounts and roles, password resets, lockouts | D2; TOTP on D16 |
-| `imports-and-sources.md` | The source adapters, `import_runs`, source health, restarting a source, the Firestore bridge, the unresolved-names queue | D2–D7 (runbook v0 on D4) |
-| `home-box.md` | The home scrape worker over WireGuard | D2 |
-| `workers.md` | Deploying VPS-2's workers, `beat` and Flower. Nothing deploys to VPS-2 yet. | D2–D3 |
 | `push-notifications.md` | FCM, the outbox and its dispatcher, the admin composer | D3, D6 |
 | `backup-and-restore.md` | Nightly backups, the restore drill, the monthly routine | D3; drill and runbook v1 on D8 |
 | `monitoring.md` | Uptime Kuma, alert routing, the monitoring review | D3, D7, D12 |
 | `remote-config.md` | Maintenance mode, soft updates, moving hosts | D8 |
-| `store-releases.md` | Android closed testing and production; Codemagic, TestFlight and the App Store | D2, D12; iOS D13–D20 |
+| `store-releases.md` (grows) | Android production, then Codemagic, TestFlight and the App Store; the closed track is covered since D2 | D12; iOS D13–D20 |
 
 Existing runbooks grow too: `firebase-hosting.md` with the public PWA release and the VPS-1 mirror (D4) and the emergency install link (D10); `tls-certificates.md` with the domain move (O4); `secrets.md` with the Play service account (D27).
 

@@ -121,6 +121,192 @@ export const field = {
   lockedLabel: 'مقفل من المحرر',
 } as const;
 
+export const dialogs = {
+  cancel: 'إلغاء',
+  typeToConfirm: (phrase: string): string => `للتأكيد اكتب ${phrase}`,
+  confirmInput: 'نص التأكيد',
+  conflictTitleAdminPrefix: 'عدّل',
+  conflictTitleSourcePrefix: 'حدّث',
+  conflictTitleSuffix: 'هذا العنصر',
+  /** The other side's save, with the subject as its own island: «حُفظت نسخة أحدث من «…» في …». */
+  conflictBodyBefore: 'حُفظت نسخة أحدث من «',
+  conflictBodyAfter: (cairoTime: string): string =>
+    `» في ${cairoTime} بتوقيت القاهرة. تعديلاتك لم تُحفظ بعد.`,
+  /** `meta.changed_at` was missing: say so instead of showing the client's clock as their save time (A-R2-7). */
+  conflictTimeUnknown: '» في وقت غير معروف. تعديلاتك لم تُحفظ بعد.',
+  showChanges: 'اعرض التغييرات',
+  hideChanges: 'أخفِ التغييرات',
+  noChanges: 'لم يتغيّر أي حقل تعرضه هذه الشاشة.',
+  reload: 'إعادة التحميل',
+  discard: 'تجاهل تعديلاتي',
+  before: 'قبل',
+  after: 'بعد',
+} as const;
+
+/** The API's nine match statuses, in A3's chip and A4's override (data-model). */
+export const matchStatus = {
+  scheduled: 'مجدولة',
+  live: 'مباشر',
+  halftime: 'بين الشوطين',
+  extra_time: 'وقت إضافي',
+  penalties: 'ركلات ترجيح',
+  finished: 'انتهت',
+  postponed: 'مؤجلة',
+  cancelled: 'ملغاة',
+  abandoned: 'متوقفة',
+} as const;
+
+export const matches = {
+  title: 'المباريات',
+  add: 'إضافة مباراة',
+  summary: (count: number, competitions: number, missing: number): string =>
+    `${count} مباراة · ${competitions} بطولة · ${missing} بلا قنوات`,
+  yesterday: 'أمس',
+  today: 'اليوم',
+  tomorrow: 'غداً',
+  afterTomorrow: 'بعد غد',
+  pickDate: 'تاريخ…',
+  dayLabel: 'اليوم',
+  teamFilter: 'فريق في هذا اليوم',
+  competitionFilter: 'البطولة',
+  sourceFilter: 'المصدر',
+  statusFilter: 'الحالة',
+  all: 'الكل',
+  missingOnly: 'بلا قنوات فقط',
+  columns: {
+    time: 'الوقت',
+    match: 'المباراة',
+    status: 'الحالة',
+    channels: 'القنوات',
+    commentator: 'المعلق',
+    source: 'المصدر',
+    locked: 'حقول مقفلة',
+    edit: 'تعديل',
+    more: 'المزيد',
+  },
+  groupCount: (count: number): string => `${count}`,
+  groupMissing: (count: number): string => `${count} بلا قنوات`,
+  selected: (count: number): string => `تم تحديد ${count}`,
+  bulkToolbar: 'إجراءات جماعية',
+  bulk: {
+    changeCompetition: 'تغيير البطولة',
+    removeChannels: 'إزالة القنوات',
+    cancel: 'إلغاء',
+    removePhrase: (count: number): string => `إزالة القنوات من ${count}`,
+    removeTitle: (count: number): string => `إزالة القنوات من ${count} مباراة؟`,
+    removeBody: 'ستُزال كل قنوات هذه المباريات الظاهرة، مع إعداداتها لهذا الماتش. لا يمكن التراجع.',
+    competitionTitle: 'تغيير بطولة المباريات المحددة',
+    competitionBody: 'ستنتقل كل المباريات المحددة إلى البطولة التي تختارها.',
+    confirm: 'تغيير',
+    /** A `409` from a bulk write names the rows whose version moved (A-R1-3); the names stay islands (A-R2-9). */
+    staleBefore: 'تغيّرت هذه المباريات منذ عرض القائمة: ',
+    staleAfter: '. حدّث القائمة ثم أعد المحاولة',
+  },
+  empty: {
+    title: 'لا مباريات في هذا اليوم',
+    body: 'جرّب يوماً آخر أو أزل الفلاتر.',
+    allClearTitle: 'كل مباريات اليوم لها قنوات',
+    allClearBody: 'لا توجد مباريات بلا قنوات في هذا اليوم.',
+    allClearAction: 'إزالة الفلتر',
+  },
+  showing: (shown: number, total: number): string => `عرض ${shown} من ${total}`,
+  keyboard: 'للتنقل',
+  statusHint: 'تقديري',
+  /** A row with no kickoff the sources know yet (A-R1-24). */
+  timeUnknown: 'لم يُحدد',
+} as const;
+
+/** A4 (admin board "Match editor"). */
+export const editor = {
+  breadcrumbRoot: 'المباريات',
+  newMatch: 'مباراة جديدة',
+  preview: 'معاينة',
+  save: 'حفظ',
+  saving: 'جارٍ الحفظ',
+  loading: 'جارٍ تحميل المباراة',
+  loadFailedBody: 'تحقق من الاتصال ثم أعد المحاولة، أو ارجع إلى القائمة.',
+  backToMatches: 'رجوع إلى المباريات',
+  discard: 'تجاهل',
+  detailsTab: 'التفاصيل',
+  historyTab: 'السجل',
+  teamsAndTime: 'الفريقان والموعد',
+  homeTeam: 'صاحب الأرض',
+  awayTeam: 'الضيف',
+  date: 'التاريخ',
+  time: 'الوقت',
+  cairoNote: 'بتوقيت القاهرة',
+  savedAs: (utc: string): string => `يُحفظ ${utc} UTC`,
+  timeTbd: 'الموعد لم يتحدد',
+  competition: 'البطولة',
+  stadium: 'الملعب',
+  stage: 'المرحلة',
+  /** US4 scenario 4's stages, as suggestions over free text (A-R2-5). */
+  stagePresets: [
+    'الجولة الأولى',
+    'ذهاب دور 16',
+    'إياب دور 16',
+    'ربع النهائي',
+    'نصف النهائي',
+    'النهائي',
+  ],
+  teamSearch: 'ابحث عن فريق',
+  freeText: 'أو اكتب اسماً',
+  channels: 'القنوات الناقلة',
+  channelCount: (count: number): string => `${count} قناة`,
+  addChannel: 'إضافة قناة',
+  searchChannel: 'ابحث عن قناة',
+  category: 'التصنيف',
+  satellite: 'القمر',
+  noSatellite: 'منصات بلا قمر',
+  all: 'الكل',
+  sports: 'رياضة',
+  entertainment: 'ترفيه',
+  platform: 'منصة',
+  searching: 'جارٍ البحث…',
+  noChannels: 'لا قنوات بهذا البحث',
+  add: 'إضافة',
+  remove: 'إزالة',
+  hideFromMatch: 'إخفاء من هذا الماتش فقط',
+  hideAlways: 'إخفاء دائماً',
+  hiddenAlways: 'مخفية دائماً',
+  show: 'إظهار',
+  hidePhrase: 'إخفاء دائماً',
+  /** «إخفاء «<name>» دائماً؟» built from its parts, so the Latin name stays its own island (A-R1-18). */
+  hideTitleBefore: 'إخفاء ',
+  hideTitleAfter: ' دائماً؟',
+  hideBody: 'لن تظهر هذه القناة في أي مباراة بعد الآن، ولن يعيدها أي مصدر.',
+  commentator: (slot: number): string => `المعلق ${slot}`,
+  none: 'بدون معلق',
+  manualBroadcast: 'البث اليدوي',
+  slot1: 'يعرض على',
+  slot2: 'يعرض أيضاً على',
+  pickFromList: 'اختر من القائمة أو اكتب اسماً',
+  slotLogoKept: 'شعار هذه القناة محفوظ',
+  statusTitle: 'الحالة والنتيجة',
+  status: 'الحالة',
+  autoStatus: 'تلقائي · من المصدر',
+  manualHint: 'اختيار حالة يدوياً يتقدم على المصدر حتى تعيده إلى «تلقائي».',
+  home: 'صاحب الأرض',
+  away: 'الضيف',
+  scoreLabel: 'النتيجة',
+  scoreRequired: 'أدخل نتيجة المباراة كاملة قبل الحفظ',
+  penalties: 'ركلات الترجيح',
+  scoreNotAllowed: 'لا نتيجة لهذه الحالة',
+  period: 'الشوط',
+  periodFirstHalf: 'الشوط الأول',
+  periodSecondHalf: 'الشوط الثاني',
+  periodExtraFirst: 'إضافي أول',
+  periodExtraSecond: 'إضافي ثانٍ',
+  minute: 'الدقيقة',
+  lockedHint: 'لن تغيّر المصادر هذه الحقول. يُقفل الحقل تلقائياً عند تعديله يدوياً.',
+  unsaved: 'لديك تغييرات غير محفوظة',
+  unsavedBody: 'إذا غادرت الآن ستفقد تعديلات القنوات والمرحلة.',
+  leave: 'غادر دون حفظ',
+  stay: 'ابقَ',
+  saveAndLeave: 'احفظ وغادر',
+  noEvents: 'لم تبدأ المباراة بعد.',
+} as const;
+
 export type ErrorCode =
   | 'invalid_credentials'
   | 'account_locked'
@@ -131,7 +317,23 @@ export type ErrorCode =
   | 'unauthenticated'
   | 'token_expired'
   | 'internal_error'
-  | 'network_error';
+  | 'network_error'
+  | 'invalid_response'
+  | 'forbidden'
+  | 'edit_conflict'
+  | 'in_use'
+  | 'already_exists'
+  | 'file_too_large'
+  | 'unsupported_media_type'
+  | 'media_invalid'
+  | 'precondition_required'
+  | 'match_not_found'
+  | 'team_not_found'
+  | 'competition_not_found'
+  | 'satellite_not_found'
+  | 'channel_not_found'
+  | 'commentator_not_found'
+  | 'hidden_name_not_found';
 
 export const errorCopy: Record<ErrorCode, string> = {
   invalid_credentials: 'إيميل أو باسوورد غلط',
@@ -144,6 +346,22 @@ export const errorCopy: Record<ErrorCode, string> = {
   token_expired: 'انتهت الجلسة. سجّل الدخول مرة أخرى',
   internal_error: 'حدث خطأ في الخادم. حاول مرة أخرى بعد قليل',
   network_error: 'تعذّر الاتصال بالخادم. تأكد من اتصال WireGuard وحاول مرة أخرى',
+  invalid_response: 'رد غير متوقع من الخادم. حاول مرة أخرى',
+  forbidden: 'صلاحيتك لا تسمح بهذا الإجراء',
+  edit_conflict: 'عُدّل هذا العنصر من شخص آخر. راجع التغييرات قبل الحفظ',
+  in_use: 'هذا العنصر مستخدم في مكان آخر. أزله من هناك أولاً',
+  already_exists: 'يوجد عنصر بنفس القيمة بالفعل',
+  file_too_large: 'الملف أكبر من الحد المسموح',
+  unsupported_media_type: 'نوع الملف غير مدعوم',
+  media_invalid: 'تعذّر قراءة الملف. جرّب ملفاً آخر',
+  precondition_required: 'أعد تحميل الصفحة ثم حاول مرة أخرى',
+  match_not_found: 'هذه المباراة غير موجودة. ربما حُذفت',
+  team_not_found: 'هذا الفريق غير موجود. ربما حُذف',
+  competition_not_found: 'هذه البطولة غير موجودة. ربما حُذفت',
+  satellite_not_found: 'هذا القمر غير موجود. ربما حُذف',
+  channel_not_found: 'هذه القناة غير موجودة. ربما حُذفت',
+  commentator_not_found: 'هذا المعلق غير موجود. ربما حُذف',
+  hidden_name_not_found: 'هذا الاسم غير مخفي',
 };
 
 const unknownErrorCopy = 'حدث خطأ غير متوقع. حاول مرة أخرى';

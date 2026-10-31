@@ -310,7 +310,7 @@ def test_rehost_fixture_sets_every_rule_16_column(sync_session, tmp_path):
 
     # Asset changes bump the datasets of the rows that reference them.
     bumped = {k for k, v in _versions(s).items() if v != versions_before[k]}
-    assert bumped == {"satellites", "competitions", "channels", "teams", "commentators", "matches"}
+    assert bumped == {"satellites", "competitions", "channels", "teams", "commentators", "matches", "broadcast_presets"}
 
     # Re-run: nothing is downloaded again and nothing changes.
     server.requests.clear()

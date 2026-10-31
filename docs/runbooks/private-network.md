@@ -87,6 +87,27 @@ Then, on VPS-1:
 sudo shred -u /root/wireguard-peers/<name>.conf
 ```
 
+### The home box peer
+
+The owner's x86-64 scrape box is a peer like any other, with one rule that no other peer has: it is
+the only address allowed to reach Redis on `10.8.0.1:6379` ([firewall-changes.md](firewall-changes.md#redis-on-wg0-the-home-box)).
+
+```bash
+sudo ./madar-infra/scripts/wg-add-peer.sh home-box        # prints the client config once
+```
+
+Then:
+
+1. put the config on the box as `/etc/wireguard/wg0.conf` and `sudo systemctl enable --now wg-quick@wg0`;
+2. note its address (`10.8.0.<n>`, from `wg show wg0` or the `[Peer]` block) and set it in VPS-1's
+   `/srv/madar/.env` as `HOME_BOX_WG_IP`;
+3. re-run `sudo ./madar-infra/scripts/bootstrap-vps.sh vps1` so the rendered firewall carries that
+   address, and deploy once so the Redis ACL defines the `homebox` user;
+4. finish the box's own setup: [home-box.md](home-box.md).
+
+`wg-add-peer.sh` also gives the peer the hub's public key and a preshared key, which is why the
+box's config must be moved to it and deleted from VPS-1 like any other.
+
 ### List peers
 
 ```bash

@@ -1,0 +1,51 @@
+{
+  "name": "projects/example-project/databases/(default)/documents/matchDays/2026-11-02",
+  "fields": {
+    "id": { "stringValue": "2026-11-02" },
+    "date": { "stringValue": "2026-11-02" },
+    "updatedAt": { "timestampValue": "2026-11-02T06:15:00.000Z" },
+    "matches": {
+      "arrayValue": {
+        "values": [
+          {
+            "mapValue": {
+              "fields": {
+                "id": { "stringValue": "bridge-only-1" },
+                "competition": { "stringValue": "الدوري الإنجليزي الممتاز" },
+                "competitionStage": { "stringValue": "الجولة 12" },
+                "team1": { "stringValue": "مان سيتي" },
+                "team2": { "stringValue": "أستون فيلا" },
+                "time": { "stringValue": "06:30 م" },
+                "ysMatchId": { "stringValue": "" },
+                "channelIds": { "arrayValue": { "values": [{ "stringValue": "ch-badr-enc" }] } },
+                "hiddenChannels": { "arrayValue": { "values": [] } },
+                "channelCommentators": {
+                  "mapValue": {
+                    "fields": {
+                      "ch-badr-enc": {
+                        "mapValue": {
+                          "fields": {
+                            "name": { "stringValue": "معلق جديد تماماً" },
+                            "image": { "stringValue": "" },
+                            "audio": { "stringValue": "" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "commentator": { "stringValue": "" },
+                "stadium": { "stringValue": "ملعب الاتحاد" },
+                "logo1": { "stringValue": "" },
+                "logo2": { "stringValue": "" },
+                "live": { "booleanValue": false }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "createTime": "2026-11-02T05:00:00.000Z",
+  "updateTime": "2026-11-02T06:15:00.000Z"
+}

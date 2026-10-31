@@ -21,7 +21,7 @@ sudo docker logs --since 24h madar-caddy-1 2>&1 | grep -Ei 'certificate|acme|tls
 
 ## First issuance
 
-This is T058's last step. The first infra sync (README.md stage 4) starts Caddy, which asks for the three certificates within a minute or two. It needs:
+This is T058's last step. The first infra sync (README.md stage 5) starts Caddy, which asks for the three certificates within a minute or two. It needs:
 
 - TCP 80 and 443 open in the security list and in VPS-1's iptables;
 - `ACME_EMAIL` and `VPS1_IP` set in `/srv/madar/.env`;

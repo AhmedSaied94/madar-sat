@@ -13,7 +13,12 @@ The rules:
 | Secret | Lives in | Used by | Rotate |
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | `/srv/madar/.env` on **both** VMs, and inside `DATABASE_URL` and `DATABASE_URL_SYNC` | PostgreSQL, the APIs, `migrate`, `cli`, the workers | [Below](#rotate-the-postgresql-password) |
-| `REDIS_PASSWORD` | Both `.env` files, and inside `REDIS_URL` and `CELERY_BROKER_URL` | Redis, the APIs, the workers | [Below](#rotate-the-redis-password) |
+| `REDIS_PASSWORD` | Both `.env` files, and inside `REDIS_URL` and `CELERY_BROKER_URL`; one line of the rendered `/srv/madar/redis/users.acl` (`default` user) | Redis, the APIs, the workers | [Below](#rotate-the-redis-password) |
+| `REDIS_HOMEBOX_PASSWORD` | VPS-1's `.env` and the home box's `.env`; the `homebox` line of the rendered `/srv/madar/redis/users.acl` | The home box's worker, as the `homebox` Redis user | [Below](#rotate-the-home-box-redis-password) |
+| `ADMIN_JWT_SECRET` | VPS-1's `.env` only; at least 32 bytes. Every VPS-1 container loads that file, so the other services can read it, but only `api-admin` uses it (it refuses to start without it). VPS-2 never needs it. | `api-admin` | [Below](#rotate-the-admin-jwt-secret) |
+| `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY` | VPS-2's `.env` only; never in the repo, a log line or a test (D15, FR-052) | The Firestore bridge | [Below](#rotate-the-sat-air-bridge-credentials) |
+| `GHCR_READ_TOKEN` | The home box's `.env` | `home-box-update.sh` (read-only `read:packages`) | [Below](#rotate-the-home-boxs-ghcr-token) |
+| `SCRAPE_USER_AGENT` | VPS-2's and the home box's `.env` | The fetcher's `User-Agent`; not a secret, but keep it a real contact | Edit it and recreate the workers |
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `DEPLOY_SSH_KEY` | GitHub secret. The public half is in VPS-1's `.env` and in `/home/deploy/.ssh/authorized_keys`. | `backend.yml` deploy, `infra.yml` sync | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | `WG_CI_CONFIG` | GitHub secret; the peer `ci` in VPS-1's `wg0.conf` | The same jobs | [private-network.md "Rotate the CI peer"](private-network.md#rotate-the-ci-peer) |
@@ -53,19 +58,101 @@ Not secrets: the public and private IPs, the hostnames, the Firebase project ID,
 
    From D3, recreate VPS-2's workers too.
 
+## Rotate the home box Redis password
+
+The home box authenticates to Redis as the ACL user `homebox`; its password is
+`REDIS_HOMEBOX_PASSWORD` on both VPS-1 and the box. The rendered ACL file is the only place Redis
+reads it.
+
+1. On VPS-1, make a new value and put it in `/srv/madar/.env` as `REDIS_HOMEBOX_PASSWORD`.
+2. Deploy (any deploy does it, or `deploy.sh --infra-only`). It renders `/srv/madar/redis/users.acl`,
+   finds it changed, restarts Redis, and proves that both the `default` and the `homebox` password
+   work before it touches the APIs ([deploy-and-rollback.md](deploy-and-rollback.md)). The `homebox`
+   user's old password stops working at that restart.
+3. Put the same value in the box's `/srv/madar/.env`, and update `REDIS_URL` there
+   (`redis://homebox:<new>@10.8.0.1:6379/0`).
+4. Recreate the box's worker:
+   `sudo docker compose -f /srv/madar/infra/compose/home-box.yml --env-file /srv/madar/.env up -d`
+   (without `--env-file`, compose fails on the required variables).
+5. Check the box's log has no `NOPERM` or `WRONGPASS`, and start a run
+   ([imports-and-sources.md](imports-and-sources.md)).
+
+## Rotate the admin JWT secret
+
+Rotating it signs every admin out: an access token minted with the old key stops verifying (the
+refresh token still works, so the admin continues after one refresh).
+
+1. `openssl rand -hex 32` on VPS-1.
+2. Put it in VPS-1's `/srv/madar/.env` as `ADMIN_JWT_SECRET`. VPS-2 doesn't use it and must not hold
+   it: no worker verifies an admin token (only `api-admin` does).
+3. `dc up -d --force-recreate api-admin` on VPS-1.
+4. Check `/admin/api/healthz` and that a login works.
+
+## Rotate the Sat Air bridge credentials
+
+The bridge reads the old Sat Air project's public web configuration. It lives only in VPS-2's
+`.env`; nothing in the repository or the tests knows it (D15, FR-052).
+
+1. Get the current web configuration from the old project (Firebase console → project settings →
+   your apps), and take the API key that is restricted to Firestore reads.
+2. Put the project id and the key in VPS-2's `/srv/madar/.env` as `SATAIR_FIREBASE_PROJECT_ID` and
+   `SATAIR_FIREBASE_API_KEY`.
+3. Re-run the VPS-2 deploy, then start a bridge run by hand and read `import_runs`
+   ([imports-and-sources.md](imports-and-sources.md)).
+
+If the key was exposed, revoke it in the old project and issue a new one first. A `403` from
+`firestore.googleapis.com` in the run's log means the key or its restrictions are wrong.
+
+## Rotate the home box's GHCR token
+
+`GHCR_READ_TOKEN` is a fine-grained GitHub token with only `read:packages`, used by
+`home-box-update.sh` to pull `madar-backend-amd64:stable`.
+
+1. Create a new token (GitHub → settings → developer settings → fine-grained tokens), scope: this
+   repository, permission: Packages → read.
+2. Put it in the box's `/srv/madar/.env`.
+3. Run `sudo /srv/madar/infra/scripts/home-box-update.sh` and check it pulls and logs out.
+4. Revoke the old token.
+
+The script logs in, pulls and logs out in one run, so the token is on disk only in the box's `.env`
+(mode 600).
+
 ## Rotate the Redis password
 
-Redis reads `requirepass` when it starts, so it and every client restart together. Redis keeps its data (`appendonly yes`).
+Redis reads the ACL file when it starts, and `deploy.sh` restarts it when the rendered file changed.
+Rotate in this order, or every client answers `WRONGPASS`:
 
-1. Make a new password, and put it into `REDIS_PASSWORD`, `REDIS_URL` and `CELERY_BROKER_URL` in both VMs' `.env` files.
-2. Recreate Redis and its clients:
+1. Make a new password, and put it into `REDIS_PASSWORD`, `REDIS_URL` and `CELERY_BROKER_URL` in
+   both VMs' `.env` files. Do not restart anything yet: Redis still holds the old ACL.
+2. Render the new ACL and load it, then let the clients come up on it. On VPS-1, as `deploy`:
 
    ```bash
-   dc up -d --force-recreate redis api-public api-admin
+   /srv/madar/infra/scripts/deploy.sh --infra-only   # renders, restarts Redis, proves both users
+   dc up -d --force-recreate api-public api-admin worker-media
    curl -fsS http://127.0.0.1:8000/healthz
    ```
 
-   From D3, recreate VPS-2's workers too.
+   `deploy.sh --infra-only` is what renders `/srv/madar/redis/users.acl` and restarts Redis: a
+   changed file takes effect only at a restart, because Compose recreates a container only when its
+   definition changes. It pings `default` and `homebox`, and puts the previous ACL back if the new
+   one is refused. A plain `dc restart redis` would load nothing and leave every client on the new
+   password against the old ACL ([deploy-and-rollback.md "How a release reaches VPS-1"](deploy-and-rollback.md#how-a-release-reaches-vps-1)).
+3. On VPS-2 (as `deploy`), recreate the four services on the new password. They exist only in
+   `vps2.yml`, so VPS-1's `dc` helper (which points at `vps1.yml` and has no `--profile workers`)
+   does not work here; this is the command `deploy.sh --host vps2` runs:
+
+   ```bash
+   IMAGE_TAG=$(cat /srv/madar/current_tag) \
+     docker compose --env-file /srv/madar/.env --profile workers \
+       -f /srv/madar/infra/compose/vps2.yml up -d --force-recreate \
+       worker-imports worker-scrape worker-maintenance beat
+   ```
+4. On the home box, update `REDIS_URL` in its `/srv/madar/.env`, then recreate its worker:
+
+   ```bash
+   sudo docker compose -f /srv/madar/infra/compose/home-box.yml --env-file /srv/madar/.env up -d
+   ```
+5. Check `/healthz` (its `redis` field) and one worker per host.
 
 ## Rotate the Firebase service account key
 

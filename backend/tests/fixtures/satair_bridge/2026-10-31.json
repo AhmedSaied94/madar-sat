@@ -1,0 +1,123 @@
+{
+  "name": "projects/example-project/databases/(default)/documents/matchDays/2026-10-31",
+  "fields": {
+    "id": { "stringValue": "2026-10-31" },
+    "date": { "stringValue": "2026-10-31" },
+    "updatedAt": { "timestampValue": "2026-10-31T09:00:00.000Z" },
+    "matches": {
+      "arrayValue": {
+        "values": [
+          {
+            "mapValue": {
+              "fields": {
+                "id": { "stringValue": "bridge-new-1" },
+                "competition": { "stringValue": "الدوري المصري الممتاز" },
+                "competitionStage": { "stringValue": "الجولة 10" },
+                "team1": { "stringValue": "الأهلي" },
+                "team2": { "stringValue": "الزمالك" },
+                "time": { "stringValue": "08:00 م" },
+                "ysMatchId": { "stringValue": "" },
+                "channelIds": {
+                  "arrayValue": {
+                    "values": [
+                      { "stringValue": "ch-cyr" },
+                      { "stringValue": "ch-hidden" },
+                      { "stringValue": "orphan-channel-1" }
+                    ]
+                  }
+                },
+                "hiddenChannels": { "arrayValue": { "values": [{ "stringValue": "ch-hidden" }] } },
+                "channelCommentators": {
+                  "mapValue": {
+                    "fields": {
+                      "ch-cyr": {
+                        "mapValue": {
+                          "fields": {
+                            "name": { "stringValue": "معلق القناة الأولى" },
+                            "image": { "stringValue": "" },
+                            "audio": { "stringValue": "" }
+                          }
+                        }
+                      },
+                      "ch-hidden": {
+                        "mapValue": {
+                          "fields": {
+                            "name": { "stringValue": "معلق أول" },
+                            "image": { "stringValue": "" },
+                            "audio": { "stringValue": "" },
+                            "name2": { "stringValue": "معلق ثان" }
+                          }
+                        }
+                      },
+                      "orphan-channel-1": {
+                        "mapValue": {
+                          "fields": {
+                            "name": { "stringValue": "معلق قناة محذوفة" },
+                            "image": { "stringValue": "" },
+                            "audio": { "stringValue": "" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "commentator": { "stringValue": "" },
+                "stadium": { "stringValue": "استاد القاهرة" },
+                "logo1": { "stringValue": "" },
+                "logo2": { "stringValue": "" },
+                "broadcastOn": { "stringValue": "شبكة قنوات اختبار" },
+                "broadcastLogo": { "stringValue": "" },
+                "live": { "booleanValue": false },
+                "cardSharing": { "stringValue": "يذكر أن" }
+              }
+            }
+          },
+          {
+            "mapValue": {
+              "fields": {
+                "id": { "stringValue": "bridge-ys-1" },
+                "competition": { "stringValue": "دوري مختلف تماماً" },
+                "competitionStage": { "stringValue": "" },
+                "team1": { "stringValue": "اسم من الجسر" },
+                "team2": { "stringValue": "اسم آخر" },
+                "time": { "stringValue": "11:30 م" },
+                "ysMatchId": { "stringValue": "5802974" },
+                "channelIds": { "arrayValue": { "values": [{ "stringValue": "ch-nilesat-free" }] } },
+                "hiddenChannels": { "arrayValue": { "values": [] } },
+                "channelCommentators": { "mapValue": { "fields": {} } },
+                "commentator": { "stringValue": "" },
+                "stadium": { "stringValue": "" },
+                "logo1": { "stringValue": "" },
+                "logo2": { "stringValue": "" },
+                "live": { "booleanValue": false }
+              }
+            }
+          },
+          {
+            "mapValue": {
+              "fields": {
+                "id": { "stringValue": "bridge-placeholders-1" },
+                "competition": { "stringValue": "غير مدرج" },
+                "competitionStage": { "stringValue": "نصف النهائي  نصف النهائي" },
+                "team1": { "stringValue": "" },
+                "team2": { "stringValue": "⚽" },
+                "time": { "stringValue": "--:--" },
+                "ysMatchId": { "stringValue": "" },
+                "channelIds": { "arrayValue": { "values": [] } },
+                "hiddenChannels": { "arrayValue": { "values": [] } },
+                "channelCommentators": { "mapValue": { "fields": {} } },
+                "commentator": { "stringValue": "" },
+                "stadium": { "stringValue": "غير مدرج" },
+                "logo1": { "stringValue": "" },
+                "logo2": { "stringValue": "" },
+                "live": { "booleanValue": false }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "createTime": "2026-10-31T07:00:00.000Z",
+  "updateTime": "2026-10-31T09:00:00.000Z"
+}

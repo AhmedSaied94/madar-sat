@@ -7,7 +7,6 @@ old ``encryption`` field held (README rule 9, constitution O3). It must be 0.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -35,14 +34,11 @@ from app.db.models import (
     TeamExternalId,
 )
 
-CARD_SHARING_LABELS = ("Mega Share", "Apollo", "VIP", "ليست مكسورة", "BISS")
-
-# Latin labels match as whole words in any case ("beIN VIP", "Biss : 12 34"), so names
-# that merely contain the letters ("Guinea-Bissau", "Apollon") are not flagged. The
-# Arabic label also matches its ar_normalize spelling (ة → ه).
-_LABEL_RE = re.compile(r"\b(?:mega\s*share|apollo|vip|biss)\b|ليست\s*مكسور[ةه]", re.IGNORECASE)
-# Separators a removed label leaves at either end: "beIN Sports - VIP" → "beIN Sports".
-_EDGE_RE = re.compile(r"^[\s\-–—|:/]+|[\s\-–—|:/]+$")
+# The label helpers moved to app.domain.content (the admin API uses them too); the loader's
+# modules and tests still import them from here.
+from app.domain.content import CARD_SHARING_LABELS as CARD_SHARING_LABELS
+from app.domain.content import find_card_sharing_label as find_card_sharing_label
+from app.domain.content import strip_card_sharing_labels as strip_card_sharing_labels
 
 # Every table the snapshot loader or the media rehoster writes.
 SCANNED_MODELS: tuple[Any, ...] = (
@@ -72,26 +68,6 @@ class LabelHit:
     column: str
     key: str  # the row's primary key, for the report
     label: str  # the matched text
-
-
-def find_card_sharing_label(value: str | None) -> str | None:
-    """Return the first card-sharing label in ``value`` (as written there), or ``None``."""
-    if not value:
-        return None
-    m = _LABEL_RE.search(value)
-    return m.group(0) if m else None
-
-
-def strip_card_sharing_labels(value: str | None) -> str | None:
-    """Return ``value`` without its card-sharing labels, or ``None`` if nothing else is left.
-
-    A value with no label (``""`` and ``None`` included) comes back unchanged. Some real
-    channel names carry a label ("CCTV Sports VIP"); the channel is kept under the rest of
-    its name.
-    """
-    if not value or _LABEL_RE.search(value) is None:
-        return value
-    return _EDGE_RE.sub("", " ".join(_LABEL_RE.sub(" ", value).split())) or None
 
 
 def _text_columns(model: Any) -> list[Column[Any]]:

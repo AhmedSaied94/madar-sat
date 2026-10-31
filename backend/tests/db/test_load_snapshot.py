@@ -130,7 +130,7 @@ def test_dataset_versions_bumped_once_per_run(sync_session):
     before = dict(sync_session.execute(text("SELECT name, version FROM dataset_versions")).all())
     _load(sync_session)
     after = dict(sync_session.execute(text("SELECT name, version FROM dataset_versions")).all())
-    assert len(after) == 8
+    assert len(after) == 10  # 0004 added `broadcast_presets` and `sources` (B1-R1-3)
     assert {k: after[k] - before[k] for k in after} == dict.fromkeys(after, 1)
 
 

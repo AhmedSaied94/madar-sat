@@ -61,11 +61,30 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends ripgrep
       - run: flutter pub get
+      # M-R3-2: backend.yml's `clients` job only compares the network client, so a provider
+      # *.g.dart left stale (or never committed) by a source change would pass. Fail on any diff.
+      - name: Check no generated *.g.dart is stale
+        run: |
+          dart run build_runner build -d
+          if [[ -n $(git status --porcelain -- lib) ]]; then
+            git status --short -- lib
+            git diff -- lib
+            echo "::error::build_runner changed app/lib; run it and commit the output"
+            exit 1
+          fi
       - run: flutter analyze
       - run: ./tool/check_token_copy.sh
       - run: ./tool/check_literals.sh
       - name: flutter test (goldens included)
         run: flutter test
+      # M-R1-2 / B2-R2-13: the PWA opens drift on the web, so the build must ship sqlite3.wasm and
+      # drift_worker.js. The same flags as pwa.yml, on every PR that touches app/.
+      - name: Build the web app and check its drift assets
+        run: |
+          flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+          ./tool/check_web_assets.sh build/web
+      # `tool/check_providers.sh` stays out of CI on purpose: Lane M is moving that check into
+      # `flutter test` (`m-round-2.md` M-R2-7), which this job already runs.
       - name: Build the prod-flavor debug APK (it calls VPS-1)
         run: flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

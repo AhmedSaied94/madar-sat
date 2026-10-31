@@ -333,6 +333,8 @@ class MatchChannel(Base):
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), primary_key=True)
     channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id"), primary_key=True)
     source: Mapped[str] = mapped_column(ForeignKey("sources.name"))
+    # The source that first brought the link; NULL when an editor added it (0003). Never changes.
+    imported_by: Mapped[str | None] = mapped_column(ForeignKey("sources.name"))
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
     commentator_id: Mapped[int | None] = mapped_column(ForeignKey("commentators.id", ondelete="SET NULL"))
     commentator2_id: Mapped[int | None] = mapped_column(ForeignKey("commentators.id", ondelete="SET NULL"))
@@ -381,7 +383,7 @@ class ImportRun(Base):
     raw_path: Mapped[str | None] = mapped_column(Text)
 
 
-# --- 0002 additions (created now, used on D2/D3) ------------------------------
+# --- 0002 additions (used from D2; 0003 adds audit_log.source) -----------------
 
 
 class AdminUser(Base):
@@ -416,6 +418,8 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     admin_user_id: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"))
+    # The importer behind the change; NULL for admin and CLI actions (0003, ck_audit_log_actor).
+    source: Mapped[str | None] = mapped_column(ForeignKey("sources.name"))
     entity: Mapped[str] = mapped_column(Text)
     entity_id: Mapped[int | None] = mapped_column(BigInteger)
     action: Mapped[str] = mapped_column(Text)
@@ -488,4 +492,6 @@ DATASET_NAMES = (
     "teams",
     "commentators",
     "rights_holders",
+    "broadcast_presets",
+    "sources",
 )

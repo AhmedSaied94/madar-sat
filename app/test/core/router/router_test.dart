@@ -1,48 +1,74 @@
+import 'dart:convert';
+
+import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:madar_sat/core/db/app_database.dart';
+import 'package:madar_sat/core/format/clock.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
+import 'package:madar_sat/core/network/swr_providers.dart';
+import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/core/router/app_router.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
 import 'package:madar_sat/features/gallery/presentation/gallery_page.dart';
-import 'package:madar_sat/features/matches/data/matches_api.dart';
+import 'package:madar_sat/features/frequencies/presentation/frequencies_page.dart';
+import 'package:madar_sat/features/frequencies/presentation/satellite_channels_page.dart';
+import 'package:madar_sat/features/live/live_poller.dart';
+import 'package:madar_sat/features/match_detail/presentation/match_detail_page.dart';
 import 'package:madar_sat/features/matches/presentation/matches_page.dart';
-import 'package:madar_sat/features/matches/presentation/matches_providers.dart';
+import 'package:madar_sat/features/my_satellites/presentation/my_satellites_page.dart';
 import 'package:madar_sat/features/shell/presentation/stub_page.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
-import '../../fixtures/fake_api_client.dart';
+import '../../fixtures/fake_http_adapter.dart';
 import '../../fixtures/sample_models.dart';
 
-Widget _app(GoRouter router, {List<MatchSummary> rows = const []}) => ProviderScope(
-      overrides: [
-        matchesApiProvider.overrideWithValue(MatchesApi(FakeApiClient(rows: rows))),
-      ],
-      child: MaterialApp.router(
-        routerConfig: router,
-        locale: const Locale('ar'),
-        supportedLocales: const [Locale('ar')],
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        theme: MadarTheme.dark,
-        builder: (context, child) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(disableAnimations: true),
-            child: child ?? const SizedBox.shrink(),
-          ),
+/// S2 reads today through the stale-while-revalidate repository: an in-memory database and
+/// a scripted adapter that answers every revalidation with [rows], on a pinned clock.
+Widget _app(GoRouter router, {List<MatchSummary> rows = const []}) {
+  final clock = sampleNow();
+  final database = AppDatabase(NativeDatabase.memory(), now: () => clock);
+  addTearDown(database.close);
+  final http = FakeHttpAdapter();
+  final body = jsonDecode(jsonEncode([for (final row in rows) row.toJson()])) as List<Object?>;
+  for (var answer = 0; answer < 20; answer++) {
+    http.enqueueData(body, etag: '"v$answer"');
+  }
+  return ProviderScope(
+    overrides: [
+      swrRepositoryProvider.overrideWithValue(
+        SwrRepository(dio: fakeDio(http), database: database),
+      ),
+      clockProvider.overrideWithValue(() => clock),
+      liveFetcherProvider.overrideWithValue(() async => const []),
+    ],
+    child: MaterialApp.router(
+      routerConfig: router,
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar')],
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: MadarTheme.dark,
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child ?? const SizedBox.shrink(),
         ),
       ),
-    );
+    ),
+  );
+}
 
 void main() {
+  // The gallery test builds two apps, so two in-memory databases, one after the other.
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
   const routes = [
     '/live',
     '/day/2026-10-28',
-    '/match/1',
-    '/my-satellites',
-    '/satellites',
-    '/satellites/1',
     '/channel/1',
     '/team/1',
     '/competition/1',
@@ -77,6 +103,63 @@ void main() {
     });
   }
 
+  group('the D2 routes open their screens', () {
+    final screens = <String, void Function(WidgetTester tester)>{
+      '/match/7': (tester) => expect(
+            tester.widget<MatchDetailPage>(find.byType(MatchDetailPage)).matchId,
+            7,
+          ),
+      '/my-satellites': (tester) => expect(find.byType(MySatellitesPage), findsOneWidget),
+      '/satellites': (tester) => expect(find.byType(FrequenciesPage), findsOneWidget),
+      '/satellites/3': (tester) => expect(
+            tester
+                .widget<SatelliteChannelsPage>(find.byType(SatelliteChannelsPage))
+                .satelliteId,
+            3,
+          ),
+    };
+
+    screens.forEach((route, expectScreen) {
+      testWidgets('$route is its own screen, not a stub', (tester) async {
+        final router = createAppRouter(includeGallery: false);
+        await tester.pumpWidget(_app(router));
+        await tester.pumpAndSettle();
+
+        router.go(route);
+        await tester.pumpAndSettle();
+
+        expectScreen(tester);
+        expect(find.byType(StubPage), findsNothing);
+      });
+    });
+
+    // `int.tryParse` alone would let `-5`, `+5`, ` 5` and `0x10` (16) through, and ids are
+    // positive whole numbers.
+    for (final route in [
+      '/match/abc',
+      '/match/-5',
+      '/match/+5',
+      '/match/0x10',
+      '/match/0',
+      '/match/12345678901',
+      '/satellites/abc',
+      '/satellites/-1',
+      '/satellites/0x2',
+    ]) {
+      testWidgets('$route has no whole-number id, so it goes home', (tester) async {
+        final router = createAppRouter(includeGallery: false);
+        await tester.pumpWidget(_app(router));
+        await tester.pumpAndSettle();
+
+        router.go(route);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MatchesPage), findsOneWidget);
+        expect(router.state.uri.path, '/');
+      });
+    }
+  });
+
   testWidgets('the detail back arrow points right in RTL', (tester) async {
     final router = createAppRouter(includeGallery: false);
     await tester.pumpWidget(_app(router));
@@ -98,14 +181,14 @@ void main() {
     await tester.tap(find.text('الأهلي'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(StubPage), findsOneWidget);
+    expect(tester.widget<MatchDetailPage>(find.byType(MatchDetailPage)).matchId, 48213);
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     expect(find.byType(MatchesPage), findsOneWidget);
-    expect(find.byType(StubPage), findsNothing);
+    expect(find.byType(MatchDetailPage), findsNothing);
   });
 
   testWidgets('the gallery route exists only when enabled', (tester) async {

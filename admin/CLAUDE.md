@@ -14,6 +14,14 @@ pnpm prism                   # Prism mock of the admin spec on :4010
 pnpm dev                     # Vite on :5173; /admin/api is proxied to Prism
 ```
 
+Against the deployed admin API over WireGuard (rather than Prism), run the `wg` mode: it proxies
+`/admin/api` to `https://10.8.0.1` through Caddy's root CA, so the browser still only talks to
+`localhost` and the API needs no CORS (research R23):
+
+```sh
+NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm dev:wg
+```
+
 In dev builds only, a `?mock=<example>` page parameter makes every API call that declares that example send `Prefer: code=<status>, example=<example>` (the status is read from the spec at dev-server start), so Prism answers with that named example. The A1 examples are `login_ok`, `invalid_credentials`, `account_locked` and `validation_error`:
 
 - `http://localhost:5173/login?mock=invalid_credentials` → «إيميل أو باسوورد غلط» and «تبقّت 3 محاولات…»
@@ -30,7 +38,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-litera
 
 - `pnpm test`: Vitest + Testing Library + MSW (jsdom). `pnpm test:watch` while working. Render with `renderRtl` from `src/test/render.tsx`, which wraps the RTL root, a query client and a memory router; MSW runs from `src/test/setup.ts` and fails on unhandled requests.
 - Tests come first and are seen failing before the code they cover (constitution, Test-first). Every state in a component's README has a test.
-- Playwright smoke tests arrive on D11 (delivery-plan §7); until then screens are checked by screenshots against the PNG boards.
+- Playwright smoke tests arrive on D4 (delivery-plan §7); until then screens are checked by screenshots against the PNG boards.
 
 ## Generated code: never edit by hand
 
@@ -42,7 +50,14 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-litera
 
 - The contract belongs to Lane B1. If the client needs a change, ask B1 to change the spec, then run `pnpm orval` and commit the output. `backend.yml`'s `clients` job fails when the committed output is stale.
 - Tokens: change `madar-design/design-system/tokens.json`, run `python3 madar-design/design-system/code/generate_tokens.py`, then copy the generated files and fonts here again. `./scripts/check-token-copy.sh` fails on any difference.
-- `src/api/http.ts` is the hand-written axios mutator: same-origin requests (the spec's paths already start with `/admin/api`), `withCredentials`, Zod-parsed responses, and errors turned into `ApiError` with the envelope's `error.code`.
+- `src/api/http.ts` is the hand-written axios mutator: same-origin requests (the spec's paths already start with `/admin/api`), `withCredentials`, Zod-parsed responses, and errors turned into `ApiError` with the envelope's `error.code`. Every endpoint the app calls must have its response schema registered in its `responseSchemas` map, keyed `"<METHOD> <path>"` with `{}` for a path parameter; a request without one fails instead of skipping validation.
+
+## Times
+
+Admin times are UTC instants on the wire and Cairo time on screen. A3 and A4 convert in both
+directions through `src/lib/cairoTime.ts` (`date-fns-tz` with `Africa/Cairo`), never with the browser's
+zone and never with `ar` digits: the time field is labelled «بتوقيت القاهرة», and a saved value is the
+UTC instant of the Cairo wall time the editor typed.
 
 ## Visual rules
 

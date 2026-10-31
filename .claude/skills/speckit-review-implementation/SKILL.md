@@ -1,6 +1,6 @@
 ---
 name: speckit-review-implementation
-description: Review one lane's implementation across spec, API, database, pipelines, app, UI, admin, security, tests and ops; write a review file and append fix tasks to the lane's section
+description: Review one lane's implementation across spec, API, database, pipelines, app, UI, admin, security, tests and ops; write a review file and append fix tasks for CRITICAL and HIGH findings to the lane's section
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: madar-sat
@@ -42,8 +42,9 @@ The review produces:
 1. `FEATURE_DIR/reviews/<lane>-round-<K>.md`: the verified findings, graded, each with its evidence,
    plus every check you ran and its result.
 2. A `### Review fixes (round K)` block at the end of the `## Lane <LANE>` section of `tasks.md`,
-   with one task for each confirmed finding that needs a change, so the lane's next
-   `/speckit-implement` run fixes them.
+   with one task for each CONFIRMED CRITICAL and HIGH finding, so the lane's next
+   `/speckit-implement` run fixes them. Only CRITICAL and HIGH are fixed; MEDIUM and LOW
+   findings are notes in the round file and never become tasks.
 
 ## Operating Constraints
 
@@ -104,7 +105,8 @@ The review produces:
      for UI work, their rows in `madar-design/app-flutter/SCREENS.md` or
      `madar-design/admin-react/SCREENS.md`, the PNGs and the component READMEs;
    - the latest `FEATURE_DIR/reviews/<lane>-round-*.md`, if any. Its number plus one is this round's
-     `K` (else `K` = 1). Each of its findings is re-checked in this round.
+     `K` (else `K` = 1). Each of its findings is re-checked in this round. A MEDIUM or LOW finding
+     still open stays a note: report it under "Previous round", and never raise it to a task.
 4. Read `.github/workflows/*.yml`, once they exist, to learn which jobs this change set triggers (they
    run per folder: `backend.yml`, `admin.yml`, `app.yml`, `pwa.yml`; system-design §9).
 
@@ -431,6 +433,10 @@ Severity:
   maintainability problem with a concrete future failure.
 - **LOW**: minor polish.
 
+Grade honestly: don't raise a finding to HIGH so that it gets fixed, and don't lower one to skip
+it. Only CRITICAL and HIGH block the lane and become fix tasks; MEDIUM and LOW are notes for the
+owner, so keep them short.
+
 Verdict: **BLOCK** if any CRITICAL, **CHANGES REQUESTED** if any HIGH, **APPROVE WITH NOTES** if
 only MEDIUM or LOW, **APPROVE** if none.
 
@@ -482,7 +488,7 @@ What you did not check or run, and why.
 
 ### 7. Append the fix tasks
 
-If there are CONFIRMED findings of MEDIUM or higher, append to the end of the `## Lane <LANE>`
+If there are CONFIRMED CRITICAL or HIGH findings, append to the end of the `## Lane <LANE>`
 section of `tasks.md` (just before the next `## ` heading):
 
 1. Write the header `### Review fixes (round <K>)` and one line saying the tasks come from
@@ -499,8 +505,8 @@ section of `tasks.md` (just before the next `## ` heading):
    owner (a spec, plan, doc or constitution change) becomes a task to ask, not a guess. A fix that
    belongs in another lane's folder becomes a task to ask that lane, not an edit.
 
-LOW and PLAUSIBLE findings stay in the round file only. With no CONFIRMED finding of MEDIUM or
-higher, leave `tasks.md` byte for byte unchanged.
+MEDIUM, LOW and PLAUSIBLE findings stay in the round file only. With no CONFIRMED CRITICAL or HIGH
+finding, leave `tasks.md` byte for byte unchanged.
 
 ### 8. Fix mode (only with `fix`)
 
@@ -520,7 +526,7 @@ many tasks were appended to the lane's section. Then give the next step:
 - With appended tasks: run `/speckit-implement Only the tasks under "Lane <LANE>" in tasks.md.`
   (in whichever agent implements) to fix them, then run
   `/speckit-review-implementation lane=<lane>` again for round K+1.
-- With APPROVE or APPROVE WITH NOTES: the lane is ready for its PR once the owner has read the notes
-  and the "Owner must review" files.
+- With APPROVE or APPROVE WITH NOTES: no tasks were appended and no further round is needed. The
+  lane is ready for its PR once the owner has read the notes and the "Owner must review" files.
 
 Do not commit. The user decides when to commit.

@@ -100,6 +100,8 @@ const sampleSatellite = SatelliteRef(
 ChannelCarriage sampleCarriage({
   bool withSatellite = true,
   Access access = Access.encrypted,
+  String? provider,
+  String? package,
 }) {
   return ChannelCarriage(
     id: 5512,
@@ -114,8 +116,8 @@ ChannelCarriage sampleCarriage({
         : null,
     frequencyNote: withSatellite ? null : 'UHF 32',
     access: access,
-    provider: null,
-    package: null,
+    provider: provider,
+    package: package,
     beam: Beam.wide,
     country: null,
     frequencyChangedAt: DateTime.utc(2026, 10, 20),

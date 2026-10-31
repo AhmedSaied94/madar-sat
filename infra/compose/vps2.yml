@@ -1,6 +1,8 @@
 # VPS-2 "workers": the Celery processes of SD §6.1, exactly one beat, and Flower (FR-020).
-# Everything is under the `workers` profile, so nothing starts until the worker code exists (D3):
-#   IMAGE_TAG=<sha> docker compose --env-file /srv/madar/.env -f compose/vps2.yml --profile workers up -d
+# Everything is under the `workers` profile, so a Compose command must name `--profile workers`:
+#   IMAGE_TAG=<sha> docker compose --env-file /srv/madar/.env -f compose/vps2.yml --profile workers \
+#     up -d worker-imports worker-scrape worker-maintenance beat      # scripts/deploy.sh --host vps2
+# `worker-live`, `worker-notify` and `flower` stay defined but are not started on D2.
 # Every image is linux/arm64. Secrets come only from /srv/madar/.env (mode 600). The workers reach
 # PostgreSQL and Redis on VPS-1's VCN IP (DATABASE_URL, REDIS_URL, CELERY_BROKER_URL).
 name: madar
@@ -32,28 +34,38 @@ x-worker: &worker
     start_period: 30s
 
 services:
-  # Normalize, upsert, entity resolution, media rehosting.
+  # Normalize, upsert, entity resolution, media rehosting, and the raw pages it saves for 5 days
+  # (RAW_ROOT=/srv/raw, data-model §Raw pages).
   worker-imports:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "imports", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "imports", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
+    environment:
+      RAW_ROOT: ${RAW_ROOT:-/srv/raw}
+    volumes:
+      - /srv/raw:/srv/raw
 
-  # Fetch and parse only. Can move to the home box if OCI IPs get blocked.
+  # Fetch and parse only, under the `scrape` queue. The default path is the owner's home box
+  # (`scrape_home`); switch with YSSCORES_FETCH_QUEUE=scrape if ysscores stops blocking VPS IPs.
   worker-scrape:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
   worker-live:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
   worker-notify:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "notifications", "-n", "worker@%h", "-c", "2", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "notifications", "-n", "worker@%h", "-c", "2", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
-  # Cleanup, media copy, dataset versions.
+  # Cleanup, media copy, dataset versions. `adapters.prune_raw_pages` needs the raw disk.
   worker-maintenance:
     <<: *worker
-    command: ["celery", "-A", "app.workers", "worker", "-Q", "maintenance", "-n", "worker@%h", "-c", "1", "--without-gossip", "--without-mingle"]
+    command: ["celery", "-A", "app.workers", "worker", "-Q", "maintenance", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
+    environment:
+      RAW_ROOT: ${RAW_ROOT:-/srv/raw}
+    volumes:
+      - /srv/raw:/srv/raw
 
   # Exactly one beat, ever (SD §6.1). The fixed container_name makes `--scale beat=2` fail.
   beat:

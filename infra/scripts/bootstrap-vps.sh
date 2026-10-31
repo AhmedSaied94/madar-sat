@@ -39,6 +39,10 @@ serial_mark=$state_dir/serial-console-tested
 oci_rules_backup=/etc/iptables/rules.v4.oci-original
 # The non-root user of backend/Dockerfile: the one-off `cli` container writes media and reports.
 app_uid=10001
+# The `redis` user's gid inside redis:7.4.12. The rendered ACL is 640 and belongs to this group, so
+# the server can read it; deploy writes it, so it must belong to the group (B2-R1-1).
+acl_gid=999
+acl_group=redis-acl
 public_ssh_rule='-A INPUT -p tcp -m tcp --dport 22 -j ACCEPT'
 ipv4_re='^[0-9]{1,3}(\.[0-9]{1,3}){3}$'
 # The fake values of infra/compose/example.env.
@@ -46,6 +50,10 @@ placeholder_re='(example|changeme|your-firebase|192\.0\.2\.)'
 
 # Read one value from the env file without executing it.
 env_get() { sed -n "s/^$1=//p" "$env_file" | tail -n 1; }
+
+# The group with this gid, or nothing. `getent` exits 2 for a gid that has no group, and under
+# `set -o pipefail` that aborted the script before its `groupadd` branch could run (B2-R2-10).
+group_for_gid() { getent group "$1" 2>/dev/null | cut -d: -f1 || true; }
 
 install_packages() {
   log "installing packages"
@@ -121,7 +129,8 @@ ensure_env_file() {
   grep -q '^MADAR_ENV_FILE=' "$env_file" && die "remove MADAR_ENV_FILE from $env_file (CI and dev only)"
 
   local required=(VCN_IP PEER_VCN_IP) key value
-  [[ $role == vps1 ]] && required+=(VPS1_IP ACME_EMAIL FIREBASE_PROJECT_ID GHCR_OWNER POSTGRES_PASSWORD REDIS_PASSWORD)
+  [[ $role == vps1 ]] && required+=(VPS1_IP ACME_EMAIL FIREBASE_PROJECT_ID GHCR_OWNER POSTGRES_PASSWORD REDIS_PASSWORD \
+    REDIS_HOMEBOX_PASSWORD HOME_BOX_WG_IP)
   for key in "${required[@]}"; do
     value=$(env_get "$key")
     [[ -n $value ]] || die "$key is empty in $env_file"
@@ -129,7 +138,9 @@ ensure_env_file() {
       die "$key in $env_file still has its example value"
     fi
   done
-  for key in VCN_IP PEER_VCN_IP; do
+  local address_keys=(VCN_IP PEER_VCN_IP)
+  [[ $role == vps1 ]] && address_keys+=(HOME_BOX_WG_IP)
+  for key in "${address_keys[@]}"; do
     [[ $(env_get "$key") =~ $ipv4_re ]] || die "$key is not an IPv4 address"
   done
   local leftovers
@@ -152,6 +163,22 @@ ensure_env_file() {
   rm -f "$tmp"
 }
 
+ensure_redis_acl_group() {
+  # deploy renders the ACL; the redis user (gid 999) reads it. Docker would create a missing bind
+  # source as root:root, which is why every folder here is created explicitly.
+  local existing
+  existing=$(group_for_gid "$acl_gid")
+  if [[ -z $existing ]]; then
+    log "creating group $acl_group (gid $acl_gid, the redis user's)"
+    groupadd --gid "$acl_gid" "$acl_group"
+    existing=$acl_group
+  fi
+  usermod -aG "$existing" deploy
+  # 750, group 999: the directory has to be traversable by the redis user, not only the file
+  # (B2-R2-1). Re-run after an older bootstrap to correct it.
+  install -d -m 750 -o deploy -g "$existing" /srv/madar/redis
+}
+
 ensure_dirs() {
   log "creating /srv folders"
   install -d -m 750 -o deploy -g deploy /srv/madar /srv/madar/infra
@@ -161,6 +188,11 @@ ensure_dirs() {
     install -d -m 755 -o deploy -g deploy /srv/admin
     [[ -f /srv/admin/index.html ]] \
       || install -m 644 -o deploy -g deploy "$infra/admin-placeholder/index.html" /srv/admin/index.html
+  fi
+  if [[ $role == vps2 ]]; then
+    # The raw pages. Docker would create the missing bind source as root:root, and the uid-10001
+    # workers with cap_drop ALL could not write it (B2-R1-5).
+    install -d -m 755 -o "$app_uid" -g "$app_uid" /srv/raw
   fi
 }
 
@@ -233,8 +265,8 @@ apply_firewall() {
   local rendered
   rendered=$(mktemp)
   # shellcheck disable=SC2016 # envsubst takes the variable names literally
-  VCN_IP=$(env_get VCN_IP) PEER_VCN_IP=$(env_get PEER_VCN_IP) \
-    envsubst '${VCN_IP} ${PEER_VCN_IP}' < "$infra/firewall/$role.rules" \
+  VCN_IP=$(env_get VCN_IP) PEER_VCN_IP=$(env_get PEER_VCN_IP) HOME_BOX_WG_IP=$(env_get HOME_BOX_WG_IP) \
+    envsubst '${VCN_IP} ${PEER_VCN_IP} ${HOME_BOX_WG_IP}' < "$infra/firewall/$role.rules" \
     | SSH_RULE=$ssh_rule OCI_RULES=$oci_rules awk '
         $0 == "# @PUBLIC_SSH@" { if (ENVIRON["SSH_RULE"] != "") print ENVIRON["SSH_RULE"]; next }
         $0 == "# @OCI_INSTANCE_SERVICES@" { if (ENVIRON["OCI_RULES"] != "") print ENVIRON["OCI_RULES"]; next }
@@ -266,7 +298,11 @@ main() {
   install_docker
   ensure_deploy_user
   ensure_env_file
+  [[ $role == vps1 ]] && ensure_redis_acl_group
   ensure_dirs
+  # check-firewall.sh reads this to know which expectations apply (B2-R1-6).
+  install -d -m 755 "$state_dir"
+  printf '%s\n' "$role" > "$state_dir/host-role"
   if [[ $role == vps1 ]]; then
     setup_wireguard_hub
     docker_after_wg0

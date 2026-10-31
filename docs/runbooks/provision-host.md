@@ -177,6 +177,16 @@ It prints `-rw------- 1 deploy deploy … /srv/madar/.env` and `20`. What each v
 | `CONTRACT_VERSION` | `1.0.0` |
 | `CELERY_BROKER_URL` | `redis://:<REDIS_PASSWORD>@redis:6379/0` (unused until the workers exist, D3) |
 
+From D2 on, VPS-1's file also needs these keys (the deploy refuses to start without them):
+
+| Key | Value |
+| --- | --- |
+| `ADMIN_JWT_SECRET` | `openssl rand -base64 48`, at least 32 bytes. Only `api-admin` uses it; a compose command fails at parse time without it ([secrets.md](secrets.md#where-they-live)) |
+| `REDIS_HOMEBOX_PASSWORD` | A new password, on VPS-1 and the home box. It is the `homebox` Redis user's ([home-box.md](home-box.md)) |
+| `HOME_BOX_WG_IP` | The home box's peer address on `wg0`; the firewall admits only it to Redis |
+| `VPS2_VCN_IP` (GitHub variable) | VPS-2's VCN private IP, for the `deploy-vps2` job |
+| VPS-2's `.env` | Its own file: `DATABASE_URL`, `DATABASE_URL_SYNC` and `REDIS_URL` on VPS-1's VCN IP, `CELERY_BROKER_URL`, `RAW_ROOT=/srv/raw`, `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY`, `SCRAPE_USER_AGENT`, `YSSCORES_FETCH_QUEUE`, `MEDIA_*` and `CORS_ORIGINS` ([workers.md](workers.md), [owner-actions.md](../owner-actions.md#lane-b2-ingestion-and-hosts)) |
+
 The block leaves out the keys VPS-1 doesn't use: `IMAGE_TAG` and `HEALTHZ_FORCE_FAIL` (`deploy.sh` sets them), `FLOWER_BASIC_AUTH` (VPS-2's), and `DEV_POSTGRES_PORT` and `DEV_REDIS_PORT` (local only). Add the Firebase preview channel's origin to `CORS_ORIGINS` once `pwa.yml` has printed it ([firebase-hosting.md](firebase-hosting.md)).
 
 **VPS-2** uses VPS-1's database and Redis passwords. First copy them from your machine, VPS-1 to VPS-2, without printing them. In the order above, VPS-1 has finished steps 2–9 before this: its step 4 re-run started the WireGuard hub (`wg0`, `10.8.0.1`), step 5 connected your device, and step 6 closed its public SSH. So VPS-1 is reached over WireGuard (`madar-vps1`), and VPS-2 still by its public IP:
@@ -243,7 +253,11 @@ Then re-run the script:
 sudo ./madar-infra/scripts/bootstrap-vps.sh <role>
 ```
 
-It checks the required keys, warns about any value still left from `example.env`, and creates the `/srv` folders. On VPS-1 it also sets up the WireGuard hub (it prints `hub public key: …`) and makes Docker start after `wg0`. It then asks:
+It checks the required keys, warns about any value still left from `example.env`, and creates the `/srv` folders.
+
+Re-run it on **VPS-1 before the first D2 deploy**: `deploy.sh` refuses to render the Redis ACL without
+gid 999's group, and the script is what creates it and makes `deploy` a member (`ensure_redis_acl_group`).
+An already-provisioned host needs nothing else; the re-run corrects `/srv/madar/redis`'s group too (B2-R2-10). On VPS-1 it also sets up the WireGuard hub (it prints `hub public key: …`) and makes Docker start after `wg0`. It then asks:
 
 ```text
 [bootstrap] Have you logged in through this host's OCI serial console? Type 'serial console tested' to close public SSH:
@@ -260,7 +274,7 @@ ip -4 -o addr show wg0                             # VPS-1 only: 10.8.0.1/24
 systemctl show docker -p After | grep -o 'wg-quick@wg0.service'   # VPS-1 only
 ```
 
-Nothing serves yet. Caddy, PostgreSQL and Redis start with the first infra sync (README.md stage 4).
+Nothing serves yet. Caddy, PostgreSQL and Redis start with the first infra sync (README.md stage 5).
 
 ## 5. Your WireGuard peer
 
@@ -342,12 +356,16 @@ sudo ./madar-infra/scripts/wg-add-peer.sh ci       # the CI peer
 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub   # note this fingerprint
 ```
 
-Back on your machine, with your tunnel up:
+Back on your machine, with your tunnel up. `DEPLOY_KNOWN_HOSTS` must hold **both** host keys,
+because `deploy-vps2` jumps from VPS-1 to VPS-2:
 
 ```bash
 R=AhmedSaied94/madar-sat
 ssh-keyscan -t ed25519 10.8.0.1 > "$d/known_hosts"
-ssh-keygen -lf "$d/known_hosts"              # must match the fingerprint above
+# `ssh-keyscan` has no jump option, and ssh looks the key up by the address it connects to, so scan
+# VPS-2 from VPS-1 and keep the VCN IP (ssh-config.sh sets `HostName $VPS2_VCN_IP`, no alias).
+ssh ubuntu@10.8.0.1 ssh-keyscan -t ed25519 "$VPS2_VCN_IP" >> "$d/known_hosts"
+ssh-keygen -lf "$d/known_hosts"              # two lines: 10.8.0.1 and the VPS-2 VCN IP
 ssh -i "$d/deploy" -o IdentitiesOnly=yes -o UserKnownHostsFile="$d/known_hosts" deploy@10.8.0.1 true && echo deploy login works
 
 gh secret set DEPLOY_SSH_KEY -R "$R" < "$d/deploy"
@@ -374,7 +392,7 @@ sudo reboot
 After a minute, reconnect and check:
 
 ```bash
-sudo ./madar-infra/scripts/check-firewall.sh   # exit 0: "IPv4: active rules match /etc/iptables/rules.v4", and the same for IPv6
+sudo ./madar-infra/scripts/check-firewall.sh --role vps1   # or vps2; exit 0: "IPv4: active rules match /etc/iptables/rules.v4", and the same for IPv6
 systemctl is-active netfilter-persistent docker # active, active
 systemctl is-active wg-quick@wg0                # VPS-1 only: active
 sudo wg show wg0                                # VPS-1 only: your peer, with a fresh handshake once you reconnect

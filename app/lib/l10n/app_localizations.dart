@@ -382,6 +382,18 @@ abstract class AppLocalizations {
   /// **'ملاحظة التردد'**
   String get frequencyNote;
 
+  /// No description provided for @access.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول'**
+  String get access;
+
+  /// No description provided for @category.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفئة'**
+  String get category;
+
   /// No description provided for @details.
   ///
   /// In ar, this message translates to:
@@ -693,6 +705,408 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'حجم الخط'**
   String get textScale;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get filterAll;
+
+  /// No description provided for @clearSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسح البحث'**
+  String get clearSearch;
+
+  /// No description provided for @staleHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث {age}'**
+  String staleHint(Object age);
+
+  /// No description provided for @ageJustNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآن'**
+  String get ageJustNow;
+
+  /// No description provided for @ageMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'منذ {count} د'**
+  String ageMinutes(Object count);
+
+  /// No description provided for @ageHours.
+  ///
+  /// In ar, this message translates to:
+  /// **'منذ {count} س'**
+  String ageHours(Object count);
+
+  /// No description provided for @ageDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'منذ {count} يوم'**
+  String ageDays(Object count);
+
+  /// No description provided for @commentator.
+  ///
+  /// In ar, this message translates to:
+  /// **'المعلّق'**
+  String get commentator;
+
+  /// No description provided for @commentatorPlay.
+  ///
+  /// In ar, this message translates to:
+  /// **'تشغيل مقطع صوتي لـ {name}'**
+  String commentatorPlay(Object name);
+
+  /// No description provided for @commentatorPause.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف المقطع'**
+  String get commentatorPause;
+
+  /// No description provided for @commentatorLoading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل المقطع'**
+  String get commentatorLoading;
+
+  /// No description provided for @commentatorPlaying.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري التشغيل...'**
+  String get commentatorPlaying;
+
+  /// No description provided for @commentatorError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تشغيل المقطع'**
+  String get commentatorError;
+
+  /// No description provided for @receptionVideo.
+  ///
+  /// In ar, this message translates to:
+  /// **'فيديو الاستقبال'**
+  String get receptionVideo;
+
+  /// No description provided for @s2TbdGroup.
+  ///
+  /// In ar, this message translates to:
+  /// **'موعد لم يُحدد'**
+  String get s2TbdGroup;
+
+  /// No description provided for @s2ShowAllMatches.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض كل المباريات'**
+  String get s2ShowAllMatches;
+
+  /// No description provided for @s3Title.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل المباراة'**
+  String get s3Title;
+
+  /// No description provided for @s3WhereToWatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'أين تشاهد'**
+  String get s3WhereToWatch;
+
+  /// No description provided for @s3OnSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'على {satellites}'**
+  String s3OnSatellites(String satellites);
+
+  /// No description provided for @s3OnDefaultSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'على نايل سات وبدر'**
+  String get s3OnDefaultSatellites;
+
+  /// No description provided for @s3StartsInMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تبدأ بعد دقيقة} =2{تبدأ بعد دقيقتين} few{تبدأ بعد {count} دقائق} other{تبدأ بعد {count} دقيقة}}'**
+  String s3StartsInMinutes(int count);
+
+  /// No description provided for @s3StartsInHours.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تبدأ بعد ساعة} =2{تبدأ بعد ساعتين} few{تبدأ بعد {count} ساعات} other{تبدأ بعد {count} ساعة}}'**
+  String s3StartsInHours(int count);
+
+  /// No description provided for @s3StartsInDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{تبدأ بعد يوم} =2{تبدأ بعد يومين} few{تبدأ بعد {count} أيام} other{تبدأ بعد {count} يوم}}'**
+  String s3StartsInDays(int count);
+
+  /// No description provided for @s3ChannelsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{قناة واحدة} =2{قناتان} few{{count} قنوات} other{{count} قناة}}'**
+  String s3ChannelsCount(int count);
+
+  /// No description provided for @s3SatellitesCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{قمر واحد} =2{قمرين} few{{count} أقمار} other{{count} قمرًا}}'**
+  String s3SatellitesCount(int count);
+
+  /// No description provided for @s3PlatformsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{منصة واحدة} =2{منصتان} few{{count} منصات} other{{count} منصة}}'**
+  String s3PlatformsCount(int count);
+
+  /// No description provided for @s3ChannelsOnSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'{channels} على {satellites}'**
+  String s3ChannelsOnSatellites(Object channels, Object satellites);
+
+  /// No description provided for @s3FreeOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'المجانية فقط'**
+  String get s3FreeOnly;
+
+  /// No description provided for @s3SearchHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن قمر أو قناة...'**
+  String get s3SearchHint;
+
+  /// No description provided for @s3OtherSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقمار أخرى'**
+  String get s3OtherSatellites;
+
+  /// No description provided for @s3OtherPlatforms.
+  ///
+  /// In ar, this message translates to:
+  /// **'منصات وقنوات أخرى'**
+  String get s3OtherPlatforms;
+
+  /// No description provided for @s3NoSatellite.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون قمر'**
+  String get s3NoSatellite;
+
+  /// No description provided for @s3NothingOnMySatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد قنوات على أقمارك لهذه المباراة'**
+  String get s3NothingOnMySatellites;
+
+  /// No description provided for @s3NoResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد قنوات مطابقة لبحثك'**
+  String get s3NoResults;
+
+  /// No description provided for @s3BackToTop.
+  ///
+  /// In ar, this message translates to:
+  /// **'العودة لأعلى القنوات'**
+  String get s3BackToTop;
+
+  /// No description provided for @s3BroadcastOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'يعرض على'**
+  String get s3BroadcastOn;
+
+  /// No description provided for @s3BroadcastAlsoOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'يعرض أيضاً على'**
+  String get s3BroadcastAlsoOn;
+
+  /// No description provided for @s3MatchInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلومات المباراة'**
+  String get s3MatchInfo;
+
+  /// No description provided for @s3Stadium.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملعب'**
+  String get s3Stadium;
+
+  /// No description provided for @s3LocalBroadcasterEg.
+  ///
+  /// In ar, this message translates to:
+  /// **'القناة الناقلة في مصر'**
+  String get s3LocalBroadcasterEg;
+
+  /// No description provided for @s3NoChannelsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تُضف القنوات الناقلة بعد'**
+  String get s3NoChannelsTitle;
+
+  /// No description provided for @s3NoChannelsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستظهر القنوات والترددات هنا فور إضافتها.'**
+  String get s3NoChannelsBody;
+
+  /// No description provided for @s3Refresh.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث'**
+  String get s3Refresh;
+
+  /// No description provided for @s3OpenFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فتح الرابط'**
+  String get s3OpenFailed;
+
+  /// No description provided for @s3DateTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'{date} · {time}'**
+  String s3DateTime(Object date, Object time);
+
+  /// No description provided for @s4NoMatchesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مباريات على {satellites} لهذا اليوم'**
+  String s4NoMatchesTitle(Object satellites);
+
+  /// No description provided for @s4NoMatchesBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسحب القائمة لتحديثها.'**
+  String get s4NoMatchesBody;
+
+  /// No description provided for @s4NoSatellitesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تختر أقماراً بعد'**
+  String get s4NoSatellitesTitle;
+
+  /// No description provided for @s4NoSatellitesBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر قمراً واحداً على الأقل لتظهر المباريات المنقولة عليه.'**
+  String get s4NoSatellitesBody;
+
+  /// No description provided for @s4ChooseSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر أقمارك'**
+  String get s4ChooseSatellites;
+
+  /// No description provided for @s5SearchSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن قمر...'**
+  String get s5SearchSatellites;
+
+  /// No description provided for @s5SatelliteCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} قمراً'**
+  String s5SatelliteCount(Object count);
+
+  /// No description provided for @s5SectionAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل الأقمار'**
+  String get s5SectionAll;
+
+  /// No description provided for @s5MineMarker.
+  ///
+  /// In ar, this message translates to:
+  /// **'طبقي'**
+  String get s5MineMarker;
+
+  /// No description provided for @s5ChannelCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} قناة'**
+  String s5ChannelCount(Object count);
+
+  /// No description provided for @s5NoSatellitesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أقمار مطابقة'**
+  String get s5NoSatellitesTitle;
+
+  /// No description provided for @s5NoSatellitesBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'جرّب اسماً أو موقعاً آخر.'**
+  String get s5NoSatellitesBody;
+
+  /// No description provided for @s5ReceptionHowTo.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة استقبال القمر'**
+  String get s5ReceptionHowTo;
+
+  /// No description provided for @s5ReceptionOpenFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فتح الفيديو'**
+  String get s5ReceptionOpenFailed;
+
+  /// No description provided for @s5StrongestFrequency.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقوى تردد'**
+  String get s5StrongestFrequency;
+
+  /// No description provided for @s5WeakestFrequency.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضعف تردد'**
+  String get s5WeakestFrequency;
+
+  /// No description provided for @s5SearchChannels.
+  ///
+  /// In ar, this message translates to:
+  /// **'بحث في القنوات...'**
+  String get s5SearchChannels;
+
+  /// No description provided for @s5CategoryTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'{label} {count}'**
+  String s5CategoryTab(Object count, Object label);
+
+  /// No description provided for @s5NoSportsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد قنوات رياضة على هذا القمر'**
+  String get s5NoSportsTitle;
+
+  /// No description provided for @s5NoEntertainmentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد قنوات ترفيه على هذا القمر'**
+  String get s5NoEntertainmentTitle;
+
+  /// No description provided for @s5NoResultsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد قنوات مطابقة'**
+  String get s5NoResultsTitle;
+
+  /// No description provided for @s5NoResultsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'جرّب اسم قناة أو أرقاماً من التردد.'**
+  String get s5NoResultsBody;
 }
 
 class _AppLocalizationsDelegate

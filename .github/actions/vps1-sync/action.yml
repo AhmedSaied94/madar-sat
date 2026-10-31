@@ -1,9 +1,10 @@
 # Shared by backend.yml (deploy) and infra.yml (sync), research R13:
 #   1. join WireGuard with the CI peer config;
-#   2. trust only VPS-1's pinned host key (StrictHostKeyChecking=yes) for SSH and rsync;
+#   2. trust only the pinned host keys (StrictHostKeyChecking=yes) for SSH and rsync;
 #   3. rsync infra/ to /srv/madar/infra/ on VPS-1, deleting what master no longer has.
-# The calling job runs deploy.sh with the `ssh-command` output, then leaves WireGuard in an
-# `if: always()` step.
+# The calling job runs deploy.sh with `ssh -F <dir>/config vps1` (or `vps2`), then leaves WireGuard
+# in an `if: always()` step. The config file, not command-line options, is what gives the `-J` hop
+# the same key and known_hosts (B2-R1-4).
 name: Sync infra to VPS-1
 description: Join WireGuard, pin VPS-1's host key, and rsync infra/ to /srv/madar/infra/.
 
@@ -15,12 +16,16 @@ inputs:
     description: The deploy user's private SSH key (secret DEPLOY_SSH_KEY)
     required: true
   known-hosts:
-    description: VPS-1's host key line for 10.8.0.1 (secret DEPLOY_KNOWN_HOSTS)
+    description: VPS-1's and VPS-2's host key lines (secret DEPLOY_KNOWN_HOSTS)
     required: true
+  vps2-host:
+    description: VPS-2's VCN IP (variable VPS2_VCN_IP); empty on jobs that only touch VPS-1
+    required: false
+    default: ""
 
 outputs:
   ssh-command:
-    description: The ssh command line with the pinned key and host-key options
+    description: '`ssh -F <dir>/config`; append `vps1` or `vps2`'
     value: ${{ steps.ssh.outputs.command }}
 
 runs:
@@ -42,14 +47,16 @@ runs:
       env:
         SSH_KEY: ${{ inputs.ssh-key }}
         KNOWN_HOSTS: ${{ inputs.known-hosts }}
+        VPS2_HOST: ${{ inputs.vps2-host }}
       run: |
         dir="$RUNNER_TEMP/madar-ssh"
         install -d -m 700 "$dir"
         (umask 077 && printf '%s\n' "$SSH_KEY" > "$dir/id" && printf '%s\n' "$KNOWN_HOSTS" > "$dir/known_hosts")
-        echo "command=ssh -i $dir/id -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$dir/known_hosts -o ConnectTimeout=20" >> "$GITHUB_OUTPUT"
+        "$GITHUB_WORKSPACE/infra/scripts/ssh-config.sh" "$dir" "$VPS2_HOST"
+        echo "command=ssh -F $dir/config" >> "$GITHUB_OUTPUT"
 
     - name: rsync infra/ to VPS-1
       shell: bash
       env:
         SSH_COMMAND: ${{ steps.ssh.outputs.command }}
-      run: rsync -a --delete -e "$SSH_COMMAND" infra/ deploy@10.8.0.1:/srv/madar/infra/
+      run: rsync -a --delete -e "$SSH_COMMAND" infra/ vps1:/srv/madar/infra/

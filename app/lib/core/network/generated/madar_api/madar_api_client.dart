@@ -31,37 +31,37 @@ abstract class MadarApiClient {
 
   /// Health Endpoint
   @GET('/healthz')
-  Future<EnvelopeHealthStatus> healthEndpointHealthzGet();
+  Future<HttpResponse<EnvelopeHealthStatus>> healthEndpointHealthzGet();
 
   /// Get Channel
   @GET('/v1/channels/{channel_id}')
-  Future<EnvelopeChannelDetail> getChannelV1ChannelsChannelIdGet({
+  Future<HttpResponse<EnvelopeChannelDetail>> getChannelV1ChannelsChannelIdGet({
     @Path('channel_id') required int channelId,
   });
 
   /// Get Commentator
   @GET('/v1/commentators/{commentator_id}')
-  Future<EnvelopeCommentatorDetail> getCommentatorV1CommentatorsCommentatorIdGet({
+  Future<HttpResponse<EnvelopeCommentatorDetail>> getCommentatorV1CommentatorsCommentatorIdGet({
     @Path('commentator_id') required int commentatorId,
   });
 
   /// List Competitions
   @GET('/v1/competitions')
-  Future<EnvelopeListCompetition> listCompetitionsV1CompetitionsGet();
+  Future<HttpResponse<EnvelopeListCompetition>> listCompetitionsV1CompetitionsGet();
 
   /// Get Competition
   @GET('/v1/competitions/{competition_id}')
-  Future<EnvelopeCompetitionDetail> getCompetitionV1CompetitionsCompetitionIdGet({
+  Future<HttpResponse<EnvelopeCompetitionDetail>> getCompetitionV1CompetitionsCompetitionIdGet({
     @Path('competition_id') required int competitionId,
   });
 
   /// Get Live
   @GET('/v1/live')
-  Future<EnvelopeListLiveState> getLiveV1LiveGet();
+  Future<HttpResponse<EnvelopeListLiveState>> getLiveV1LiveGet();
 
   /// List Matches
   @GET('/v1/matches')
-  Future<EnvelopeListMatchSummary> listMatchesV1MatchesGet({
+  Future<HttpResponse<EnvelopeListMatchSummary>> listMatchesV1MatchesGet({
     @Query('from') required DateTime from,
     @Query('to') required DateTime to,
     @Query('sport') Sport? sport,
@@ -74,30 +74,30 @@ abstract class MadarApiClient {
 
   /// Get Match
   @GET('/v1/matches/{match_id}')
-  Future<EnvelopeMatchDetail> getMatchV1MatchesMatchIdGet({
+  Future<HttpResponse<EnvelopeMatchDetail>> getMatchV1MatchesMatchIdGet({
     @Path('match_id') required int matchId,
   });
 
   /// List Rights Holders
   @GET('/v1/rights-holders')
-  Future<EnvelopeListRightsHolder> listRightsHoldersV1RightsHoldersGet({
+  Future<HttpResponse<EnvelopeListRightsHolder>> listRightsHoldersV1RightsHoldersGet({
     @Query('satellite_id') int? satelliteId,
     @Query('competition_id') int? competitionId,
   });
 
   /// Get Rights Holder
   @GET('/v1/rights-holders/{rights_holder_id}')
-  Future<EnvelopeRightsHolderDetail> getRightsHolderV1RightsHoldersRightsHolderIdGet({
+  Future<HttpResponse<EnvelopeRightsHolderDetail>> getRightsHolderV1RightsHoldersRightsHolderIdGet({
     @Path('rights_holder_id') required int rightsHolderId,
   });
 
   /// List Satellites
   @GET('/v1/satellites')
-  Future<EnvelopeListSatellite> listSatellitesV1SatellitesGet();
+  Future<HttpResponse<EnvelopeListSatellite>> listSatellitesV1SatellitesGet();
 
   /// List Satellite Channels
   @GET('/v1/satellites/{satellite_id}/channels')
-  Future<EnvelopeListChannelCarriage> listSatelliteChannelsV1SatellitesSatelliteIdChannelsGet({
+  Future<HttpResponse<EnvelopeListChannelCarriage>> listSatelliteChannelsV1SatellitesSatelliteIdChannelsGet({
     @Path('satellite_id') required int satelliteId,
     @Query('category') Category? category,
     @Query('q') String? q,
@@ -105,7 +105,7 @@ abstract class MadarApiClient {
 
   /// Search Teams
   @GET('/v1/teams')
-  Future<EnvelopeListTeamSearchItem> searchTeamsV1TeamsGet({
+  Future<HttpResponse<EnvelopeListTeamSearchItem>> searchTeamsV1TeamsGet({
     @Query('q') required String q,
     @Query('cursor') String? cursor,
     @Query('limit') int? limit = 20,
@@ -113,7 +113,7 @@ abstract class MadarApiClient {
 
   /// Get Team
   @GET('/v1/teams/{team_id}')
-  Future<EnvelopeTeamDetail> getTeamV1TeamsTeamIdGet({
+  Future<HttpResponse<EnvelopeTeamDetail>> getTeamV1TeamsTeamIdGet({
     @Path('team_id') required int teamId,
   });
 }

@@ -21,7 +21,7 @@
     "review": {
       "version": "1.0.0",
       "source": "local",
-      "manifest_hash": "sha256:5e06d49dedb7c0499e8fa68113197148c9056e162ca2435047dfc124476159fb",
+      "manifest_hash": "sha256:1fa04a498ff6093ab74277e22d75d0044850980599785ff9c698fdbf37346a48",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -33,7 +33,7 @@
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-10-29T19:29:48.929032+00:00"
+      "installed_at": "2026-10-31T13:02:13.123928+00:00"
     }
   }
 }

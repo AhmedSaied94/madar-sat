@@ -28,6 +28,8 @@ os.environ.setdefault(
     "pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev,imgs.ysscores.com",
 )
 os.environ.setdefault("CORS_ORIGINS", "https://madar.web.app,https://madar.firebaseapp.com")
+# Only the admin app reads this (research R2); at least 32 bytes.
+os.environ.setdefault("ADMIN_JWT_SECRET", "test-only-admin-jwt-secret-0123456789abcdef")
 
 from datetime import UTC, datetime  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -135,7 +137,7 @@ def frozen_now() -> datetime:
     return datetime(2026, 10, 28, 18, 0, tzinfo=UTC)
 
 
-async def _client(app, db_connection, frozen_now):
+async def _client(app, db_connection, frozen_now, *, headers=None, client_addr=("127.0.0.1", 50000)):
     """An ASGI client whose requests share the test's rolled-back transaction."""
     from httpx import ASGITransport, AsyncClient
 
@@ -149,7 +151,8 @@ async def _client(app, db_connection, frozen_now):
     overrides = {get_now: lambda: frozen_now, get_session: _session}
     app.dependency_overrides.update(overrides)
     try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        transport = ASGITransport(app=app, client=client_addr)
+        async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
             yield client
     finally:
         for dep in overrides:
@@ -165,8 +168,164 @@ async def public_client(loaded_snapshot, db_connection, frozen_now):
 
 
 @pytest.fixture
-async def admin_client(loaded_snapshot, db_connection, frozen_now):
+async def anon_admin_client(loaded_snapshot, db_connection, frozen_now):
+    """The admin app with no credentials (the auth routes, 401 and 403 tests)."""
     from app.admin import app
 
     async for client in _client(app, db_connection, frozen_now):
+        yield client
+
+
+# --- Admin accounts, tokens and Redis (D2) ----------------------------------------------------------
+
+ADMIN_PASSWORD = "correct horse battery"  # ≥ 12 characters; the hash is computed once per session
+TEST_REDIS_URL = os.environ.get("TEST_REDIS_URL", "redis://localhost:6380/0")
+REDIS_TEST_PREFIXES = ("auth:", "lock:test:")
+
+
+@pytest.fixture(scope="session")
+def admin_password() -> str:
+    return ADMIN_PASSWORD
+
+
+@pytest.fixture(scope="session")
+def admin_password_hash(admin_password) -> str:
+    from app.auth.passwords import hash_password
+
+    return hash_password(admin_password)
+
+
+@pytest.fixture
+async def redis_client():
+    """Redis on ``TEST_REDIS_URL`` with this app's keys cleared before each test.
+
+    Only the ``auth:`` and ``lock:test:`` prefixes are deleted: other lanes' tests share the server,
+    so FLUSHDB would break them.
+    """
+    import redis.asyncio as aioredis
+
+    client = aioredis.from_url(TEST_REDIS_URL)
+    for prefix in REDIS_TEST_PREFIXES:
+        async for key in client.scan_iter(match=f"{prefix}*"):
+            await client.delete(key)
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+@pytest.fixture
+def make_admin(session, admin_password_hash):
+    """Create an admin account in the test transaction; returns the ``AdminUser`` row."""
+    from app.db.models import AdminUser
+
+    async def _make(email="editor@example.com", name="محرر", role="editor", *, is_active=True, password_hash=None):
+        admin = AdminUser(
+            email=email, name=name, role=role, password_hash=password_hash or admin_password_hash, is_active=is_active
+        )
+        session.add(admin)
+        await session.flush()
+        return admin
+
+    return _make
+
+
+def bearer(admin, now) -> dict[str, str]:
+    """An ``Authorization`` header carrying a valid access token for ``admin`` at ``now``."""
+    from app.auth.tokens import issue_access_token
+
+    return {"Authorization": f"Bearer {issue_access_token(admin.id, admin.role, now)}"}
+
+
+@pytest.fixture
+async def editor_client(loaded_snapshot, db_connection, frozen_now, make_admin, redis_client):
+    """The admin app, signed in as an ``editor``. ``client.admin`` is the account."""
+    from app.admin import app
+
+    editor = await make_admin("editor@example.com", "محرر", "editor")
+    async for client in _client(app, db_connection, frozen_now, headers=bearer(editor, frozen_now)):
+        client.admin = editor
+        yield client
+
+
+@pytest.fixture
+async def admin_client(loaded_snapshot, db_connection, frozen_now, make_admin, redis_client):
+    """The admin app, signed in as an ``admin``. ``client.admin`` is the account."""
+    from app.admin import app
+
+    boss = await make_admin("boss@example.com", "مدير", "admin")
+    async for client in _client(app, db_connection, frozen_now, headers=bearer(boss, frozen_now)):
+        client.admin = boss
+        yield client
+
+
+@pytest.fixture
+def client_at(loaded_snapshot, db_connection, frozen_now):
+    """``async with client_at(("10.8.0.1", 5000), headers) as client``: the admin app from a given peer address."""
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def _open(addr, headers=None):
+        from app.admin import app
+
+        async for client in _client(app, db_connection, frozen_now, headers=headers, client_addr=addr):
+            yield client
+
+    return _open
+
+
+@pytest.fixture
+def etag_of():
+    """``await etag_of(client, "/admin/api/matches/1")``: the entity's current ``ETag``."""
+
+    async def _etag(client, path: str) -> str:
+        response = await client.get(path)
+        assert response.status_code == 200, response.text
+        return response.headers["etag"]
+
+    return _etag
+
+
+# --- Requests that run in parallel ---------------------------------------------------------------
+#
+# Concurrent requests may not share one AsyncSession, so these tests get their own client over the
+# real ``get_session``: every request opens its own connection. The account is committed outside the
+# test's transaction (and removed afterwards), so those connections can see it.
+
+
+@pytest.fixture
+async def committed_editor(_prepare_database, admin_password_hash):
+    """An ``editor`` committed in its own transaction; yields ``(email, id)``."""
+    from uuid import uuid4
+
+    from app.db.models import AdminUser
+    from app.db.session import SyncSession
+
+    email = f"race-{uuid4().hex[:10]}@example.com"
+    with SyncSession() as session:
+        admin = AdminUser(
+            email=email, name="سباق", role="editor", password_hash=admin_password_hash, is_active=True
+        )
+        session.add(admin)
+        session.commit()
+        admin_id = admin.id
+    try:
+        yield email, admin_id
+    finally:
+        from sqlalchemy import delete
+
+        with SyncSession() as session:
+            session.execute(delete(AdminUser).where(AdminUser.id == admin_id))
+            session.commit()
+
+
+@pytest.fixture
+async def parallel_admin_client():
+    """The admin app with the real session dependency: each request uses its own connection."""
+    from httpx import ASGITransport, AsyncClient
+
+    from app.admin import app
+
+    transport = ASGITransport(app=app, client=("127.0.0.1", 50000))
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client

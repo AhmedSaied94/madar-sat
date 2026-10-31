@@ -1,0 +1,14 @@
+# Runs the updater every 10 minutes from boot (FR-028). A missed run is harmless: the next one
+# pulls the same `stable` tag, and the box holds no state that a restart would lose.
+[Unit]
+Description=Madar Sat: update the home box scrape worker every 10 minutes
+Documentation=file:/srv/madar/infra/../docs/runbooks/home-box.md
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Unit=home-box-update.service
+
+[Install]
+WantedBy=timers.target
