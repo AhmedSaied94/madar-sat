@@ -80,12 +80,15 @@ https://10.8.0.1 {
 	}
 	# Separate, as in public_headers: a deletion would defer the whole block past error responses.
 	header -Server
-	encode zstd gzip
 
+	# No `encode` here: Caddy appends `-zstd`/`-gzip` to a strong ETag it compresses, and strips that
+	# suffix again only from If-None-Match. The editor's If-Match would then never equal the version
+	# api-admin computes, and every save would answer 409 edit_conflict.
 	handle /admin/api/* {
 		reverse_proxy 10.8.0.1:8001
 	}
 	handle {
+		encode zstd gzip
 		root * /srv/admin
 		try_files {path} /index.html
 		file_server
