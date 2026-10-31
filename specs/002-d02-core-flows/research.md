@@ -86,8 +86,10 @@ Phase 0 of [plan.md](plan.md). Each decision lists what was chosen, why, and wha
   | Satellite | `satellites`, `channels`, `matches` |
   | Channel | `channels`, `satellites` (counts), `matches` |
   | Commentator | `commentators`, `matches` |
-  | Hidden channel name | `matches` |
+  | Hidden channel name | `matches`, `channels` |
   | Media upload alone | none (no row references the asset yet) |
+
+  A hidden name also bumps `channels` because the satellite list, each satellite's channel list and the channel detail all filter by hidden names, and their ETags are built from `channels` (`/v1/satellites`, `/v1/satellites/{id}/channels`, `/v1/channels/{id}`). Hidden names change rarely, so the extra revalidation is cheap. (Amended 2026-10-31 after review finding B1-R1-5.)
 
 - **Rationale:** FR-010 and constitution VI. One code path means one set of tests covers audit, locks and versions for every entity.
 - **Alternatives:** Database triggers for audit (rejected: they don't know the admin, and they would audit importer noise as well).
@@ -213,6 +215,8 @@ Phase 0 of [plan.md](plan.md). Each decision lists what was chosen, why, and wha
   - **Parse:** pure, with `lxml.html`. Each `.matches-wrapper` (`champ_title`, `champ_img`) contains `a.ajax-match-item` elements. Teams, logos and the time come from the element's attributes and `.match-date`, as `parseYSDay` reads them. The ysscores match id comes from the `/ar/match/<id>/<slug>` href.
   - **Normalize:** times are Cairo wall clock (IMPORT.html: «مواعيد الموقع بتوقيت القاهرة أصلاً»), converted with `app.domain.time`. `"--:--"` sets `time_tbd`. Placeholders become NULL and doubled stage text is cleaned.
   - **Status:** fixtures only. The adapter writes no status or score; feed status is D5's work (constitution II).
+  - **Postponed items:** an item marked `match-postponed` (`data-status="14"`, «تأجلت») is imported with `time_tbd = true` and no kickoff, even though the page still prints its old time. The match appears under «موعد لم يُحدد» on its listed day, it never reaches the clock's estimated live state, and a kickoff an editor has locked is kept. The adapter still writes no status: marking the match `postponed` is the editors' job until D5. Each postponed item is listed in `run.json`. When ysscores lists the match again with a new date and time, the next run updates it in place by its external id. (Amended 2026-10-31 after review finding B2-R1-10.)
+    - Skipping postponed items instead was rejected: a match imported before it was postponed would keep its old kickoff and turn into an estimated «مباشر» at that time (constitution II).
   - **Tests:** pages saved by B2 on D2 go in `backend/tests/fixtures/ysscores/`: a normal day, a day with `"--:--"` and a postponement, and an empty day. One test pins a known kickoff, so a change in the site's time zone is caught.
   - **Routing:** fetches go to `scrape_home` when `YSSCORES_FETCH_QUEUE=scrape_home` (the default; SD §6.6 says ysscores blocks datacenter IPs), else to `scrape`.
 - **Rationale:** FR-021, and the brief: "ported from `IMPORT.html`". Reading attributes is as stable as the old page made it.
@@ -348,6 +352,7 @@ Phase 0 of [plan.md](plan.md). Each decision lists what was chosen, why, and wha
     It keeps local days today−1 to today+6 and prunes older ones.
   - **Other screens:** a `cached_documents` table (`key`, `etag`, `body` as JSON text, `fetched_at`) holds match detail, `/v1/satellites`, each satellite's channel list, and S4's day filtered by `satellite_ids`, with the same flow. S4's list goes there, not into `match_windows`, because it is a different query: written through the day path, it would replace S2's full day, and filtering S2's rows locally would miss carriages (a row's channel line holds at most 2).
   - **Freshness targets:** `StaleHint` appears once a copy is past its target: 5 minutes for matches and match detail, 24 hours for satellites and channels. A cached state is never shown as live: `StatusBlock` uses the cached status only for non-live states, and live states come only from `/v1/live`, in memory.
+  - **Requests:** every revalidation goes through the generated `MadarApi` client, never hand-written paths or a hand-parsed envelope (constitution VI). Set swagger_parser's `original_http_response: true` in `app/swagger_parser.yaml`; generated methods then return Retrofit's `HttpResponse<T>`, so the repository can read the status (`200` or `304`) and the `ETag` header. Pass `If-None-Match` through the existing ETag interceptor or `Options`. Read errors with the generated `ErrorEnvelope`. No exception is recorded in Complexity Tracking, because none is needed. (Amended 2026-10-31 after review finding M-R1-3.)
 - **Rationale:** FR-046, constitution VIII and SD §5.1. Typed rows are needed to group matches by local day across windows; the other screens read whole documents, so JSON is the smallest correct cache for them.
 - **Alternatives:** Typed tables for every shape (rejected: a lot of schema for documents that are only ever read whole). Dio's HTTP cache (rejected: it isn't drift, and it can't group by local day).
 
@@ -360,7 +365,8 @@ Phase 0 of [plan.md](plan.md). Each decision lists what was chosen, why, and wha
   - **Links and copying:** `url_launcher` opens the reception video, and `Clipboard` copies the frequency.
   - **Logos:** `cached_network_image`, if D1's `LogoTile` doesn't already cache.
   - **Day paging:** a `PageView` inside the app's RTL `Directionality`, so a swipe follows RTL order.
-  - **My satellites:** resolved from `/v1/satellites` by the slugs of Nilesat 7.0W and Badr (O10) until D3 stores the user's choice.
+  - **My satellites:** resolved from `/v1/satellites` by the slugs of Nilesat 7.0W and Badr (O10) until D3 stores the user's choice. Until then, S3 titles that part «على نايل سات وبدر», not «على أقمارك», because the user hasn't chosen anything. The «حدد أقمارك» chip arrives on D3 with its picker (Complexity Tracking).
+  - **Providers:** every Riverpod provider in `app/lib/` is written with `@riverpod` and `riverpod_generator`, as constitution VIII asks; this includes D1's. The D2 review fix round migrates them together with M-R1-14, which rewrites the same providers anyway, so the app never mixes the two styles. (Amended 2026-10-31 after review finding M-R1-16.)
   - **New dependencies:** `just_audio`, `url_launcher`, `cached_network_image`, all in SD §5.1's package list.
 - **Rationale:** FR-042, FR-043 and FR-047, constitution VIII (lists virtualized, logic in providers), and SC-006.
 

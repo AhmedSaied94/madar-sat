@@ -162,7 +162,7 @@ Every write follows the same rules: `If-Match` on `PATCH` and `DELETE`, an audit
 
 | Method & path | Role | Response |
 | --- | --- | --- |
-| `GET /broadcast-presets` | editor | `[{id, name, logo}]`, read-only (the editor arrives with A11 on D7) |
+| `GET /broadcast-presets` | editor | `[{id, name, logo_asset_id, logo}]`, read-only (the editor arrives with A11 on D7) |
 | `GET /hidden-channel-names` | editor | `[{name}]` |
 | `POST /hidden-channel-names` | editor | `{name}` → `201 {name: <normalized>}`. Idempotent: an existing name gives `200` |
 | `DELETE /hidden-channel-names/{name}` | editor | `{name}` is URL-encoded. `200 data: null`; `404 hidden_name_not_found` |
