@@ -46,6 +46,34 @@ sudo wg show                       # a handshake with 10.8.0.1
 The WebRTC/VCN path is not used: the box talks to `10.8.0.1:6379` over `wg0`. Keep the hub's
 public UDP 51820 open (it is, for every peer).
 
+### A box that already runs another tunnel
+
+If the box is also a staff peer (another interface already routes `10.8.0.0/24`), give the
+home-box config its own name, `/etc/wireguard/wg-homebox.conf`, and send only Redis through it by
+firewall mark. Put these under `[Interface]`:
+
+```ini
+Table = off
+PostUp = iptables -t mangle -A OUTPUT -d 10.8.0.1 -p tcp --dport 6379 -j MARK --set-mark 0x6379
+PostUp = iptables -t mangle -A PREROUTING -d 10.8.0.1 -p tcp --dport 6379 -j MARK --set-mark 0x6379
+PostUp = ip rule add fwmark 0x6379 table 6379
+PostUp = ip route add 10.8.0.1/32 dev %i table 6379
+PreDown = ip route del 10.8.0.1/32 dev %i table 6379
+PreDown = ip rule del fwmark 0x6379 table 6379
+PreDown = iptables -t mangle -D PREROUTING -d 10.8.0.1 -p tcp --dport 6379 -j MARK --set-mark 0x6379
+PreDown = iptables -t mangle -D OUTPUT -d 10.8.0.1 -p tcp --dport 6379 -j MARK --set-mark 0x6379
+```
+
+Then `sudo systemctl enable --now wg-quick@wg-homebox`. Both mark rules are needed: `OUTPUT` covers
+commands run on the box itself, and `PREROUTING` covers the worker, whose packets arrive from its
+Docker bridge. Without it the worker logs no `Connected to …` line and its health check times out.
+Docker's masquerade then gives the packets the tunnel's address, `10.8.0.4`.
+
+Check it with `sudo iptables -t mangle -S | grep 6379` (two lines). If you add a line to the file
+while the interface is up, `wg-quick down` fails on the `PreDown` that has nothing to delete and
+leaves the interface up without its routes. Recover with `sudo ip link del wg-homebox`, then
+`sudo wg-quick up wg-homebox`.
+
 ## Set `HOME_BOX_WG_IP` and apply the firewall
 
 The peer's address is what limits Redis to this box:
