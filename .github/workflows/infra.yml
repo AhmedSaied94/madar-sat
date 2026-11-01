@@ -265,6 +265,10 @@ jobs:
           running_tag() { printf 'previous-tag\n'; }
           healthy_services() { return 1; }
           docker() { return 0; }
+          # D3: deploy_vps2 creates the hosts' folders and enables the backup timers. Both touch
+          # /srv and systemd, so this drill stubs them; their own steps cover them.
+          ensure_dirs() { :; }
+          install_timers() { :; }
           # `$1` is the compose verb; failing `up` is what the guards are about. (A `case` on `$*`
           # with a leading space never matches, which silently tested the healthy path.)
           compose_stub() {
