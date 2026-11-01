@@ -104,7 +104,7 @@ final class LiveStatesProvider
   }
 }
 
-String _$liveStatesHash() => r'60fcc049de6553f50324d388fcd9d74265528a5a';
+String _$liveStatesHash() => r'0b7e07ffe2784614970687eecf122605df8e282c';
 
 /// The live states by match id: in memory only, never in drift (FR-047), replaced whole by
 /// each answer so a match that left `/v1/live` drops out.
@@ -138,8 +138,8 @@ abstract class _$LiveStates extends $Notifier<Map<int, LiveState>> {
 /// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
-/// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
-///   but only while a live or imminent match is on screen.
+/// * `/v1/live` is fetched every Remote Config interval (`livePollIntervalProvider`), and
+///   at once when polling starts, but only while a live or imminent match is on screen.
 ///
 /// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
 /// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
@@ -156,8 +156,8 @@ final livePollingProvider = LivePollingProvider._();
 /// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
-/// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
-///   but only while a live or imminent match is on screen.
+/// * `/v1/live` is fetched every Remote Config interval (`livePollIntervalProvider`), and
+///   at once when polling starts, but only while a live or imminent match is on screen.
 ///
 /// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
 /// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
@@ -171,8 +171,8 @@ final class LivePollingProvider extends $NotifierProvider<LivePolling, void> {
   /// While a screen's route is visible and the app is `resumed`:
   ///
   /// * [onRevalidate] runs every [PollIntervals.matches];
-  /// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
-  ///   but only while a live or imminent match is on screen.
+  /// * `/v1/live` is fetched every Remote Config interval (`livePollIntervalProvider`), and
+  ///   at once when polling starts, but only while a live or imminent match is on screen.
   ///
   /// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
   /// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
@@ -206,7 +206,7 @@ final class LivePollingProvider extends $NotifierProvider<LivePolling, void> {
   }
 }
 
-String _$livePollingHash() => r'01aaed9aed18026ef9d1414cc1cf95a38d8a4a01';
+String _$livePollingHash() => r'36f755124326e2e6248109ee4b538e525dc1091a';
 
 /// The poll policy (FR-047, research R26, constitution VIII: the timers live in a provider,
 /// not in a widget).
@@ -214,8 +214,8 @@ String _$livePollingHash() => r'01aaed9aed18026ef9d1414cc1cf95a38d8a4a01';
 /// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
-/// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
-///   but only while a live or imminent match is on screen.
+/// * `/v1/live` is fetched every Remote Config interval (`livePollIntervalProvider`), and
+///   at once when polling starts, but only while a live or imminent match is on screen.
 ///
 /// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
 /// two screens stacked by the navigator never share one set of inputs: covering S2 with S3

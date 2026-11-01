@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/api_failure.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../core/network/generated/models/satellite.dart';
 import '../../../core/network/swr_providers.dart';
 import '../../../core/network/swr_repository.dart';
@@ -33,10 +34,13 @@ class Satellites extends _$Satellites {
   }
 }
 
-/// The ids of my satellites, resolved from [satellitesProvider]. Empty until the list has
-/// loaded (or when the server lists neither), never a guess.
+/// The ids of my satellites: the person's own choice once S1.3 or S15 stored one, otherwise
+/// O10's default set resolved through the catalogue. Empty until the list has loaded (or
+/// when the server lists neither), never a guess.
 @riverpod
 Set<int> mySatelliteIds(Ref ref) {
+  final chosen = ref.watch(chosenSatelliteIdsProvider);
+  if (chosen != null) return chosen;
   final satellites = ref.watch(satellitesProvider).value?.data;
   if (satellites == null) return const {};
   return {
@@ -50,9 +54,13 @@ Set<int> mySatelliteIds(Ref ref) {
 List<Satellite> mySatelliteEntries(Ref ref) {
   final satellites = ref.watch(satellitesProvider).value?.data;
   if (satellites == null) return const [];
+  final chosen = ref.watch(chosenSatelliteIdsProvider);
   return [
     for (final satellite in satellites)
-      if (MySatellites.defaultSlugs.contains(satellite.slug)) satellite,
+      if (chosen == null
+          ? MySatellites.defaultSlugs.contains(satellite.slug)
+          : chosen.contains(satellite.id))
+        satellite,
   ];
 }
 
@@ -61,10 +69,18 @@ List<Satellite> mySatelliteEntries(Ref ref) {
 List<String> mySatelliteNames(Ref ref) =>
     [for (final satellite in ref.watch(mySatelliteEntriesProvider)) satellite.nameAr];
 
-/// The satellites the user chose, or null until D3 stores a choice. While it is null the
-/// O10 default set stands in, and S3 titles it by name rather than as «على أقمارك»
-/// (constitution I: the screen may not call two bundled defaults "yours").
+/// The satellites the person chose in S1.3 or S15, or null while no choice was made. While
+/// it is null the O10 default set stands in, and S3 offers «حدد أقمارك» rather than calling
+/// two bundled defaults "yours" (constitution I).
 @Riverpod(keepAlive: true)
-Set<int>? chosenSatelliteIds(Ref ref) => null;
+Set<int>? chosenSatelliteIds(Ref ref) {
+  final ids = ref.watch(settingsProvider).satelliteIds;
+  return ids.isEmpty ? null : ids;
+}
+
+/// True when the default set stands in for a choice the person has not made yet: S3 then
+/// shows «حدد أقمارك» instead of calling the defaults "yours" (constitution I).
+@riverpod
+bool usesDefaultSatellites(Ref ref) => ref.watch(chosenSatelliteIdsProvider) == null;
 
 Duration? _never(int retryCount, Object error) => null;

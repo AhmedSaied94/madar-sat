@@ -56,11 +56,11 @@ void main() {
         offsetAt: (_) => const Duration(hours: 3),
       );
 
-  test('a version-1 database opens at version 2 with its rows intact', () async {
+  test('a version-1 database opens at the current version with its rows intact', () async {
     final database = openV1([inWindow]);
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 2);
+    expect(database.schemaVersion, 3);
     final rows = await database.readAll();
     expect(rows, hasLength(1));
     expect(rows.single.id, inWindow.id);
@@ -68,7 +68,7 @@ void main() {
     expect(rows.single.kickoffAt, inWindow.kickoffAt!.toUtc());
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.read<int>('user_version'), 2);
+    expect(version.read<int>('user_version'), 3);
   });
 
   test('match_windows has day (primary key), etag and fetched_at', () async {

@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:madar_sat/core/audio/clip_controller.dart';
 import 'package:madar_sat/core/db/app_database.dart';
+import 'package:madar_sat/core/db/database_provider.dart';
 import 'package:madar_sat/core/format/bidi.dart';
 import 'package:madar_sat/core/format/clock.dart';
 import 'package:madar_sat/core/links/url_opener.dart';
@@ -78,6 +79,24 @@ void main() {
   void answerDetail(MatchDetail detail, {String? etag = '"v1"'}) =>
       api.answer(_matchPath, matchDetailJson(detail), etag: etag);
 
+  /// A channel row may sit below the fold (my satellites, then the other groups); scroll to
+  /// it before tapping, as a person would.
+  Future<void> tapChannel(WidgetTester tester, String name) async {
+    final finder = find.text(name);
+    if (finder.evaluate().isEmpty) {
+      await tester.dragUntilVisible(
+        finder,
+        find.byType(Scrollable).first,
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
+
   Future<void> seedCache(MatchDetail detail, {required Duration age}) => db.putDocument(
         key: DocumentKeys.matchDetail(_matchId),
         etag: '"v1"',
@@ -112,6 +131,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appDatabaseProvider.overrideWithValue(db),
           swrRepositoryProvider.overrideWithValue(SwrRepository(dio: api.dio, database: db)),
           clockProvider.overrideWithValue(() => sampleNow()),
           clipEngineProvider.overrideWithValue(engine),
@@ -652,8 +672,7 @@ void main() {
       answerDetail(standard());
       await open(tester);
 
-      await tester.tap(find.text('DAZN 1 HD'));
-      await tester.pumpAndSettle();
+      await tapChannel(tester, 'DAZN 1 HD');
       await tester.tap(find.text('فيديو الاستقبال'));
       await tester.pumpAndSettle();
 
@@ -682,10 +701,14 @@ void main() {
         ]),
       );
       answerDetail(standard());
-      await open(tester);
+      await open(
+        tester,
+        overrides: [
+          chosenSatelliteIdsProvider.overrideWithValue({sampleSatellite.id, badrSatellite.id}),
+        ],
+      );
 
-      await tester.tap(find.text('DAZN 1 HD'));
-      await tester.pumpAndSettle();
+      await tapChannel(tester, 'DAZN 1 HD');
 
       expect(find.text('نسخ التردد'), findsOneWidget);
       expect(find.text('فيديو الاستقبال'), findsNothing);
@@ -697,8 +720,7 @@ void main() {
       answerDetail(standard());
       await open(tester);
 
-      await tester.tap(find.text('DAZN 1 HD'));
-      await tester.pumpAndSettle();
+      await tapChannel(tester, 'DAZN 1 HD');
       await tester.tap(find.text('فيديو الاستقبال'));
       await tester.pumpAndSettle();
 
@@ -708,11 +730,15 @@ void main() {
     testWidgets('the satellite list failing does not hide the channels', (tester) async {
       api.offline(_satellitesPath);
       answerDetail(standard());
-      await open(tester);
+      await open(
+        tester,
+        overrides: [
+          chosenSatelliteIdsProvider.overrideWithValue({sampleSatellite.id, badrSatellite.id}),
+        ],
+      );
 
       expect(find.byType(CarriageRow), findsWidgets);
-      await tester.tap(find.text('DAZN 1 HD'));
-      await tester.pumpAndSettle();
+      await tapChannel(tester, 'DAZN 1 HD');
       expect(find.text('فيديو الاستقبال'), findsNothing);
     });
   });
@@ -851,26 +877,24 @@ void main() {
   });
 
   group('no channels yet', () {
-    testWidgets('says so and offers «تحديث», which asks the server again', (tester) async {
+    testWidgets('says so and offers «تابع المباراة», which follows the match (D3)', (tester) async {
       answerSatellites();
       answerDetail(sampleMatchDetail());
-      answerDetail(
-        sampleMatchDetail(carriages: [sampleCarriageEntry(id: 1, name: 'ON Sport HD')]),
-        etag: '"v2"',
-      );
       await open(tester);
 
       expect(find.text('لم تُضف القنوات الناقلة بعد'), findsOneWidget);
       expect(find.text('ستظهر القنوات والترددات هنا فور إضافتها.'), findsOneWidget);
       expect(find.byType(CarriageRow), findsNothing);
-      expect(api.requestsTo(_matchPath), hasLength(1));
 
-      await tester.tap(find.text('تحديث'));
+      await tester.tap(find.text('تابع المباراة').last);
       await tester.pumpAndSettle();
 
-      expect(api.requestsTo(_matchPath), hasLength(2));
-      expect(find.text('لم تُضف القنوات الناقلة بعد'), findsNothing);
-      expect(find.text('ON Sport HD'), findsOneWidget);
+      // The follow lands in drift: the reminder will name this match when a channel appears.
+      expect(
+        (await db.readFollows()).where((row) => row.kind == 'match'),
+        hasLength(1),
+      );
+      expect(find.text('تتابع المباراة'), findsWidgets);
     });
 
     testWidgets('the toolbar and its filters are not shown with nothing to filter', (tester) async {
@@ -1074,9 +1098,13 @@ void main() {
       answerSatellites();
       answerDetail(standard());
       api.notModified(_matchPath);
-      await open(tester);
-      await tester.tap(find.text('DAZN 1 HD'));
-      await tester.pumpAndSettle();
+      await open(
+        tester,
+        overrides: [
+          chosenSatelliteIdsProvider.overrideWithValue({sampleSatellite.id, badrSatellite.id}),
+        ],
+      );
+      await tapChannel(tester, 'DAZN 1 HD');
       expect(find.text('فيديو الاستقبال'), findsNothing);
 
       await tester.pump(const Duration(seconds: 61));

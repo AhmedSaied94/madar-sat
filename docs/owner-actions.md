@@ -14,7 +14,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | --- | --- | --- | --- |
 | [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
 | [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** none (done 2026-10-31) · **Lane B2:** none left that can run before the merge (the home box's worker and its dry run follow the first deploy) · **Lane A:** 2 items (the editors' devices, and the walk-through over WireGuard with its screenshots) · **Lane M:** 2 items (the screens against the design, and the merge) | **Lane B1:** 5 items (the deploy check, the first admin, one account per editor, the `404` from the internet, and the token-leak drill) · **Lane B2:** 5 items (the first unattended run, the bridge, a logo, the firewall proof, and the queue decision; hosts up, the home box's worker and `/srv/raw` are done) · **Lane A:** 1 item (the first editor walk-through; `admin.yml` is green) · **Lane M:** 5 items (tag `app-v0.2.0`, Play App Signing and the closed-track upload, the testers list, the phone walk-through, and the PWA preview) | **All code lanes are done; the hosts, the first admin, the first run, the first release and the phone walk-through are yours.** Lane B2 builds on B1's `app.workers`, `app.media` and revisions `0003`–`0004`; Lane A is rebased on B1's T015 commit, so it carries the D2 admin client. Lane A's round-1, round-2 and round-3 fixes are closed (A-R1-1 … A-R1-24, A-R2-1 … A-R2-13 and A-R3-1, 176 tests); A-F1 (React Hook Form), A-F2 (`DataTable`) and T107's browser steps are open. Lane M's screens read the `/v1` API on VPS-1; its zones script (T133) and the two `app.yml` checks wait on you and B2. Its round-1, round-2 and round-3 review fixes are in `d02-features` (M-R1-1 to M-R1-17, M-R2-1 to M-R2-10 and M-R3-1 to M-R3-2, 480 tests). |
-| [003 D3 follow, push and sources](#003-d3-follow-push-and-sources) | **Lane B1:** 4 items (the contract diff, revision `0005`, the audience query, the rate-limit values) · **Lane B2:** 7 items (the matching, backup and Kuma reviews, the Telegram bot, the B2 and OCI buckets, and the FCM key with B1) · **Lane A:** 2 items (the WireGuard walk and the screenshots) | **Lane B1:** 2 items (the deploy with `0005`, the FCM key and the first real reminder) · **Lane B2:** 6 items (the deploy check, the Kuma monitors, the first LiveSoccerTV run, the breaker drill, the first backups, the stopped-worker drill) · **Lane A:** 1 item (the deployed editor walk-through) | **Lane B1 is merged into `003-d03`** (PR #16); **Lane B2 is written on `d03-b2` and rebased onto it, with `0005` applied and the whole backend suite green** (PR #17, merged). **Lane A** is written on `d03-a` and merged up: T088–T105 done (219 admin tests), with three contract gaps for B1 — aliases, per-row `etag` on the competition and satellite lists, and `kind` in `ChannelPatch` (PR #18). Nothing is deployed or run on a host yet. |
+| [003 D3 follow, push and sources](#003-d3-follow-push-and-sources) | **Lane B1:** 4 items (the contract diff, revision `0005`, the audience query, the rate-limit values) · **Lane B2:** 7 items (the matching, backup and Kuma reviews, the Telegram bot, the B2 and OCI buckets, and the FCM key with B1) · **Lane A:** 2 items (the WireGuard walk and the screenshots) · **Lane M:** the Firebase identifiers, the VAPID key, the privacy and share links, the merge | **Lane B1:** 2 items (the deploy with `0005`, the FCM key and the first real reminder) · **Lane B2:** 6 items (the deploy check, the Kuma monitors, the first LiveSoccerTV run, the breaker drill, the first backups, the stopped-worker drill) · **Lane A:** 1 item (the deployed editor walk-through) · **Lane M:** the Android and iPhone walks, the closed-test build, the Remote Config parameters | **Lane B1 is merged into `003-d03`** (PR #16); **Lane B2 is written on `d03-b2` and rebased onto it, with `0005` applied and the whole backend suite green** (PR #17, merged). **Lane A** is written on `d03-a` and merged up: T088–T105 done (219 admin tests), with three contract gaps for B1 — aliases, per-row `etag` on the competition and satellite lists, and `kind` in `ChannelPatch` (PR #18). Nothing is deployed or run on a host yet. **Lane M is written on `d03-m` in `../madar-d03-M`** (560 app tests green on the test box); T133 is unblocked by B1's contract and is the next commit. |
 
 ## Every month
 
@@ -290,6 +290,22 @@ Round 3 is **approve with notes**: no CRITICAL and no HIGH; two MEDIUM and three
 
 ## 003 D3 follow, push and sources
 
+### Lane B1: devices, push, cache and limits
+
+#### Before merge, in this order
+
+- [ ] **T014 The contract PR.** Read the `backend/openapi/*.json` diff against [contracts/public-devices.md](../specs/003-d03-follow-push-sources/contracts/public-devices.md) and [contracts/admin-api.md](../specs/003-d03-follow-push-sources/contracts/admin-api.md): four new `/v1/devices*` paths with `Cache-Control: no-store`, `429 rate_limited` on every `/v1` path, and the A13/A2/A6/A7 admin routes. The generated clients are in the same PR. Merge it first; lanes A, M and B2 rebase on it.
+- [ ] **T008 Revision `0005`.** Read `backend/alembic/versions/0005_devices_outbox_sources.py` line by line: expand-only (nullable columns or defaults), one array CHECK (`ck_devices_satellite_ids`), one `>= 0` CHECK on `sources.consecutive_failures`, two partial indexes, one FK to `sources(name)`, and a downgrade that drops exactly those. → [database-migrations](runbooks/database-migrations.md#revision-0005)
+- [ ] **T034 The audience query.** The owner's review is in [push-notifications](runbooks/push-notifications.md#the-owners-audience-review): one `DISTINCT` statement, bound parameters, `device_follows` only, the per-device `kickoff_reminder` switch honoured in SQL. It is `AUDIENCE` in `backend/app/notifications/dispatcher.py`.
+- [ ] **T037 The rate-limit values.** 120/min per verified device, 600/min per IP, 30 per 10 min for `POST /v1/devices`. They are settings, not contract, and the reasoning is in [response-cache-and-limits](runbooks/response-cache-and-limits.md#the-rate-limits). Say if the IP value is too low for a carrier NAT day.
+
+#### After merge
+
+These need Lane B2's T077 (`worker-notify` mounts the FCM key) and the owner's key.
+
+- [ ] **T047 The deploy, the FCM key and the first real reminder.** `backend.yml` deploys and runs `0005`; install the service account as in [push-notifications](runbooks/push-notifications.md#the-fcm-service-account) (`FCM_CREDENTIALS_FILE`, `FCM_DRY_RUN=false`, `PWA_ORIGIN` on VPS-2, file mode 600, mounted into `worker-notify` only); `dc logs worker-notify` shows `fcm: initialized` after the first send; run one real reminder to your own Android phone through `notifications.dispatch_due` (quickstart step 4 without dry run) and tap it.
+- [ ] **The first reminder is the check.** After it lands: the outbox row is `sent` with `sent_at`, `sent` equals the number of followed devices, and the notification opens `/match/<id>` in the app. Then leave `FCM_DRY_RUN` at `false`. → [push-notifications](runbooks/push-notifications.md#read-the-outbox)
+
 ### Lane B2: LiveSoccerTV, health, backups and monitoring
 
 Built on 2026-11-01 on `d03-b2` in `../madar-d03-b2`, cut from the planning branch `003-d03-...` and rebased onto it after Lane B1 merged (PR #16), so revision `0005` and B1's code are underneath it ([tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-b2), [quickstart](../specs/003-d03-follow-push-sources/quickstart.md#lane-b2-livesoccertv-health-backups-monitoring)).
@@ -318,6 +334,50 @@ Local checks: the whole backend suite (B1's devices, notifications, cache, limit
 - [ ] **T084 A stopped worker alerts.** Stop `worker-notify` for 10 minutes and confirm Kuma alerts on Telegram, then start it again. → [uptime-kuma](runbooks/uptime-kuma.md#5-check)
 - [x] **T068 Rebase on `003-d03` after B1's `0005`.** Done on 2026-11-01: rebased onto `ee730cc` (PR #16). The temporary guards are gone, so `test_health.py`, the placeholder cases of `test_livesoccertv_links.py` and `test_ingest_log.py` now run for real, `import_runs.log` is written, and `app.workers` merges both schedule modules (T070). → [tasks.md](../specs/003-d03-follow-push-sources/tasks.md#after-the-1300-merge-b2)
 
+
+Lane B1 implements devices and follows on `/v1`, the reminder scheduler and the FCM dispatcher on the outbox, the response cache, the `/v1` limits, the admin additions for A2/A6/A7/A13, and revision `0005` ([tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-b1), [quickstart](../specs/003-d03-follow-push-sources/quickstart.md#lane-b1-devices-notifications-cache-admin-additions)). It is on `d03-b1` in `../madar-d03-b1`, cut from `003-d03-follow-push-sources`.
+
+What was checked locally: `ruff` and `mypy --strict` are green; `pytest --cov` is green (**1212 passed, 93.49 %**), covering the new `tests/devices/`, `tests/notifications/`, `tests/api/` and `tests/admin/` files; both OpenAPI documents are what `export-openapi` writes; oasdiff against `contract-v1` reports no breaking change for either; the regenerated admin (Orval) and Dart (`swagger_parser` + `build_runner`) clients are in the working tree, and the admin typechecks. One line outside the generated client changed: `admin/src/features/matches/queries.ts` now types the sources list as `SourceHealth` (the `GET /sources` shape), which is what A13 uses. `tests/adapters/test_homebox_acl.py` fails on `master` here too (the dev Redis uses `requirepass`), so it is not part of that figure.
+
+### Lane A: admin
+
+Implemented on 2026-11-01 on `d03-a` in `../madar-d03-A`, cut from `003-d03-follow-push-sources` and rebased on Lane B1's contract merge (`ee730cc`), so the regenerated admin client of T014 is in the branch ([tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-a), [quickstart](../specs/003-d03-follow-push-sources/quickstart.md#lane-a-admin)).
+
+T088–T105 are ticked: the `@dnd-kit` dependencies, the Arabic copy for the four new `error.code`s and every new screen, D2's two carry-overs (A-F1's React Hook Form resolver and A-F2's shared `DataTable`), `SortableList`, `AudioPlayer` and `KpiCard`, A5, A6, A7, A8, A10, A13 and A2, the ordering writes to `PUT /competitions/order` and `PUT /satellites/order`, and the router with A2 as the landing page.
+
+Checked locally in `admin/`: `pnpm typecheck`, `pnpm lint` (0 errors, 19 warnings), `pnpm test` (**219 tests in 26 files**), `pnpm build`, `./scripts/check-literals.sh`, `./scripts/check-token-copy.sh`, and `pnpm orval && git diff --exit-code src/api/generated/` is clean. Nothing was opened in a browser and nothing ran over WireGuard.
+
+Three contract gaps found while building are written up at the end of [tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-a) and need Lane B1 before the screens are complete: team and competition **aliases** (no field in D2's contract; editors ship without them), **no per-row `etag`** on the competition and satellite lists (T101 reads each moved row's version from its detail just before the reorder, so a change between render and save is not caught), and **`ChannelPatch` has no `kind`** (a platform placeholder can gain a satellite and a frequency but cannot become a satellite channel).
+
+#### Before merge, in this order
+
+- [ ] **T106 The WireGuard walk.** After B1's T047 deploy: `NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm dev:wg`, then walk [quickstart Lane A](../specs/003-d03-follow-push-sources/quickstart.md#lane-a-admin) steps 1–8 — edit a team's logo, reorder competitions by mouse and keyboard (including the two-browser conflict), set Nilesat's best and worst frequency, complete a placeholder, play a commentator clip, pause/resume/run a source, and read the dashboard. Note that completing a **platform** placeholder is blocked until B1 adds `kind` to `ChannelPatch`.
+- [ ] **T107 The screenshots.** At 1440 and 1024 against `Main.png`, `Teams.png`, `Competitions.png`, `Satellites.png`, `Channels.png` (light), `Commentators.png`, `Sources.png` and `SourceRun.png`, in the theme each board uses, attached to the PR.
+
+#### After merge
+
+- [ ] **T108 The editor walk-through.** Sign in over WireGuard and repeat the walk on the deployed admin API; then confirm a team edit reaches the app within 60 s (SC-006, the day's done check).
+
+### Lane M: app
+
+Lane M builds onboarding (S1.1–S1.5), S9, S15's core, S16, S0's states, Remote Config, the media-host rule, drift v3, the new components and the push and crash adapters. T133 (device registration and follow sync over B1's regenerated client) is **blocked on B1's contract merge** (T014): the app has no `/v1/devices` operation to call until then. Everything the device owns locally is built and tested: the identity in secure storage, `Authorization: Device` on every `/v1` request, the token → `sync_state.device` flag, the follow set in drift with `sync_state.follows`, and the retry hooks T133 will call.
+
+What is checked without a device, in `app/`: `flutter analyze` clean; the new tests under `test/core/{config,settings}`, `test/features/{onboarding,follows,devices,favorites,settings,system,notifications,match_detail}`, `test/goldens/components_d3_test.dart` and `test/architecture/platform_plugins_test.dart`, run with `rtest` on the test box. Not checked: a real phone or iPhone, the Firebase project, Remote Config in the console, and the store build.
+
+#### Before merge, in this order
+
+- [ ] **T109–T110 The Firebase project's public identifiers.** In the Firebase console, register the Android app (`com.madarsat.app`), the iOS app and the web app, then copy into `app/env/{dev,staging,prod}.json`: `FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_WEB_APP_ID`, `FIREBASE_ANDROID_APP_ID`, `FIREBASE_IOS_APP_ID` and `FIREBASE_VAPID_KEY` (the last from **Cloud Messaging → Web Push certificates**, public half only). These are identifiers, not secrets. Empty values are why the app currently starts with no Firebase: it still runs, but push, Crashlytics and Remote Config are absent. → [store-releases](runbooks/store-releases.md#push-setup), [remote-config](runbooks/remote-config.md)
+- [ ] **T138's two links.** Set `PRIVACY_URL` and `SHARE_URL` in `app/env/prod.json` (and `staging`). Empty means the privacy row is not drawn, because the repo has no policy address to invent. `SHARE_URL` is what S16's «شارك التطبيق» shares.
+- [ ] **T138 The Remote Config parameters.** Add `api_base_url`, `media_base_url`, `min_supported_build`, `latest_build` and `live_poll_interval_s` in the console and publish them equal to the bundled defaults. Nothing breaks without them, but the app then has no remote switches at all. → [remote-config](runbooks/remote-config.md)
+- [ ] **Ask Lane B2 for one CI define.** `app-release.yml` passes `--build-number`, but the forced-update screen compares `min_supported_build` with a value compiled into Dart. B2's `app-release.yml` should also pass `--dart-define=APP_BUILD_NUMBER=$BUILD_NUMBER`, so the build number the app reports equals the version code Play installed. Until then the number comes from `pubspec.yaml` (`app/lib/core/config/build_info.dart`, guarded by a test).
+- [ ] **Merge the PR** once its checks are green, after B1's T014 lands and Lane M rebases to finish T133.
+
+#### After merge
+
+- [ ] **T136 The Android walk**, on the closed-test build ([quickstart Lane M](../specs/003-d03-follow-push-sources/quickstart.md#lane-m-app)): S1.1–S1.4, S9 with both teams, killing the app in S1.2 and resuming, S3's «تابع المباراة» and «حدد أقمارك» chip, S15's zone/format/theme/size, S16's rows, airplane mode with the banner and its age, and the exit snackbar. Screenshots in both themes next to the boards.
+- [ ] **T137 The iPhone walk**, iOS ≥ 16.4 in Safari: S1.4 shows S1.5, install from the share sheet, open from the icon, allow notifications, then receive a reminder with the app closed. Record the iOS version and attach a screenshot. This is the plan's top risk (delivery-plan §10).
+- [ ] **Crashlytics proof.** With the identifiers in place, build the `prod` Android app, crash it once (an uncaught exception in a debug-only button is enough), and confirm the crash appears in the console within a few minutes.
+- [ ] **Remote Config proof.** Raise `min_supported_build` above the installed build, relaunch and confirm the forced-update screen; set it back. Then change `live_poll_interval_s` to 60 and confirm S2 still updates.
 
 ## Known for later features
 
@@ -453,47 +513,6 @@ Each day gets its full section when it's implemented. These lines come from the 
   - a sponsor and the slot's schedule (Gaps 18);
   - turn on the V3 flags;
   - submit the store releases.
-
-## 003 D3 follow, push and sources
-
-Lane B1 implements devices and follows on `/v1`, the reminder scheduler and the FCM dispatcher on the outbox, the response cache, the `/v1` limits, the admin additions for A2/A6/A7/A13, and revision `0005` ([tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-b1), [quickstart](../specs/003-d03-follow-push-sources/quickstart.md#lane-b1-devices-notifications-cache-admin-additions)). It is on `d03-b1` in `../madar-d03-b1`, cut from `003-d03-follow-push-sources`.
-
-What was checked locally: `ruff` and `mypy --strict` are green; `pytest --cov` is green (**1212 passed, 93.49 %**), covering the new `tests/devices/`, `tests/notifications/`, `tests/api/` and `tests/admin/` files; both OpenAPI documents are what `export-openapi` writes; oasdiff against `contract-v1` reports no breaking change for either; the regenerated admin (Orval) and Dart (`swagger_parser` + `build_runner`) clients are in the working tree, and the admin typechecks. One line outside the generated client changed: `admin/src/features/matches/queries.ts` now types the sources list as `SourceHealth` (the `GET /sources` shape), which is what A13 uses. `tests/adapters/test_homebox_acl.py` fails on `master` here too (the dev Redis uses `requirepass`), so it is not part of that figure.
-
-### Lane B1: devices, push, cache and limits
-
-#### Before merge, in this order
-
-- [ ] **T014 The contract PR.** Read the `backend/openapi/*.json` diff against [contracts/public-devices.md](../specs/003-d03-follow-push-sources/contracts/public-devices.md) and [contracts/admin-api.md](../specs/003-d03-follow-push-sources/contracts/admin-api.md): four new `/v1/devices*` paths with `Cache-Control: no-store`, `429 rate_limited` on every `/v1` path, and the A13/A2/A6/A7 admin routes. The generated clients are in the same PR. Merge it first; lanes A, M and B2 rebase on it.
-- [ ] **T008 Revision `0005`.** Read `backend/alembic/versions/0005_devices_outbox_sources.py` line by line: expand-only (nullable columns or defaults), one array CHECK (`ck_devices_satellite_ids`), one `>= 0` CHECK on `sources.consecutive_failures`, two partial indexes, one FK to `sources(name)`, and a downgrade that drops exactly those. → [database-migrations](runbooks/database-migrations.md#revision-0005)
-- [ ] **T034 The audience query.** The owner's review is in [push-notifications](runbooks/push-notifications.md#the-owners-audience-review): one `DISTINCT` statement, bound parameters, `device_follows` only, the per-device `kickoff_reminder` switch honoured in SQL. It is `AUDIENCE` in `backend/app/notifications/dispatcher.py`.
-- [ ] **T037 The rate-limit values.** 120/min per verified device, 600/min per IP, 30 per 10 min for `POST /v1/devices`. They are settings, not contract, and the reasoning is in [response-cache-and-limits](runbooks/response-cache-and-limits.md#the-rate-limits). Say if the IP value is too low for a carrier NAT day.
-
-#### After merge
-
-These need Lane B2's T077 (`worker-notify` mounts the FCM key) and the owner's key.
-
-- [ ] **T047 The deploy, the FCM key and the first real reminder.** `backend.yml` deploys and runs `0005`; install the service account as in [push-notifications](runbooks/push-notifications.md#the-fcm-service-account) (`FCM_CREDENTIALS_FILE`, `FCM_DRY_RUN=false`, `PWA_ORIGIN` on VPS-2, file mode 600, mounted into `worker-notify` only); `dc logs worker-notify` shows `fcm: initialized` after the first send; run one real reminder to your own Android phone through `notifications.dispatch_due` (quickstart step 4 without dry run) and tap it.
-- [ ] **The first reminder is the check.** After it lands: the outbox row is `sent` with `sent_at`, `sent` equals the number of followed devices, and the notification opens `/match/<id>` in the app. Then leave `FCM_DRY_RUN` at `false`. → [push-notifications](runbooks/push-notifications.md#read-the-outbox)
-
-### Lane A: admin
-
-Implemented on 2026-11-01 on `d03-a` in `../madar-d03-A`, cut from `003-d03-follow-push-sources` and rebased on Lane B1's contract merge (`ee730cc`), so the regenerated admin client of T014 is in the branch ([tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-a), [quickstart](../specs/003-d03-follow-push-sources/quickstart.md#lane-a-admin)).
-
-T088–T105 are ticked: the `@dnd-kit` dependencies, the Arabic copy for the four new `error.code`s and every new screen, D2's two carry-overs (A-F1's React Hook Form resolver and A-F2's shared `DataTable`), `SortableList`, `AudioPlayer` and `KpiCard`, A5, A6, A7, A8, A10, A13 and A2, the ordering writes to `PUT /competitions/order` and `PUT /satellites/order`, and the router with A2 as the landing page.
-
-Checked locally in `admin/`: `pnpm typecheck`, `pnpm lint` (0 errors, 19 warnings), `pnpm test` (**219 tests in 26 files**), `pnpm build`, `./scripts/check-literals.sh`, `./scripts/check-token-copy.sh`, and `pnpm orval && git diff --exit-code src/api/generated/` is clean. Nothing was opened in a browser and nothing ran over WireGuard.
-
-Three contract gaps found while building are written up at the end of [tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-a) and need Lane B1 before the screens are complete: team and competition **aliases** (no field in D2's contract; editors ship without them), **no per-row `etag`** on the competition and satellite lists (T101 reads each moved row's version from its detail just before the reorder, so a change between render and save is not caught), and **`ChannelPatch` has no `kind`** (a platform placeholder can gain a satellite and a frequency but cannot become a satellite channel).
-
-#### Before merge, in this order
-
-- [ ] **T106 The WireGuard walk.** After B1's T047 deploy: `NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm dev:wg`, then walk [quickstart Lane A](../specs/003-d03-follow-push-sources/quickstart.md#lane-a-admin) steps 1–8 — edit a team's logo, reorder competitions by mouse and keyboard (including the two-browser conflict), set Nilesat's best and worst frequency, complete a placeholder, play a commentator clip, pause/resume/run a source, and read the dashboard. Note that completing a **platform** placeholder is blocked until B1 adds `kind` to `ChannelPatch`.
-- [ ] **T107 The screenshots.** At 1440 and 1024 against `Main.png`, `Teams.png`, `Competitions.png`, `Satellites.png`, `Channels.png` (light), `Commentators.png`, `Sources.png` and `SourceRun.png`, in the theme each board uses, attached to the PR.
-
-#### After merge
-
-- [ ] **T108 The editor walk-through.** Sign in over WireGuard and repeat the walk on the deployed admin API; then confirm a team edit reaches the app within 60 s (SC-006, the day's done check).
 
 ## Gaps
 

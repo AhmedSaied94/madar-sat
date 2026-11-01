@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/format/digits.dart';
@@ -10,9 +9,11 @@ import '../../../core/network/generated/models/sport.dart';
 import '../../../core/network/generated/models/status.dart';
 import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
+import '../../../design/components/display_scope.dart';
 import '../../../design/components/logo.dart';
 import '../../../design/components/status_block.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/config/media_image.dart';
 
 /// The top of S3: the competition and stage, both teams with the status between them (home
 /// on the right), and the kickoff date in words.
@@ -33,7 +34,7 @@ class MatchHero extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: _semantics(l),
+      label: _semantics(context, l),
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(
@@ -91,7 +92,7 @@ class MatchHero extends StatelessWidget {
                 const SizedBox(width: MadarSpace.s2),
                 Flexible(
                   child: Text(
-                    _dateAndTime(l),
+                    _dateAndTime(context, l),
                     style: MadarText.textCaption.copyWith(color: colors.textSecondary),
                   ),
                 ),
@@ -143,14 +144,14 @@ class MatchHero extends StatelessWidget {
     return l.s3StartsInMinutes(minutes);
   }
 
-  String _dateAndTime(AppLocalizations l) {
+  String _dateAndTime(BuildContext context, AppLocalizations l) {
     final time = match.timeTbd
         ? null
-        : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker);
+        : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker, use24h: MadarDisplayScope.use24hOf(context), zone: MadarDisplayScope.zoneOf(context).fixed);
     return l.s3DateTime(MadarDates.full(l, _localDay), time ?? l.timeTbd);
   }
 
-  String _semantics(AppLocalizations l) {
+  String _semantics(BuildContext context, AppLocalizations l) {
     final parts = <String>[l.vs(match.away.name, match.home.name)];
     final score = match.score;
     String scoreWords() => l.scoreSemantics(
@@ -161,7 +162,7 @@ class MatchHero extends StatelessWidget {
       case Status.scheduled:
         final time = match.timeTbd
             ? null
-            : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker);
+            : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker, use24h: MadarDisplayScope.use24hOf(context), zone: MadarDisplayScope.zoneOf(context).fixed);
         parts.add(time ?? l.timeTbd);
       case Status.live:
         parts.add(l.live);
@@ -213,7 +214,7 @@ class _CompetitionLine extends StatelessWidget {
       children: [
         LogoTile(
           kind: LogoTileKind.competition,
-          logo: competition.logo == null ? null : CachedNetworkImageProvider(competition.logo!),
+          logo: mediaImage(context, competition.logo),
           size: MadarSpace.s6,
         ),
         Text(
@@ -253,7 +254,7 @@ class _Team extends StatelessWidget {
         if (!individual) ...[
           TeamCrest(
             name: name,
-            logo: logo == null ? null : CachedNetworkImageProvider(logo!),
+            logo: mediaImage(context, logo),
             size: MadarSpace.s12 + MadarSpace.s6,
           ),
           const SizedBox(height: MadarSpace.s2),

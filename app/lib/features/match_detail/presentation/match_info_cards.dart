@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/generated/models/access.dart';
@@ -12,6 +11,7 @@ import '../../../design/components/badges.dart';
 import '../../../design/components/commentator_row.dart';
 import '../../../design/components/logo.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/config/media_image.dart';
 
 /// The broadcasters an admin typed in by hand (`kind: custom`), for example «ON Sport 1».
 ///
@@ -70,7 +70,7 @@ class _BroadcasterCard extends StatelessWidget {
             children: [
               LogoTile(
                 kind: LogoTileKind.channel,
-                logo: entry.logo == null ? null : CachedNetworkImageProvider(entry.logo!),
+                logo: mediaImage(context, entry.logo),
                 fallbackText: entry.label,
                 size: MadarSpace.s12,
               ),

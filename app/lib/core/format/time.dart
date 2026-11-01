@@ -20,14 +20,18 @@ class DayWindow {
 abstract final class MadarTime {
   /// A kickoff in the device's local time, in 12 h with [am]/[pm] markers or in 24 h.
   /// Returns null when the kickoff is unknown (`time_tbd`).
+  /// [zone] is the app's chosen GMT offset (S15): null keeps the device's own zone, DST
+  /// included.
   static String? kickoff(
     DateTime? kickoffUtc, {
     bool use24h = false,
+    Duration? zone,
     required String am,
     required String pm,
   }) {
     if (kickoffUtc == null) return null;
-    final local = kickoffUtc.toLocal();
+    final local =
+        zone == null ? kickoffUtc.toLocal() : kickoffUtc.toUtc().add(zone);
     final hour24 = local.hour;
     if (use24h) {
       return '${MadarDigits.two(hour24)}:${MadarDigits.two(local.minute)}';

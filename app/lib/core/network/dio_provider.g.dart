@@ -8,19 +8,19 @@ part of 'dio_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// One Dio for the app: base URL from the bundled flavor config, timeouts, and the
-/// ETag interceptor (research R17).
+/// One Dio for the app: base URL from Remote Config (the flavor's bundled value until the
+/// fetch answers), timeouts, and the ETag interceptor (research R17, R28).
 
 @ProviderFor(dio)
 final dioProvider = DioProvider._();
 
-/// One Dio for the app: base URL from the bundled flavor config, timeouts, and the
-/// ETag interceptor (research R17).
+/// One Dio for the app: base URL from Remote Config (the flavor's bundled value until the
+/// fetch answers), timeouts, and the ETag interceptor (research R17, R28).
 
 final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
     with $Provider<Dio> {
-  /// One Dio for the app: base URL from the bundled flavor config, timeouts, and the
-  /// ETag interceptor (research R17).
+  /// One Dio for the app: base URL from Remote Config (the flavor's bundled value until the
+  /// fetch answers), timeouts, and the ETag interceptor (research R17, R28).
   DioProvider._()
     : super(
         from: null,
@@ -54,7 +54,7 @@ final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
   }
 }
 
-String _$dioHash() => r'4b9bbd31ceddce8a480a2314c94d7907774ccc21';
+String _$dioHash() => r'b56c1329bf0cca1d123bdbe333a1f0883a246d26';
 
 /// The generated client (swagger_parser, never hand-edited).
 

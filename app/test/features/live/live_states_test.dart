@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
+import 'package:madar_sat/core/config/remote_config.dart';
 import 'package:madar_sat/features/live/live_poller.dart';
 
 LiveState _state(int id, {int home = 0}) => LiveState(
@@ -30,14 +31,17 @@ void main() {
     addTearDown(container.dispose);
   });
 
+  const live = Duration(seconds: RemoteConfigValues.defaultLivePollSeconds);
+  const ttl = Duration(seconds: RemoteConfigValues.defaultLivePollSeconds * 2);
+
   test('the expiry is two poll intervals, so one missed poll does not blank the score', () {
-    expect(PollIntervals.liveStateTtl, PollIntervals.live * 2);
+    expect(PollIntervals.liveStateTtl(live), ttl);
   });
 
   testWidgets('states expire when no answer refreshes them in time', (tester) async {
     notifier().replaceAll([_state(1)]);
 
-    await tester.pump(PollIntervals.liveStateTtl - const Duration(seconds: 1));
+    await tester.pump(ttl - const Duration(seconds: 1));
     expect(states(), isNotEmpty);
 
     await tester.pump(const Duration(seconds: 2));
@@ -46,10 +50,10 @@ void main() {
 
   testWidgets('each answer starts the clock again', (tester) async {
     notifier().replaceAll([_state(1)]);
-    await tester.pump(PollIntervals.live);
+    await tester.pump(live);
 
     notifier().replaceAll([_state(1, home: 1)]);
-    await tester.pump(PollIntervals.liveStateTtl - const Duration(seconds: 1));
+    await tester.pump(ttl - const Duration(seconds: 1));
     expect(states()[1]!.score!.home, 1, reason: 'the second answer is still inside its own time');
 
     await tester.pump(const Duration(seconds: 2));

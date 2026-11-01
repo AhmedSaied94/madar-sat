@@ -20,7 +20,8 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, deploy keys, infra updates |
 | [break-glass.md](break-glass.md) | Getting back into a VM when WireGuard or SSH doesn't work, and an instance Oracle stopped |
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
-| [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore |
+| [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore, and push setup (the notification channel, the VAPID key, the service worker, the iPhone PWA test) |
+| [remote-config.md](remote-config.md) | The app's Remote Config keys and their bundled defaults, changing a host safely, raising `min_supported_build`, the live poll interval |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
 | [snapshot-load.md](snapshot-load.md) | Loading the Sat Air snapshot into VPS-1 and rehosting its media |
 | [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs`, `log` and `run.json`, pausing a source, the breaker, LiveSoccerTV and its placeholders, switching a fetch queue, the bridge's configuration |

@@ -75,20 +75,23 @@ abstract class _$Satellites
   }
 }
 
-/// The ids of my satellites, resolved from [satellitesProvider]. Empty until the list has
-/// loaded (or when the server lists neither), never a guess.
+/// The ids of my satellites: the person's own choice once S1.3 or S15 stored one, otherwise
+/// O10's default set resolved through the catalogue. Empty until the list has loaded (or
+/// when the server lists neither), never a guess.
 
 @ProviderFor(mySatelliteIds)
 final mySatelliteIdsProvider = MySatelliteIdsProvider._();
 
-/// The ids of my satellites, resolved from [satellitesProvider]. Empty until the list has
-/// loaded (or when the server lists neither), never a guess.
+/// The ids of my satellites: the person's own choice once S1.3 or S15 stored one, otherwise
+/// O10's default set resolved through the catalogue. Empty until the list has loaded (or
+/// when the server lists neither), never a guess.
 
 final class MySatelliteIdsProvider
     extends $FunctionalProvider<Set<int>, Set<int>, Set<int>>
     with $Provider<Set<int>> {
-  /// The ids of my satellites, resolved from [satellitesProvider]. Empty until the list has
-  /// loaded (or when the server lists neither), never a guess.
+  /// The ids of my satellites: the person's own choice once S1.3 or S15 stored one, otherwise
+  /// O10's default set resolved through the catalogue. Empty until the list has loaded (or
+  /// when the server lists neither), never a guess.
   MySatelliteIdsProvider._()
     : super(
         from: null,
@@ -122,7 +125,7 @@ final class MySatelliteIdsProvider
   }
 }
 
-String _$mySatelliteIdsHash() => r'6a91781ef7a96d70e299f1c9fa4d34de54a8539f';
+String _$mySatelliteIdsHash() => r'877e24d72dd47e67ac936d40411a094c709f472e';
 
 /// My satellites as the catalogue lists them, in its order.
 
@@ -170,7 +173,7 @@ final class MySatelliteEntriesProvider
 }
 
 String _$mySatelliteEntriesHash() =>
-    r'21498d9e033fe18242780fac5b4b6c415aa302f9';
+    r'798fa4caddca0387f70c6c04875dcedf1806b86c';
 
 /// Their Arabic names, for a title that names them: «على نايل سات وبدر».
 
@@ -218,23 +221,23 @@ final class MySatelliteNamesProvider
 
 String _$mySatelliteNamesHash() => r'ae8f42c7ece008f57088c9afd8c4235162eff005';
 
-/// The satellites the user chose, or null until D3 stores a choice. While it is null the
-/// O10 default set stands in, and S3 titles it by name rather than as «على أقمارك»
-/// (constitution I: the screen may not call two bundled defaults "yours").
+/// The satellites the person chose in S1.3 or S15, or null while no choice was made. While
+/// it is null the O10 default set stands in, and S3 offers «حدد أقمارك» rather than calling
+/// two bundled defaults "yours" (constitution I).
 
 @ProviderFor(chosenSatelliteIds)
 final chosenSatelliteIdsProvider = ChosenSatelliteIdsProvider._();
 
-/// The satellites the user chose, or null until D3 stores a choice. While it is null the
-/// O10 default set stands in, and S3 titles it by name rather than as «على أقمارك»
-/// (constitution I: the screen may not call two bundled defaults "yours").
+/// The satellites the person chose in S1.3 or S15, or null while no choice was made. While
+/// it is null the O10 default set stands in, and S3 offers «حدد أقمارك» rather than calling
+/// two bundled defaults "yours" (constitution I).
 
 final class ChosenSatelliteIdsProvider
     extends $FunctionalProvider<Set<int>?, Set<int>?, Set<int>?>
     with $Provider<Set<int>?> {
-  /// The satellites the user chose, or null until D3 stores a choice. While it is null the
-  /// O10 default set stands in, and S3 titles it by name rather than as «على أقمارك»
-  /// (constitution I: the screen may not call two bundled defaults "yours").
+  /// The satellites the person chose in S1.3 or S15, or null while no choice was made. While
+  /// it is null the O10 default set stands in, and S3 offers «حدد أقمارك» rather than calling
+  /// two bundled defaults "yours" (constitution I).
   ChosenSatelliteIdsProvider._()
     : super(
         from: null,
@@ -269,4 +272,54 @@ final class ChosenSatelliteIdsProvider
 }
 
 String _$chosenSatelliteIdsHash() =>
-    r'9a92ea4838b5c26377ca654a38876b3542922e8b';
+    r'300e3188b3168be8b5008f0ac66351e39de704de';
+
+/// True when the default set stands in for a choice the person has not made yet: S3 then
+/// shows «حدد أقمارك» instead of calling the defaults "yours" (constitution I).
+
+@ProviderFor(usesDefaultSatellites)
+final usesDefaultSatellitesProvider = UsesDefaultSatellitesProvider._();
+
+/// True when the default set stands in for a choice the person has not made yet: S3 then
+/// shows «حدد أقمارك» instead of calling the defaults "yours" (constitution I).
+
+final class UsesDefaultSatellitesProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// True when the default set stands in for a choice the person has not made yet: S3 then
+  /// shows «حدد أقمارك» instead of calling the defaults "yours" (constitution I).
+  UsesDefaultSatellitesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'usesDefaultSatellitesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$usesDefaultSatellitesHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return usesDefaultSatellites(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$usesDefaultSatellitesHash() =>
+    r'adaee2a69673028ac43644c5d6c07559bb73d9c5';

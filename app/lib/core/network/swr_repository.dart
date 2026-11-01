@@ -117,6 +117,19 @@ class SwrRepository {
         encode: (value) => value.toJson(),
       );
 
+  /// `GET /v1/teams/{id}`, cached under `team:<id>`: S9's followed teams, so their names and
+  /// competitions show without a match being cached for them.
+  Stream<SwrSnapshot<TeamDetail>> watchTeamDetail(int teamId) => _document<TeamDetail>(
+        key: DocumentKeys.team(teamId),
+        fetch: (etag) => _conditional<TeamDetail, EnvelopeTeamDetail>(
+          etag: etag,
+          send: (client) => client.getTeamV1TeamsTeamIdGet(teamId: teamId),
+          unwrap: (envelope) => _dataOf(envelope.success, envelope.error, envelope.data),
+        ),
+        decode: (json) => TeamDetail.fromJson((json! as Map).cast<String, Object?>()),
+        encode: (value) => value.toJson(),
+      );
+
   /// `GET /v1/satellites`, cached under [DocumentKeys.satellites].
   Stream<SwrSnapshot<List<Satellite>>> watchSatellites() => _document<List<Satellite>>(
         key: DocumentKeys.satellites,

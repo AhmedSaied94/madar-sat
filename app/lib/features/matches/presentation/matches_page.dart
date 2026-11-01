@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/clock.dart';
 import '../../../core/l10n/dates.dart';
 import '../../../core/theme/madar_tokens.dart';
+import '../../../design/components/banner.dart';
 import '../../../design/components/bottom_nav.dart';
 import '../../../design/components/date_strip.dart';
 import '../../../design/components/filter_chip_row.dart';
 import '../../../design/components/top_bar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../live/live_merge.dart';
+import '../../system/data/connectivity.dart';
 import '../../live/live_poller.dart';
 import '../data/matches_providers.dart';
 import '../domain/matches_day.dart';
@@ -108,6 +110,10 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               MadarTopBar.root(onSearch: () => context.push('/search')),
+              // S0 offline-with-cache (R29): the banner carries the newest copy's age and
+              // pushes the content down instead of covering it.
+              if (!ref.watch(connectivityStatusProvider))
+                OfflineBanner(age: view?.snapshot.age(now)),
               Padding(
                 padding: const EdgeInsetsDirectional.symmetric(
                   horizontal: MadarSpace.s4,
@@ -180,7 +186,7 @@ class _MatchesPageState extends ConsumerState<MatchesPage> {
           MadarTab.mySatellites => context.go('/my-satellites'),
           MadarTab.frequencies => context.go('/satellites'),
           MadarTab.favorites => context.go('/favorites'),
-          MadarTab.more => context.go('/settings'),
+          MadarTab.more => context.go('/more'),
         },
       ),
     );

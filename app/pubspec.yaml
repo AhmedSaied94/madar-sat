@@ -29,6 +29,13 @@ dependencies:
   just_audio: ^0.10.6
   url_launcher: ^6.3.3
   cached_network_image: ^4.0.6
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
+  firebase_remote_config: ^7.0.1
+  firebase_crashlytics: ^6.0.1
+  flutter_secure_storage: ^11.2.0
+  share_plus: ^13.3.1
+  web: ^1.1.2
 
 dev_dependencies:
   flutter_test:

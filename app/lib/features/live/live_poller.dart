@@ -5,22 +5,23 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/config/remote_config.dart';
 import '../../core/network/api_failure.dart';
 import '../../core/network/dio_provider.dart';
 import '../../core/network/generated/models/live_state.dart';
 
 part 'live_poller.g.dart';
 
-/// The polling intervals (FR-047). These are the bundled defaults until Remote Config
-/// arrives on D3 (plan.md Complexity Tracking), so changing one is a new build.
+/// The polling intervals (FR-047). `/v1/live`'s interval comes from Remote Config on D3
+/// ([livePollIntervalProvider], 30 s by default, R28); the matches revalidation keeps its
+/// bundled 60 s.
 abstract final class PollIntervals {
   static const Duration matches = Duration(seconds: 60);
-  static const Duration live = Duration(seconds: 30);
 
   /// How long a live state may stand without a newer `/v1/live` answer: two intervals, so
   /// one missed poll does not blank a score but a feed that stopped answering cannot keep a
   /// finished match "live" on screen.
-  static const Duration liveStateTtl = Duration(seconds: 60);
+  static Duration liveStateTtl(Duration interval) => interval * 2;
 }
 
 /// Fetches `/v1/live`. A provider so a test can answer without a server.
@@ -49,9 +50,13 @@ LiveFetcher liveFetcher(Ref ref) {
 @Riverpod(keepAlive: true)
 class LiveStates extends _$LiveStates {
   Timer? _expiry;
+  Duration _ttl = PollIntervals.liveStateTtl(
+    const Duration(seconds: RemoteConfigValues.defaultLivePollSeconds),
+  );
 
   @override
   Map<int, LiveState> build() {
+    _ttl = PollIntervals.liveStateTtl(ref.watch(livePollIntervalProvider));
     ref.onDispose(() => _expiry?.cancel());
     return const {};
   }
@@ -59,7 +64,7 @@ class LiveStates extends _$LiveStates {
   void replaceAll(List<LiveState> states) {
     state = {for (final live in states) live.matchId: live};
     _expiry?.cancel();
-    _expiry = states.isEmpty ? null : Timer(PollIntervals.liveStateTtl, clear);
+    _expiry = states.isEmpty ? null : Timer(_ttl, clear);
   }
 
   void clear() {
@@ -75,8 +80,8 @@ class LiveStates extends _$LiveStates {
 /// While a screen's route is visible and the app is `resumed`:
 ///
 /// * [onRevalidate] runs every [PollIntervals.matches];
-/// * `/v1/live` is fetched every [PollIntervals.live], and at once when polling starts,
-///   but only while a live or imminent match is on screen.
+/// * `/v1/live` is fetched every Remote Config interval (`livePollIntervalProvider`), and
+///   at once when polling starts, but only while a live or imminent match is on screen.
 ///
 /// Each mounted screen holds its own claim (`sync`, keyed by an object the scope owns), so
 /// two screens stacked by the navigator never share one set of inputs: covering S2 with S3
@@ -87,13 +92,17 @@ class LiveStates extends _$LiveStates {
 class LivePolling extends _$LivePolling {
   Timer? _matchesTimer;
   Timer? _liveTimer;
+  Duration _liveInterval = const Duration(seconds: RemoteConfigValues.defaultLivePollSeconds);
   final Map<Object, _Claim> _claims = {};
 
   @override
-  void build() => ref.onDispose(() {
-        _stopAll();
-        _claims.clear();
-      });
+  void build() {
+    _liveInterval = ref.watch(livePollIntervalProvider);
+    ref.onDispose(() {
+      _stopAll();
+      _claims.clear();
+    });
+  }
 
   /// One screen's inputs: whether its route is visible, whether the app is resumed, whether
   /// `/v1/live` is worth asking, and how to refresh the screen's own data.
@@ -140,7 +149,7 @@ class LivePolling extends _$LivePolling {
 
     if (active.any((claim) => claim.hasLiveOrImminent)) {
       if (_liveTimer == null) {
-        _liveTimer = Timer.periodic(PollIntervals.live, (_) => unawaited(_fetchLive()));
+        _liveTimer = Timer.periodic(_liveInterval, (_) => unawaited(_fetchLive()));
         unawaited(_fetchLive());
       }
     } else {
