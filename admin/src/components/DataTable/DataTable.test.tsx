@@ -87,9 +87,9 @@ describe('DataTable', () => {
   it('groups rows under a competition row with its count', () => {
     const { table } = renderTable();
 
-    const group = within(table).getByRole('rowheader', { name: /كأس ألمانيا/ });
+    const group = within(table).getByRole('columnheader', { name: /كأس ألمانيا/ });
     expect(group).toHaveTextContent('3');
-    expect(within(table).getByRole('rowheader', { name: /الدوري الإسباني/ })).toHaveTextContent('1');
+    expect(within(table).getByRole('columnheader', { name: /الدوري الإسباني/ })).toHaveTextContent('1');
   });
 
   it('reveals row actions on hover and on keyboard focus', () => {

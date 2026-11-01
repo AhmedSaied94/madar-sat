@@ -253,44 +253,56 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### Setup (A)
 
-- [ ] T088 [US4] Add `@dnd-kit/core` and `@dnd-kit/sortable` to `admin/package.json` (exact versions) and refresh the lockfile ([R22](research.md#r22-ordering-with-drag-and-keyboard)).
-- [ ] T089 [P] [US4] Add Arabic copy for the new `error.code`s (`run_in_progress`, `source_not_runnable`, `source_not_found`, `import_run_not_found`) and the new screens to `admin/src/i18n/`; never show `error.message`.
+- [x] T088 [US4] Add `@dnd-kit/core` and `@dnd-kit/sortable` to `admin/package.json` (exact versions) and refresh the lockfile ([R22](research.md#r22-ordering-with-drag-and-keyboard)).
+- [x] T089 [P] [US4] Add Arabic copy for the new `error.code`s (`run_in_progress`, `source_not_runnable`, `source_not_found`, `import_run_not_found`) and the new screens to `admin/src/i18n/`; never show `error.message`.
 
 ### Carry-over from 002 (A, first)
 
-- [ ] T090 [US4] **A-F1 (002 T106):** wire `zodResolver(patchMatchBody)` into `admin/src/features/matches/MatchEditor.tsx` so the one React Hook Form form resolves through the Orval schema instead of validating the assembled patch by hand. A4's behaviour and `MatchEditor.test.tsx` stay green. Tick 002's A-F1 when done.
-- [ ] T091 [US4] **A-F2:** move A3's table in `admin/src/features/matches/MatchesPage.tsx` onto the shared `DataTable` (grouping, bulk bar, skeleton, J/K/X/E keys) and delete the local markup. `MatchesPage.test.tsx` stays green. Tick 002's A-F2 when done.
+- [x] T090 [US4] **A-F1 (002 T106):** wire `zodResolver(patchMatchBody)` into `admin/src/features/matches/MatchEditor.tsx` so the one React Hook Form form resolves through the Orval schema instead of validating the assembled patch by hand. A4's behaviour and `MatchEditor.test.tsx` stay green. Tick 002's A-F1 when done.
+- [x] T091 [US4] **A-F2:** move A3's table in `admin/src/features/matches/MatchesPage.tsx` onto the shared `DataTable` (grouping, bulk bar, skeleton, J/K/X/E keys) and delete the local markup. `MatchesPage.test.tsx` stays green. Tick 002's A-F2 when done.
 
 ### Tests and components first (A)
 
-- [ ] T092 [P] [US4] Write `admin/src/components/SortableList/SortableList.test.tsx` (see it fail), then build `SortableList` with `@dnd-kit`: drag handle, keyboard lift/move/drop with Arabic announcements, visible focus, disabled while saving, RTL; tokens only.
-- [ ] T093 [P] [US4] Write `admin/src/components/AudioPlayer/AudioPlayer.test.tsx` (see it fail), then build `AudioPlayer` on native `<audio>`: idle, playing, paused, error, loading; only one plays at a time across the page; visible focus ([R23](research.md#r23-a8s-editor-drawer-a10s-audio-and-a5s-logo-preview)).
-- [ ] T094 [P] [US4] Write `admin/src/components/KpiCard/KpiCard.test.tsx` (see it fail), then build `KpiCard` from its INDEX README (label with glyph, tabular figure, context, optional link), every README state.
+- [x] T092 [P] [US4] Write `admin/src/components/SortableList/SortableList.test.tsx` (see it fail), then build `SortableList` with `@dnd-kit`: drag handle, keyboard lift/move/drop with Arabic announcements, visible focus, disabled while saving, RTL; tokens only.
+- [x] T093 [P] [US4] Write `admin/src/components/AudioPlayer/AudioPlayer.test.tsx` (see it fail), then build `AudioPlayer` on native `<audio>`: idle, playing, paused, error, loading; only one plays at a time across the page; visible focus ([R23](research.md#r23-a8s-editor-drawer-a10s-audio-and-a5s-logo-preview)).
+- [x] T094 [P] [US4] Write `admin/src/components/KpiCard/KpiCard.test.tsx` (see it fail), then build `KpiCard` from its INDEX README (label with glyph, tabular figure, context, optional link), every README state.
 
 ### Screens (A)
 
 Each screen is checked against its board in `madar-design/admin-react/SCREENS.md`; each gets a flow test against the generated MSW handlers written first and seen failing.
 
-- [ ] T095 [P] [US4] A5 Teams in `admin/src/features/teams/` (`TeamsPage.tsx`, `TeamEditor.tsx`, tests): `DataTable` with search and the competition and missing-logo filters; editor with name, aliases, logo upload previewed on dark and light tiles in the `Logo` frame, main and other competitions, stadium, external ids read-only; unsaved guard; `409` conflict dialog. No merge tool.
-- [ ] T096 [P] [US4] A7 Satellites in `admin/src/features/satellites/`: `SortableList` order (wired to the order endpoint in T101); editor with Arabic and English names, orbital position, best and worst frequency (MHz, H/V/L/R, symbol rate), reception video (`https` only, refused otherwise), logo.
-- [ ] T097 [P] [US4] A8 Channels in `admin/src/features/channels/`: `DataTable` with the satellite, category, access, missing logo, platform-only, shown-on-match-pages and placeholder filters; the editor drawer (focus trapped and returned, unsaved guard) with every field of PB A8; «إضافة على قمر آخر» prefilling `POST /channels` and showing `409 already_exists`; a placeholder shows a «يحتاج استكمال» marker, and completing it (satellite and frequency or platform, show on match pages) saves through PATCH.
-- [ ] T098 [P] [US4] A10 Commentators in `admin/src/features/commentators/`: table with photo, name and `AudioPlayer`; rename, replace photo or clip through D2's media upload; delete shows the usage count first and the `409 in_use` refusal.
-- [ ] T099 [P] [US4] A6 Competitions in `admin/src/features/competitions/`: `SortableList` with drag and keyboard; editor with name, aliases and logo.
+- [x] T095 [P] [US4] A5 Teams in `admin/src/features/teams/` (`TeamsPage.tsx`, `TeamEditor.tsx`, tests): `DataTable` with search and the competition and missing-logo filters; editor with name, aliases, logo upload previewed on dark and light tiles in the `Logo` frame, main and other competitions, stadium, external ids read-only; unsaved guard; `409` conflict dialog. No merge tool.
+- [x] T096 [P] [US4] A7 Satellites in `admin/src/features/satellites/`: `SortableList` order (wired to the order endpoint in T101); editor with Arabic and English names, orbital position, best and worst frequency (MHz, H/V/L/R, symbol rate), reception video (`https` only, refused otherwise), logo.
+- [x] T097 [P] [US4] A8 Channels in `admin/src/features/channels/`: `DataTable` with the satellite, category, access, missing logo, platform-only, shown-on-match-pages and placeholder filters; the editor drawer (focus trapped and returned, unsaved guard) with every field of PB A8; «إضافة على قمر آخر» prefilling `POST /channels` and showing `409 already_exists`; a placeholder shows a «يحتاج استكمال» marker, and completing it (satellite and frequency or platform, show on match pages) saves through PATCH.
+- [x] T098 [P] [US4] A10 Commentators in `admin/src/features/commentators/`: table with photo, name and `AudioPlayer`; rename, replace photo or clip through D2's media upload; delete shows the usage count first and the `409 in_use` refusal.
+- [x] T099 [P] [US4] A6 Competitions in `admin/src/features/competitions/`: `SortableList` with drag and keyboard; editor with name, aliases and logo.
 
 ### After the 13:00 merge (A)
 
-- [ ] T100 [US4] Rebase on `master` (T014) and build on the regenerated client; replace any local placeholder types with the generated ones.
-- [ ] T101 [US4] Wire A6 and A7 ordering to `PUT /competitions/order` and `PUT /satellites/order` with each row's version; a `409` opens the D2 conflict dialog and reloads; tests for both paths.
-- [ ] T102 [US4] A13 Sources in `admin/src/features/sources/` (`SourcesPage.tsx`, `SourceRunPage.tsx`, tests): a card per source with status, last success, an items sparkline, error rate and breaker `StatusChip`; «تشغيل الآن» (disabled while running, `409 run_in_progress` toast), «إيقاف» / «استئناف»; run history with cursor and the run detail (counts, errors, log, placeholders created, unmatched matches). React Query refetch every 30 s while visible ([R24](research.md#r24-a13-and-a2-refresh)).
-- [ ] T103 [US4] A2 Dashboard in `admin/src/features/dashboard/`: `KpiCard`s for matches without channels, placeholders to complete and source health; the missing-channels list by competition linking to A4; source tiles linking to A13; recent changes. Refetch every 60 s while visible.
-- [ ] T104 [US4] Add A2, A5–A8, A10 and A13 to `SidebarNav` and the router, with A2 as the landing page after login.
-- [ ] T105 [US4] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh`.
+- [x] T100 [US4] Rebase on `master` (T014) and build on the regenerated client; replace any local placeholder types with the generated ones.
+- [x] T101 [US4] Wire A6 and A7 ordering to `PUT /competitions/order` and `PUT /satellites/order` with each row's version; a `409` opens the D2 conflict dialog and reloads; tests for both paths.
+- [x] T102 [US4] A13 Sources in `admin/src/features/sources/` (`SourcesPage.tsx`, `SourceRunPage.tsx`, tests): a card per source with status, last success, an items sparkline, error rate and breaker `StatusChip`; «تشغيل الآن» (disabled while running, `409 run_in_progress` toast), «إيقاف» / «استئناف»; run history with cursor and the run detail (counts, errors, log, placeholders created, unmatched matches). React Query refetch every 30 s while visible ([R24](research.md#r24-a13-and-a2-refresh)).
+- [x] T103 [US4] A2 Dashboard in `admin/src/features/dashboard/`: `KpiCard`s for matches without channels, placeholders to complete and source health; the missing-channels list by competition linking to A4; source tiles linking to A13; recent changes. Refetch every 60 s while visible.
+- [x] T104 [US4] Add A2, A5–A8, A10 and A13 to `SidebarNav` and the router, with A2 as the landing page after login.
+- [x] T105 [US4] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh`.
 
 ### Validation (A)
 
 - [ ] T106 [US4] Walk [quickstart Lane A](quickstart.md#lane-a-admin) steps 1–8 with `pnpm dev:wg` against VPS-1 (needs B1's T047 deploy), including the two-browser reorder conflict and the keyboard-only reorder.
 - [ ] T107 [US4] Take screenshots at 1440 and 1024 against `Main.png`, `Teams.png`, `Competitions.png`, `Satellites.png`, `Channels.png`, `Commentators.png`, `Sources.png` and `SourceRun.png`, in the theme each board uses, and attach them to the PR.
-- [ ] T108 [US4] Add the D3 Lane A items to `docs/owner-actions.md` (after merge: the editor walk-through over WireGuard), each with its task ID, and update the "Open now" table.
+- [x] T108 [US4] Add the D3 Lane A items to `docs/owner-actions.md` (after merge: the editor walk-through over WireGuard), each with its task ID, and update the "Open now" table.
+
+#### Notes from the implementation (Lane A, 2026-11-01)
+
+Not review findings: three contract gaps found while building, each needing Lane B1 and none worked around by inventing behaviour.
+
+- **`aliases` on teams and competitions.** The spec's US4 scenarios have A5 and A6 edit aliases, but D2's `AdminTeam`/`TeamCreate`/`TeamPatch` and the competition schemas carry no alias field, and the D3 contract says "no change". The editors ship without it (owner's decision on the day); the alias table is D5's.
+- **No per-row version on the competition and satellite lists.** `PUT /competitions/order` and `PUT /satellites/order` require `if_match` per item, but `AdminCompetition` and `AdminSatellite` carry no `etag` (unlike `AdminMatchRow`, A-F3). T101 reads each moved row's version from its detail immediately before the reorder, so a change between the list render and the save is not detected; adding `etag` to both rows closes it.
+- **`ChannelPatch` has no `kind`.** `contracts/admin-api.md` says a placeholder "moved to `kind: satellite`" saves through `PATCH /channels/{id}`, but the patch model omits `kind`. A platform placeholder can therefore gain a satellite and frequency but cannot become a satellite channel; the importers' placeholders are `platform` (R18), so completing one needs `kind` in the patch.
+
+A4: `GET /commentators` has only `q` and a cursor, so A10 ships the search alone and not the board's «بلا صورة» / «بلا صوت» filters; adding them is a contract change with a list filter each.
+
+Two test fixtures were updated for the contract change rather than weakened: the `GET /sources` handlers now answer `SourceHealth` (health fields), and the channel fixtures carry `placeholder_source`. A3's group-header query moved from `rowheader` to `columnheader` because the shared `DataTable` marks its group row with `scope="colgroup"`, and its lock glyph is now named by the table.
 
 ---
 

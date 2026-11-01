@@ -127,6 +127,7 @@ const channels = [
     show_in_match: false,
     sort_order: 14,
     hidden_by_name: false,
+    placeholder_source: null,
   },
   {
     id: 6001,
@@ -147,6 +148,7 @@ const channels = [
     show_in_match: true,
     sort_order: 3,
     hidden_by_name: false,
+    placeholder_source: null,
   },
 ];
 

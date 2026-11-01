@@ -77,7 +77,7 @@ describe('App routes', () => {
 
   it('shows the placeholder on a section that arrives on a later day', async () => {
     server.use(http.post('*/admin/api/auth/login', loginOk));
-    renderApp('/teams');
+    renderApp('/audit');
 
     await signIn();
 

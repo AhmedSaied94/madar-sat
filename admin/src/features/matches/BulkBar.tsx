@@ -8,24 +8,19 @@ import { useToast } from '../../components/Toast/Toast';
 import { copyForErrorCode, matches as copy, toast as toastCopy } from '../../i18n/ar';
 import { useBulkMatches } from './queries';
 
-// A3's bulk bar (Matches.html): everything applies to the selection in one all-or-nothing request.
-// Removing channels is an admin action and needs the typed confirmation; an editor never sees it.
-// Each item sends the version the list showed, so a stale selection is refused, never overwritten
-// (A-R1-3).
+// A3's bulk actions, rendered inside the shared DataTable's bulk bar (A-F2). Everything applies to the
+// selection in one all-or-nothing request; each item sends the version the list showed, so a stale
+// selection is refused, never overwritten (A-R1-3). Removing channels is an admin action only.
 
-interface BulkBarProps {
+interface BulkActionsProps {
   selected: readonly AdminMatchRow[];
   competitions: readonly AdminCompetition[];
   canRemoveChannels: boolean;
-  onClear: () => void;
+  /** Clears the table's selection once the change stuck. */
+  onDone: () => void;
 }
 
-/** Each row's version comes with the list (Lane B1's `AdminMatchRow.etag`, A-F3). */
-function rowEtag(row: AdminMatchRow): string {
-  return row.etag;
-}
-
-export function BulkBar({ selected, competitions, canRemoveChannels, onClear }: BulkBarProps): ReactElement {
+export function BulkActions({ selected, competitions, canRemoveChannels, onDone }: BulkActionsProps): ReactElement {
   const bulk = useBulkMatches();
   const toast = useToast();
   const [mode, setMode] = useState<'idle' | 'competition' | 'remove'>('idle');
@@ -33,7 +28,7 @@ export function BulkBar({ selected, competitions, canRemoveChannels, onClear }: 
   const [failure, setFailure] = useState<ReactNode>(null);
 
   const count = selected.length;
-  const items = selected.map((row) => ({ id: row.id, etag: rowEtag(row) }));
+  const items = selected.map((row) => ({ id: row.id, etag: row.etag }));
 
   function fail(error: unknown): void {
     const code = error instanceof ApiError ? error.code : 'network_error';
@@ -74,7 +69,7 @@ export function BulkBar({ selected, competitions, canRemoveChannels, onClear }: 
       });
       toast.show({ kind: 'success', title: toastCopy.saved });
       setMode('idle');
-      onClear();
+      onDone();
     } catch (error) {
       fail(error);
     }
@@ -86,7 +81,7 @@ export function BulkBar({ selected, competitions, canRemoveChannels, onClear }: 
       await bulk.mutateAsync({ data: { action: 'remove_channels', items, channel_ids: null } });
       toast.show({ kind: 'success', title: toastCopy.saved });
       setMode('idle');
-      onClear();
+      onDone();
     } catch (error) {
       fail(error);
     }
@@ -94,30 +89,22 @@ export function BulkBar({ selected, competitions, canRemoveChannels, onClear }: 
 
   return (
     <>
-      <div
-        role="toolbar"
-        aria-label={copy.bulkToolbar}
-        className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-1 px-4 py-2 ring-1 ring-inset ring-divider"
-      >
-        <span className="text-label font-semibold text-text-primary">{copy.selected(count)}</span>
-        {failure ? (
-          <span role="alert" className="text-caption font-semibold text-error">
-            {failure}
-          </span>
-        ) : null}
-        <span className="flex-1" />
-        <Button size="sm" variant="secondary" onClick={() => setMode('competition')}>
-          {copy.bulk.changeCompetition}
+      {failure ? (
+        <span role="alert" className="text-caption font-semibold text-error">
+          {failure}
+        </span>
+      ) : null}
+      <Button size="sm" variant="secondary" onClick={() => setMode('competition')}>
+        {copy.bulk.changeCompetition}
+      </Button>
+      {canRemoveChannels ? (
+        <Button size="sm" variant="danger" onClick={() => setMode('remove')}>
+          {copy.bulk.removeChannels}
         </Button>
-        {canRemoveChannels ? (
-          <Button size="sm" variant="danger" onClick={() => setMode('remove')}>
-            {copy.bulk.removeChannels}
-          </Button>
-        ) : null}
-        <Button size="sm" variant="ghost" onClick={onClear}>
-          {copy.bulk.cancel}
-        </Button>
-      </div>
+      ) : null}
+      <Button size="sm" variant="ghost" onClick={onDone}>
+        {copy.bulk.cancel}
+      </Button>
 
       <ConfirmDialog
         open={mode === 'competition'}

@@ -6,8 +6,16 @@ import { EmptyState } from '../components/EmptyState/EmptyState';
 import { ToastProvider } from '../components/Toast/Toast';
 import { LoginPage } from '../features/auth/LoginPage';
 import { SessionProvider, useSession } from '../features/auth/session';
+import { ChannelsPage } from '../features/channels/ChannelsPage';
+import { CommentatorsPage } from '../features/commentators/CommentatorsPage';
+import { CompetitionsPage } from '../features/competitions/CompetitionsPage';
+import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { MatchEditor } from '../features/matches/MatchEditor';
 import { MatchesPage } from '../features/matches/MatchesPage';
+import { SatellitesPage } from '../features/satellites/SatellitesPage';
+import { SourceRunPage } from '../features/sources/SourceRunPage';
+import { SourcesPage } from '../features/sources/SourcesPage';
+import { TeamsPage } from '../features/teams/TeamsPage';
 import { Shell } from '../features/shell/Shell';
 import { shell } from '../i18n/ar';
 
@@ -34,10 +42,18 @@ export const appRoutes: RouteObject[] = [
   {
     element: <SignedInShell />,
     children: [
-      { index: true, element: <ComingSoon /> },
+      // A2 is the landing page after login (T104).
+      { index: true, element: <DashboardPage /> },
       { path: 'matches', element: <MatchesPage /> },
       { path: 'matches/new', element: <MatchEditor /> },
       { path: 'matches/:id', element: <MatchEditor /> },
+      { path: 'teams', element: <TeamsPage /> },
+      { path: 'competitions', element: <CompetitionsPage /> },
+      { path: 'channels', element: <ChannelsPage /> },
+      { path: 'satellites', element: <SatellitesPage /> },
+      { path: 'commentators', element: <CommentatorsPage /> },
+      { path: 'sources', element: <SourcesPage /> },
+      { path: 'import-runs/:id', element: <SourceRunPage /> },
       { path: '*', element: <ComingSoon /> },
     ],
   },

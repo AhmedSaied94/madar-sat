@@ -60,7 +60,20 @@ describe('adminHttp', () => {
     server.use(
       mswHttp.get('*/admin/api/sources', ({ request }) => {
         seen = request.headers.get('X-CSRF-Token');
-        return HttpResponse.json(envelope([{ name: 'ysscores', kind: 'scraper', is_enabled: true }]));
+        return HttpResponse.json(envelope([{
+            name: 'ysscores',
+            kind: 'scraper',
+            is_enabled: true,
+            breaker: 'closed',
+            breaker_opened_at: null,
+            consecutive_failures: 0,
+            paused: false,
+            last_success_at: null,
+            last_run: null,
+            items_24h: [],
+            error_rate_24h: null,
+            running: false,
+          }]));
       }),
     );
 
@@ -154,7 +167,20 @@ describe('adminHttp', () => {
   it('carries the response ETag on the envelope it returns', async () => {
     server.use(
       mswHttp.get('*/admin/api/sources', () =>
-        HttpResponse.json(envelope([{ name: 'ysscores', kind: 'scraper', is_enabled: true }]), {
+        HttpResponse.json(envelope([{
+            name: 'ysscores',
+            kind: 'scraper',
+            is_enabled: true,
+            breaker: 'closed',
+            breaker_opened_at: null,
+            consecutive_failures: 0,
+            paused: false,
+            last_success_at: null,
+            last_run: null,
+            items_24h: [],
+            error_rate_24h: null,
+            running: false,
+          }]), {
           headers: { ETag: '"v7"' },
         }),
       ),
