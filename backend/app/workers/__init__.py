@@ -21,8 +21,8 @@ from app.workers.base import BaseTask
 from app.workers.config import get_worker_settings
 
 QUEUE_NAMES = ("scrape", "scrape_home", "imports", "maintenance", "media", "live", "notifications")
-TASK_MODULES = ("app.adapters.tasks", "app.adapters.media_tasks")
-SCHEDULE_MODULE = "app.adapters.schedule"
+TASK_MODULES = ("app.adapters.tasks", "app.adapters.media_tasks", "app.notifications.tasks")
+SCHEDULE_MODULES = ("app.adapters.schedule", "app.notifications.schedule")
 ROUTER_MODULE = "app.adapters.tasks"
 
 
@@ -38,12 +38,8 @@ def existing_modules(names: Iterable[str]) -> list[str]:
     return found
 
 
-def load_beat_schedule(module: str = SCHEDULE_MODULE) -> dict[str, Any]:
-    """The module's ``BEAT_SCHEDULE``, or ``{}`` when it doesn't exist yet.
-
-    Only a missing ``module`` (or its parent package) is tolerated. An error inside an
-    existing module, such as one of its own imports failing, propagates.
-    """
+def _module_schedule(module: str) -> dict[str, Any]:
+    """One module's ``BEAT_SCHEDULE``, or ``{}`` when it doesn't exist yet."""
     try:
         loaded = importlib.import_module(module)
     except ModuleNotFoundError as exc:
@@ -52,6 +48,23 @@ def load_beat_schedule(module: str = SCHEDULE_MODULE) -> dict[str, Any]:
         raise
     schedule = getattr(loaded, "BEAT_SCHEDULE", {})
     return dict(schedule)
+
+
+def load_beat_schedule(modules: str | Iterable[str] = SCHEDULE_MODULES) -> dict[str, Any]:
+    """The merge of every schedule module's ``BEAT_SCHEDULE`` (research R21).
+
+    A missing module (or its parent package) contributes nothing. Two modules declaring the same
+    entry name is a programming error and raises, so one beat entry never silently shadows another.
+    An error inside an existing module propagates.
+    """
+    names = (modules,) if isinstance(modules, str) else tuple(modules)
+    merged: dict[str, Any] = {}
+    for module in names:
+        for entry, definition in _module_schedule(module).items():
+            if entry in merged:
+                raise ValueError(f"duplicate beat entry {entry!r} (declared twice in {names})")
+            merged[entry] = definition
+    return merged
 
 
 def route(name: str, args: Any = None, kwargs: Any = None, options: Any = None, task: Any = None, **_: Any) -> Any:

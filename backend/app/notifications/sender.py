@@ -1,0 +1,131 @@
+"""The push sender: a protocol, the FCM implementation and one batch call per page (research R9).
+
+``firebase-admin`` is imported only where it is used, so the API process and the home box never load
+it. The credentials file is read once per worker; ``FCM_DRY_RUN`` uses FCM's own dry run.
+"""
+
+from __future__ import annotations
+
+import inspect
+import logging
+from collections.abc import Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Protocol
+
+from app.notifications.messages import CHANNEL_ID, ICON, PushMessage
+from app.workers.base import Retryable
+
+log = logging.getLogger("madar.notifications")
+
+ICON_PATH = "/icons/Icon-192.png"
+BADGE_PATH = "/icons/Icon-maskable-192.png"
+
+
+@dataclass(frozen=True)
+class SendOutcome:
+    """One page's result: delivered, failed, and the tokens FCM says no longer exist."""
+
+    sent: int = 0
+    failed: int = 0
+    unregistered: tuple[str, ...] = ()
+
+
+class PushSender(Protocol):
+    def send_page(self, messages: Sequence[PushMessage]) -> SendOutcome: ...
+
+
+@dataclass
+class FcmSender:
+    """``firebase_admin.messaging.send_each``: one HTTP call for ≤ 500 messages."""
+
+    credentials_file: Path | None
+    dry_run: bool = False
+    pwa_origin: str | None = None
+
+    @classmethod
+    def from_settings(cls) -> FcmSender:
+        from app.settings import get_settings
+
+        settings = get_settings()
+        return cls(
+            credentials_file=settings.fcm_credentials_file,
+            dry_run=settings.fcm_dry_run,
+            pwa_origin=str(settings.pwa_origin) if settings.pwa_origin else None,
+        )
+
+    def _messaging(self) -> Any:
+        import firebase_admin
+        from firebase_admin import credentials, messaging
+
+        if not firebase_admin._apps:  # one app per process
+            if self.credentials_file is None:
+                raise RuntimeError("FCM_CREDENTIALS_FILE is not set; the notifications worker cannot send")
+            firebase_admin.initialize_app(credentials.Certificate(str(self.credentials_file)))
+            log.info("fcm: initialized", extra={"dry_run": self.dry_run})
+        return messaging
+
+    def _message(self, messaging: Any, message: PushMessage) -> Any:
+        android = messaging.AndroidConfig(
+            collapse_key=message.tag,
+            notification=messaging.AndroidNotification(tag=message.tag, channel_id=CHANNEL_ID, icon=ICON),
+        )
+        webpush = None
+        if message.link:
+            origin = message.link.split("/match/")[0]
+            webpush = messaging.WebpushConfig(
+                notification=messaging.WebpushNotification(
+                    tag=message.tag, icon=f"{origin}{ICON_PATH}", badge=f"{origin}{BADGE_PATH}"
+                ),
+                fcm_options=messaging.WebpushFCMOptions(link=message.link),
+            )
+        return messaging.Message(
+            **{_token_field(messaging): message.token},
+            notification=messaging.Notification(title=message.title, body=message.body),
+            data=message.data,
+            android=android,
+            webpush=webpush,
+        )
+
+    def send_page(self, messages: Sequence[PushMessage]) -> SendOutcome:
+        if not messages:
+            return SendOutcome()
+        messaging = self._messaging()
+        batch = [self._message(messaging, message) for message in messages]
+        try:
+            response = messaging.send_each(batch, dry_run=self.dry_run)
+        except Exception as exc:  # noqa: BLE001 - a whole-call failure is transient
+            log.warning("fcm_call_failed", extra={"messages": len(batch), "why": repr(exc)})
+            raise Retryable(f"send_each failed: {exc!r}") from exc
+
+        sent = 0
+        failed = 0
+        unregistered: list[str] = []
+        for message, result in zip(messages, response.responses, strict=True):
+            if result.success:
+                sent += 1
+                continue
+            problem = result.exception
+            if _is_unregistered(messaging, problem):
+                unregistered.append(message.token)
+            else:
+                failed += 1
+                log.info("fcm_message_failed", extra={"why": repr(problem)})
+        return SendOutcome(sent=sent, failed=failed, unregistered=tuple(unregistered))
+
+
+def _token_field(messaging: Any) -> str:
+    """``firebase-admin`` 7 renamed ``Message.token`` to ``Message.fid``; support both."""
+    return "fid" if "fid" in inspect.signature(messaging.Message.__init__).parameters else "token"
+
+
+def _is_unregistered(messaging: Any, exc: BaseException | None) -> bool:
+    """FCM's ``UNREGISTERED``, and an ``INVALID_ARGUMENT`` on the token (research R7)."""
+    if exc is None:
+        return False
+    if isinstance(exc, messaging.UnregisteredError):
+        return True
+    code = getattr(exc, "code", None)
+    return (
+        code == "INVALID_ARGUMENT" or "INVALID_ARGUMENT" in str(exc) or "not a valid FCM registration token" in str(exc)
+    )

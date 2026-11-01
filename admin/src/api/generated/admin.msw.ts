@@ -26,8 +26,10 @@ import type {
   EnvelopeAdminTeam,
   EnvelopeAdminUser,
   EnvelopeBulkResult,
+  EnvelopeDashboard,
   EnvelopeHealthStatus,
   EnvelopeHiddenChannelName,
+  EnvelopeImportRunDetail,
   EnvelopeListAdminCommentator,
   EnvelopeListAdminCompetition,
   EnvelopeListAdminMatchRow,
@@ -35,11 +37,14 @@ import type {
   EnvelopeListBroadcastPreset,
   EnvelopeListChannelItem,
   EnvelopeListHiddenChannelName,
-  EnvelopeListSourceItem,
+  EnvelopeListImportRunRow,
+  EnvelopeListSourceHealth,
   EnvelopeListTeamItem,
   EnvelopeMediaAsset,
   EnvelopeNoneType,
   EnvelopeSession,
+  EnvelopeSourceHealth,
+  EnvelopeSourceRunQueued,
   ErrorEnvelope
 } from './admin.schemas';
 
@@ -103,10 +108,10 @@ export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock401 =
 
 export const getListBroadcastPresetsAdminApiBroadcastPresetsGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
 
-export const getListChannelsAdminApiChannelsGetResponseMock = (): EnvelopeListChannelItem => ({"data":[{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+export const getListChannelsAdminApiChannelsGetResponseMock = (): EnvelopeListChannelItem => ({"data":[{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
 
-export const getListChannelsAdminApiChannelsGetResponseMock200 = (): EnvelopeListChannelItem => ({"data":[{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+export const getListChannelsAdminApiChannelsGetResponseMock200 = (): EnvelopeListChannelItem => ({"data":[{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
 
 
@@ -118,10 +123,10 @@ export const getListChannelsAdminApiChannelsGetResponseMock403 = (): ErrorEnvelo
 
 export const getListChannelsAdminApiChannelsGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
-export const getCreateChannelAdminApiChannelsPostResponseMock = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateChannelAdminApiChannelsPostResponseMock = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getCreateChannelAdminApiChannelsPostResponseMock201 = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateChannelAdminApiChannelsPostResponseMock201 = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getCreateChannelAdminApiChannelsPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -158,10 +163,10 @@ export const getDeleteChannelAdminApiChannelsChannelIdDeleteResponseMock422 = (o
 
 export const getDeleteChannelAdminApiChannelsChannelIdDeleteResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getGetChannelAdminApiChannelsChannelIdGetResponseMock = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetChannelAdminApiChannelsChannelIdGetResponseMock = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getGetChannelAdminApiChannelsChannelIdGetResponseMock200 = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetChannelAdminApiChannelsChannelIdGetResponseMock200 = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getGetChannelAdminApiChannelsChannelIdGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -175,10 +180,10 @@ export const getGetChannelAdminApiChannelsChannelIdGetResponseMock404 = (): Erro
 
 export const getGetChannelAdminApiChannelsChannelIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock200 = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock200 = (): EnvelopeAdminChannel => ({"data":{"access":"encrypted","beam":"wide","category":"sports","country":"قطر","display_name":"beIN SPORTS 1","frequency":{"mhz":11843,"pol":"H","sr":27500},"frequency_note":"تردد احتياطي","hidden_by_name":false,"id":5512,"kind":"satellite","locked_fields":["name"],"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":9,"name":"beIN SPORTS 1 HD","package":"باقة الرياضة","placeholder_source":null,"provider":"beIN","satellite_id":2,"show_in_match":false,"sort_order":14},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -322,6 +327,26 @@ export const getCreateCompetitionAdminApiCompetitionsPostResponseMock409 = (): E
 
 export const getCreateCompetitionAdminApiCompetitionsPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock = (): EnvelopeBulkResult => ({"data":{"updated":[{"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":48213}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock200 = (): EnvelopeBulkResult => ({"data":{"updated":[{"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":48213}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
 export const getDeleteCompetitionAdminApiCompetitionsCompetitionIdDeleteResponseMock = (overrideResponse: Partial< EnvelopeNoneType > = {}): EnvelopeNoneType => ({data: null, error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
 
 
@@ -385,6 +410,21 @@ export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMo
 
 export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
+export const getGetDashboardAdminApiDashboardGetResponseMock = (): EnvelopeDashboard => ({"data":{"missing_channels":[{"competition":{"id":12,"name":"الدوري المصري الممتاز","priority":3},"matches":[{"away":"الزمالك","home":"الأهلي","id":48213,"kickoff_at":"2026-11-01T18:00:00Z"}]}],"missing_channels_count":9,"placeholders_to_complete":14,"recent_changes":[{"action":"update","at":"2026-11-01T08:00:41Z","by":{"kind":"admin","name":"محرر"},"entity":"match","entity_id":48213}],"sources":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetDashboardAdminApiDashboardGetResponseMock200 = (): EnvelopeDashboard => ({"data":{"missing_channels":[{"competition":{"id":12,"name":"الدوري المصري الممتاز","priority":3},"matches":[{"away":"الزمالك","home":"الأهلي","id":48213,"kickoff_at":"2026-11-01T18:00:00Z"}]}],"missing_channels_count":9,"placeholders_to_complete":14,"recent_changes":[{"action":"update","at":"2026-11-01T08:00:41Z","by":{"kind":"admin","name":"محرر"},"entity":"match","entity_id":48213}],"sources":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getGetDashboardAdminApiDashboardGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetDashboardAdminApiDashboardGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getGetDashboardAdminApiDashboardGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
 export const getHealthEndpointAdminApiHealthzGetResponseMock = (overrideResponse: Partial< EnvelopeHealthStatus > = {}): EnvelopeHealthStatus => ({data: faker.helpers.arrayElement([{db: "ok", redis: "ok"},null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
 
 
@@ -435,6 +475,24 @@ export const getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteRespo
 
 
 export const getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock = (): EnvelopeImportRunDetail => ({"data":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"log":{"errors":[],"placeholders_created":[],"skipped_channels":7,"unmatched_matches":[]},"log_available":true,"raw_path":"livesoccertv/2026-11-01/run.json","started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock200 = (): EnvelopeImportRunDetail => ({"data":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"log":{"errors":[],"placeholders_created":[],"skipped_channels":7,"unmatched_matches":[]},"log_available":true,"raw_path":"livesoccertv/2026-11-01/run.json","started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"import_run_not_found","message":"import run not found"},"meta":{},"success":false})
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
 export const getListMatchesAdminApiMatchesGetResponseMock = (): EnvelopeListAdminMatchRow => ({"data":[{"away":{"id":102,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الزمالك"},"broadcaster_count":1,"channel_count":14,"commentator":{"id":7,"name":"معلق تجريبي"},"competition":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الدوري المصري الممتاز","priority":3,"stage":"الجولة 9"},"estimated":false,"etag":"\"3f9a1c6d47b0e2a5c8d14f7b90e3a652\"","home":{"id":101,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الأهلي"},"id":48213,"kickoff_at":"2026-10-31T18:00:00Z","locked":true,"match_date":"2026-10-31","missing_channels":false,"score":{"away":0,"away_pen":2,"home":1,"home_pen":3},"sources":["ysscores","legacy"],"status":"live","time_tbd":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
@@ -574,6 +632,26 @@ export const getCreateSatelliteAdminApiSatellitesPostResponseMock409 = (): Error
 
 export const getCreateSatelliteAdminApiSatellitesPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock = (): EnvelopeBulkResult => ({"data":{"updated":[{"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":48213}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock200 = (): EnvelopeBulkResult => ({"data":{"updated":[{"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":48213}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
 export const getDeleteSatelliteAdminApiSatellitesSatelliteIdDeleteResponseMock = (overrideResponse: Partial< EnvelopeNoneType > = {}): EnvelopeNoneType => ({data: null, error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
 
 
@@ -637,10 +715,10 @@ export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock422 
 
 export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getListSourcesAdminApiSourcesGetResponseMock = (): EnvelopeListSourceItem => ({"data":[{"is_enabled":true,"kind":"scraper","name":"ysscores"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListSourcesAdminApiSourcesGetResponseMock = (): EnvelopeListSourceHealth => ({"data":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListSourcesAdminApiSourcesGetResponseMock200 = (): EnvelopeListSourceItem => ({"data":[{"is_enabled":true,"kind":"scraper","name":"ysscores"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListSourcesAdminApiSourcesGetResponseMock200 = (): EnvelopeListSourceHealth => ({"data":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -648,6 +726,76 @@ export const getListSourcesAdminApiSourcesGetResponseMock401 = (): ErrorEnvelope
 
 
 export const getListSourcesAdminApiSourcesGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock200 = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"source_not_found","message":"source not found"},"meta":{},"success":false})
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock200 = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"source_not_found","message":"source not found"},"meta":{},"success":false})
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getRunSourceAdminApiSourcesNameRunPostResponseMock = (overrideResponse: Partial< EnvelopeSourceRunQueued > = {}): EnvelopeSourceRunQueued => ({data: faker.helpers.arrayElement([{queued: faker.datatype.boolean()},null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+
+
+export const getRunSourceAdminApiSourcesNameRunPostResponseMock202 = (overrideResponse: Partial< EnvelopeSourceRunQueued > = {}): EnvelopeSourceRunQueued => ({data: faker.helpers.arrayElement([{queued: faker.datatype.boolean()},null,]), error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+
+
+export const getRunSourceAdminApiSourcesNameRunPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getRunSourceAdminApiSourcesNameRunPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getRunSourceAdminApiSourcesNameRunPostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"source_not_found","message":"source not found"},"meta":{},"success":false})
+
+
+
+export const getRunSourceAdminApiSourcesNameRunPostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetResponseMock = (): EnvelopeListImportRunRow => ({"data":[{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetResponseMock200 = (): EnvelopeListImportRunRow => ({"data":[{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"source_not_found","message":"source not found"},"meta":{},"success":false})
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
 export const getListTeamsAdminApiTeamsGetResponseMock = (): EnvelopeListTeamItem => ({"data":[{"competitions":[{"id":12,"name":"الدوري المصري الممتاز"},{"id":40,"name":"دوري أبطال أفريقيا"}],"country":"مصر","id":101,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الأهلي","primary_competition":{"id":12,"name":"الدوري المصري الممتاز"}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
@@ -2030,6 +2178,96 @@ export const getCreateCompetitionAdminApiCompetitionsPostMockHandler422 = (overr
   }, options)
 }
 
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler = (overrideResponse?: EnvelopeBulkResult | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EnvelopeBulkResult> | EnvelopeBulkResult), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler200 = (overrideResponse?: EnvelopeBulkResult | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EnvelopeBulkResult> | EnvelopeBulkResult), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/competitions/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderCompetitionsAdminApiCompetitionsOrderPutResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
 export const getDeleteCompetitionAdminApiCompetitionsCompetitionIdDeleteMockHandler = (overrideResponse?: EnvelopeNoneType | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<EnvelopeNoneType> | EnvelopeNoneType), options?: RequestHandlerOptions) => {
   return http.delete('*/admin/api/competitions/:competitionId', async (info) => {
   
@@ -2313,6 +2551,81 @@ export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchMockHandle
   }, options)
 }
 
+export const getGetDashboardAdminApiDashboardGetMockHandler = (overrideResponse?: EnvelopeDashboard | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeDashboard> | EnvelopeDashboard), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/dashboard', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetDashboardAdminApiDashboardGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetDashboardAdminApiDashboardGetMockHandler200 = (overrideResponse?: EnvelopeDashboard | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeDashboard> | EnvelopeDashboard), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/dashboard', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetDashboardAdminApiDashboardGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetDashboardAdminApiDashboardGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/dashboard', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getGetDashboardAdminApiDashboardGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/dashboard', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetDashboardAdminApiDashboardGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetDashboardAdminApiDashboardGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/dashboard', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetDashboardAdminApiDashboardGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetDashboardAdminApiDashboardGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/dashboard', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetDashboardAdminApiDashboardGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
 export const getHealthEndpointAdminApiHealthzGetMockHandler = (overrideResponse?: EnvelopeHealthStatus | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeHealthStatus> | EnvelopeHealthStatus), options?: RequestHandlerOptions) => {
   return http.get('*/admin/api/healthz', async (info) => {
   
@@ -2548,6 +2861,94 @@ export const getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteMockH
     return new HttpResponse(JSON.stringify(overrideResponse !== undefined
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler = (overrideResponse?: EnvelopeImportRunDetail | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeImportRunDetail> | EnvelopeImportRunDetail), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunAdminApiImportRunsRunIdGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler200 = (overrideResponse?: EnvelopeImportRunDetail | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeImportRunDetail> | EnvelopeImportRunDetail), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunAdminApiImportRunsRunIdGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunAdminApiImportRunsRunIdGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunAdminApiImportRunsRunIdGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunAdminApiImportRunsRunIdGetResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunAdminApiImportRunsRunIdGetResponseMock422()),
       { status: 422,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -3192,6 +3593,96 @@ export const getCreateSatelliteAdminApiSatellitesPostMockHandler422 = (overrideR
   }, options)
 }
 
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler = (overrideResponse?: EnvelopeBulkResult | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EnvelopeBulkResult> | EnvelopeBulkResult), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler200 = (overrideResponse?: EnvelopeBulkResult | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EnvelopeBulkResult> | EnvelopeBulkResult), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getOrderSatellitesAdminApiSatellitesOrderPutMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/satellites/order', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getOrderSatellitesAdminApiSatellitesOrderPutResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
 export const getDeleteSatelliteAdminApiSatellitesSatelliteIdDeleteMockHandler = (overrideResponse?: EnvelopeNoneType | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<EnvelopeNoneType> | EnvelopeNoneType), options?: RequestHandlerOptions) => {
   return http.delete('*/admin/api/satellites/:satelliteId', async (info) => {
   
@@ -3475,7 +3966,7 @@ export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchMockHandler428 =
   }, options)
 }
 
-export const getListSourcesAdminApiSourcesGetMockHandler = (overrideResponse?: EnvelopeListSourceItem | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListSourceItem> | EnvelopeListSourceItem), options?: RequestHandlerOptions) => {
+export const getListSourcesAdminApiSourcesGetMockHandler = (overrideResponse?: EnvelopeListSourceHealth | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListSourceHealth> | EnvelopeListSourceHealth), options?: RequestHandlerOptions) => {
   return http.get('*/admin/api/sources', async (info) => {
   
     return new HttpResponse(JSON.stringify(overrideResponse !== undefined
@@ -3488,7 +3979,7 @@ export const getListSourcesAdminApiSourcesGetMockHandler = (overrideResponse?: E
 }
 
 
-export const getListSourcesAdminApiSourcesGetMockHandler200 = (overrideResponse?: EnvelopeListSourceItem | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListSourceItem> | EnvelopeListSourceItem), options?: RequestHandlerOptions) => {
+export const getListSourcesAdminApiSourcesGetMockHandler200 = (overrideResponse?: EnvelopeListSourceHealth | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListSourceHealth> | EnvelopeListSourceHealth), options?: RequestHandlerOptions) => {
   return http.get('*/admin/api/sources', async (info) => {
   
     return new HttpResponse(JSON.stringify(overrideResponse !== undefined
@@ -3532,6 +4023,336 @@ export const getListSourcesAdminApiSourcesGetMockHandler403 = (overrideResponse?
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getListSourcesAdminApiSourcesGetResponseMock403()),
       { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getPauseSourceAdminApiSourcesNamePausePostMockHandler = (overrideResponse?: EnvelopeSourceHealth | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSourceHealth> | EnvelopeSourceHealth), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/pause', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPauseSourceAdminApiSourcesNamePausePostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostMockHandler200 = (overrideResponse?: EnvelopeSourceHealth | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSourceHealth> | EnvelopeSourceHealth), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/pause', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPauseSourceAdminApiSourcesNamePausePostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/pause', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPauseSourceAdminApiSourcesNamePausePostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/pause', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPauseSourceAdminApiSourcesNamePausePostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/pause', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPauseSourceAdminApiSourcesNamePausePostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPauseSourceAdminApiSourcesNamePausePostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/pause', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPauseSourceAdminApiSourcesNamePausePostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getResumeSourceAdminApiSourcesNameResumePostMockHandler = (overrideResponse?: EnvelopeSourceHealth | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSourceHealth> | EnvelopeSourceHealth), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/resume', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResumeSourceAdminApiSourcesNameResumePostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostMockHandler200 = (overrideResponse?: EnvelopeSourceHealth | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSourceHealth> | EnvelopeSourceHealth), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/resume', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResumeSourceAdminApiSourcesNameResumePostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/resume', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResumeSourceAdminApiSourcesNameResumePostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/resume', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResumeSourceAdminApiSourcesNameResumePostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/resume', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResumeSourceAdminApiSourcesNameResumePostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResumeSourceAdminApiSourcesNameResumePostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/resume', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResumeSourceAdminApiSourcesNameResumePostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler = (overrideResponse?: EnvelopeSourceRunQueued | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSourceRunQueued> | EnvelopeSourceRunQueued), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRunSourceAdminApiSourcesNameRunPostResponseMock()),
+      { status: 202,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler202 = (overrideResponse?: EnvelopeSourceRunQueued | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSourceRunQueued> | EnvelopeSourceRunQueued), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRunSourceAdminApiSourcesNameRunPostResponseMock202()),
+      { status: 202,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRunSourceAdminApiSourcesNameRunPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRunSourceAdminApiSourcesNameRunPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRunSourceAdminApiSourcesNameRunPostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler409 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 409,
+        
+      })
+  }, options)
+}
+
+
+export const getRunSourceAdminApiSourcesNameRunPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/sources/:name/run', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRunSourceAdminApiSourcesNameRunPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler = (overrideResponse?: EnvelopeListImportRunRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListImportRunRow> | EnvelopeListImportRunRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListSourceRunsAdminApiSourcesNameRunsGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler200 = (overrideResponse?: EnvelopeListImportRunRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListImportRunRow> | EnvelopeListImportRunRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListSourceRunsAdminApiSourcesNameRunsGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListSourceRunsAdminApiSourcesNameRunsGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListSourceRunsAdminApiSourcesNameRunsGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListSourceRunsAdminApiSourcesNameRunsGetResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListSourceRunsAdminApiSourcesNameRunsGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/sources/:name/runs', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListSourceRunsAdminApiSourcesNameRunsGetResponseMock422()),
+      { status: 422,
         headers: { 'Content-Type': 'application/json' }
       })
   }, options)
@@ -3976,13 +4797,16 @@ export const getMadarSatAdminAPIMock = () => [
   getPatchCommentatorAdminApiCommentatorsCommentatorIdPatchMockHandler(),
   getListCompetitionsAdminApiCompetitionsGetMockHandler(),
   getCreateCompetitionAdminApiCompetitionsPostMockHandler(),
+  getOrderCompetitionsAdminApiCompetitionsOrderPutMockHandler(),
   getDeleteCompetitionAdminApiCompetitionsCompetitionIdDeleteMockHandler(),
   getGetCompetitionAdminApiCompetitionsCompetitionIdGetMockHandler(),
   getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchMockHandler(),
+  getGetDashboardAdminApiDashboardGetMockHandler(),
   getHealthEndpointAdminApiHealthzGetMockHandler(),
   getListHiddenChannelNamesAdminApiHiddenChannelNamesGetMockHandler(),
   getAddHiddenChannelNameAdminApiHiddenChannelNamesPostMockHandler(),
   getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteMockHandler(),
+  getGetImportRunAdminApiImportRunsRunIdGetMockHandler(),
   getListMatchesAdminApiMatchesGetMockHandler(),
   getCreateMatchAdminApiMatchesPostMockHandler(),
   getBulkAdminApiMatchesBulkPostMockHandler(),
@@ -3991,10 +4815,15 @@ export const getMadarSatAdminAPIMock = () => [
   getUploadMediaAdminApiMediaPostMockHandler(),
   getListSatellitesAdminApiSatellitesGetMockHandler(),
   getCreateSatelliteAdminApiSatellitesPostMockHandler(),
+  getOrderSatellitesAdminApiSatellitesOrderPutMockHandler(),
   getDeleteSatelliteAdminApiSatellitesSatelliteIdDeleteMockHandler(),
   getGetSatelliteAdminApiSatellitesSatelliteIdGetMockHandler(),
   getPatchSatelliteAdminApiSatellitesSatelliteIdPatchMockHandler(),
   getListSourcesAdminApiSourcesGetMockHandler(),
+  getPauseSourceAdminApiSourcesNamePausePostMockHandler(),
+  getResumeSourceAdminApiSourcesNameResumePostMockHandler(),
+  getRunSourceAdminApiSourcesNameRunPostMockHandler(),
+  getListSourceRunsAdminApiSourcesNameRunsGetMockHandler(),
   getListTeamsAdminApiTeamsGetMockHandler(),
   getCreateTeamAdminApiTeamsPostMockHandler(),
   getDeleteTeamAdminApiTeamsTeamIdDeleteMockHandler(),

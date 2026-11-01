@@ -36,6 +36,10 @@ LIST_ROUTES = [
 ]
 MISSING_ID = 2**63 - 1  # the largest valid id (bigint): validates, then 404s
 
+# D3's device routes: the same envelope, but `Cache-Control: no-store` and never an ETag
+# (contracts/public-devices.md). Their auth, validation and rotation are in tests/devices/.
+DEVICE_ROUTES = ["/v1/devices", "/v1/devices/me", "/v1/devices/me/follows"]
+
 
 def _fill(template: str, entity_id: int) -> str:
     return re.sub(r"\{\w+\}", str(entity_id), template)
@@ -58,7 +62,7 @@ def fr008_paths(loaded_snapshot: None) -> list[str]:
 def test_fr008_route_list_matches_contract() -> None:
     doc = json.loads((Path(__file__).resolve().parents[2] / "openapi" / "public.json").read_text(encoding="utf-8"))
     declared = {p for p in doc["paths"] if p.startswith("/v1/")}
-    covered = {r.split("?")[0] for r in LIST_ROUTES} | {t for t, _, _ in DETAIL_ROUTES}
+    covered = {r.split("?")[0] for r in LIST_ROUTES} | {t for t, _, _ in DETAIL_ROUTES} | set(DEVICE_ROUTES)
     assert declared == covered
 
 

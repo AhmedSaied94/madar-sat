@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 
 class Status(StrEnum):
@@ -341,3 +343,190 @@ class CommentatorDetail(CommentatorRef):
 class HealthStatus(BaseModel):
     db: Literal["ok"]
     redis: Literal["ok"]
+
+
+# --- Devices and follows (D3, contracts/public-devices.md) --------------------
+
+
+class NotificationType(StrEnum):
+    """The seven types of SD §6.8; unknown types are refused (research R4)."""
+
+    kickoff_reminder = "kickoff_reminder"
+    goal = "goal"
+    final_score = "final_score"
+    match_started = "match_started"
+    channels_updated = "channels_updated"
+    frequency_changed = "frequency_changed"
+    announcement = "announcement"
+
+
+LeadMin = Literal[5, 15, 30, 60]
+
+
+class NotificationPref(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    on: bool = True
+    # Stored now, honoured from D8; only ``kickoff_reminder`` takes one (research R4).
+    lead_min: LeadMin | None = None
+
+
+# SD §6.8's defaults, filled on read for a device that never sent ``prefs``.
+DEFAULT_PREFS: dict[NotificationType, NotificationPref] = {
+    NotificationType.kickoff_reminder: NotificationPref(on=True, lead_min=15),
+    NotificationType.goal: NotificationPref(on=True),
+    NotificationType.final_score: NotificationPref(on=True),
+    NotificationType.match_started: NotificationPref(on=False),
+    NotificationType.channels_updated: NotificationPref(on=True),
+    NotificationType.frequency_changed: NotificationPref(on=True),
+    NotificationType.announcement: NotificationPref(on=True),
+}
+
+
+class NotificationPrefs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    types: dict[NotificationType, NotificationPref] = Field(default_factory=dict)
+
+    @classmethod
+    def with_defaults(cls, stored: Any) -> NotificationPrefs:
+        """The stored prefs, every missing type filled from the defaults."""
+        types = dict(DEFAULT_PREFS)
+        if isinstance(stored, dict):
+            incoming = stored.get("types", stored)
+            if isinstance(incoming, dict):
+                for name, value in incoming.items():
+                    try:
+                        key = NotificationType(name)
+                    except ValueError:  # a type this version doesn't know: ignored, never served
+                        continue
+                    types[key] = NotificationPref.model_validate(value)
+        return cls(types=types)
+
+
+class DeviceRegister(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"install_id": "6f1c0b8e-2d3a-4c8b-9f0e-1a2b3c4d5e6f", "platform": "android"}]},
+    )
+
+    install_id: UUID
+    platform: Literal["android", "ios", "web"]
+
+
+class DeviceRegistered(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"device_id": 812, "device_token": "Q2hhbmdlTWUtNDMtY2hhcnMtYmFzZTY0dXJsLXRva2Vu"}]
+        }
+    )
+
+    device_id: int
+    device_token: str
+
+
+def _check_tz(value: str | None) -> str | None:
+    if value is None:
+        return None
+    try:
+        ZoneInfo(value)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise ValueError("not an IANA time zone name") from None
+    return value
+
+
+class DeviceUpdate(BaseModel):
+    """Every field optional: an omitted field is unchanged, ``null`` clears it."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "push_token": "fcm-token-example",
+                    "app_version": "0.3.0+31",
+                    "tz": "Africa/Cairo",
+                    "locale": "ar-EG",
+                    "satellite_ids": [3, 7],
+                    "prefs": {"types": {"kickoff_reminder": {"on": True, "lead_min": 15}}},
+                }
+            ]
+        },
+    )
+
+    push_token: Annotated[str | None, StringConstraints(max_length=4096)] = None
+    app_version: Annotated[str | None, StringConstraints(max_length=32)] = None
+    tz: Annotated[str | None, StringConstraints(max_length=64)] = None
+    locale: Annotated[str | None, StringConstraints(max_length=16)] = None
+    satellite_ids: Annotated[list[Annotated[int, Field(ge=1, le=2**63 - 1)]], Field(max_length=32)] | None = None
+    prefs: NotificationPrefs | None = None
+
+    @field_validator("tz")
+    @classmethod
+    def _tz_is_iana(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("not an IANA time zone name") from None
+        return value
+
+
+class Device(BaseModel):
+    """What the server stores, without the token or its hash (contracts/public-devices.md)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "device_id": 812,
+                    "platform": "android",
+                    "app_version": "0.3.0+31",
+                    "tz": "Africa/Cairo",
+                    "locale": "ar-EG",
+                    "satellite_ids": [3, 7],
+                    "has_push_token": True,
+                    "prefs": {"types": {}},
+                }
+            ]
+        }
+    )
+
+    device_id: int
+    platform: Literal["android", "ios", "web"]
+    app_version: str | None
+    tz: str | None
+    locale: str | None
+    satellite_ids: list[int]
+    has_push_token: bool
+    prefs: NotificationPrefs
+
+
+class FollowSet(BaseModel):
+    """The whole follow set: ≤ 500 ids in total, duplicates collapsed (research R5)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {"teams": [101, 205], "competitions": [12], "matches": [48213], "channels": [], "commentators": []}
+            ]
+        },
+    )
+
+    teams: list[int] = Field(default_factory=list)
+    competitions: list[int] = Field(default_factory=list)
+    matches: list[int] = Field(default_factory=list)
+    channels: list[int] = Field(default_factory=list)
+    commentators: list[int] = Field(default_factory=list)
+
+    def collapsed(self) -> dict[str, list[int]]:
+        """Each kind with duplicates removed, order kept."""
+        return {kind: list(dict.fromkeys(getattr(self, kind))) for kind in FOLLOW_KINDS}
+
+    def total(self) -> int:
+        return sum(len(values) for values in self.collapsed().values())
+
+
+FOLLOW_KINDS = ("teams", "competitions", "matches", "channels", "commentators")

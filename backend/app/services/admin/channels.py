@@ -85,6 +85,7 @@ def item_fields(channel: Channel, hidden: bool, logo: str | None) -> dict[str, A
         "show_in_match": channel.show_in_match,
         "sort_order": channel.sort_order,
         "hidden_by_name": hidden,
+        "placeholder_source": channel.placeholder_source,
     }
 
 
@@ -183,6 +184,10 @@ async def update(
             setattr(channel, column, _value(changes[column]))
     if "frequency" in changes:
         _set_frequency(channel, changes["frequency"])
+    # A placeholder an editor puts on match pages becomes a normal channel (research R13, R18);
+    # the same audit entry records both fields.
+    if changes.get("show_in_match") is True and channel.placeholder_source is not None:
+        channel.placeholder_source = None
 
     state = {key: getattr(channel, key) for key in (*PLAIN_COLUMNS, "frequency_mhz")}
     await _check(session, channel.kind, state, changes)

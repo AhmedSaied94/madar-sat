@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useBulk, useListCompetitions, useListMatches, useListSources } from '../../api/generated/admin';
-import type { AdminCompetition, ListMatchesParams, SourceItem } from '../../api/generated/admin.schemas';
+import type { AdminCompetition, ListMatchesParams, SourceHealth } from '../../api/generated/admin.schemas';
 import { ApiError } from '../../api/http';
 
 // A3's data: the day's rows and the two lists its filters and bulk bar need, all over the Orval
@@ -13,7 +13,7 @@ export function useMatches(params: ListMatchesParams) {
 
 export function useMatchLookups(): {
   competitions: readonly AdminCompetition[];
-  sources: readonly SourceItem[];
+  sources: readonly SourceHealth[];
 } {
   const competitions = useListCompetitions();
   const sources = useListSources();

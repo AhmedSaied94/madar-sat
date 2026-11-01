@@ -165,6 +165,39 @@ def test_missing_adapter_modules_leave_an_empty_schedule():
     assert load_beat_schedule("app.adapters.does_not_exist") == {}
 
 
+def test_the_beat_schedule_is_the_merge_of_every_schedule_module():
+    from app.workers import load_beat_schedule
+
+    merged = load_beat_schedule()
+    assert {"ysscores-fixtures", "satair-bridge", "prune-raw-pages"} <= set(merged)
+    assert {"notify-schedule", "notify-dispatch", "notify-prune"} <= set(merged)
+    assert merged["notify-dispatch"]["task"] == "notifications.dispatch_due"
+    assert merged["notify-dispatch"]["options"] == {"queue": "notifications"}
+    assert merged["notify-prune"]["options"] == {"queue": "maintenance"}
+
+
+def test_a_duplicate_beat_entry_name_raises(monkeypatch):
+    from app.workers import load_beat_schedule
+
+    first = types.ModuleType("app.adapters.schedule_one")
+    first.BEAT_SCHEDULE = {"same": {"task": "a", "schedule": 60.0}}  # type: ignore[attr-defined]
+    second = types.ModuleType("app.adapters.schedule_two")
+    second.BEAT_SCHEDULE = {"same": {"task": "b", "schedule": 60.0}}  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "app.adapters.schedule_one", first)
+    monkeypatch.setitem(sys.modules, "app.adapters.schedule_two", second)
+
+    with pytest.raises(ValueError, match="duplicate beat entry"):
+        load_beat_schedule(("app.adapters.schedule_one", "app.adapters.schedule_two"))
+
+
+def test_a_missing_schedule_module_contributes_nothing():
+    from app.workers import load_beat_schedule
+
+    assert load_beat_schedule(("app.adapters.does_not_exist", "app.notifications.schedule")) == (
+        __import__("app.notifications.schedule", fromlist=["BEAT_SCHEDULE"]).BEAT_SCHEDULE
+    )
+
+
 def test_beat_schedule_is_read_from_the_adapter_schedule_module(monkeypatch):
     from app.workers import load_beat_schedule
 
@@ -174,12 +207,12 @@ def test_beat_schedule_is_read_from_the_adapter_schedule_module(monkeypatch):
     assert load_beat_schedule("app.adapters.fake_schedule") == stub.BEAT_SCHEDULE  # type: ignore[attr-defined]
 
 
-@pytest.mark.parametrize("module", ["app.adapters.tasks", "app.adapters.media_tasks"])
-def test_only_existing_adapter_task_modules_are_included(module):
-    from app.workers import app, existing_modules
+@pytest.mark.parametrize("module", ["app.adapters.tasks", "app.adapters.media_tasks", "app.notifications.tasks"])
+def test_only_existing_task_modules_are_included(module):
+    from app.workers import TASK_MODULES, app, existing_modules
 
     included = set(app.conf.include or ())
-    assert included == set(existing_modules(("app.adapters.tasks", "app.adapters.media_tasks")))
+    assert included == set(existing_modules(TASK_MODULES))
     assert (module in included) == (module in existing_modules((module,)))
 
 

@@ -152,9 +152,7 @@ def fetch(self: Any, source: str, start: str | None = None) -> dict[str, Any]:
             result = _failed(
                 source, started, _pages_of(adapter), http_errors=_http_errors_of(fetcher), error="layout_changed"
             )
-            log.warning(
-                "layout_changed", extra={"source": source, "why": str(exc), "pages": len(_pages_of(adapter))}
-            )
+            log.warning("layout_changed", extra={"source": source, "why": str(exc), "pages": len(_pages_of(adapter))})
         except BridgeNotConfigured:
             result = _failed(source, started, _pages_of(adapter), http_errors=0, error="bridge_not_configured")
             log.error("bridge_not_configured", extra={"source": source})

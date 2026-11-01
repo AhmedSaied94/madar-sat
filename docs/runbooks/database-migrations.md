@@ -1,6 +1,6 @@
 # Database migrations
 
-The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), `0004` adds the `broadcast_presets` and `sources` dataset names ([below](#revision-0004)), and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
+The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), `0004` adds the `broadcast_presets` and `sources` dataset names ([below](#revision-0004)), `0005` adds devices' satellites, the outbox cursor, source health, the run log and placeholder markers ([below](#revision-0005)),, and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
 
 ## How a migration runs in a deploy
 
@@ -89,3 +89,24 @@ The rules (constitution, "Migrations"):
 - `0001` is `schema.sql` unchanged, and a test checks its SQL file hash. Never edit it.
 
 Rolling back by redeploying an older release through `deploy.sh` runs that release's `alembic upgrade head`. That fails once the database is at a revision the older image doesn't know. Use the manual rollback instead ([deploy-and-rollback.md "Roll back"](deploy-and-rollback.md#roll-back)).
+
+## Revision 0005
+
+Added on D3 (`backend/alembic/versions/0005_devices_outbox_sources.py`). Expand-only: every change is a nullable column or one with a default, so the D2 release keeps running on the new schema.
+
+- `devices.satellite_ids bigint[] NOT NULL DEFAULT '{}'`, `ck_devices_satellite_ids` (`cardinality <= 32`): the device's dish, which words its reminders. Not a foreign key (arrays can't be); the API checks ids on write and the dispatcher ignores ids that no longer exist.
+- `notification_outbox.claimed_at timestamptz`, `cursor_device_id bigint NOT NULL DEFAULT 0`, index `notification_outbox_sending_idx` on `claimed_at WHERE status = 'sending'`: reclaim a row a dead worker left in `sending`, resume a partly sent one without sending twice.
+- `sources.consecutive_failures integer NOT NULL DEFAULT 0` (`>= 0`), `breaker_opened_at`, `last_success_at`, `last_zero_alert_on date`: the circuit breaker and the zero-items alarm. Lane B2 writes them only through `app/adapters/health.py`.
+- `import_runs.log jsonb`: the compact run log (≤ 64 KB, truncated lists), read by `api-admin` on VPS-1, which cannot see VPS-2's `run.json`.
+- `channels.placeholder_source text REFERENCES sources(name)`, index `channels_placeholder_idx` on `placeholder_source WHERE placeholder_source IS NOT NULL`: an importer-created placeholder, hidden from every public read until an editor saves it with `show_in_match: true`.
+
+Check it after a deploy:
+
+```sql
+SELECT column_name FROM information_schema.columns
+ WHERE table_name IN ('devices', 'notification_outbox', 'sources', 'import_runs', 'channels')
+   AND column_name IN ('satellite_ids', 'claimed_at', 'cursor_device_id', 'consecutive_failures',
+                       'breaker_opened_at', 'last_success_at', 'last_zero_alert_on', 'log', 'placeholder_source');
+```
+
+Nine rows. The downgrade drops them all and leaves every other row unchanged; no data migration is needed.

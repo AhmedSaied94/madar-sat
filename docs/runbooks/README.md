@@ -31,6 +31,8 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [tls-certificates.md](tls-certificates.md) | Let's Encrypt on sslip.io, failed issuance, a changed public IP |
 | [staff-accounts.md](staff-accounts.md) | Creating admin and editor accounts, password resets, deactivating an account, a suspected token leak |
 | [admin-access.md](admin-access.md) | Running the admin app on an editor's machine: `pnpm dev:wg` over WireGuard, Caddy's root CA, the Prism mock and its `?mock=` states |
+| [push-notifications.md](push-notifications.md) | FCM credentials, the reminder scheduler and dispatcher, reading and re-sending outbox rows, the audience query |
+| [response-cache-and-limits.md](response-cache-and-limits.md) | What `/v1` caches and for how long, turning it off, the device/IP/register limits and a CGNAT false positive |
 | [secrets.md](secrets.md) | Where every secret lives, rotating them, gitleaks failures and leaks |
 | [local-dev.md](local-dev.md) | PostgreSQL, Redis and HTTPS Caddy on your machine; the test settings |
 | [ci-workflows.md](ci-workflows.md) | What each workflow checks, common failures, re-runs, the T067 proofs |
@@ -89,8 +91,9 @@ The firewall rule and the `homebox` Redis user have to exist before anything sta
 10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
 11. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
 12. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
-13. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
-14. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
+13. **Reminders (D3):** the FCM service account on VPS-2 and `FCM_DRY_RUN=false`, one real reminder to the owner's phone ([push-notifications.md](push-notifications.md#the-fcm-service-account)), and the `/v1` limits left at their defaults ([response-cache-and-limits.md](response-cache-and-limits.md)).
+14. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
+15. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
 
 Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [owner-actions.md](../owner-actions.md).
 
@@ -110,6 +113,8 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A migration failed, or you need the schema's state | [database-migrations.md](database-migrations.md) |
 | A deploy key leaked or needs replacing | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
+| A reminder didn't arrive, or FCM rejects the credentials | [push-notifications.md](push-notifications.md) |
+| A 429 appears in the API log, or public reads feel slow | [response-cache-and-limits.md](response-cache-and-limits.md) |
 | A new editor, a forgotten password, someone leaves, or an admin session may have leaked | [staff-accounts.md](staff-accounts.md) |
 | An editor needs the admin app on their machine, or the mock's states | [admin-access.md](admin-access.md) |
 | A device needs the private network, or one is lost | [private-network.md "Peers"](private-network.md#peers) |
@@ -129,7 +134,7 @@ Later days add these. Each arrives with the change that builds the part it cover
 
 | Runbook | Covers | From |
 | --- | --- | --- |
-| `push-notifications.md` | FCM, the outbox and its dispatcher, the admin composer | D3, D6 |
+| `push-notifications.md` (grows) | The admin composer and the other six notification types | D6 |
 | `backup-and-restore.md` | Nightly backups, the restore drill, the monthly routine | D3; drill and runbook v1 on D8 |
 | `monitoring.md` | Uptime Kuma, alert routing, the monitoring review | D3, D7, D12 |
 | `remote-config.md` | Maintenance mode, soft updates, moving hosts | D8 |

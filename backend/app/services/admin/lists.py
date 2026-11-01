@@ -25,7 +25,6 @@ from app.db.models import (
     Competition,
     HiddenChannelName,
     Satellite,
-    Source,
     Team,
     TeamCompetition,
 )
@@ -174,6 +173,8 @@ class ChannelFilters:
     kind: str | None = None
     access: str | None = None
     missing_logo: bool | None = None
+    placeholder: bool | None = None
+    show_in_match: bool | None = None
 
 
 async def channels(
@@ -185,9 +186,15 @@ async def channels(
         (Channel.category, filters.category),
         (Channel.kind, filters.kind),
         (Channel.access, filters.access),
+        (Channel.show_in_match, filters.show_in_match),
     ):
         if value is not None:
             query = query.where(column == value)
+    if filters.placeholder is not None:
+        # An importer's placeholder (research R18); A8 completes them before they reach /v1.
+        query = query.where(
+            Channel.placeholder_source.is_not(None) if filters.placeholder else Channel.placeholder_source.is_(None)
+        )
     if filters.missing_logo is not None:
         query = query.where(
             Channel.logo_asset_id.is_(None) if filters.missing_logo else Channel.logo_asset_id.is_not(None)
@@ -273,11 +280,6 @@ async def broadcast_presets(session: AsyncSession) -> list[a.BroadcastPreset]:
         )
         for row in rows
     ]
-
-
-async def sources(session: AsyncSession) -> list[a.SourceItem]:
-    rows = (await session.scalars(select(Source).order_by(Source.name))).all()
-    return [a.SourceItem(name=row.name, kind=row.kind, is_enabled=row.is_enabled) for row in rows]
 
 
 async def hidden_names(session: AsyncSession) -> list[a.HiddenChannelName]:

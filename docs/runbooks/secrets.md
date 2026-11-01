@@ -19,6 +19,7 @@ The rules:
 | `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY` | VPS-2's `.env` only; never in the repo, a log line or a test (D15, FR-052) | The Firestore bridge | [Below](#rotate-the-sat-air-bridge-credentials) |
 | `GHCR_READ_TOKEN` | The home box's `.env` | `home-box-update.sh` (read-only `read:packages`) | [Below](#rotate-the-home-boxs-ghcr-token) |
 | `SCRAPE_USER_AGENT` | VPS-2's and the home box's `.env` | The fetcher's `User-Agent`; not a secret, but keep it a real contact | Edit it and recreate the workers |
+| FCM service account JSON | VPS-2 only: `/srv/secrets/fcm.json`, mode 600, owner `deploy`; mounted read-only into `worker-notify` and no other service. `FCM_CREDENTIALS_FILE` in `/srv/madar/.env` points at it. | `firebase_admin` in the notifications worker | [push-notifications.md](push-notifications.md#the-fcm-service-account) |
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `DEPLOY_SSH_KEY` | GitHub secret. The public half is in VPS-1's `.env` and in `/home/deploy/.ssh/authorized_keys`. | `backend.yml` deploy, `infra.yml` sync | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | `WG_CI_CONFIG` | GitHub secret; the peer `ci` in VPS-1's `wg0.conf` | The same jobs | [private-network.md "Rotate the CI peer"](private-network.md#rotate-the-ci-peer) |
@@ -29,6 +30,8 @@ The rules:
 | `ubuntu` console passwords | Your password manager, one per VM | The serial console | `sudo passwd ubuntu`, then test the console again ([provision-host.md §2](provision-host.md#2-console-password-then-test-the-serial-console)) |
 | Caddy's internal CA key | VPS-1's `madar_caddy_data` volume | The admin site's certificates | Only by letting Caddy make a new CA, which means a new root on every admin device |
 | `GITHUB_TOKEN` | Created per job, expires when the job ends | GHCR push and pull | Nothing to rotate. `deploy.sh` logs out of GHCR on exit. |
+
+Also set on the hosts, and **not** secrets: `FCM_DRY_RUN` (VPS-2), `PWA_ORIGIN` (VPS-2), `RESPONSE_CACHE_ENABLED`, `RESPONSE_CACHE_MAX_BYTES`, `RATE_LIMIT_DEVICE_PER_MIN`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_REGISTER_PER_10MIN` (VPS-1). They live in the same `.env` and are documented in [push-notifications.md](push-notifications.md) and [response-cache-and-limits.md](response-cache-and-limits.md).
 
 Not secrets: the public and private IPs, the hostnames, the Firebase project ID, the WireGuard hub's public key, and `DEPLOY_KNOWN_HOSTS` (VPS-1's public host key, kept as a secret only for convenience).
 

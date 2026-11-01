@@ -92,21 +92,3 @@ async def remove_hidden_channel_name(
     await service.remove_hidden_name(session, admin, name)
     await session.commit()
     return ok(None)
-
-
-@router.get(
-    "/sources",
-    response_model=Envelope[list[a.SourceItem]],
-    responses={
-        200: {
-            "description": "Sources, with the list's `ETag`",
-            **ETAG_HEADER,
-            **_docs.ok_example("sources_ok", [ex.SOURCE], _docs.LIST_META),
-        },
-        **_docs.AUTHED,
-        304: _docs.NOT_MODIFIED,
-    },
-    dependencies=[Depends(ETag("admin_sources", ("sources",)))],
-)
-async def list_sources(session: Db) -> Envelope[list[a.SourceItem]]:
-    return ok(await service.sources(session))

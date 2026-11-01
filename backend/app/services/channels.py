@@ -19,7 +19,7 @@ async def get_channel_detail(session: AsyncSession, channel_id: int, now: dateti
             select(Channel, Satellite, MediaAsset.path)
             .outerjoin(Satellite, Satellite.id == Channel.satellite_id)
             .outerjoin(MediaAsset, MediaAsset.id == Channel.logo_asset_id)
-            .where(Channel.id == channel_id, Channel.deleted_at.is_(None))
+            .where(Channel.id == channel_id, Channel.deleted_at.is_(None), Channel.placeholder_source.is_(None))
         )
     ).first()
     if row is None:
@@ -35,6 +35,7 @@ async def get_channel_detail(session: AsyncSession, channel_id: int, now: dateti
             Channel.name_norm == ch.name_norm,
             Channel.id != channel_id,
             Channel.deleted_at.is_(None),
+            Channel.placeholder_source.is_(None),
         )
         .order_by(Channel.sort_order.asc().nulls_last(), Channel.id)
     )

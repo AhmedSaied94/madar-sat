@@ -52,7 +52,18 @@ D2_ROUTES = (
     | _crud("/admin/api/channels")
     | _crud("/admin/api/commentators")
 )
-ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES
+# contracts/admin-api.md D3: A13's sources, A2's dashboard and A6/A7's ordering.
+D3_ROUTES = {
+    ("GET", "/admin/api/dashboard"),
+    ("PUT", "/admin/api/competitions/order"),
+    ("PUT", "/admin/api/satellites/order"),
+    ("POST", "/admin/api/sources/{name}/run"),
+    ("POST", "/admin/api/sources/{name}/pause"),
+    ("POST", "/admin/api/sources/{name}/resume"),
+    ("GET", "/admin/api/sources/{name}/runs"),
+    ("GET", "/admin/api/import-runs/{id}"),
+}
+ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES | D3_ROUTES
 
 
 def _normalize(operations: set[tuple[str, str]]) -> set[tuple[str, str]]:
