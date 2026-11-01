@@ -54,9 +54,14 @@ services:
     <<: *worker
     command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
+  # The dispatcher and scheduler of D3 (SD §6.8). It is the only service that needs the FCM service
+  # account, so it is the only one that mounts /srv/secrets: the file is mode 600 and read-only here,
+  # and the runbook says who may read it (R9). Started with the other workers from D3 on.
   worker-notify:
     <<: *worker
     command: ["celery", "-A", "app.workers", "worker", "-Q", "notifications", "-n", "worker@%h", "-c", "2", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
+    volumes:
+      - /srv/secrets:/srv/secrets:ro
 
   # Cleanup, media copy, dataset versions. `adapters.prune_raw_pages` needs the raw disk.
   worker-maintenance:
@@ -78,6 +83,47 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  # Uptime Kuma (R20): the monitors the owner creates from docs/runbooks/uptime-kuma.md — four HTTP
+  # checks and six push monitors. Its UI is published on the VCN address only; VPS-1's wg0 Caddy
+  # proxies it at https://10.8.0.1/kuma/, so it is never public. Data lives in /srv/kuma.
+  uptime-kuma:
+    <<: *service
+    image: louislam/uptime-kuma:1
+    container_name: madar-kuma
+    ports:
+      - "${VCN_IP:?set VCN_IP}:3001:3001"
+    volumes:
+      - /srv/kuma:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "extra/healthcheck"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # One-shot database backup (R19), started by backup-db.timer through `compose run --rm backup-db`.
+  # It reads the database over the VCN from VPS-1, stages the dump on /srv/backup and pushes it to
+  # Backblaze B2 with restic; the heartbeat goes to Kuma. The script is mounted, not baked, so a
+  # change to it is a deploy. `profiles: [backup]` keeps it out of every `up`.
+  backup-db:
+    platform: linux/arm64
+    profiles: [backup]
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backup:${IMAGE_TAG:?set IMAGE_TAG}
+    env_file: ${MADAR_ENV_FILE:-/srv/madar/.env}
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - ../backup:/opt/backup:ro
+      - /srv/backup:/srv/backup
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   # Queue dashboard, on localhost only until Caddy proxies it over wg0 (SD §7.2). Basic auth
   # from FLOWER_BASIC_AUTH; the broker from CELERY_BROKER_URL.

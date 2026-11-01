@@ -38,6 +38,78 @@ jobs:
             echo "::endgroup::"
           done
 
+      # The backup profile is a one-shot: `config` must see it, and the media units call it by name.
+      # Rendered as JSON: Compose prints volumes in long form, so a short-syntax grep never matches.
+      - name: The backup services are defined behind their profile
+        run: |
+          set -euo pipefail
+          for host in vps1 vps2; do
+            services=$(docker compose -f "infra/compose/$host.yml" --env-file infra/compose/example.env \
+              --profile backup config --services)
+            expected=$([[ $host == vps1 ]] && echo backup-media || echo backup-db)
+            grep -qx "$expected" <<<"$services" \
+              || { echo "::error::$host.yml has no $expected service"; exit 1; }
+          done
+
+          v1=$(docker compose -f infra/compose/vps1.yml --env-file infra/compose/example.env --profile backup config)
+          grep -q 'backup-media.sh' <<<"$v1" || { echo "::error::backup-media runs no script"; exit 1; }
+          grep -q -- '--weekly' <<<"$v1" || { echo "::error::backup-media-weekly lost its flag"; exit 1; }
+
+          # Both profiles, so the one-shot backup service is in the same render as the workers.
+          v2=$(docker compose -f infra/compose/vps2.yml --env-file infra/compose/example.env \
+            --profile workers --profile backup config --format json)
+          # The FCM key is mounted read-only into worker-notify and into nothing else (R9).
+          jq -e '.services["worker-notify"].volumes | any(.source == "/srv/secrets" and .read_only == true)' \
+            <<<"$v2" >/dev/null \
+            || { echo "::error::worker-notify no longer mounts the FCM secret read-only"; exit 1; }
+          users=$(jq -r '.services | to_entries[]
+            | select([.value.volumes // [] | .[] | .source?] | index("/srv/secrets"))
+            | .key' <<<"$v2")
+          [[ $users == worker-notify ]] \
+            || { echo "::error::/srv/secrets is mounted by: ${users//$'\n'/, }"; exit 1; }
+          jq -e '.services["uptime-kuma"].image | startswith("louislam/uptime-kuma")' <<<"$v2" >/dev/null \
+            || { echo "::error::Kuma is gone from vps2.yml"; exit 1; }
+          jq -e '.services["backup-db"].profiles == ["backup"]' <<<"$v2" >/dev/null \
+            || { echo "::error::backup-db is not behind the backup profile"; exit 1; }
+
+      # The D3 timers must exist, name a real service, and use the Cairo calendar (R19).
+      - name: Verify the backup systemd units
+        run: |
+          set -euo pipefail
+          systemd-analyze verify infra/systemd/backup-db.service infra/systemd/backup-db.timer \
+            infra/systemd/backup-media.service infra/systemd/backup-media.timer \
+            infra/systemd/backup-media-weekly.service infra/systemd/backup-media-weekly.timer \
+            || { echo "::error::the backup units don't verify"; exit 1; }
+          grep -q 'Africa/Cairo' infra/systemd/backup-db.timer
+          grep -q 'Africa/Cairo' infra/systemd/backup-media.timer
+          grep -q 'OnCalendar=Sun' infra/systemd/backup-media-weekly.timer
+          for unit in infra/systemd/*.service; do
+            grep -q 'compose/vps[12].yml run --rm -T' "$unit" \
+              || { echo "::error::$unit does not run a backup container"; exit 1; }
+          done
+
+      # The backup scripts never echo a secret and never run without their key variables.
+      - name: The backup scripts fail fast on missing settings
+        run: |
+          set -euo pipefail
+          grep -q 'set -Eeuo pipefail' infra/backup/backup-db.sh
+          grep -q 'set -Eeuo pipefail' infra/backup/backup-media.sh
+          # Comments are allowed to name a variable; a command that would print one is not.
+          if grep -vE '^[[:space:]]*#' infra/backup/*.sh \
+            | grep -nE '^[[:space:]]*set -x|(echo|printf)[^#]*\$\{?(RESTIC_PASSWORD|B2_ACCOUNT_KEY|B2_ACCOUNT_ID|POSTGRES_PASSWORD|RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY|TELEGRAM_BOT_TOKEN)'; then
+            echo "::error::a backup script would print a secret"
+            exit 1
+          fi
+          # With no environment, both exit non-zero before touching a host.
+          if env -i PATH="$PATH" infra/backup/backup-db.sh; then
+            echo "::error::backup-db.sh ran without its settings"
+            exit 1
+          fi
+          if env -i PATH="$PATH" infra/backup/backup-media.sh; then
+            echo "::error::backup-media.sh ran without its settings"
+            exit 1
+          fi
+
       # The home box's units run the update script; `verify` catches a typo or a bad directive.
       - name: Verify the home-box systemd units
         run: |
@@ -193,6 +265,10 @@ jobs:
           running_tag() { printf 'previous-tag\n'; }
           healthy_services() { return 1; }
           docker() { return 0; }
+          # D3: deploy_vps2 creates the hosts' folders and enables the backup timers. Both touch
+          # /srv and systemd, so this drill stubs them; their own steps cover them.
+          ensure_dirs() { :; }
+          install_timers() { :; }
           # `$1` is the compose verb; failing `up` is what the guards are about. (A `case` on `$*`
           # with a leading space never matches, which silently tested the healthy path.)
           compose_stub() {
@@ -269,9 +345,76 @@ jobs:
             || { echo "::error::a healthy up restored an ACL it did not need to"; exit 1; }
 
       - name: shellcheck
-        run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources infra/scripts/*.sh
+        run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources infra/scripts/*.sh infra/backup/*.sh
       - name: actionlint
         run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.12 -color
+
+  # Builds and pushes the backup image (madar-backup) on master (R19). It is a separate package from
+  # madar-backend because it carries restic, rclone and the postgres client and nothing else; the two
+  # host timers pull it by tag. A one-shot run must never build on the host itself.
+  build-backup:
+    needs: [check]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ${{ vars.ARM_RUNNER || 'ubuntu-24.04' }}
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: image
+        name: Image name (GHCR needs a lowercase owner)
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/madar-backup:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - if: vars.ARM_RUNNER == ''
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: infra/backup
+          file: infra/backup/Dockerfile
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.image.outputs.ref }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=madar-backup
+          cache-to: type=gha,mode=max,scope=madar-backup
+
+  # Moves madar-backup:stable to the tag just built, so the host timers can pull one moving tag, and
+  # keeps the newest 3 versions inside GHCR's free storage (R13, R19).
+  backup-stable:
+    needs: [build-backup]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Move madar-backup:stable to ${{ github.sha }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/madar-backup"
+          docker buildx imagetools create -t "$image:stable" "$image:${GITHUB_SHA}"
+      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          package-name: madar-backup
+          package-type: container
+          min-versions-to-keep: 3
 
   # Applies infra/ to VPS-1 (Compose services and Caddy) without a backend change. Shares the
   # deploy-vps1 group with backend.yml's deploy, so the two never overlap.

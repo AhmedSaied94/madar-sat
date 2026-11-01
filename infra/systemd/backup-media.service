@@ -1,0 +1,16 @@
+# Nightly media mirror to the OCI bucket on VPS-1 (R19, SC-004). Started by backup-media.timer at
+# 03:30 Africa/Cairo. Also used by backup-media-weekly.service with `--weekly`.
+[Unit]
+Description=Madar Sat: nightly media mirror to the OCI bucket
+Documentation=file:/srv/madar/infra/../docs/runbooks/backups.md
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps1.yml run --rm -T backup-media
+WorkingDirectory=/srv/madar/infra
+User=root
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=60min
