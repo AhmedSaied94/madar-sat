@@ -38,6 +38,9 @@ media.{$VPS1_IP}.sslip.io {
 	import public_headers
 	root * /srv/media
 	header Cache-Control "public, max-age=31536000, immutable"
+	# Flutter web fetches image bytes (CanvasKit decodes them), so every origin needs CORS, preview
+	# channels included. The files are public and read without credentials, so any origin may.
+	header Access-Control-Allow-Origin "*"
 	file_server
 }
 

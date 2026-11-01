@@ -36,7 +36,7 @@ Each response must carry:
 | `referrer-policy` | `strict-origin-when-cross-origin` |
 | `server` | Absent |
 
-`media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable`.
+`media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable` and `access-control-allow-origin: *`: the web build reads images with `fetch`, from any origin including Hosting preview channels. A browser that cached a media file before the header existed keeps failing on it until you clear its site data.
 
 ```bash
 curl -s https://api.130.110.117.215.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}
