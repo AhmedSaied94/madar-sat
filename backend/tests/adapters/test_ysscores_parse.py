@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 
@@ -26,6 +27,31 @@ TBD_PAGE = """<!doctype html><html><body>
 </div>
 </body></html>"""
 
+# A finished match as the live page drew it on 2026-10-31: its `.match-date` holds the score
+# instead of a time. Next to it, a fixture still to come; both carry `.match-with-result`.
+FINISHED_PAGE = """<!doctype html><html><body>
+<div class="matches-wrapper" id="1" champ_title="الدوري المصري"
+     champ_img="https://imgs.ysscores.com/championship/1/league.png">
+  <a href="https://www.ysscores.com/ar/match/7000002/Abo-Qir-vs-Ghazl-El-Mahalla" title="الجولة 12"
+     home_name="أبو قير" away_name="غزل المحلة" match_id="7000002" data-status="4"
+     class="ajax-match-item inline-match-item mb-row match-with-result">
+    <div class="result-wrap">
+      <span class="result-status-text">انتهت المباراة</span>
+      <b class="match-date">
+        <span class="first-team-result loser">0</span>
+        <i>-</i>
+        <span class="second-team-result winner">1</span>
+      </b>
+    </div>
+  </a>
+  <a href="https://www.ysscores.com/ar/match/7000003/Ceramica-vs-ZED" title="الجولة 12"
+     home_name="سيراميكا" away_name="نادي زد" match_id="7000003" data-status="0"
+     class="ajax-match-item inline-match-item mb-row match-with-result">
+    <b class="match-date">08:00<i class="mb-meridiem">م</i></b>
+  </a>
+</div>
+</body></html>"""
+
 
 @pytest.fixture
 def adapter() -> YsscoresAdapter:
@@ -43,7 +69,7 @@ def _page(path: Path):
 
 def test_each_wrapper_gives_its_competition_title_and_logo(adapter: YsscoresAdapter) -> None:
     items = adapter.parse(_page(NORMAL))
-    assert len(items) == 42  # 53 anchors, 11 of them in play or finished
+    assert len(items) == 38  # 53 anchors: 11 in play, 4 finished
     assert {item.competition for item in items} >= {"الدوري الفرنسي", "الدوري المصري"}
     lille = next(i for i in items if i.external_id == "5802974")
     assert lille.competition == "الدوري الفرنسي"
@@ -108,10 +134,22 @@ def test_a_page_without_a_wrapper_is_a_layout_change(adapter: YsscoresAdapter) -
 
 def test_matches_in_play_are_not_fixtures_and_are_skipped(adapter: YsscoresAdapter) -> None:
     items = adapter.parse(_page(NORMAL))
-    # 11 of the page's 53 anchors show a live or finished match instead of a .match-date. Importing
-    # one with no kickoff would wipe the kickoff already stored for it, so parse drops them.
-    assert len(items) == 42
-    assert all(item.wall_time for item in items)
+    # Of the page's 53 anchors, 11 are in play (no .match-date) and 4 finished (a .match-date holding
+    # the score). Importing one with no kickoff would wipe the kickoff already stored for it, so parse
+    # drops them; what is left is a time, never a score.
+    assert len(items) == 38
+    assert all(re.fullmatch(r"\d{1,2}:\d{2} [صم]", item.wall_time or "") for item in items)
+
+
+def test_finished_matches_showing_their_score_are_skipped(adapter: YsscoresAdapter) -> None:
+    """A finished match keeps its `.match-date`, filled with the score. Read as a time it has none,
+    and the upsert would wipe the kickoff already stored for it (58 matches on 2026-10-31)."""
+    from app.adapters.base import RawPage
+
+    page = RawPage(url="https://www.ysscores.com/ar/match_date_to#2026-10-31", status=200, body=FINISHED_PAGE.encode())
+    (item,) = adapter.parse(page)
+    assert item.external_id == "7000003"
+    assert item.wall_time == "08:00 م"
 
 
 def test_the_unknown_time_marker_parses(adapter: YsscoresAdapter) -> None:
