@@ -11,7 +11,8 @@ import { useToast } from '../../components/Toast/Toast';
 import { common, copyForErrorCode, teams as copy, toast as toastCopy } from '../../i18n/ar';
 import { conflictParty, diffDrafts, type ConflictField } from '../../lib/conflict';
 import { uploadAsset } from '../../lib/media';
-import { useCompetitionOptions, useRefreshAdmin } from './queries';
+import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import { useCompetitionOptions } from './queries';
 
 // A5's editor (admin board "Teams"): name, logo, main and other competitions, stadium and country.
 // Aliases have no field in D2's admin contract yet, so they are not invented here; the external ids
@@ -239,7 +240,6 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
           label={copy.editor.name}
           value={draft.name}
           onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-          autoFocus
         />
         <Field
           label={copy.editor.stadium}
@@ -272,7 +272,7 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
 
         <fieldset className="flex flex-col">
           <legend className="text-caption mb-2 font-semibold text-text-secondary">{copy.editor.competitions}</legend>
-          <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg bg-bg p-3">
+          <div className="flex flex-col gap-1 overflow-y-auto rounded-lg bg-bg p-3">
             {competitions.map((competition) => (
               <label key={competition.id} className="text-label flex items-center gap-2 text-text-primary">
                 <input
@@ -290,7 +290,7 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
         <div className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-text-secondary">{copy.editor.logo}</span>
           <div className="flex items-center gap-3">
-            <span className="flex size-16 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
+            <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
               {draft.logoUrl ? (
                 <img src={draft.logoUrl} alt="" className="size-12 object-contain" />
               ) : (

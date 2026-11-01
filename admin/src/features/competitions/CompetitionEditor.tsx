@@ -9,7 +9,7 @@ import { Field } from '../../components/Field/Field';
 import { useToast } from '../../components/Toast/Toast';
 import { common, competitions as copy, copyForErrorCode, toast as toastCopy } from '../../i18n/ar';
 import { uploadAsset } from '../../lib/media';
-import { useRefreshAdmin } from './queries';
+import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
 
 // A6's editor. Aliases have no field in D2's contract yet (recorded follow-up), so the drawer edits
 // what the API has: the name and the logo.
@@ -145,13 +145,12 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
           label={copy.editor.name}
           value={draft.name}
           onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-          autoFocus
         />
 
         <div className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-text-secondary">{copy.editor.logo}</span>
           <div className="flex items-center gap-3">
-            <span className="flex size-16 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
+            <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
               {draft.logoUrl ? (
                 <img src={draft.logoUrl} alt="" className="size-12 object-contain" />
               ) : (

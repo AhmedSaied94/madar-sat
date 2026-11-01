@@ -16,10 +16,10 @@ export interface KpiCardProps {
   value: string;
   context: string;
   /** `attention` when the work is what needs looking at, never for a total. */
-  tone?: 'default' | 'attention';
-  progress?: { value: number; max: number };
+  tone?: 'default' | 'attention' | undefined;
+  progress?: { value: number; max: number } | undefined;
   /** Where the counted rows are; every card that counts work links to them. */
-  href?: string;
+  href?: string | undefined;
 }
 
 const shell =

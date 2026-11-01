@@ -331,6 +331,7 @@ export const sortable = {
   dropped: (name: string, position: number): string => `أُفلت ${name} في الترتيب ${position}.`,
   cancelled: (name: string): string => `أُلغي نقل ${name}.`,
   saving: 'جارٍ حفظ الترتيب…',
+  role: 'قابل للترتيب',
 } as const;
 
 /** AudioPlayer (A10): the clip's five states. */
@@ -406,9 +407,18 @@ export const competitions = {
     name: 'اسم البطولة',
     logo: 'الشعار',
     logoUpload: 'رفع شعار',
+    unsavedBody: 'إذا غادرت الآن ستفقد تعديلات البطولة.',
     empty: 'لا بطولات بعد',
     emptyBody: 'أضف أول بطولة لتظهر في التطبيق.',
   },
+} as const;
+
+/** A6 and A7: the order conflict, and the help text under the list. */
+export const ordering = {
+  conflictLabel: 'الترتيب',
+  serverNewer: 'الخادم يحمل ترتيباً أحدث',
+  saveFailed: 'تعذّر حفظ الترتيب',
+  saved: 'حُفظ الترتيب',
 } as const;
 
 /** A7 (admin board "Satellites"). */
@@ -420,6 +430,7 @@ export const satellites = {
   rank: (position: number): string => `الترتيب ${position}`,
   channelCount: (count: number): string => `${count} قناة`,
   noFrequencies: 'بلا أقوى/أضعف تردد',
+  editNamed: (name: string): string => `تعديل ${name}`,
   editor: {
     newTitle: 'قمر جديد',
     title: 'تعديل القمر',
@@ -439,6 +450,9 @@ export const satellites = {
     receptionInvalid: 'أدخل رابطاً يبدأ بـ https://',
     logo: 'الشعار',
     logoUpload: 'رفع شعار',
+    empty: 'لا أقمار بعد',
+    emptyBody: 'أضف أول قمر لتظهر قنواته في التطبيق.',
+    unsavedBody: 'إذا غادرت الآن ستفقد تعديلات القمر.',
   },
 } as const;
 
@@ -455,6 +469,10 @@ export const channels = {
   missingLogoOnly: 'بلا شعار',
   platformOnly: 'منصات فقط',
   shownInMatch: 'يظهر في المباريات',
+  placeholderOnly: 'يحتاج استكمال',
+  needsCompletion: 'يحتاج استكمال',
+  editNamed: (name: string): string => `تعديل ${name}`,
+  addOnAnotherNamed: (name: string): string => `إضافة ${name} على قمر آخر`,
   all: 'الكل',
   sports: 'رياضة',
   entertainment: 'ترفيه',
@@ -485,6 +503,8 @@ export const channels = {
     country: 'الدولة',
     satellite: 'القمر',
     showInMatch: 'إظهار في صفحات المباريات',
+    logo: 'الشعار',
+    logoUpload: 'رفع شعار',
     addOnSatellite: 'إضافة على قمر آخر',
     unsaved: 'لديك تغييرات غير محفوظة',
     unsavedBody: 'إذا غادرت الآن ستفقد تعديلات القناة.',
@@ -526,6 +546,101 @@ export const commentators = {
     empty: 'لا معلقين بهذا البحث',
     emptyBody: 'جرّب اسماً آخر أو أزل الفلاتر.',
   },
+} as const;
+
+/** A13 (admin board "Sources" and "Run detail"). */
+export const sources = {
+  title: 'المصادر',
+  subtitle: (count: number): string => `${count} مصدراً · التشغيل والمراقبة`,
+  runNow: 'تشغيل الآن',
+  running: 'جارٍ التشغيل',
+  pause: 'إيقاف',
+  resume: 'استئناف',
+  paused: 'موقوف',
+  breakerOpen: 'الدائرة مفتوحة',
+  healthy: 'سليم',
+  lastSuccess: (cairo: string): string => `آخر نجاح ${cairo}`,
+  neverSucceeded: 'لم ينجح بعد',
+  errorRate: (rate: number): string => `نسبة الأخطاء ${rate}%`,
+  noErrorRate: 'لا تشغيلات في 24 ساعة',
+  itemsSparkline: 'عدد العناصر في آخر 24 ساعة',
+  openRuns: 'السجل',
+  runsTitle: (name: string): string => `تشغيلات ${name}`,
+  runStatus: {
+    running: 'قيد التشغيل',
+    succeeded: 'نجح',
+    partial: 'جزئي',
+    failed: 'فشل',
+  },
+  columns: {
+    started: 'البداية',
+    status: 'الحالة',
+    found: 'وُجد',
+    upserted: 'حُفظ',
+    httpErrors: 'أخطاء HTTP',
+    detail: 'التفاصيل',
+  },
+  noRuns: 'لا تشغيلات بعد',
+  loadMore: 'المزيد',
+  previous: 'السابق',
+  runQueued: 'أُرسل المصدر للتشغيل',
+  pauseDone: 'أُوقف المصدر',
+  resumeDone: 'استُؤنف المصدر',
+  detail: {
+    title: 'تفاصيل التشغيلة',
+    back: 'رجوع إلى المصادر',
+    loading: 'جارٍ تحميل التشغيلة',
+    notFound: 'سجل هذه التشغيلة غير موجود. ربما حُذف بعد خمسة أيام',
+    itemsFound: 'العناصر الموجودة',
+    itemsUpserted: 'العناصر المحفوظة',
+    httpErrors: 'أخطاء HTTP',
+    started: 'بدأت',
+    finishedAt: 'انتهت',
+    log: 'السجل',
+    logUnavailable: 'لا سجل محفوظ لهذه التشغيلة',
+    unmatched: 'مباريات لم تُطابق',
+    placeholders: 'قنوات مؤقتة أُنشئت',
+    skipped: 'قنوات متخطاة',
+    errors: 'أخطاء',
+    empty: '—',
+  },
+} as const;
+
+/** A2 (admin board "Main"): today's work, the sources' health and the last changes. */
+export const dashboard = {
+  title: 'لوحة المتابعة',
+  subtitle: 'بتوقيت القاهرة · أهم ما يحتاج انتباهك اليوم',
+  missing: 'مباريات بلا قنوات',
+  missingContext: (matches: number): string => `من ${matches} مباراة اليوم`,
+  placeholders: 'قنوات تحتاج استكمال',
+  placeholdersContext: 'من المصادر، مخفية حتى تكتمل',
+  sourcesHealth: 'صحة المصادر',
+  sourcesContext: (healthy: number, total: number): string => `${healthy} من ${total} سليمة`,
+  missingTitle: 'مباريات بلا قنوات',
+  missingEmpty: 'كل مباريات اليوم لها قنوات',
+  missingOpen: 'افتح المباريات',
+  sourceTitle: 'صحة المصادر',
+  sourceOpen: 'افتح المصادر',
+  recentTitle: 'آخر التغييرات',
+  recentEmpty: 'لا تغييرات بعد',
+  recentLine: (who: string, action: string, entity: string): string => `${who} ${action} ${entity}`,
+  bySource: (name: string): string => `مصدر ${name}`,
+  actions: {
+    create: 'أضاف',
+    update: 'عدّل',
+    delete: 'حذف',
+    bulk: 'حدّث',
+  } as Record<string, string>,
+  entities: {
+    match: 'مباراة',
+    team: 'فريق',
+    competition: 'بطولة',
+    channel: 'قناة',
+    satellite: 'قمر',
+    commentator: 'معلق',
+    source: 'مصدر',
+  } as Record<string, string>,
+  loading: 'جارٍ تحميل لوحة المتابعة',
 } as const;
 
 export type ErrorCode =

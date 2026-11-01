@@ -20,6 +20,8 @@ import {
   getChannelResponse,
   getCommentatorResponse,
   getCompetitionResponse,
+  getDashboardResponse,
+  getImportRunResponse,
   getMatchResponse,
   getSatelliteResponse,
   getTeamResponse,
@@ -32,18 +34,23 @@ import {
   listMatchesResponse,
   listSatellitesResponse,
   listSourcesResponse,
+  listSourceRunsResponse,
   listTeamsResponse,
   loginResponse,
   logoutResponse,
   meResponse,
+  orderCompetitionsResponse,
+  orderSatellitesResponse,
   patchChannelResponse,
   patchCommentatorResponse,
   patchCompetitionResponse,
   patchMatchResponse,
   patchSatelliteResponse,
   patchTeamResponse,
+  pauseSourceResponse,
   refreshResponse,
   removeHiddenChannelNameResponse,
+  resumeSourceResponse,
   uploadMediaResponse,
 } from './generated/admin.zod';
 
@@ -94,12 +101,23 @@ const errorEnvelope = z.object({
 
 // Keyed by "<METHOD> <path>", with `{}` standing for a path parameter (`/admin/api/matches/{}`).
 // A request without a schema here fails loudly instead of skipping validation.
+
+// Orval emits no response schema for `POST /sources/{name}/run` (a 202 with a tiny body), so the
+// envelope is spelled out here; it is the last hand-written entry.
+const sourceRunQueuedResponse = z.object({
+  success: z.literal(true),
+  data: z.object({ queued: z.boolean() }).nullable(),
+  error: z.literal(null),
+  meta: z.record(z.string(), z.unknown()).default({}),
+});
+
 const responseSchemas: Readonly<Record<string, z.ZodTypeAny>> = {
   'POST /admin/api/auth/login': loginResponse,
   'POST /admin/api/auth/logout': logoutResponse,
   'POST /admin/api/auth/refresh': refreshResponse,
   'GET /admin/api/auth/me': meResponse,
   'GET /admin/api/healthz': healthEndpointResponse,
+  'GET /admin/api/dashboard': getDashboardResponse,
   'GET /admin/api/broadcast-presets': listBroadcastPresetsResponse,
   'GET /admin/api/channels': listChannelsResponse,
   // Orval emits no response schema for a 201-only operation; a create answers with the same
@@ -114,6 +132,7 @@ const responseSchemas: Readonly<Record<string, z.ZodTypeAny>> = {
   'PATCH /admin/api/commentators/{}': patchCommentatorResponse,
   'DELETE /admin/api/commentators/{}': deleteCommentatorResponse,
   'GET /admin/api/competitions': listCompetitionsResponse,
+  'PUT /admin/api/competitions/order': orderCompetitionsResponse,
   'POST /admin/api/competitions': patchCompetitionResponse,
   'GET /admin/api/competitions/{}': getCompetitionResponse,
   'PATCH /admin/api/competitions/{}': patchCompetitionResponse,
@@ -128,11 +147,17 @@ const responseSchemas: Readonly<Record<string, z.ZodTypeAny>> = {
   'PATCH /admin/api/matches/{}': patchMatchResponse,
   'POST /admin/api/media': uploadMediaResponse,
   'GET /admin/api/satellites': listSatellitesResponse,
+  'PUT /admin/api/satellites/order': orderSatellitesResponse,
   'POST /admin/api/satellites': patchSatelliteResponse,
   'GET /admin/api/satellites/{}': getSatelliteResponse,
   'PATCH /admin/api/satellites/{}': patchSatelliteResponse,
   'DELETE /admin/api/satellites/{}': deleteSatelliteResponse,
   'GET /admin/api/sources': listSourcesResponse,
+  'POST /admin/api/sources/{}/run': sourceRunQueuedResponse,
+  'POST /admin/api/sources/{}/pause': pauseSourceResponse,
+  'POST /admin/api/sources/{}/resume': resumeSourceResponse,
+  'GET /admin/api/sources/{}/runs': listSourceRunsResponse,
+  'GET /admin/api/import-runs/{}': getImportRunResponse,
   'GET /admin/api/teams': listTeamsResponse,
   'POST /admin/api/teams': patchTeamResponse,
   'GET /admin/api/teams/{}': getTeamResponse,

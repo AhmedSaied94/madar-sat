@@ -1,5 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
-
 import { useListCompetitions, useListTeams } from '../../api/generated/admin';
 import type { ListTeamsParams } from '../../api/generated/admin.schemas';
 
@@ -13,11 +11,4 @@ export function useTeams(params: ListTeamsParams) {
 export function useCompetitionOptions() {
   const query = useListCompetitions();
   return query.data?.data ?? [];
-}
-
-export function useRefreshAdmin(): () => void {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries();
-  };
 }

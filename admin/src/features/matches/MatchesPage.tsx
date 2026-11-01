@@ -1,8 +1,9 @@
 import { clsx } from 'clsx';
 import { useMemo, useState, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import type { AdminMatchRow, ListMatchesParams, Status } from '../../api/generated/admin.schemas';
+import { DataTable, type DataTableColumn } from '../../components/DataTable/DataTable';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { Icon } from '../../components/Icon/Icon';
 import { SourceChip, type SourceCode } from '../../components/StatusChip/StatusChip';
@@ -10,12 +11,13 @@ import { focusRing } from '../../components/focus';
 import { useSession } from '../../features/auth/session';
 import { cairoDay, cairoDayBounds, formatCairoClock, formatCairoDayLabel, shiftCairoDay } from '../../lib/cairoTime';
 import { copyForErrorCode, matchStatus, matches as copy, toast as toastCopy } from '../../i18n/ar';
-import { BulkBar } from './BulkBar';
+import { BulkActions } from './BulkBar';
 import { useMatchLookups, useMatches } from './queries';
 
-// A3 (admin board "Matches"): one Cairo day of matches, grouped by competition, filtered by the four
-// controls the brief names, and editable in bulk. Rows never offer a delete: removing channels is the
-// destructive action, and it lives in the bulk bar for admins only.
+// A3 (admin board "Matches"): one Cairo day of matches on the shared DataTable — grouping by
+// competition, the bulk bar, J/K/X/E keys and the skeleton come from the component (A-F2). Rows never
+// offer a delete: removing channels is the destructive action, and it lives in the bulk bar for
+// admins only.
 
 const API_STATUSES: readonly Status[] = [
   'scheduled',
@@ -83,32 +85,6 @@ function StatusCell({ row }: { row: AdminMatchRow }): ReactElement {
   );
 }
 
-interface Group {
-  key: string;
-  name: string;
-  stage: string | null;
-  rows: AdminMatchRow[];
-  missing: number;
-}
-
-function groupByCompetition(rows: readonly AdminMatchRow[]): Group[] {
-  const groups = new Map<string, Group>();
-  for (const row of rows) {
-    const key = String(row.competition.id);
-    const group = groups.get(key) ?? {
-      key,
-      name: row.competition.name,
-      stage: row.competition.stage,
-      rows: [],
-      missing: 0,
-    };
-    group.rows.push(row);
-    if (row.missing_channels) group.missing += 1;
-    groups.set(key, group);
-  }
-  return [...groups.values()];
-}
-
 function Skeleton(): ReactElement {
   return (
     <div data-testid="matches-skeleton" className="flex flex-col gap-2 p-4">
@@ -124,15 +100,19 @@ function Skeleton(): ReactElement {
   );
 }
 
+const groupLabel = (row: AdminMatchRow): string =>
+  row.competition.stage ? `${row.competition.name} · ${row.competition.stage}` : row.competition.name;
+
 export function MatchesPage(): ReactElement {
   const { session } = useSession();
+  const navigate = useNavigate();
   const today = cairoDay(new Date().toISOString());
   const [day, setDay] = useState(today);
   const [competitionId, setCompetitionId] = useState<number | null>(null);
   const [source, setSource] = useState<string | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [missingOnly, setMissingOnly] = useState(false);
-  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+  const [selectionResetKey, setSelectionResetKey] = useState(0);
 
   const bounds = cairoDayBounds(day);
   const params: ListMatchesParams = {
@@ -147,9 +127,8 @@ export function MatchesPage(): ReactElement {
   const { competitions, sources } = useMatchLookups();
 
   const rows = data?.data ?? [];
-  const groups = useMemo(() => groupByCompetition(rows), [rows]);
   const missingCount = rows.filter((row) => row.missing_channels).length;
-  const selectedRows = rows.filter((row) => selected.has(row.id));
+  const competitionCount = useMemo(() => new Set(rows.map((row) => row.competition.id)).size, [rows]);
 
   const tabs = [
     { id: 'yesterday', label: copy.yesterday, day: shiftCairoDay(today, -1) },
@@ -158,29 +137,84 @@ export function MatchesPage(): ReactElement {
     { id: 'afterTomorrow', label: copy.afterTomorrow, day: shiftCairoDay(today, 2) },
   ];
 
-  function toggle(id: number): void {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const columns: readonly DataTableColumn<AdminMatchRow>[] = [
+    {
+      id: 'time',
+      header: copy.columns.time,
+      cell: (row) =>
+        row.time_tbd || !row.kickoff_at ? (
+          <span className="text-caption text-text-tertiary">{copy.timeUnknown}</span>
+        ) : (
+          <span className="text-label font-semibold text-text-primary">
+            <time dateTime={row.kickoff_at}>{formatCairoClock(row.kickoff_at).time}</time>{' '}
+            <span className="text-micro text-text-tertiary">{formatCairoClock(row.kickoff_at).period}</span>
+          </span>
+        ),
+    },
+    {
+      id: 'match',
+      header: copy.columns.match,
+      cell: (row) => (
+        <span id={`match-teams-${row.id}`} className="flex items-center gap-2">
+          <Crest logo={row.home.logo} name={row.home.name} />
+          <bdi className="text-label text-text-primary">{row.home.name}</bdi>
+          <span aria-hidden="true" className="text-text-tertiary">
+            ×
+          </span>
+          <bdi className="text-label text-text-primary">{row.away.name}</bdi>
+          <Crest logo={row.away.logo} name={row.away.name} />
+        </span>
+      ),
+    },
+    { id: 'status', header: copy.columns.status, cell: (row) => <StatusCell row={row} /> },
+    {
+      id: 'channels',
+      header: copy.columns.channels,
+      numeric: true,
+      cell: (row) =>
+        row.channel_count === 0 ? (
+          <span className="text-micro inline-flex items-center gap-1 rounded-xs bg-postponed-container px-2 py-1 font-semibold text-postponed">
+            <Icon name="alert" size="sm" />0
+          </span>
+        ) : (
+          <span className="text-label tabular-nums text-text-primary">{row.channel_count}</span>
+        ),
+    },
+    {
+      id: 'commentator',
+      header: copy.columns.commentator,
+      cell: (row) =>
+        row.commentator ? (
+          <bdi className="text-label text-text-secondary">{row.commentator.name}</bdi>
+        ) : (
+          <span className="text-caption text-text-tertiary">—</span>
+        ),
+    },
+    {
+      id: 'sources',
+      header: copy.columns.source,
+      cell: (row) => (
+        <span className="flex flex-wrap items-center gap-1">
+          {row.sources.map((name) => (
+            <SourceBadge key={name} name={name} />
+          ))}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0">
           <h1 className="heading-1 text-text-primary">{copy.title}</h1>
-          <p className="text-caption text-text-secondary">
-            {copy.summary(rows.length, groups.length, missingCount)}
-          </p>
+          <p className="text-caption text-text-secondary">{copy.summary(rows.length, competitionCount, missingCount)}</p>
         </div>
         <span className="flex-1" />
         <Link
           to="/matches/new"
           className={clsx(
-            'text-label inline-flex h-8 min-h-12 items-center gap-2 rounded-lg bg-accent px-3 font-semibold text-on-accent',
+            'text-label inline-flex h-12 items-center gap-2 rounded-lg bg-accent px-3 font-semibold text-on-accent',
             focusRing,
           )}
         >
@@ -198,7 +232,7 @@ export function MatchesPage(): ReactElement {
               aria-pressed={day === tab.day}
               onClick={() => {
                 setDay(tab.day);
-                setSelected(new Set());
+                setSelectionResetKey((key) => key + 1);
               }}
               className={clsx(
                 'text-caption h-8 rounded-sm px-3 font-semibold',
@@ -279,15 +313,6 @@ export function MatchesPage(): ReactElement {
         </div>
       </div>
 
-      {selectedRows.length > 0 ? (
-        <BulkBar
-          selected={selectedRows}
-          competitions={competitions}
-          canRemoveChannels={session?.admin.role === 'admin'}
-          onClear={() => setSelected(new Set())}
-        />
-      ) : null}
-
       <div className="min-w-0 overflow-x-auto rounded-xl bg-surface-1 ring-1 ring-inset ring-divider">
         {isPending ? (
           <Skeleton />
@@ -310,122 +335,42 @@ export function MatchesPage(): ReactElement {
             <EmptyState kind="empty" title={copy.empty.title} body={copy.empty.body} />
           )
         ) : (
-          <table className="w-full border-collapse text-start">
-            <caption className="sr-only">{copy.title}</caption>
-            <thead>
-              <tr className="text-micro border-b border-divider text-start text-text-tertiary">
-                <th scope="col" className="w-8 px-2 py-2">
-                  <span className="sr-only">{copy.columns.match}</span>
-                </th>
-                <th scope="col" className="px-2 py-2 text-start">{copy.columns.time}</th>
-                <th scope="col" className="px-2 py-2 text-start">{copy.columns.match}</th>
-                <th scope="col" className="px-2 py-2 text-start">{copy.columns.status}</th>
-                <th scope="col" className="px-2 py-2 text-start">{copy.columns.channels}</th>
-                <th scope="col" className="px-2 py-2 text-start">{copy.columns.commentator}</th>
-                <th scope="col" className="px-2 py-2 text-start">{copy.columns.source}</th>
-                <th scope="col" className="px-2 py-2 text-start">
-                  <span className="sr-only">{copy.columns.locked}</span>
-                  <Icon name="lock" size="sm" />
-                </th>
-                <th scope="col" className="px-2 py-2" />
-              </tr>
-            </thead>
-            {groups.map((group) => (
-              <tbody key={group.key}>
-                <tr className="bg-surface-2">
-                  <th colSpan={9} scope="colgroup" className="text-caption px-3 py-2 text-start font-semibold text-text-primary">
-                    <span className="flex items-center gap-2">
-                      <span dir="auto">{group.stage ? `${group.name} · ${group.stage}` : group.name}</span>
-                      <span className="text-micro rounded-xs bg-surface-3 px-2 text-text-secondary">
-                        {copy.groupCount(group.rows.length)}
-                      </span>
-                      {group.missing > 0 ? (
-                        <span className="text-micro text-postponed">{copy.groupMissing(group.missing)}</span>
-                      ) : null}
-                    </span>
-                  </th>
-                </tr>
-                {group.rows.map((row) => (
-                  <tr key={row.id} data-testid={`match-row-${row.id}`} className="border-b border-divider last:border-0 hover:bg-surface-2">
-                    <td className="px-2 py-2">
-                      <input
-                        type="checkbox"
-                        aria-label={copy.columns.match}
-                        checked={selected.has(row.id)}
-                        onChange={() => toggle(row.id)}
-                        className="size-4 accent-accent"
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      {row.time_tbd || !row.kickoff_at ? (
-                        <span className="text-caption text-text-tertiary">{copy.timeUnknown}</span>
-                      ) : (
-                        <span className="text-label font-semibold text-text-primary">
-                          <time dateTime={row.kickoff_at}>{formatCairoClock(row.kickoff_at).time}</time>{' '}
-                          <span className="text-micro text-text-tertiary">{formatCairoClock(row.kickoff_at).period}</span>
-                        </span>
-                      )}
-                    </td>
-                    <td id={`match-teams-${row.id}`} className="px-2 py-2">
-                      <span className="flex items-center gap-2">
-                        <Crest logo={row.home.logo} name={row.home.name} />
-                        <bdi className="text-label text-text-primary">{row.home.name}</bdi>
-                        <span aria-hidden="true" className="text-text-tertiary">×</span>
-                        <bdi className="text-label text-text-primary">{row.away.name}</bdi>
-                        <Crest logo={row.away.logo} name={row.away.name} />
-                      </span>
-                    </td>
-                    <td className="px-2 py-2">
-                      <StatusCell row={row} />
-                    </td>
-                    <td className="px-2 py-2">
-                      {row.channel_count === 0 ? (
-                        <span className="text-micro inline-flex items-center gap-1 rounded-xs bg-postponed-container px-2 py-1 font-semibold text-postponed">
-                          <Icon name="alert" size="sm" />0
-                        </span>
-                      ) : (
-                        <span className="text-label tabular text-text-primary">{row.channel_count}</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2">
-                      {row.commentator ? (
-                        <bdi className="text-label text-text-secondary">{row.commentator.name}</bdi>
-                      ) : (
-                        <span className="text-caption text-text-tertiary">—</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2">
-                      <span className="flex flex-wrap items-center gap-1">
-                        {row.sources.map((name) => (
-                          <SourceBadge key={name} name={name} />
-                        ))}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2">
-                      {row.locked ? (
-                        <span className="inline-flex text-postponed" title={copy.columns.locked}>
-                          <Icon name="lock" size="sm" label={copy.columns.locked} />
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-2 py-2">
-                      <span id={`edit-${row.id}`} hidden>{copy.columns.edit}</span>
-                      <Link
-                        to={`/matches/${row.id}`}
-                        aria-labelledby={`edit-${row.id} match-teams-${row.id}`}
-                        className={clsx(
-                          'inline-flex size-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-3',
-                          focusRing,
-                        )}
-                      >
-                        <Icon name="edit" size="sm" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            ))}
-          </table>
+          <DataTable
+            label={copy.title}
+            columns={columns}
+            rows={rows}
+            rowKey={(row) => String(row.id)}
+            rowTestId={(row) => `match-row-${row.id}`}
+            rowLabel={(row) => `${row.home.name} × ${row.away.name}`}
+            groupBy={groupLabel}
+            selectable
+            rowState={(row) => ({
+              ...(row.missing_channels ? { warning: copy.groupMissing(row.channel_count) } : {}),
+              ...(row.locked ? { locked: true } : {}),
+            })}
+            bulkActions={(keys) => (
+              <BulkActions
+                selected={rows.filter((row) => keys.includes(String(row.id)))}
+                competitions={competitions}
+                canRemoveChannels={session?.admin.role === 'admin'}
+                onDone={() => setSelectionResetKey((key) => key + 1)}
+              />
+            )}
+            rowActions={(row) => (
+              <Link
+                to={`/matches/${row.id}`}
+                aria-labelledby={`edit-${row.id} match-teams-${row.id}`}
+                className={`inline-flex size-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-3 ${focusRing}`}
+              >
+                <span id={`edit-${row.id}`} hidden>
+                  {copy.columns.edit}
+                </span>
+                <Icon name="edit" size="sm" />
+              </Link>
+            )}
+            onEdit={(row) => navigate(`/matches/${row.id}`)}
+            selectionResetKey={selectionResetKey}
+          />
         )}
       </div>
     </div>

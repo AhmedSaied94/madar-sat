@@ -67,6 +67,8 @@ function SortableRow({ id, position, name, selected, disabled, children, onKeyDo
         {...listeners}
         ref={setActivatorNodeRef}
         type="button"
+        // dnd-kit's own description is English; the handle speaks Arabic like the rest of the admin.
+        aria-roledescription={copy.role}
         disabled={disabled}
         aria-label={copy.handle(name)}
         onKeyDown={onKeyDown}

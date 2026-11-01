@@ -92,6 +92,9 @@ export function AudioPlayer({ src, person, durationMs = null }: AudioPlayerProps
       data-state={state}
       className="flex min-w-0 items-center gap-3 rounded-lg bg-bg px-3 py-2"
     >
+      {/* A short voice sample with no transcript in the data model: its accessible name is the person,
+          and the comment is the only meaning it carries. No caption track exists to attach. */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio ref={element} src={src} preload="none" aria-label={copy.name(person)} />
 
       <button
@@ -108,7 +111,7 @@ export function AudioPlayer({ src, person, durationMs = null }: AudioPlayerProps
         <span
           aria-hidden="true"
           className={clsx(
-            'inline-flex size-10 items-center justify-center rounded-pill',
+            'inline-flex size-8 items-center justify-center rounded-pill',
             state === 'error' ? 'bg-error-container' : 'bg-accent',
           )}
         >

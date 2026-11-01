@@ -111,7 +111,7 @@ export function TeamsPage(): ReactElement {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex h-9 min-w-0 items-center gap-2 rounded-lg bg-surface-1 px-3 ring-1 ring-inset ring-divider">
+        <label className="flex h-8 min-w-0 items-center gap-2 rounded-lg bg-surface-1 px-3 ring-1 ring-inset ring-divider">
           <Icon name="search" size="md" className="text-text-tertiary" />
           <input
             type="search"
@@ -127,7 +127,7 @@ export function TeamsPage(): ReactElement {
           aria-label={copy.competitionFilter}
           value={competitionId}
           onChange={(event) => setCompetitionId(event.target.value)}
-          className="text-caption h-9 rounded-md bg-surface-1 px-2 text-text-primary ring-1 ring-inset ring-divider"
+          className="text-caption h-8 rounded-md bg-surface-1 px-2 text-text-primary ring-1 ring-inset ring-divider"
         >
           <option value={ALL}>{`${copy.competitionFilter}: ${copy.all}`}</option>
           {competitions.map((competition) => (
@@ -142,7 +142,7 @@ export function TeamsPage(): ReactElement {
           aria-pressed={missingLogo}
           onClick={() => setMissingLogo((current) => !current)}
           className={clsx(
-            'text-caption inline-flex h-9 items-center gap-2 rounded-md px-3 font-semibold ring-1 ring-inset',
+            'text-caption inline-flex h-8 items-center gap-2 rounded-md px-3 font-semibold ring-1 ring-inset',
             missingLogo ? 'bg-accent-container text-accent-text ring-accent' : 'bg-surface-1 text-text-secondary ring-divider',
             focusRing,
           )}
