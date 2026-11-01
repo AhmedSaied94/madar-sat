@@ -39,6 +39,7 @@ jobs:
           done
 
       # The backup profile is a one-shot: `config` must see it, and the media units call it by name.
+      # Rendered as JSON: Compose prints volumes in long form, so a short-syntax grep never matches.
       - name: The backup services are defined behind their profile
         run: |
           set -euo pipefail
@@ -49,13 +50,27 @@ jobs:
             grep -qx "$expected" <<<"$services" \
               || { echo "::error::$host.yml has no $expected service"; exit 1; }
           done
-          compose_v1=$(docker compose -f infra/compose/vps1.yml --env-file infra/compose/example.env --profile backup config)
-          grep -q 'backup-media.sh' <<<"$compose_v1" || { echo "::error::backup-media runs no script"; exit 1; }
-          grep -q -- '--weekly' <<<"$compose_v1" || { echo "::error::backup-media-weekly lost its flag"; exit 1; }
-          compose_v2=$(docker compose -f infra/compose/vps2.yml --env-file infra/compose/example.env --profile workers config)
-          grep -q '/srv/secrets:/srv/secrets:ro' <<<"$compose_v2" \
-            || { echo "::error::worker-notify no longer mounts the FCM secret"; exit 1; }
-          grep -q 'louislam/uptime-kuma:1' <<<"$compose_v2" || { echo "::error::Kuma is gone from vps2.yml"; exit 1; }
+
+          v1=$(docker compose -f infra/compose/vps1.yml --env-file infra/compose/example.env --profile backup config)
+          grep -q 'backup-media.sh' <<<"$v1" || { echo "::error::backup-media runs no script"; exit 1; }
+          grep -q -- '--weekly' <<<"$v1" || { echo "::error::backup-media-weekly lost its flag"; exit 1; }
+
+          # Both profiles, so the one-shot backup service is in the same render as the workers.
+          v2=$(docker compose -f infra/compose/vps2.yml --env-file infra/compose/example.env \
+            --profile workers --profile backup config --format json)
+          # The FCM key is mounted read-only into worker-notify and into nothing else (R9).
+          jq -e '.services["worker-notify"].volumes | any(.source == "/srv/secrets" and .read_only == true)' \
+            <<<"$v2" >/dev/null \
+            || { echo "::error::worker-notify no longer mounts the FCM secret read-only"; exit 1; }
+          users=$(jq -r '.services | to_entries[]
+            | select([.value.volumes // [] | .[] | .source?] | index("/srv/secrets"))
+            | .key' <<<"$v2")
+          [[ $users == worker-notify ]] \
+            || { echo "::error::/srv/secrets is mounted by: ${users//$'\n'/, }"; exit 1; }
+          jq -e '.services["uptime-kuma"].image | startswith("louislam/uptime-kuma")' <<<"$v2" >/dev/null \
+            || { echo "::error::Kuma is gone from vps2.yml"; exit 1; }
+          jq -e '.services["backup-db"].profiles == ["backup"]' <<<"$v2" >/dev/null \
+            || { echo "::error::backup-db is not behind the backup profile"; exit 1; }
 
       # The D3 timers must exist, name a real service, and use the Cairo calendar (R19).
       - name: Verify the backup systemd units
@@ -79,8 +94,9 @@ jobs:
           set -euo pipefail
           grep -q 'set -Eeuo pipefail' infra/backup/backup-db.sh
           grep -q 'set -Eeuo pipefail' infra/backup/backup-media.sh
-          if grep -nE 'set -x|echo .*(RESTIC_PASSWORD|B2_ACCOUNT_KEY|POSTGRES_PASSWORD|RCLONE_CONFIG_OCI_SECRET)' \
-            infra/backup/*.sh; then
+          # Comments are allowed to name a variable; a command that would print one is not.
+          if grep -vE '^[[:space:]]*#' infra/backup/*.sh \
+            | grep -nE '^[[:space:]]*set -x|(echo|printf)[^#]*\$\{?(RESTIC_PASSWORD|B2_ACCOUNT_KEY|B2_ACCOUNT_ID|POSTGRES_PASSWORD|RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY|TELEGRAM_BOT_TOKEN)'; then
             echo "::error::a backup script would print a secret"
             exit 1
           fi
