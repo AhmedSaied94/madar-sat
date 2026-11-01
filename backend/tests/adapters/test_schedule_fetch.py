@@ -178,15 +178,29 @@ def test_the_t60_entry_asks_for_the_narrow_window() -> None:
     assert str(BEAT_SCHEDULE["livesoccertv-48h"]["schedule"]) == "<crontab: 45 */2 * * * (m/h/dM/MY/d)>"
 
 
-def test_the_worker_app_loads_this_module_s_beat_schedule() -> None:
-    """``app.workers`` merges every existing schedule module; ours is the one it already loads (T070)."""
+def test_the_worker_app_merges_both_schedule_modules_without_clashing() -> None:
+    """``app.workers`` loads the adapters' and the notifications' entries in one schedule (T070)."""
+    from app.notifications.schedule import BEAT_SCHEDULE as NOTIFY_SCHEDULE
     from app.workers import app
 
     loaded = app.conf.beat_schedule
     assert set(BEAT_SCHEDULE) <= set(loaded)
+    assert set(NOTIFY_SCHEDULE) <= set(loaded)
+    assert not set(BEAT_SCHEDULE) & set(NOTIFY_SCHEDULE)
+    assert len(loaded) == len(BEAT_SCHEDULE) + len(NOTIFY_SCHEDULE)
     assert loaded["livesoccertv-t60"]["task"] == "adapters.schedule_fetch"
-    # B1's ``notifications.schedule`` arrives with T009 and is merged by name; ours must not clash.
-    assert len(loaded) == len(set(loaded))
+    assert loaded["notify-dispatch"]["task"] == "notifications.dispatch_due"
+
+
+def test_the_registered_task_names_are_the_ones_a13_and_the_beat_call() -> None:
+    """``inspect registered`` in ``dev.yml`` must list both, by exactly these names (T069, T070)."""
+    import app.notifications.tasks  # noqa: F401 - the worker's `include` imports it at start-up
+    from app.workers import app
+
+    for name in ("adapters.schedule_fetch", "adapters.fetch", "adapters.ingest", "ops.heartbeat"):
+        assert name in app.tasks, name
+    for name in ("notifications.dispatch_due", "notifications.schedule_reminders"):
+        assert name in app.tasks, name
 
 
 def test_the_heartbeats_cover_their_own_queues() -> None:

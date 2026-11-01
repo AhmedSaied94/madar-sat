@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 
-from app.adapters.health import column_available
 from app.adapters.messages import BroadcastItem, ScrapeResult
 from app.adapters.tasks import MAX_LOG_BYTES, MAX_LOG_ITEMS, _compact_log, _fit, ingest
 from tests.adapters.helpers import last_run, match_page, new_match
@@ -108,26 +108,41 @@ def test_a_failed_fetch_still_counts_toward_the_breaker(
 
 
 def test_a_broadcast_run_writes_its_log_beside_run_json(sync_session, prepared) -> None:
-    if not column_available(sync_session, "import_runs", "log"):
-        pytest.skip("0005's import_runs.log is not applied yet (B1 T008; rebase at T068)")
     match = new_match(sync_session, kickoff_at=NOW)
-    result = _result(items=[BroadcastItem(match_id=match.id, match_url="https://x/1", channels=[])])
+    # The planning pass leaves its coverage beside Redis; the run log carries it (T071).
+    from app.adapters.livesoccertv import store_plan_log
+
+    store_plan_log({"planned": 1, "mapped": 1, "unmapped": 0, "unmapped_sample": [], "recent": 0})
+    # One name Madar has no channel for becomes a hidden placeholder, and the log says so (R18).
+    from app.adapters.messages import BroadcastChannel
+
+    channels = [BroadcastChannel(name="Al Kass One", country="Egypt")]
+    result = _result(items=[BroadcastItem(match_id=match.id, match_url="https://x/1", channels=channels)])
 
     summary = ingest.apply(args=(result.as_task_arg(),)).get()
     sync_session.expire_all()
     run = last_run(sync_session)
 
     assert summary["kind"] == "broadcasts"
-    logged = json.loads(
-        sync_session.execute(
-            __import__("sqlalchemy").text("SELECT log FROM import_runs WHERE id = :id"), {"id": run.id}
-        ).scalar_one()
-    )
+    stored = sync_session.execute(text("SELECT log FROM import_runs WHERE id = :id"), {"id": run.id}).scalar_one()
+    # JSONB comes back as a dict; a text column would need json.loads.
+    logged = json.loads(stored) if isinstance(stored, str) else stored
     assert logged["kind"] == "broadcasts"
     assert logged["counts"]["targets"] == 1
     assert logged["health"]["breaker_opened"] is False
+    assert logged["placeholders_created"] == ["Al Kass One"]
+    assert logged["counts"]["links_added"] == 1
     assert "plan" in logged
 
     run_json = json.loads((Path(run.raw_path) / "run.json").read_text(encoding="utf-8"))
     assert run_json["counts"]["items_found"] == 1
     assert run_json["unmatched"] == []
+    assert run_json["placeholders_created"] == ["Al Kass One"]
+
+    # The placeholder is hidden from `/v1` by its own column, and A8 finds it by the filter (R13).
+    from app.db.models import Channel
+
+    placeholder = sync_session.query(Channel).filter(Channel.name == "Al Kass One").one()
+    assert placeholder.kind == "platform"
+    assert placeholder.show_in_match is False
+    assert placeholder.deleted_at is None

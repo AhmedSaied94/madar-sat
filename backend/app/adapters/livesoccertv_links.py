@@ -15,8 +15,8 @@ tables, under the rules the spec keeps:
 - only rows whose ``source`` is ``livesoccertv`` are added or removed. An editor's edit or removal
   makes a row ``manual`` (D2 FR-008), which this module never touches again.
 
-Lane B1 owns revision ``0005`` that adds ``channels.placeholder_source``; the column is named in SQL
-here rather than added to ``app.db.models`` (Lane B1 owns that file).
+Revision ``0005`` (Lane B1) adds ``channels.placeholder_source``; the insert names the column in SQL
+rather than through ``app.db.models``, which Lane B1 owns.
 """
 
 from __future__ import annotations
@@ -190,12 +190,7 @@ def _placeholder(
     outcome: LinkOutcome,
 ) -> int | None:
     """Create one hidden placeholder, or report why the name is skipped (R18)."""
-    from app.adapters.health import column_available
-
     country = normalize_country(listed_country)
-    if not column_available(session, "channels", "placeholder_source"):
-        outcome.skipped.append({"name": name, "country": country, "why": "placeholder_column_missing"})
-        return None
     if any(row.deleted for row in existing):
         # An editor rejected this name once: never recreate it (R18).
         outcome.skipped.append({"name": name, "country": country, "why": "deleted_by_editor"})

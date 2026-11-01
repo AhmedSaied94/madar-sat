@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import select, text
 
-from app.adapters.health import column_available
 from app.adapters.livesoccertv_links import apply_broadcasts
 from app.adapters.messages import BroadcastChannel
 from app.db.models import AuditLog, Channel, MatchChannel
@@ -19,12 +18,6 @@ COUNTRIES = ("Egypt", "Saudi Arabia", "Algeria", "Middle East")
 @pytest.fixture
 def match(sync_session):
     return new_match(sync_session, kickoff_at=datetime(2026, 11, 7, 18, 0, tzinfo=UTC))
-
-
-@pytest.fixture
-def placeholders_ready(sync_session):  # noqa: ANN001 - the fixture yields nothing
-    if not column_available(sync_session, "channels", "placeholder_source"):
-        pytest.skip("0005's channels.placeholder_source is not applied yet (B1 T008; rebase at T068)")
 
 
 def links_of(session, match_id: int) -> dict[int, MatchChannel]:
@@ -90,9 +83,7 @@ def test_a_listed_country_picks_the_country_variant(sync_session, match) -> None
     assert outcome.added == [english_kuwait.id]
 
 
-def test_a_name_from_a_configured_country_becomes_one_hidden_placeholder(
-    sync_session, match, placeholders_ready
-) -> None:
+def test_a_name_from_a_configured_country_becomes_one_hidden_placeholder(sync_session, match) -> None:
     before = dataset_versions(sync_session)
 
     outcome = apply_broadcasts(
@@ -128,9 +119,7 @@ def test_a_name_from_a_configured_country_becomes_one_hidden_placeholder(
     assert audit[0].action == "create"
 
 
-def test_the_same_placeholder_is_reused_by_a_second_run_and_another_match(
-    sync_session, match, placeholders_ready
-) -> None:
+def test_the_same_placeholder_is_reused_by_a_second_run_and_another_match(sync_session, match) -> None:
     first = apply_broadcasts(
         sync_session,
         match_id=match.id,
@@ -158,7 +147,7 @@ def test_the_same_placeholder_is_reused_by_a_second_run_and_another_match(
     assert set(links_of(sync_session, other.id)) == set(first.added)
 
 
-def test_a_soft_deleted_placeholder_is_never_recreated(sync_session, match, placeholders_ready) -> None:
+def test_a_soft_deleted_placeholder_is_never_recreated(sync_session, match) -> None:
     new_channel(sync_session, "Rejected Channel", country="egypt", deleted=True)
 
     outcome = apply_broadcasts(
@@ -173,7 +162,7 @@ def test_a_soft_deleted_placeholder_is_never_recreated(sync_session, match, plac
     assert outcome.skipped == [{"name": "Rejected Channel", "country": "egypt", "why": "deleted_by_editor"}]
 
 
-def test_a_name_from_an_unlisted_country_is_skipped_and_counted(sync_session, match, placeholders_ready) -> None:
+def test_a_name_from_an_unlisted_country_is_skipped_and_counted(sync_session, match) -> None:
     outcome = apply_broadcasts(
         sync_session,
         match_id=match.id,

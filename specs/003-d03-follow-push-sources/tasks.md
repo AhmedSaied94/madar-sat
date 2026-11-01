@@ -216,9 +216,9 @@ Each lane merges at least twice (delivery-plan §5.2): once at the contract or s
 
 ### After the 13:00 merge (B2)
 
-- [ ] T068 [US3] Rebase on `master` (T014): `0005`'s columns exist; the health and placeholder tests run against them.
+- [x] T068 [US3] Rebase on `master` (T014): `0005`'s columns exist; the health and placeholder tests run against them.
 - [x] T069 [US3] Confirm `api-admin`'s `send_task("adapters.schedule_fetch", …)` reaches `worker-imports` on VPS-2 (the name and queue match `tasks.py`); add a test that the registered task name is exactly `adapters.schedule_fetch`.
-- [ ] T070 [US3] Confirm `app.workers` loads both schedule modules with no duplicate entry names (`celery -A app.workers inspect registered` in `dev.yml`).
+- [x] T070 [US3] Confirm `app.workers` loads both schedule modules with no duplicate entry names (`celery -A app.workers inspect registered` in `dev.yml`).
 - [x] T071 [US3] Add a `livesoccertv_teams` check to the snapshot data: count mapped teams and log the top unmapped teams of the next 48 h in the first run's log, so the owner sees the coverage.
 - [x] T072 [US3] Write `docs/runbooks/imports-and-sources.md` additions: LiveSoccerTV (what it reads, its queue, the country list and how to change it, placeholders and how editors complete or delete them), the breaker and zero-items alarm, pause / resume / run now in A13, and moving its fetch between the home box and VPS-2.
 

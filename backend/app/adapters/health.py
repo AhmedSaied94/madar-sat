@@ -1,9 +1,8 @@
 """Source health: the circuit breaker, the zero-items alarm and the ``sources`` bump (R17).
 
 Called once per run, inside the ingest transaction that writes ``import_runs``, so the run row and
-the breaker can never disagree. Lane B1 owns revision ``0005`` that adds the four columns; this
-module names them in SQL rather than adding them to ``app.db.models`` (Lane B1 owns that file), so
-it starts working the moment the migration lands.
+the breaker can never disagree. Revision ``0005`` (Lane B1) adds the four columns; this module names
+them in SQL rather than adding them to ``app.db.models``, which Lane B1 owns.
 
 Alerts go through :func:`app.adapters.alerts.send_alert`: logged and swallowed, never raised.
 """
@@ -92,31 +91,6 @@ def cairo_today(now: datetime) -> date:
     return now.astimezone(CAIRO).date()
 
 
-def column_available(session: Any, table: str, column: str) -> bool:
-    """Whether 0005's column exists, asked once per session.
-
-    Lane B2's code names 0005's columns but cannot add them (Lane B1 owns the migration and
-    ``app.db.models``). Until the migration lands, the health writes and the run log stay off and
-    the run still records what it did; after it, they turn on with no code change (T068).
-    """
-    key = f"column:{table}.{column}"
-    known = session.info.get(key)
-    if known is not None:
-        return bool(known)
-    found = (
-        session.execute(
-            text(
-                "SELECT 1 FROM information_schema.columns "
-                "WHERE table_schema = 'public' AND table_name = :table AND column_name = :column"
-            ),
-            {"table": table, "column": column},
-        ).first()
-        is not None
-    )
-    session.info[key] = found
-    return found
-
-
 def record_run(
     session: Any,
     *,
@@ -143,11 +117,6 @@ def record_run(
     when = now or datetime.now(UTC)
     notify = send_alert if alert is None else alert
     outcome = HealthOutcome()
-
-    if not column_available(session, "sources", "consecutive_failures"):
-        if bump:
-            bump_datasets(session, ["sources"])
-        return outcome
 
     zero_items = status != "failed" and items_found == 0 and (pages > 0 or targets > 0)
     failure = status == "failed" or zero_items
@@ -181,16 +150,13 @@ def record_run(
 
 def source_is_paused(session: Any, source: str, *, now: datetime | None = None) -> bool:
     """``is_enabled = false``, an open breaker, or ``paused_until`` in the future (R17)."""
-    has_breaker = column_available(session, "sources", "breaker_opened_at")
-    selected = "is_enabled, paused_until, breaker_opened_at" if has_breaker else "is_enabled, paused_until"
     row = session.execute(
-        text(f"SELECT {selected} FROM sources WHERE name = :name"),  # noqa: S608 - a fixed column list
+        text("SELECT is_enabled, paused_until, breaker_opened_at FROM sources WHERE name = :name"),
         {"name": source},
     ).first()
     if row is None:
         return False
-    enabled, paused_until = row[0], row[1]
-    breaker_opened_at = row[2] if has_breaker else None
+    enabled, paused_until, breaker_opened_at = row
     if not enabled or breaker_opened_at is not None:
         return True
     return bool(paused_until is not None and paused_until > (now or datetime.now(UTC)))

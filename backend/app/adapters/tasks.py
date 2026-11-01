@@ -589,16 +589,11 @@ def _fit(payload: dict[str, Any]) -> dict[str, Any]:
 def _write_compact_log(
     session: Any, run: Any, data: ScrapeResult, outcome: Any, links: Any, health_outcome: Any
 ) -> None:
-    """``import_runs.log``: 0005's jsonb column, and only when the migration has landed (T060)."""
+    """``import_runs.log``: the compact run detail A13 reads from VPS-1 (T060, R12)."""
     import json
 
     from sqlalchemy import text
 
-    from app.adapters.health import column_available
-
-    if not column_available(session, "import_runs", "log"):
-        log.info("run_log_skipped", extra={"source": data.source, "why": "0005_not_applied"})
-        return
     plan_log = None
     if data.kind == "broadcasts":
         from app.adapters.livesoccertv import last_plan_log
