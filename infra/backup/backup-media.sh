@@ -6,8 +6,9 @@
 #
 # Nightly: `rclone sync /srv/media` to the OCI bucket, so the mirror always matches the disk.
 # Weekly (`--weekly`): also `restic backup /srv/media` to the same B2 repository as the database,
-# with `forget --keep-weekly 4`, so a deleted or corrupted file can be recovered from a snapshot
-# rather than only from the mirror.
+# with `forget --host madar-vps1 --keep-weekly 4`, so a deleted or corrupted file can be recovered
+# from a snapshot rather than only from the mirror. The host is pinned because `forget` prunes per
+# group of host and paths, and the container's hostname changes every night (B2-R1-3).
 #
 # Media lives on VPS-1's disk, which is why this runs there and not on VPS-2 (R19). No secret is
 # echoed: the OCI keys arrive as RCLONE_CONFIG_OCI_* and never appear on a command line.
@@ -34,6 +35,9 @@ if [[ $mode == weekly ]]; then
 else
   heartbeat_url=${KUMA_PUSH_URL_BACKUP_MEDIA:-}
 fi
+# `forget` prunes per group (host + paths) and the container's hostname changes every night, so the
+# host is pinned or every weekly snapshot is kept for ever (B2-R1-3).
+restic_host=${RESTIC_HOST:-madar-vps1}
 keep_weekly=${BACKUP_KEEP_WEEKLY:-4}
 
 log() { printf '[backup-media] %s\n' "$*"; }
@@ -66,9 +70,14 @@ if [[ $mode == weekly ]]; then
   : "${B2_ACCOUNT_ID:?B2_ACCOUNT_ID is not set for the weekly snapshot}"
   : "${B2_ACCOUNT_KEY:?B2_ACCOUNT_KEY is not set for the weekly snapshot}"
   export RESTIC_REPOSITORY RESTIC_PASSWORD B2_ACCOUNT_ID B2_ACCOUNT_KEY
-  log "snapshotting $media_root into $RESTIC_REPOSITORY (keep-weekly $keep_weekly)"
-  restic backup --tag media "$media_root"
-  restic forget --tag media --keep-weekly "$keep_weekly" --prune
+  # The repository is shared with the database backup and may not exist yet (B2-R1-5).
+  if ! restic cat config >/dev/null 2>&1; then
+    log "initialising the restic repository"
+    restic init
+  fi
+  log "snapshotting $media_root into $RESTIC_REPOSITORY (host $restic_host, keep-weekly $keep_weekly)"
+  restic backup --host "$restic_host" --tag media "$media_root"
+  restic forget --host "$restic_host" --tag media --keep-weekly "$keep_weekly" --prune
 fi
 
 heartbeat up "ok $mode"

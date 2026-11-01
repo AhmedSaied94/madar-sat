@@ -19,10 +19,13 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 | `Caddyfile` | The public sites `api.`, `media.` and `app.130.110.117.215.sslip.io`, and two `wg0`-only sites: the admin at `https://10.8.0.1` and Uptime Kuma at `https://kuma.10-8-0-1.sslip.io` |
 | `firewall/vps1.rules`, `vps2.rules`, `rules.v6` | iptables templates, rendered into `/etc/iptables/rules.v4` and `rules.v6` |
 | `wireguard/wg0.conf.tmpl`, `peer.conf.tmpl` | The hub and peer configs, with key placeholders only |
-| `scripts/bootstrap-vps.sh` | Idempotent host setup (Docker, WireGuard, the `deploy` user, `/srv` folders, firewall) |
+| `scripts/bootstrap-vps.sh` | Idempotent host setup (Docker, WireGuard, the `deploy` user, `/srv` folders, the backup timers, firewall) |
 | `scripts/check-firewall.sh` | Prints the active and persisted rules, fails if they differ, and checks the Redis rules |
 | `scripts/render-redis-acl.sh` | Renders `redis/users.acl.tmpl` into `/srv/madar/redis/users.acl` (640, directory 750, group 999) and keeps the previous file; `--check` proves the modes (B2-R2-1, B2-R2-11) |
 | `scripts/check-redis-acl.sh` | CI: renders through `render-redis-acl.sh`, refuses a 700 directory, boots `redis:7.4.12` as uid 999 and rotates the password once |
+| `scripts/check-backup-retention.sh` | CI: runs the real backup scripts against local restic repositories — an empty one is created, and 7/4 retention prunes (B2-R1-3, B2-R1-5) |
+| `scripts/check-backup-permissions.sh` | CI: reads the rendered Compose files for each backup service's uid and capabilities, then proves them on a host-shaped tree (B2-R1-2) |
+| `scripts/check-doc-commands.sh` | CI: the FCM key install is one root command in `push-notifications.md`, `secrets.md` and `owner-actions.md` (B2-R1-7) |
 | `scripts/wg-add-peer.sh` | Adds a WireGuard peer; generates its keys on the host |
 | `scripts/deploy.sh` | Runs on VPS-1 (APIs and `worker-media`) or on VPS-2 (`--host vps2`: workers and `beat`): pull, roll out, health-check, roll back |
 | `scripts/home-box-update.sh`, `.service`, `.timer` | Pull `madar-backend-amd64:stable` on the home box every 10 minutes and recreate the worker if it moved |
@@ -46,7 +49,7 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 | Name | Served by | Upstream |
 | --- | --- | --- |
 | `api.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `api-public` on `127.0.0.1:8000` |
-| `media.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `/srv/media`, `immutable` |
+| `media.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `/srv/media`, `immutable`; CORS `GET`/`HEAD` only to the PWA origins, preview channels included (constitution V) |
 | `app.130.110.117.215.sslip.io` | Caddy, Let's Encrypt | `/srv/app-mirror` (PWA file mirror), CORS `GET` from the two PWA origins |
 | `<project>.web.app` | Firebase Hosting | The PWA shell (`pwa.yml`) |
 | `https://10.8.0.1` (`wg0` only) | Caddy, `tls internal` | `/admin/api/*` → `api-admin` on `10.8.0.1:8001`; everything else → `/srv/admin` |
@@ -88,12 +91,14 @@ Names only; the values are in `compose/example.env` as fakes. Use URL-safe passw
 
 | Group | Variables |
 | --- | --- |
-| Compose | `GHCR_OWNER` (lowercase), `VCN_IP` (this host's VCN private IP). `IMAGE_TAG` and `HEALTHZ_FORCE_FAIL` are set by `deploy.sh`, not in the file |
+| Compose | `GHCR_OWNER` (lowercase), `VCN_IP` (this host's VCN private IP). `IMAGE_TAG` and `HEALTHZ_FORCE_FAIL` are set by `deploy.sh`, not in the file; the backup services take `BACKUP_IMAGE_TAG`, which defaults to the moving `stable` |
 | Host and network | `VPS1_IP`, `PEER_VCN_IP` (the other host's VCN IP), `ACME_EMAIL`, `FIREBASE_PROJECT_ID`, `DEPLOY_SSH_PUBLIC_KEY`, `HOME_BOX_WG_IP` (VPS-1 only: the home box on `wg0`) |
 | PostgreSQL and Redis | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `REDIS_PASSWORD`, `REDIS_HOMEBOX_PASSWORD` |
 | Backend (`backend/app/settings.py`) | `DATABASE_URL`, `DATABASE_URL_SYNC`, `REDIS_URL`, `MEDIA_BASE_URL`, `MEDIA_ROOT`, `MEDIA_REHOST_ALLOWED_HOSTS`, `CORS_ORIGINS`, `CONTRACT_VERSION`, `ADMIN_JWT_SECRET` |
 | VPS-2 | `CELERY_BROKER_URL`, `FLOWER_BASIC_AUTH`; `DATABASE_URL`, `DATABASE_URL_SYNC` and `REDIS_URL` point at VPS-1's VCN IP |
-| Lane B2's adapters (`backend/app/adapters/config.py`) | `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY`, `SCRAPE_USER_AGENT`, `YSSCORES_FETCH_QUEUE`, `RAW_ROOT` |
+| Lane B2's adapters (`backend/app/adapters/config.py`) | `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY`, `SCRAPE_USER_AGENT`, `YSSCORES_FETCH_QUEUE`, `LIVESOCCERTV_FETCH_QUEUE`, `LIVESOCCERTV_COUNTRIES`, `SOURCE_BREAKER_THRESHOLD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `RAW_ROOT` |
+| D3 notifications (VPS-2) | `FCM_CREDENTIALS_FILE`, `FCM_DRY_RUN`, `PWA_ORIGIN` |
+| D3 backups and Kuma | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY`, `BACKUP_STAGING`, `RCLONE_CONFIG_OCI_*`, `RCLONE_BUCKET` (VPS-1), the six `KUMA_PUSH_URL_*` (VPS-2 keeps `_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`; VPS-1 keeps `_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) |
 | Home box only | `GHCR_OWNER`, `REDIS_URL=redis://homebox:<password>@10.8.0.1:6379/0`, `SCRAPE_USER_AGENT`, `GHCR_READ_TOKEN` (a read-only packages token). **No database URL** |
 
 `MADAR_ENV_FILE` exists only in `example.env`, so CI and the scripts can validate the Compose files without a host. Never set it on a host.
@@ -119,13 +124,13 @@ The step-by-step procedures are runbooks in [`docs/runbooks/`](../docs/runbooks/
 Two rules from them that apply to every change here:
 
 - `netfilter-persistent` restores the rendered firewall at boot. Never run `netfilter-persistent save`: it would write Docker's own chains into the persisted rules.
-- `infra.yml`'s `sync` job keeps `/srv/madar/infra/` on VPS-1 equal to `master`, and `backend.yml` syncs it before every deploy. `deploy-vps2` rsyncs the same folder to VPS-2. Neither job applies the firewall, WireGuard or sshd: those need `bootstrap-vps.sh` on the host. CI never connects to the home box.
+- `infra.yml`'s `sync` job keeps `/srv/madar/infra/` on VPS-1 equal to `master`, and `backend.yml` syncs it before every deploy. `deploy-vps2` rsyncs the same folder to VPS-2. Neither job applies the firewall, WireGuard, sshd or the backup timers: those need `bootstrap-vps.sh` on the host, and a deploy stops with the command to run when one is missing. CI never connects to the home box.
 
 ## CI
 
 | Workflow | Runs on | Does |
 | --- | --- | --- |
-| `infra.yml` | `infra/**`, `.github/workflows/**`, `.github/actions/**` | `docker compose config -q` for each Compose file (including `home-box.yml`), `systemd-analyze verify` on the home-box units, the ACL placeholder check, the ACL render-and-rotate check, the bootstrap gid lookup, the action's `ssh-config.sh` path, the VPS-2 rollback dry run, `caddy validate`, shellcheck, actionlint; on `master`, the `sync` job |
+| `infra.yml` | `infra/**`, `.github/workflows/**`, `.github/actions/**`, and `docs/runbooks/**` on PRs | `docker compose config -q` for each Compose file (including `home-box.yml`), the backup image tag and uid, the backup retention/init drill (real restic), the backup container's permissions, `systemd-analyze verify` on the home-box units, the ACL placeholder check, the ACL render-and-rotate check, the bootstrap gid lookup, the D3 folders/timers check, the deploy's no-root-work check, the FCM doc commands, the media CORS assertion, the action's `ssh-config.sh` path, the VPS-2 rollback dry run, `caddy validate`, shellcheck, actionlint; on `master`, the `sync` job |
 | `gitleaks.yml` | Every PR and push | gitleaks over the whole history, with redacted output |
 | `backend.yml` | `backend/**`; `infra/compose/**` on PRs only (the api-admin command check) | ruff, mypy, pytest; OpenAPI export and breaking-change check; client regeneration; on `master`, build both architectures, deploy VPS-1 and VPS-2, move `stable`, retention |
 | `app.yml` | `app/**`, `backend/openapi/public.json`, `madar-design/**` | `flutter analyze`, the token and literal checks, `flutter test`, the `prod` debug APK artifact |

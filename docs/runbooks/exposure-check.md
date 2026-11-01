@@ -36,7 +36,15 @@ Each response must carry:
 | `referrer-policy` | `strict-origin-when-cross-origin` |
 | `server` | Absent |
 
-`media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable` and `access-control-allow-origin: *`: the web build reads images with `fetch`, from any origin including Hosting preview channels. A browser that cached a media file before the header existed keeps failing on it until you clear its site data.
+`media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable`, and it answers CORS only to the PWA's origins (constitution V), preview channels included; the native apps send no `Origin` and need none. A browser that cached a media file from before the wildcard was removed keeps the old answer until you clear its site data.
+
+```bash
+media=https://media.130.110.117.215.sslip.io/
+curl -sI -H 'Origin: https://<project>.web.app' "$media" | grep -i access-control-allow-origin                  # echoes that origin
+curl -sI -H 'Origin: https://<project>--master-abc1234.web.app' "$media" | grep -i access-control-allow-origin   # a preview channel: echoes
+curl -sI -H 'Origin: https://example.org' "$media" | grep -i access-control-allow-origin                        # nothing
+curl -sI "$media" | grep -i '^vary'                                                                             # Vary: Origin
+```
 
 ```bash
 curl -s https://api.130.110.117.215.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}

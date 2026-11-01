@@ -19,10 +19,9 @@ The rules:
 | `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY` | VPS-2's `.env` only; never in the repo, a log line or a test (D15, FR-052) | The Firestore bridge | [Below](#rotate-the-sat-air-bridge-credentials) |
 | `GHCR_READ_TOKEN` | The home box's `.env` | `home-box-update.sh` (read-only `read:packages`) | [Below](#rotate-the-home-boxs-ghcr-token) |
 | `SCRAPE_USER_AGENT` | VPS-2's and the home box's `.env` | The fetcher's `User-Agent`; not a secret, but keep it a real contact | Edit it and recreate the workers |
-| FCM service account JSON | VPS-2 only: `/srv/secrets/fcm.json`, mode 600, owner `deploy`; mounted read-only into `worker-notify` and no other service. `FCM_CREDENTIALS_FILE` in `/srv/madar/.env` points at it. | `firebase_admin` in the notifications worker | [push-notifications.md](push-notifications.md#the-fcm-service-account) |
+| FCM service account JSON | VPS-2 only: `/srv/secrets/fcm.json`, mode 600, owned by uid 10001 (the image's user), in a directory 700 owned by the same uid; mounted read-only into `worker-notify` and no other service. `FCM_CREDENTIALS_FILE` in `/srv/madar/.env` points at it. Installed as root, once: [push-notifications.md](push-notifications.md#the-fcm-service-account) | `firebase_admin` in the notifications worker | [Below](#rotate-the-fcm-service-account) |
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | VPS-2's `.env` only | The importer alerts ([source-alerts.md](source-alerts.md)) and Uptime Kuma's notifications | [Below](#rotate-the-telegram-bot) |
-| `FCM_CREDENTIALS_FILE` (the file at `/srv/secrets/fcm.json`) | VPS-2 only, mode 600, owned by uid 10001, mounted read-only into `worker-notify` alone. The value itself is `FCM_CREDENTIALS_FILE=/srv/secrets/fcm.json`, not a secret. | The FCM sender (Lane B1's `push-notifications.md`, written in the same release) | [Below](#rotate-the-fcm-service-account) |
 | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` | Both VMs' `.env` (the database backup runs on VPS-2, the weekly media snapshot on VPS-1) | `backup-db.sh`, `backup-media.sh` ([backups.md](backups.md)) | [Below](#rotate-the-backup-keys) |
 | `RCLONE_CONFIG_OCI_*` (`_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
 | `KUMA_PUSH_URL_*` (six) | VPS-2's `.env` (`_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`) and VPS-1's (`_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) | `ops.heartbeat` and the backup scripts ([uptime-kuma.md](uptime-kuma.md)) | Recreate the monitor in Kuma and replace the value; they are not secrets, but they are bearer URLs |
@@ -36,7 +35,7 @@ The rules:
 | Caddy's internal CA key | VPS-1's `madar_caddy_data` volume | The admin site's certificates | Only by letting Caddy make a new CA, which means a new root on every admin device |
 | `GITHUB_TOKEN` | Created per job, expires when the job ends | GHCR push and pull | Nothing to rotate. `deploy.sh` logs out of GHCR on exit. |
 
-Also set on the hosts, and **not** secrets: `FCM_DRY_RUN` (VPS-2), `PWA_ORIGIN` (VPS-2), `RESPONSE_CACHE_ENABLED`, `RESPONSE_CACHE_MAX_BYTES`, `RATE_LIMIT_DEVICE_PER_MIN`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_REGISTER_PER_10MIN` (VPS-1). They live in the same `.env` and are documented in [push-notifications.md](push-notifications.md) and [response-cache-and-limits.md](response-cache-and-limits.md).
+Also set on the hosts, and **not** secrets: `FCM_CREDENTIALS_FILE` (the path `/srv/secrets/fcm.json`, not the file), `FCM_DRY_RUN` (VPS-2), `PWA_ORIGIN` (VPS-2), `RESPONSE_CACHE_ENABLED`, `RESPONSE_CACHE_MAX_BYTES`, `RATE_LIMIT_DEVICE_PER_MIN`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_REGISTER_PER_10MIN` (VPS-1). They live in the same `.env` and are documented in [push-notifications.md](push-notifications.md) and [response-cache-and-limits.md](response-cache-and-limits.md).
 
 Not secrets: the public and private IPs, the hostnames, the Firebase project ID, the WireGuard hub's public key, and `DEPLOY_KNOWN_HOSTS` (VPS-1's public host key, kept as a secret only for convenience).
 
@@ -212,9 +211,13 @@ To build a signed AAB on your machine, write `app/android/key.properties` (git-i
 
 1. In the Firebase console, **Project settings → Service accounts → Generate new private key** for the
    same project. The old key stays valid until you delete it.
-2. Install the new JSON on VPS-2 as `uid 10001`, mode 600:
-   `sudo -iu deploy install -d -m 700 -o 10001 -g 10001 /srv/secrets` then
-   `sudo -iu deploy install -m 600 -o 10001 -g 10001 <new>.json /srv/secrets/fcm.json`, and shred the source file.
+2. Install the new JSON on VPS-2 **as root**, with the worker's uid and mode 600 (the same commands
+   as [push-notifications.md](push-notifications.md#the-fcm-service-account)):
+   `sudo install -d -m 700 -o 10001 -g 10001 /srv/secrets`, then
+   `sudo install -m 600 -o 10001 -g 10001 <new>.json /srv/secrets/fcm.json`, then `sudo shred -u <new>.json`.
+   The same install run as `deploy` fails with EPERM: `deploy` is not root, and only root can give
+   the file uid 10001. Prove the worker can read it:
+   `docker compose exec worker-notify test -r /srv/secrets/fcm.json && echo readable`.
 3. Restart `worker-notify` only: `docker compose -p madar restart worker-notify`, and check
    `docker compose logs worker-notify | grep 'fcm: initialized'`.
 4. With `FCM_DRY_RUN=true`, queue one dispatch and read the log; then set it back to `false`

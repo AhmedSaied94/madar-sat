@@ -23,7 +23,11 @@ x-service: &service
 
 x-worker: &worker
   <<: *service
-  image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend:${IMAGE_TAG:?set IMAGE_TAG}
+  # `${IMAGE_TAG:-none}`: Compose interpolates the whole file for every command, including the
+  # backup timers' `run`, whose shell has no IMAGE_TAG (B2-R1-1). `none` cannot be pulled, and
+  # deploy.sh always passes a real tag, so a hand-run `up` fails loudly instead of starting an old
+  # image.
+  image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend:${IMAGE_TAG:-none}
   cap_drop:
     - ALL
   healthcheck:
@@ -106,11 +110,25 @@ services:
   # It reads the database over the VCN from VPS-1, stages the dump on /srv/backup and pushes it to
   # Backblaze B2 with restic; the heartbeat goes to Kuma. The script is mounted, not baked, so a
   # change to it is a deploy. `profiles: [backup]` keeps it out of every `up`.
+  #
+  # The image carries its own tag variable: `madar-backup` is tagged by the infra workflow (the run
+  # SHA and the moving `stable`), never by the backend deploy's IMAGE_TAG, and systemd starts this
+  # service with no IMAGE_TAG in the environment (B2-R1-1). deploy.sh pulls `stable` while it is
+  # logged in to GHCR.
+  #
+  # It runs as the image's user (uid 10001), which owns /srv/backup mode 700: root inside a
+  # container without CAP_DAC_OVERRIDE is still bound by the owner and mode bits, so root could not
+  # write the dump (B2-R1-2). restic and pg_dump keep their caches in /tmp, which that user owns.
   backup-db:
     platform: linux/arm64
     profiles: [backup]
-    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backup:${IMAGE_TAG:?set IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backup:${BACKUP_IMAGE_TAG:-stable}
     env_file: ${MADAR_ENV_FILE:-/srv/madar/.env}
+    user: "10001:10001"
+    environment:
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/cache
+      RESTIC_CACHE_DIR: /tmp/restic-cache
     restart: "no"
     security_opt:
       - no-new-privileges:true
