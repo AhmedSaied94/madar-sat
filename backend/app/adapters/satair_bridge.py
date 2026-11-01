@@ -77,9 +77,7 @@ class SatairBridgeAdapter:
             try:
                 # The key travels in a header, never in the URL: httpx logs the URL at INFO and a
                 # 2 MB body's error message carries it too (B2-R2-5, D15).
-                page = self.fetcher.get(
-                    url, allowed_hosts=self.allowed_hosts, headers={"X-Goog-Api-Key": api_key}
-                )
+                page = self.fetcher.get(url, allowed_hosts=self.allowed_hosts, headers={"X-Goog-Api-Key": api_key})
             except FetchError as exc:
                 if exc.status == 404:  # the old app has no document for that day
                     pages.append(RawPage(url=f"{url}#{day.isoformat()}", status=404, body=b""))

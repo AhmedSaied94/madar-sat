@@ -47,6 +47,8 @@ async def list_channels(
     kind: Kind | None = None,
     access: Access | None = None,
     missing_logo: bool | None = None,
+    placeholder: bool | None = None,
+    show_in_match: bool | None = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> Envelope[list[a.ChannelItem]]:
@@ -56,6 +58,8 @@ async def list_channels(
         kind=kind.value if kind else None,
         access=access.value if access else None,
         missing_logo=missing_logo,
+        placeholder=placeholder,
+        show_in_match=show_in_match,
     )
     items, next_cursor = await lists.channels(session, q, filters, cursor, limit)
     return ok(items, {"next_cursor": next_cursor})

@@ -14,6 +14,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | --- | --- | --- | --- |
 | [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
 | [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** none (done 2026-10-31) · **Lane B2:** none left that can run before the merge (the home box's worker and its dry run follow the first deploy) · **Lane A:** 2 items (the editors' devices, and the walk-through over WireGuard with its screenshots) · **Lane M:** 2 items (the screens against the design, and the merge) | **Lane B1:** 5 items (the deploy check, the first admin, one account per editor, the `404` from the internet, and the token-leak drill) · **Lane B2:** 5 items (the first unattended run, the bridge, a logo, the firewall proof, and the queue decision; hosts up, the home box's worker and `/srv/raw` are done) · **Lane A:** 1 item (the first editor walk-through; `admin.yml` is green) · **Lane M:** 5 items (tag `app-v0.2.0`, Play App Signing and the closed-track upload, the testers list, the phone walk-through, and the PWA preview) | **All code lanes are done; the hosts, the first admin, the first run, the first release and the phone walk-through are yours.** Lane B2 builds on B1's `app.workers`, `app.media` and revisions `0003`–`0004`; Lane A is rebased on B1's T015 commit, so it carries the D2 admin client. Lane A's round-1, round-2 and round-3 fixes are closed (A-R1-1 … A-R1-24, A-R2-1 … A-R2-13 and A-R3-1, 176 tests); A-F1 (React Hook Form), A-F2 (`DataTable`) and T107's browser steps are open. Lane M's screens read the `/v1` API on VPS-1; its zones script (T133) and the two `app.yml` checks wait on you and B2. Its round-1, round-2 and round-3 review fixes are in `d02-features` (M-R1-1 to M-R1-17, M-R2-1 to M-R2-10 and M-R3-1 to M-R3-2, 480 tests). |
+| [003 D3 follow, push and sources](#003-d3-follow-push-and-sources) | **Lane B1:** 4 items (the contract diff, revision `0005`, the audience query, the rate-limit values) | **Lane B1:** 2 items (the deploy with `0005`, the FCM key and the first real reminder) | Implemented on `d03-b1`; the suite is green and the clients are regenerated. Nothing is merged yet. |
 
 ## Every month
 
@@ -421,6 +422,28 @@ Each day gets its full section when it's implemented. These lines come from the 
   - a sponsor and the slot's schedule (Gaps 18);
   - turn on the V3 flags;
   - submit the store releases.
+
+## 003 D3 follow, push and sources
+
+Lane B1 implements devices and follows on `/v1`, the reminder scheduler and the FCM dispatcher on the outbox, the response cache, the `/v1` limits, the admin additions for A2/A6/A7/A13, and revision `0005` ([tasks.md](../specs/003-d03-follow-push-sources/tasks.md#lane-b1), [quickstart](../specs/003-d03-follow-push-sources/quickstart.md#lane-b1-devices-notifications-cache-admin-additions)). It is on `d03-b1` in `../madar-d03-b1`, cut from `003-d03-follow-push-sources`.
+
+What was checked locally: `ruff` and `mypy --strict` are green; `pytest --cov` is green (**1212 passed, 93.49 %**), covering the new `tests/devices/`, `tests/notifications/`, `tests/api/` and `tests/admin/` files; both OpenAPI documents are what `export-openapi` writes; oasdiff against `contract-v1` reports no breaking change for either; the regenerated admin (Orval) and Dart (`swagger_parser` + `build_runner`) clients are in the working tree, and the admin typechecks. One line outside the generated client changed: `admin/src/features/matches/queries.ts` now types the sources list as `SourceHealth` (the `GET /sources` shape), which is what A13 uses. `tests/adapters/test_homebox_acl.py` fails on `master` here too (the dev Redis uses `requirepass`), so it is not part of that figure.
+
+### Lane B1: devices, push, cache and limits
+
+#### Before merge, in this order
+
+- [ ] **T014 The contract PR.** Read the `backend/openapi/*.json` diff against [contracts/public-devices.md](../specs/003-d03-follow-push-sources/contracts/public-devices.md) and [contracts/admin-api.md](../specs/003-d03-follow-push-sources/contracts/admin-api.md): four new `/v1/devices*` paths with `Cache-Control: no-store`, `429 rate_limited` on every `/v1` path, and the A13/A2/A6/A7 admin routes. The generated clients are in the same PR. Merge it first; lanes A, M and B2 rebase on it.
+- [ ] **T008 Revision `0005`.** Read `backend/alembic/versions/0005_devices_outbox_sources.py` line by line: expand-only (nullable columns or defaults), one array CHECK (`ck_devices_satellite_ids`), one `>= 0` CHECK on `sources.consecutive_failures`, two partial indexes, one FK to `sources(name)`, and a downgrade that drops exactly those. → [database-migrations](runbooks/database-migrations.md#revision-0005)
+- [ ] **T034 The audience query.** The owner's review is in [push-notifications](runbooks/push-notifications.md#the-owners-audience-review): one `DISTINCT` statement, bound parameters, `device_follows` only, the per-device `kickoff_reminder` switch honoured in SQL. It is `AUDIENCE` in `backend/app/notifications/dispatcher.py`.
+- [ ] **T037 The rate-limit values.** 120/min per verified device, 600/min per IP, 30 per 10 min for `POST /v1/devices`. They are settings, not contract, and the reasoning is in [response-cache-and-limits](runbooks/response-cache-and-limits.md#the-rate-limits). Say if the IP value is too low for a carrier NAT day.
+
+#### After merge
+
+These need Lane B2's T077 (`worker-notify` mounts the FCM key) and the owner's key.
+
+- [ ] **T047 The deploy, the FCM key and the first real reminder.** `backend.yml` deploys and runs `0005`; install the service account as in [push-notifications](runbooks/push-notifications.md#the-fcm-service-account) (`FCM_CREDENTIALS_FILE`, `FCM_DRY_RUN=false`, `PWA_ORIGIN` on VPS-2, file mode 600, mounted into `worker-notify` only); `dc logs worker-notify` shows `fcm: initialized` after the first send; run one real reminder to your own Android phone through `notifications.dispatch_due` (quickstart step 4 without dry run) and tap it.
+- [ ] **The first reminder is the check.** After it lands: the outbox row is `sent` with `sent_at`, `sent` equals the number of followed devices, and the notification opens `/match/<id>` in the app. Then leave `FCM_DRY_RUN` at `false`. → [push-notifications](runbooks/push-notifications.md#read-the-outbox)
 
 ## Gaps
 

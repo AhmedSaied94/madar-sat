@@ -159,6 +159,7 @@ CHANNEL_ITEM: dict[str, Any] = {
     "show_in_match": False,
     "sort_order": 14,
     "hidden_by_name": False,
+    "placeholder_source": None,
 }
 
 CHANNEL: dict[str, Any] = {**CHANNEL_ITEM, "locked_fields": ["name"]}
@@ -176,6 +177,58 @@ COMMENTATOR: dict[str, Any] = {
 BROADCAST_PRESET: dict[str, Any] = {"id": 1, "name": "ON Sport 1", "logo_asset_id": 88, "logo": LOGO}
 HIDDEN_CHANNEL_NAME: dict[str, Any] = {"name": "قناة مخفية"}
 SOURCE: dict[str, Any] = {"name": "ysscores", "kind": "scraper", "is_enabled": True}
+
+IMPORT_RUN_ROW: dict[str, Any] = {
+    "id": 9123,
+    "status": "succeeded",
+    "started_at": "2026-11-01T07:58:00Z",
+    "finished_at": "2026-11-01T08:00:41Z",
+    "items_found": 64,
+    "items_upserted": 12,
+    "http_errors": 0,
+    "error": None,
+}
+
+IMPORT_RUN_DETAIL: dict[str, Any] = {
+    **IMPORT_RUN_ROW,
+    "raw_path": "livesoccertv/2026-11-01/run.json",
+    "log": {"unmatched_matches": [], "placeholders_created": [], "skipped_channels": 7, "errors": []},
+    "log_available": True,
+}
+
+SOURCE_HEALTH: dict[str, Any] = {
+    **SOURCE,
+    "breaker": "closed",
+    "breaker_opened_at": None,
+    "consecutive_failures": 0,
+    "paused": False,
+    "last_success_at": "2026-11-01T08:00:41Z",
+    "last_run": IMPORT_RUN_ROW,
+    "items_24h": [41, 64, 58],
+    "error_rate_24h": 0.25,
+    "running": False,
+}
+
+DASHBOARD: dict[str, Any] = {
+    "missing_channels": [
+        {
+            "competition": {"id": 12, "name": "الدوري المصري الممتاز", "priority": 3},
+            "matches": [{"id": 48213, "kickoff_at": "2026-11-01T18:00:00Z", "home": "الأهلي", "away": "الزمالك"}],
+        }
+    ],
+    "missing_channels_count": 9,
+    "placeholders_to_complete": 14,
+    "sources": [SOURCE_HEALTH],
+    "recent_changes": [
+        {
+            "at": "2026-11-01T08:00:41Z",
+            "by": {"kind": "admin", "name": "محرر"},
+            "entity": "match",
+            "entity_id": 48213,
+            "action": "update",
+        }
+    ],
+}
 MEDIA_ASSET: dict[str, Any] = {
     "id": 88,
     "kind": "image",

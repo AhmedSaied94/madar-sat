@@ -82,9 +82,7 @@ async def test_the_commentator_list_etag_follows_a_commentator_change(editor_cli
 
 async def test_the_hidden_name_list_etag_follows_a_hidden_name_change(editor_client):
     await _assert_revalidates(editor_client, HIDDEN)
-    await _assert_changes(
-        editor_client, HIDDEN, lambda: editor_client.post(HIDDEN, json={"name": "قناة تخفى دائماً"})
-    )
+    await _assert_changes(editor_client, HIDDEN, lambda: editor_client.post(HIDDEN, json={"name": "قناة تخفى دائماً"}))
 
 
 async def test_the_commentator_list_etag_follows_a_match_assignment(editor_client):

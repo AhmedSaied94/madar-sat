@@ -23,12 +23,13 @@ def hidden_names() -> Select[tuple[str]]:
 
 
 # A channel link is visible when it is not hidden on the match, the channel is not
-# soft-deleted, and its name (or normalized display name) is not in
-# hidden_channel_names. This mirrors research R6.
+# soft-deleted, it is not an importer's placeholder (research R13), and its name (or
+# normalized display name) is not in hidden_channel_names. This mirrors research R6.
 def visible_link(match_channel: Any, channel: Any, hidden: Any) -> ColumnElement[bool]:
     return and_(
         match_channel.is_hidden.is_(False),
         channel.deleted_at.is_(None),
+        channel.placeholder_source.is_(None),
         channel.name_norm.not_in(hidden),
         func.ar_normalize(func.coalesce(channel.display_name, "")).not_in(hidden),
     )

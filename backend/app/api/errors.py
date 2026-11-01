@@ -18,6 +18,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
+from app.api.cache import CachedResponse
 from app.api.envelope import fail
 
 logger = logging.getLogger("madar.api")
@@ -111,6 +112,43 @@ def validation_failed(errors: list[dict[str, Any]]) -> ApiError:
     return ApiError(422, "validation_error", "invalid request", {"errors": errors})
 
 
+# --- D3 errors (contracts/public-devices.md, contracts/admin-api.md) -----------------
+
+
+def rate_limited(retry_after_s: int) -> ApiError:
+    """``429 rate_limited`` with ``Retry-After`` and ``meta.retry_after_s`` (research R11)."""
+    return ApiError(
+        429,
+        "rate_limited",
+        "too many requests",
+        {"retry_after_s": retry_after_s},
+        headers={"Retry-After": str(retry_after_s)},
+    )
+
+
+def unknown_follow_target(unknown: dict[str, list[int]]) -> ApiError:
+    """``422 unknown_follow_target``; ``unknown`` holds only the kinds that had unknown ids."""
+    return ApiError(422, "unknown_follow_target", "unknown follow target", {"unknown": unknown})
+
+
+def too_many_follows(maximum: int) -> ApiError:
+    return ApiError(422, "too_many_follows", "too many follows", {"max": maximum})
+
+
+def unknown_satellite(ids: list[int]) -> ApiError:
+    return ApiError(422, "unknown_satellite", "unknown satellite", {"unknown": ids})
+
+
+def run_in_progress() -> ApiError:
+    """A manual run while the source's fetch lock is held (A13)."""
+    return ApiError(409, "run_in_progress")
+
+
+def source_not_runnable() -> ApiError:
+    """A source with no importer to run: ``manual``, or ``legacy`` without the bridge configured."""
+    return ApiError(409, "source_not_runnable")
+
+
 class NotModified(Exception):
     """Raised by the ETag dependency to short-circuit to a 304 with no body."""
 
@@ -159,6 +197,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def _not_modified(request: Request, exc: NotModified) -> Response:
         # A 304 has no body and no envelope, but repeats the validator headers.
         return Response(status_code=304, headers=validator_headers(exc.etag))
+
+    @app.exception_handler(CachedResponse)
+    async def _cached(request: Request, exc: CachedResponse) -> Response:
+        # A hit: the stored envelope, with the same validator headers the built response would carry.
+        return Response(content=exc.body, media_type="application/json", headers=validator_headers(exc.etag))
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:

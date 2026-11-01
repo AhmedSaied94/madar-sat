@@ -11,7 +11,9 @@ Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
   They upsert by `(source, external_id)`, skip any field listed in `locked_fields` (admin edits
   win), and send unmatched names to `unresolved_names`.
 - **Cache invalidation** uses `dataset_versions`. Each write bumps a version; Redis cache keys
-  and ETags are built from the versions, so nothing is deleted by key scan.
+  and ETags are built from the versions, so nothing is deleted by key scan. The public response
+  cache (`app/api/cache.py`) stores each serialized `200` under `rc:<etag>` for its route's TTL;
+  a bump changes the tag, so the next read misses. `/v1/devices*` is `no-store` and never cached.
 - **Admin writes** all go through `app/services/admin/writer.py`, the one unit of work: lock the
   row (`FOR UPDATE`), check `If-Match` against the version recomputed under the lock (`428` without
   it, `409 edit_conflict` when stale), apply, diff, add the changed lockable fields to
@@ -26,8 +28,18 @@ Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
   every request; the role in the token is never trusted. Every admin route except `auth/*` and `healthz`
   carries one (a test walks the routes).
 - **Push** uses an outbox. Producers only insert `notification_outbox` rows with a unique
-  `dedupe_key`. One dispatcher claims rows with `FOR UPDATE SKIP LOCKED`, resolves devices with
-  `SELECT DISTINCT` over `device_follows`, and sends through FCM.
+  `dedupe_key`; they never send. One dispatcher claims rows with `FOR UPDATE SKIP LOCKED`, resolves
+  devices with one `SELECT DISTINCT` over `device_follows` (`AUDIENCE` in
+  `app/notifications/dispatcher.py`, reviewed by the owner), and sends through FCM in pages of 500.
+  **Only `app/notifications/` imports `firebase_admin`** (`sender.py`); nothing else talks to FCM.
+- **Devices and follows** (`app/devices/`): `POST /v1/devices` upserts on `install_id` and rotates
+  the token; the row keeps only `sha256(token)` and the token is returned once. `PUT
+  /v1/devices/me/follows` replaces the whole set atomically under a device row lock (≤ 500).
+  `PUT /v1/devices/me` moves a push token to the device that sends it. The rate limiter stores
+  `dv:<hash>` and deletes it on rotate and delete (`app/api/ratelimit.py`).
+- **Source health** is written only by Lane B2's `app/adapters/health.py`; placeholders only by
+  `app/adapters/livesoccertv_links.py`. This lane reads them in `app/services/admin/sources.py`
+  and hides placeholders (`placeholder_source IS NOT NULL`) from every public channel query.
 - **Match status** is an explicit state machine (§6.2.3). A clock-guessed "live" carries
   `estimated: true` and must never show a score or minute. A manual status (`status_source = 'manual'`)
   is served as stored until an admin clears it; the allowed fields per status are in
@@ -66,15 +78,23 @@ ADMIN_JWT_SECRET=$(openssl rand -hex 32) uv run uvicorn app.admin:app --port 800
   `versions.py`, `refs.py` (id checks), one module per entity, `matches.py` + `match_links.py` + `match_view.py` +
   `match_list.py`, `bulk.py`, `lists.py`, `uploads.py`.
 - `app/media/` — fetch, encode and store media; shared by the snapshot rehoster (`app/etl/media.py`) and the upload route.
-- `app/workers/` — the Celery app (queues, retry base task, Redis locks). Lane B2's schedule module, when it
-  exists, exports `BEAT_SCHEDULE` and `app.workers.config` picks it up.
+- `app/devices/` — token generation and hashing, the `DeviceAuth` dependency, the update service and the
+  atomic follow-set replacement.
+- `app/notifications/` — `scheduler.py` (one outbox row per followed match), `dispatcher.py` (claim, the
+  audience query, pages, cursor), `messages.py` (copy and FCM fields, pure), `sender.py` (`PushSender`
+  protocol and `FcmSender`), `tasks.py` and `schedule.py` (`BEAT_SCHEDULE`).
+- `app/workers/` — the Celery app (queues, retry base task, Redis locks). It merges the `BEAT_SCHEDULE` of
+  every module in `SCHEDULE_MODULES` (`app.adapters.schedule`, `app.notifications.schedule`) and raises on
+  a duplicate entry name. Importing `app.workers` still loads neither `app.settings` nor `app.db`.
 - `app/etl/` — snapshot loader, media rehoster, load report.
 - `app/adapters/` and `tests/adapters/` — Lane B2's. B1 does not edit them.
 
 ## Ownership
 
 - B1 owns **migrations** and the **contract** (`backend/openapi/*.json`).
-- Revisions `0001`, `0002` and `0003` are applied and **never edited**; a change is a new revision.
+- Revisions `0001`, `0002`, `0003`, `0004` and `0005` are applied and **never edited**; a change is a new
+  revision. `0005` is D3's expand-only revision (device satellites, the outbox cursor, source health,
+  `import_runs.log`, `channels.placeholder_source`).
   `0001` is `alembic/sql/0001_base_schema.sql`, a byte-for-byte copy of `../old_app/migration/schema.sql`.
 - `backend/openapi/public.json` and `admin.json` are exported from code, committed,
   and tagged `contract-v1`; after the tag, changes must be non-breaking (FR-014).
@@ -113,4 +133,5 @@ Database tests use real PostgreSQL 16 (`TEST_DATABASE_URL`, default
   runs against a scratch database of its own.
 - Audio tests need `ffmpeg` and `ffprobe` and skip without them (CI and the image have them).
 
-Coverage ≥ 70 % on `app/domain`, `app/services`, `app/adapters` (MVP bar).
+Coverage ≥ 70 % on `app/domain`, `app/services`, `app/adapters`, `app/devices` and `app/notifications`
+(MVP bar).

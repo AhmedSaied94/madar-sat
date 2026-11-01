@@ -108,3 +108,12 @@ def test_no_bucket_is_time_independent():
 
 def test_canonical_query_sorts_keys():
     assert canonical_query({"b": "2", "a": "1"}) == [("a", "1"), ("b", "2")]
+
+
+def test_two_entities_of_one_detail_route_have_different_tags():
+    first = compute_etag("match_detail", {}, {"matches": 1}, path="/v1/matches/1")
+    second = compute_etag("match_detail", {}, {"matches": 1}, path="/v1/matches/2")
+    same = compute_etag("match_detail", {}, {"matches": 1}, path="/v1/matches/1")
+
+    assert first != second
+    assert first == same

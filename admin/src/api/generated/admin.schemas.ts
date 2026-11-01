@@ -48,6 +48,8 @@ export type AdminChannelLogoAssetId = number | null;
 
 export type AdminChannelPackage = string | null;
 
+export type AdminChannelPlaceholderSource = string | null;
+
 export type AdminChannelProvider = string | null;
 
 export type AdminChannelSatelliteId = number | null;
@@ -70,6 +72,7 @@ export interface AdminChannel {
   logo_asset_id: AdminChannelLogoAssetId;
   name: string;
   package: AdminChannelPackage;
+  placeholder_source: AdminChannelPlaceholderSource;
   provider: AdminChannelProvider;
   satellite_id: AdminChannelSatelliteId;
   show_in_match: boolean;
@@ -466,6 +469,23 @@ export const Category = {
   entertainment: 'entertainment',
 } as const;
 
+export type ChangedByKind = typeof ChangedByKind[keyof typeof ChangedByKind];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ChangedByKind = {
+  admin: 'admin',
+  source: 'source',
+} as const;
+
+/**
+ * Who last changed an entity: an admin (by name) or an importer (by source name).
+ */
+export interface ChangedBy {
+  kind: ChangedByKind;
+  name: string;
+}
+
 export type ChannelCreateAccess = Access | null;
 
 export type ChannelCreateBeam = Beam | null;
@@ -535,6 +555,8 @@ export type ChannelItemLogoAssetId = number | null;
 
 export type ChannelItemPackage = string | null;
 
+export type ChannelItemPlaceholderSource = string | null;
+
 export type ChannelItemProvider = string | null;
 
 export type ChannelItemSatelliteId = number | null;
@@ -556,6 +578,7 @@ export interface ChannelItem {
   logo_asset_id: ChannelItemLogoAssetId;
   name: string;
   package: ChannelItemPackage;
+  placeholder_source: ChannelItemPlaceholderSource;
   provider: ChannelItemProvider;
   satellite_id: ChannelItemSatelliteId;
   show_in_match: boolean;
@@ -696,6 +719,42 @@ export interface CompetitionRef {
   stage: CompetitionRefStage;
 }
 
+export interface Dashboard {
+  missing_channels: DashboardGroup[];
+  missing_channels_count: number;
+  placeholders_to_complete: number;
+  recent_changes: RecentChange[];
+  sources: SourceHealth[];
+}
+
+export type DashboardCompetitionId = number | null;
+
+export type DashboardCompetitionPriority = number | null;
+
+export interface DashboardCompetition {
+  id: DashboardCompetitionId;
+  name: string;
+  priority: DashboardCompetitionPriority;
+}
+
+export interface DashboardGroup {
+  competition: DashboardCompetition;
+  matches: DashboardMatch[];
+}
+
+export type DashboardMatchKickoffAt = string | null;
+
+export interface DashboardMatch {
+  away: string;
+  home: string;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  kickoff_at: DashboardMatchKickoffAt;
+}
+
 export type EnvelopeAdminChannelData = AdminChannel | null;
 
 export type EnvelopeAdminChannelError = ErrorBody | null;
@@ -800,6 +859,19 @@ export interface EnvelopeBulkResult {
   success: boolean;
 }
 
+export type EnvelopeDashboardData = Dashboard | null;
+
+export type EnvelopeDashboardError = ErrorBody | null;
+
+export type EnvelopeDashboardMeta = { [key: string]: unknown };
+
+export interface EnvelopeDashboard {
+  data: EnvelopeDashboardData;
+  error: EnvelopeDashboardError;
+  meta: EnvelopeDashboardMeta;
+  success: boolean;
+}
+
 export type EnvelopeHealthStatusData = HealthStatus | null;
 
 export type EnvelopeHealthStatusError = ErrorBody | null;
@@ -823,6 +895,19 @@ export interface EnvelopeHiddenChannelName {
   data: EnvelopeHiddenChannelNameData;
   error: EnvelopeHiddenChannelNameError;
   meta: EnvelopeHiddenChannelNameMeta;
+  success: boolean;
+}
+
+export type EnvelopeImportRunDetailData = ImportRunDetail | null;
+
+export type EnvelopeImportRunDetailError = ErrorBody | null;
+
+export type EnvelopeImportRunDetailMeta = { [key: string]: unknown };
+
+export interface EnvelopeImportRunDetail {
+  data: EnvelopeImportRunDetailData;
+  error: EnvelopeImportRunDetailError;
+  meta: EnvelopeImportRunDetailMeta;
   success: boolean;
 }
 
@@ -860,6 +945,32 @@ export interface EnvelopeSession {
   data: EnvelopeSessionData;
   error: EnvelopeSessionError;
   meta: EnvelopeSessionMeta;
+  success: boolean;
+}
+
+export type EnvelopeSourceHealthData = SourceHealth | null;
+
+export type EnvelopeSourceHealthError = ErrorBody | null;
+
+export type EnvelopeSourceHealthMeta = { [key: string]: unknown };
+
+export interface EnvelopeSourceHealth {
+  data: EnvelopeSourceHealthData;
+  error: EnvelopeSourceHealthError;
+  meta: EnvelopeSourceHealthMeta;
+  success: boolean;
+}
+
+export type EnvelopeSourceRunQueuedData = SourceRunQueued | null;
+
+export type EnvelopeSourceRunQueuedError = ErrorBody | null;
+
+export type EnvelopeSourceRunQueuedMeta = { [key: string]: unknown };
+
+export interface EnvelopeSourceRunQueued {
+  data: EnvelopeSourceRunQueuedData;
+  error: EnvelopeSourceRunQueuedError;
+  meta: EnvelopeSourceRunQueuedMeta;
   success: boolean;
 }
 
@@ -954,16 +1065,29 @@ export interface EnvelopeListHiddenChannelName {
   success: boolean;
 }
 
-export type EnvelopeListSourceItemData = SourceItem[] | null;
+export type EnvelopeListImportRunRowData = ImportRunRow[] | null;
 
-export type EnvelopeListSourceItemError = ErrorBody | null;
+export type EnvelopeListImportRunRowError = ErrorBody | null;
 
-export type EnvelopeListSourceItemMeta = { [key: string]: unknown };
+export type EnvelopeListImportRunRowMeta = { [key: string]: unknown };
 
-export interface EnvelopeListSourceItem {
-  data: EnvelopeListSourceItemData;
-  error: EnvelopeListSourceItemError;
-  meta: EnvelopeListSourceItemMeta;
+export interface EnvelopeListImportRunRow {
+  data: EnvelopeListImportRunRowData;
+  error: EnvelopeListImportRunRowError;
+  meta: EnvelopeListImportRunRowMeta;
+  success: boolean;
+}
+
+export type EnvelopeListSourceHealthData = SourceHealth[] | null;
+
+export type EnvelopeListSourceHealthError = ErrorBody | null;
+
+export type EnvelopeListSourceHealthMeta = { [key: string]: unknown };
+
+export interface EnvelopeListSourceHealth {
+  data: EnvelopeListSourceHealthData;
+  error: EnvelopeListSourceHealthError;
+  meta: EnvelopeListSourceHealthMeta;
   success: boolean;
 }
 
@@ -1029,6 +1153,99 @@ export interface HiddenChannelNameCreate {
 export interface IdName {
   id: number;
   name: string;
+}
+
+export type ImportRunDetailError = string | null;
+
+export type ImportRunDetailFinishedAt = string | null;
+
+export type ImportRunDetailLogAnyOf = { [key: string]: unknown };
+
+export type ImportRunDetailLog = ImportRunDetailLogAnyOf | null;
+
+export type ImportRunDetailRawPath = string | null;
+
+export type ImportRunDetailStatus = typeof ImportRunDetailStatus[keyof typeof ImportRunDetailStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ImportRunDetailStatus = {
+  running: 'running',
+  succeeded: 'succeeded',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
+export interface ImportRunDetail {
+  error: ImportRunDetailError;
+  finished_at: ImportRunDetailFinishedAt;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  http_errors: number;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  items_found: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  items_upserted: number;
+  log: ImportRunDetailLog;
+  log_available: boolean;
+  raw_path: ImportRunDetailRawPath;
+  started_at: string;
+  status: ImportRunDetailStatus;
+}
+
+export type ImportRunRowError = string | null;
+
+export type ImportRunRowFinishedAt = string | null;
+
+export type ImportRunRowStatus = typeof ImportRunRowStatus[keyof typeof ImportRunRowStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ImportRunRowStatus = {
+  running: 'running',
+  succeeded: 'succeeded',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
+export interface ImportRunRow {
+  error: ImportRunRowError;
+  finished_at: ImportRunRowFinishedAt;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  http_errors: number;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  items_found: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  items_upserted: number;
+  started_at: string;
+  status: ImportRunRowStatus;
 }
 
 export type Kind = typeof Kind[keyof typeof Kind];
@@ -1182,6 +1399,32 @@ export interface MediaAsset {
   width: MediaAssetWidth;
 }
 
+/**
+ * The row's current ETag. Required.
+ */
+export type OrderItemIfMatch = string | null;
+
+export interface OrderItem {
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  /** The row's current ETag. Required. */
+  if_match?: OrderItemIfMatch;
+}
+
+/**
+ * The full new order of the rows being moved, top first; each carries its version.
+ */
+export interface OrderRequest {
+  /**
+   * @minItems 1
+   * @maxItems 200
+   */
+  items: OrderItem[];
+}
+
 export type Period = typeof Period[keyof typeof Period];
 
 
@@ -1203,6 +1446,16 @@ export const Polarization = {
   L: 'L',
   R: 'R',
 } as const;
+
+export type RecentChangeEntityId = number | null;
+
+export interface RecentChange {
+  action: string;
+  at: string;
+  by: ChangedBy;
+  entity: string;
+  entity_id: RecentChangeEntityId;
+}
 
 export type SatelliteCreateBestFrequency = Frequency | null;
 
@@ -1317,20 +1570,57 @@ export interface Session {
   token_type: 'Bearer';
 }
 
-export type SourceItemKind = typeof SourceItemKind[keyof typeof SourceItemKind];
+export type SourceHealthBreaker = typeof SourceHealthBreaker[keyof typeof SourceHealthBreaker];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const SourceItemKind = {
+export const SourceHealthBreaker = {
+  closed: 'closed',
+  open: 'open',
+} as const;
+
+export type SourceHealthBreakerOpenedAt = string | null;
+
+export type SourceHealthErrorRate24h = number | null;
+
+export type SourceHealthKind = typeof SourceHealthKind[keyof typeof SourceHealthKind];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const SourceHealthKind = {
   scraper: 'scraper',
   api: 'api',
   internal: 'internal',
 } as const;
 
-export interface SourceItem {
+export type SourceHealthLastRun = ImportRunRow | null;
+
+export type SourceHealthLastSuccessAt = string | null;
+
+/**
+ * D2's ``SourceItem`` with the health fields added (A13).
+ */
+export interface SourceHealth {
+  breaker: SourceHealthBreaker;
+  breaker_opened_at: SourceHealthBreakerOpenedAt;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  consecutive_failures: number;
+  error_rate_24h: SourceHealthErrorRate24h;
   is_enabled: boolean;
-  kind: SourceItemKind;
+  items_24h: number[];
+  kind: SourceHealthKind;
+  last_run: SourceHealthLastRun;
+  last_success_at: SourceHealthLastSuccessAt;
   name: string;
+  paused: boolean;
+  running: boolean;
+}
+
+export interface SourceRunQueued {
+  queued: boolean;
 }
 
 export type Sport = typeof Sport[keyof typeof Sport];
@@ -1483,6 +1773,8 @@ category?: Category | null;
 kind?: Kind | null;
 access?: Access | null;
 missing_logo?: boolean | null;
+placeholder?: boolean | null;
+show_in_match?: boolean | null;
 cursor?: string | null;
 /**
  * @minimum 1
@@ -1499,6 +1791,14 @@ cursor?: string | null;
  * @maximum 100
  */
 limit?: number;
+};
+
+export type GetDashboardParams = {
+/**
+ * UTC; `to - from` is at most 2 days
+ */
+from: string;
+to: string;
 };
 
 export type ListMatchesParams = {
@@ -1523,6 +1823,15 @@ status?: Status | null;
 };
 
 export type BulkBody = BulkChangeCompetition | BulkRemoveChannels;
+
+export type ListSourceRunsParams = {
+cursor?: string | null;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
 
 export type ListTeamsParams = {
 q?: string | null;

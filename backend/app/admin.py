@@ -13,7 +13,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import errors, health, openapi
-from app.api.admin import auth, channels, commentators, competitions, lists, matches, media, satellites, teams
+from app.api.admin import (
+    auth,
+    channels,
+    commentators,
+    competitions,
+    dashboard,
+    lists,
+    matches,
+    media,
+    ordering,
+    satellites,
+    sources,
+    teams,
+)
 from app.auth.tokens import signing_key
 from app.settings import get_settings
 
@@ -54,6 +67,9 @@ def create_app() -> FastAPI:
         commentators.router,
         lists.router,
         media.router,
+        sources.router,
+        dashboard.router,
+        ordering.router,
     ):
         app.include_router(router)
 
