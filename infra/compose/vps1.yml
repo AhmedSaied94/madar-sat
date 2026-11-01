@@ -19,7 +19,11 @@ x-service: &service
 
 x-backend: &backend
   <<: *service
-  image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend:${IMAGE_TAG:?set IMAGE_TAG}
+  # `${IMAGE_TAG:-none}`: Compose interpolates the whole file for every command, including the
+  # backup timers' `run`, whose shell has no IMAGE_TAG (B2-R1-1). `none` cannot be pulled, and
+  # deploy.sh always passes a real tag, so a hand-run `up` fails loudly instead of starting an old
+  # image.
+  image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backend:${IMAGE_TAG:-none}
   environment:
     # Only the rollback drill sets this (deploy.sh, backend.yml break_healthcheck).
     HEALTHZ_FORCE_FAIL: ${HEALTHZ_FORCE_FAIL:-false}
@@ -147,11 +151,20 @@ services:
   # It mirrors /srv/media to the OCI bucket with rclone, and on Sundays also takes a restic snapshot
   # into the same repository as the database. Media lives on this disk, which is why it runs here and
   # not on VPS-2: the files never cross the VCN in either direction.
+  #
+  # Its own image variable, not the backend's IMAGE_TAG (B2-R1-1), and the image's user (uid 10001)
+  # because the media files are mode 0600 owned by that uid (B2-R1-2). /srv/media is mounted
+  # read-only; the caches live in /tmp.
   backup-media:
     platform: linux/arm64
     profiles: [backup]
-    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backup:${IMAGE_TAG:?set IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER}/madar-backup:${BACKUP_IMAGE_TAG:-stable}
     env_file: ${MADAR_ENV_FILE:-/srv/madar/.env}
+    user: "10001:10001"
+    environment:
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/cache
+      RESTIC_CACHE_DIR: /tmp/restic-cache
     restart: "no"
     entrypoint: ["/opt/backup/backup-media.sh"]
     security_opt:

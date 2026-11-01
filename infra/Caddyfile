@@ -33,14 +33,23 @@ api.{$VPS1_IP}.sslip.io {
 	reverse_proxy 127.0.0.1:8000
 }
 
-# Media: content-addressed files, so they never change (SD §6.9).
+# Media: content-addressed files, so they never change (SD §6.9). Flutter web fetches the bytes
+# (CanvasKit decodes them), so the PWA's origins need CORS, preview channels included; a channel
+# URL is `<project>--<channel>-<hash>.web.app`. Constitution V allows only those origins, so any
+# other Origin gets no CORS header (the native apps send none and need none), and `Vary: Origin`
+# keeps a shared cache from answering one origin with another's header.
 media.{$VPS1_IP}.sslip.io {
 	import public_headers
 	root * /srv/media
 	header Cache-Control "public, max-age=31536000, immutable"
-	# Flutter web fetches image bytes (CanvasKit decodes them), so every origin needs CORS, preview
-	# channels included. The files are public and read without credentials, so any origin may.
-	header Access-Control-Allow-Origin "*"
+
+	header Vary Origin
+	@pwa_origin {
+		method GET HEAD
+		header_regexp Origin ^https://{$FIREBASE_PROJECT_ID}(--[a-z0-9-]+)?\.(web\.app|firebaseapp\.com)$
+	}
+	header @pwa_origin Access-Control-Allow-Origin "{http.request.header.Origin}"
+
 	file_server
 }
 

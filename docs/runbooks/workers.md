@@ -75,9 +75,10 @@ printf '%s\n' "$GHCR_TOKEN" \
   | ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" "sudo -iu deploy /srv/madar/infra/scripts/deploy.sh --host vps2 $sha"
 ```
 
-The script pulls its services, starts them, and waits up to 90 s for each to report healthy, then
-installs and enables the host's backup timers (`systemctl enable --now`). Migrations are not run
-here: VPS-1's deploy runs `alembic upgrade head` first, and this job runs after it.
+The script pulls its services (and `madar-backup:stable`), starts them, waits up to 90 s for each to
+report healthy, and verifies the D3 folders and the backup timer that `bootstrap-vps.sh` installed:
+it does not create or enable anything itself (B2-R1-4). Migrations are not run here: VPS-1's deploy
+runs `alembic upgrade head` first, and this job runs after it.
 
 ## Roll back VPS-2
 

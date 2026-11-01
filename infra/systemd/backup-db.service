@@ -1,5 +1,6 @@
 # Nightly PostgreSQL backup on VPS-2 (R19, SC-004). Started by backup-db.timer at 03:00 Africa/Cairo.
-# Installed by scripts/deploy.sh; the script and the Compose file come from /srv/madar/infra.
+# Installed and enabled by scripts/bootstrap-vps.sh as root (B2-R1-4); the script and the Compose
+# file come from /srv/madar/infra. A deploy only verifies that this unit matches the repository.
 #
 # A systemd timer, not a Celery beat entry: a backup must survive a broken broker or a dead worker,
 # which is exactly the incident it is there for (R19).

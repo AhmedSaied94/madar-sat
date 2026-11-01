@@ -50,7 +50,7 @@ After the deploy:
 3. Run it again → `items_upserted = 0`, no new placeholder. Remove one of its links in A4, run again → the link stays hidden.
 4. Set `LIVESOCCERTV_FETCH_QUEUE` to a queue with a broken fetcher (or block the host on the home box) and run 3 times → the breaker opens, the source is paused, and the Telegram alert arrives within 15 min (SC-005). Resume in A13 → it runs.
 5. Feed a saved empty page through the ingest test harness on staging data → one zero-items alert, and no second one the same day.
-6. Next morning: `ssh madar-vps2 'docker compose run --rm backup-db restic snapshots'` lists last night's snapshot; `ssh madar-vps1 'docker compose run --rm backup-media rclone lsd oci:'` shows the media copy; Kuma shows both heartbeats green (SC-004). Stop `worker-notify` for 10 min → Kuma alerts on Telegram.
+6. Next morning, with the commands of [backups.md](runbooks/backups.md#check-last-nights-backup): `ssh madar-vps2 'sudo -iu deploy docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db restic snapshots --tag db --last 3'` lists last night's snapshot; the media mirror answers `rclone lsd oci: --max-depth 1` (through `--entrypoint rclone`); Kuma shows both heartbeats green (SC-004). Stop `worker-notify` for 10 min → Kuma alerts on Telegram.
 
 ## Lane A: admin
 

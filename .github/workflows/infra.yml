@@ -14,6 +14,8 @@ on:
       - "infra/**"
       - ".github/workflows/**"
       - ".github/actions/**"
+      # The runbooks carry the exact commands the scripts run; check-doc-commands.sh compares them.
+      - "docs/runbooks/**"
 
 permissions:
   contents: read
@@ -71,6 +73,61 @@ jobs:
             || { echo "::error::Kuma is gone from vps2.yml"; exit 1; }
           jq -e '.services["backup-db"].profiles == ["backup"]' <<<"$v2" >/dev/null \
             || { echo "::error::backup-db is not behind the backup profile"; exit 1; }
+
+      # B2-R1-1: the backup services carry their own tag. The timer's shell has no IMAGE_TAG (it is
+      # set by deploy.sh), and `madar-backup` is tagged by this workflow (the run SHA and the moving
+      # `stable`), never by the backend's deploy SHA. Compose interpolates the whole file for every
+      # command, so this renders both files with an env file that has no IMAGE_TAG at all: the
+      # backup services must still resolve, and so must the backend's (`:none`, unpullable).
+      #
+      # The profiles have to include the backend service's: `config` filters the model to the
+      # profiles it is given, so `--profile backup` alone renders `worker-imports` as null.
+      - name: The backup services start without IMAGE_TAG
+        run: |
+          set -euo pipefail
+          grep -v '^IMAGE_TAG=' infra/compose/example.env > "$RUNNER_TEMP/no-tag.env"
+          for host in vps1 vps2; do
+            if [[ $host == vps1 ]]; then
+              service=backup-media
+              backend_service=api-public
+              profiles=(--profile backup)
+            else
+              service=backup-db
+              backend_service=worker-imports
+              profiles=(--profile backup --profile workers)
+            fi
+            rendered=$(docker compose -f "infra/compose/$host.yml" --env-file "$RUNNER_TEMP/no-tag.env" \
+              "${profiles[@]}" config --format json)
+            image=$(jq -r --arg s "$service" '.services[$s].image' <<<"$rendered")
+            [[ $image == ghcr.io/example-owner/madar-backup:stable ]] \
+              || { echo "::error::$host.yml: $service resolves to '$image', not madar-backup:stable"; exit 1; }
+            backend=$(jq -r --arg s "$backend_service" '.services[$s].image' <<<"$rendered")
+            [[ $backend == ghcr.io/example-owner/madar-backend:none ]] \
+              || { echo "::error::$host.yml: the backend image still requires IMAGE_TAG ($backend)"; exit 1; }
+            tagged=$(BACKUP_IMAGE_TAG=2026-01-01 docker compose -f "infra/compose/$host.yml" \
+              --env-file "$RUNNER_TEMP/no-tag.env" "${profiles[@]}" config --format json \
+              | jq -r --arg s "$service" '.services[$s].image')
+            [[ $tagged == ghcr.io/example-owner/madar-backup:2026-01-01 ]] \
+              || { echo "::error::$host.yml: BACKUP_IMAGE_TAG does not reach $service"; exit 1; }
+          done
+
+      # B2-R1-2: the backup containers run as the uid that owns their paths, with every capability
+      # dropped. The script reads the rendered Compose files, the bootstrap and the deploy, then
+      # proves the permissions with a container on a host-shaped tree.
+      - name: The backup containers can write the staging directory and read the media
+        run: infra/scripts/check-backup-permissions.sh
+
+      # B2-R1-3 / B2-R1-5: the real scripts, against local restic repositories: an empty repository
+      # is created, and 7/4 retention prunes because the host and the dump path are pinned.
+      - name: The backups initialise their repository and prune
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq restic
+          infra/scripts/check-backup-retention.sh
+
+      # B2-R1-7: one root install command for the FCM key, in all three documents that carry it.
+      - name: The FCM key install steps are one command
+        run: infra/scripts/check-doc-commands.sh
 
       # The D3 timers must exist, name a real service, and use the Cairo calendar (R19).
       - name: Verify the backup systemd units
@@ -226,6 +283,23 @@ jobs:
           docker run --rm --env-file infra/compose/example.env \
             -v "$PWD/infra:/etc/madar/infra:ro" \
             caddy:2.11.7 caddy validate --config /etc/madar/infra/Caddyfile --adapter caddyfile
+          # B2-R1-6: constitution V allows public CORS only to the PWA's origins, so no site may
+          # answer a wildcard, and the media site must echo the Origin (preview channels included)
+          # for GET/HEAD with Vary: Origin.
+          if grep -qE 'Access-Control-Allow-Origin "\*"' infra/Caddyfile; then
+            echo "::error::a site answers Access-Control-Allow-Origin '*' (constitution V)"
+            exit 1
+          fi
+          media=$(awk '/^media\./,/^}/' infra/Caddyfile)
+          grep -q 'header Vary Origin' <<<"$media" \
+            || { echo "::error::the media site does not send Vary: Origin"; exit 1; }
+          grep -q 'method GET HEAD' <<<"$media" \
+            || { echo "::error::the media site's CORS matcher is not limited to GET and HEAD"; exit 1; }
+          grep -q 'header @pwa_origin Access-Control-Allow-Origin' <<<"$media" \
+            || { echo "::error::the media site no longer echoes the PWA origin"; exit 1; }
+          # shellcheck disable=SC2016 # the literal matcher, with Caddy's placeholder
+          grep -qF 'header_regexp Origin ^https://{$FIREBASE_PROJECT_ID}(--[a-z0-9-]+)?' <<<"$media" \
+            || { echo "::error::the media site's CORS matcher does not allow a preview channel"; exit 1; }
 
       # B2-R2-2: the action called `$GITHUB_ACTION_PATH/../../infra/scripts/ssh-config.sh`, which
       # resolves to .github/infra/... and exits 127, so deploy, deploy-vps2 and sync all failed.
@@ -265,10 +339,10 @@ jobs:
           running_tag() { printf 'previous-tag\n'; }
           healthy_services() { return 1; }
           docker() { return 0; }
-          # D3: deploy_vps2 creates the hosts' folders and enables the backup timers. Both touch
-          # /srv and systemd, so this drill stubs them; their own steps cover them.
-          ensure_dirs() { :; }
-          install_timers() { :; }
+          # D3: deploy_vps2 only verifies the folders and timers bootstrap created (B2-R1-4). That
+          # check is read-only, covered by its own step, and not what this drill is about; a stub
+          # here can no longer hide root-only work, because deploy.sh has none (the step below).
+          require_host_setup() { :; }
           # `$1` is the compose verb; failing `up` is what the guards are about. (A `case` on `$*`
           # with a leading space never matches, which silently tested the healthy path.)
           compose_stub() {
@@ -343,6 +417,55 @@ jobs:
           apply_stateful_infra
           [[ "$(cat "$acl_target")" == accepted-acl ]] \
             || { echo "::error::a healthy up restored an ACL it did not need to"; exit 1; }
+
+      # B2-R1-4: deploy.sh runs as `deploy` over SSH, so it may not do root-only work. The folders,
+      # the unit files, `daemon-reload` and `enable` belong to bootstrap-vps.sh, which CI proves
+      # installs them; a deploy only verifies them.
+      - name: the deploy does no root-only work
+        run: |
+          set -euo pipefail
+          # Comments may name the commands; a line that would run one may not.
+          if grep -vE '^[[:space:]]*#' infra/scripts/deploy.sh \
+            | grep -nE 'install -d .*-[og] |systemctl (enable|disable|start|stop|daemon-reload)|chown '; then
+            echo "::error::deploy.sh does root-only work; bootstrap-vps.sh owns it (B2-R1-4)"
+            exit 1
+          fi
+          grep -q 'require_host_setup' infra/scripts/deploy.sh \
+            || { echo "::error::deploy.sh does not verify the host setup"; exit 1; }
+          grep -q 'systemctl enable' infra/scripts/bootstrap-vps.sh \
+            || { echo "::error::bootstrap-vps.sh does not enable the timers"; exit 1; }
+          grep -q 'systemctl daemon-reload' infra/scripts/bootstrap-vps.sh \
+            || { echo "::error::bootstrap-vps.sh does not reload systemd"; exit 1; }
+
+      # B2-R1-4: the verifier itself, against a tree shaped like a bootstrapped host: the right modes
+      # and owners pass, a missing folder and a wrong mode fail. MADAR_STATE_DIR and MADAR_SRV_ROOT
+      # are the CI-only seams; a host never sets them.
+      - name: the deploy's folder check rejects a host bootstrap did not prepare
+        run: |
+          set -euo pipefail
+          awk '/^check_dir\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/check_dir.sh"
+          awk '/^check_dirs\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/check_dirs.sh"
+          source "$RUNNER_TEMP/check_dir.sh"
+          source "$RUNNER_TEMP/check_dirs.sh"
+          log() { :; }
+          # shellcheck disable=SC2034 # read by the extracted check_dirs
+          app_uid=$(id -u)
+          state_dir=$RUNNER_TEMP/state
+          srv_root=$RUNNER_TEMP/srv
+          install -d -m 750 "$state_dir"
+          install -d -m 700 "$srv_root/backup" "$srv_root/secrets"
+          install -d -m 755 "$srv_root/kuma"
+          check_dirs vps2 || { echo "::error::the folder check rejected the tree bootstrap creates"; exit 1; }
+          rmdir "$srv_root/backup"
+          if check_dirs vps2; then
+            echo "::error::the folder check passed with /srv/backup missing"
+            exit 1
+          fi
+          install -d -m 755 "$srv_root/backup"
+          if check_dirs vps2; then
+            echo "::error::the folder check passed with /srv/backup at mode 755"
+            exit 1
+          fi
 
       - name: shellcheck
         run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources infra/scripts/*.sh infra/backup/*.sh

@@ -13,9 +13,19 @@ backups, which are exactly what an incident needs.
 | `/srv/media` (snapshot) | VPS-1's disk | the same restic repository as the database | Sundays 04:00 Africa/Cairo | 4 weekly |
 
 - The timers are in `infra/systemd/`; the scripts are in `infra/backup/`; the image is
-  `ghcr.io/<owner>/madar-backup` (built from `infra/backup/Dockerfile` on `master`).
-- `deploy.sh` installs and enables the timers on every deploy (`systemctl enable --now`), so a fresh
-  host needs no manual step.
+  `ghcr.io/<owner>/madar-backup:stable`, built from `infra/backup/Dockerfile` on `master`
+  (`infra.yml` moves `stable` on every build, and `deploy.sh` pulls it on both hosts).
+- `bootstrap-vps.sh` creates the folders and installs and enables the timers as root
+  (`systemctl enable`), and starts them once the backup keys are in `.env`; a deploy only verifies
+  them and names the command to run when one is missing (B2-R1-4).
+- The first run creates the restic repository when the bucket is still empty (`restic cat config ||
+  restic init`), so the owner does not run `restic init` by hand (B2-R1-5).
+- Each job snapshots under a pinned restic host (`madar-vps2` for the database, `madar-vps1` for the
+  media) and the database dump always has the same path, `/srv/backup/madar.dump`. `restic forget`
+  prunes per group of host and paths, so this is what makes 7/4/6 delete anything at all (B2-R1-3).
+- The backup containers run as uid 10001 (the image's user, `cap_drop: ALL`): `/srv/backup` is that
+  uid's, mode 700, and the media files are 0600 owned by it, which is why they can write and read
+  them without `CAP_DAC_OVERRIDE` (B2-R1-2).
 - The Backblaze free tier is 10 GB: a 7/4/6 restic policy over a database of a few hundred MB stays
   inside it. Watch the bucket's used space; if it grows, lower `BACKUP_KEEP_MONTHLY` first.
 - Both jobs push a heartbeat to Uptime Kuma (`KUMA_PUSH_URL_BACKUP_DB`, `KUMA_PUSH_URL_BACKUP_MEDIA`,
@@ -28,81 +38,88 @@ The secrets are in each host's `/srv/madar/.env` (mode 600, owner `deploy`):
 
 ## Check last night's backup
 
+The commands are the ones the timers run, plus a read-only `restic`/`rclone` subcommand. They need
+no `IMAGE_TAG` in the environment: the backup services take their tag from `BACKUP_IMAGE_TAG`
+(`stable` unless a host sets it).
+
 On VPS-2 (the database):
 
 ```sh
-ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
-  'sudo -iu deploy env $(sudo cat /srv/madar/.env | xargs) \
-   docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile backup \
-   run --rm -T backup-db restic snapshots --tag db --last 3'
+ssh madar-vps2 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db \
+  restic snapshots --tag db --last 3'
 ```
 
 On VPS-1 (the media):
 
 ```sh
-sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media rclone lsd oci: --max-depth 1
+ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T --entrypoint rclone backup-media \
+  lsd oci: --max-depth 1'
 ```
 
 Both containers exit non-zero on failure, so the timer's state is the second answer:
 
 ```sh
-systemctl list-timers 'backup-*' --no-pager
-systemctl status backup-db.service --no-pager | head -n 20
-journalctl -u backup-db.service -n 50 --no-pager
+ssh madar-vps2 'systemctl list-timers "backup-*" --no-pager'
+ssh madar-vps2 'systemctl status backup-db.service --no-pager | head -n 20'
+ssh madar-vps2 'journalctl -u backup-db.service -n 50 --no-pager'
 ```
 
 ## Run one by hand
 
 ```sh
 # database, from VPS-2
-sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db
+ssh madar-vps2 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db'
 
 # media mirror, from VPS-1
-sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media
+ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media'
 
 # media mirror plus this week's snapshot, from VPS-1
-sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media-weekly
+ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media-weekly'
 ```
+
+`systemctl start backup-db.service` and `systemctl start backup-media.service` (as root) run the
+same thing through systemd; use them when you want the journal entry.
 
 ## Restore the database
 
 Do this on a scratch database first; never point it at `madar` while the API is serving.
 
 ```sh
-# 1. On VPS-2, restore the newest snapshot to /srv/backup inside the container.
-ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
-  'sudo -iu deploy docker compose --env-file /srv/madar/.env \
-   -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db \
-   restic restore latest --tag db --target /restore'
+# 1. On VPS-2, restore the newest snapshot into the staging directory the container already mounts.
+ssh madar-vps2 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db \
+  restic restore latest --tag db --target /srv/backup/restore'
 
-# 2. Copy the dump out of the container's staging area and inspect it.
-sudo -iu deploy ls -lh /srv/backup/restore/srv/backup/
+# 2. The dump is now on the host's disk, under the snapshot's own path. `/srv/backup` belongs to the
+#    backup user (uid 10001), so root reads it here.
+ssh madar-vps2 'sudo ls -lh /srv/backup/restore/srv/backup/'
 ```
 
 ```sh
-# 3. On VPS-1, create a scratch database and load the dump into it.
+# 3. From your machine: root on VPS-2 reads the dump, and it goes to VPS-1, which holds the
+#    database.
+ssh madar-vps2 'sudo cat /srv/backup/restore/srv/backup/madar.dump' > /tmp/madar.dump
+scp /tmp/madar.dump madar-vps1:/tmp/madar.dump
+```
+
+```sh
+# 4. On VPS-1, create a scratch database and load the dump into it.
 dc exec -T postgres createdb -U madar madar_restore
 dc exec -T postgres pg_restore -U madar -d madar_restore --no-owner --no-privileges \
-  < /srv/backup/restore/srv/backup/madar-<stamp>.dump
+  < /tmp/madar.dump
 dc exec postgres psql -U madar -d madar_restore -c "select count(*) from matches"
 
-# 4. When the numbers look right, swap it in during a quiet window.
+# 5. When the numbers look right, swap it in during a quiet window.
 dc stop api-public api-admin worker-media
 dc exec postgres psql -U madar -d postgres -c "select pg_terminate_backend(pid) from pg_stat_activity where datname='madar'"
 dc exec postgres dropdb -U madar madar
 dc exec postgres psql -U madar -d postgres -c "alter database madar_restore rename to madar"
 dc up -d api-public api-admin worker-media
-```
-
-`pg_restore` from the host needs the dump on the host: the container writes to `/srv/backup`, which
-is the same directory vps2.yml mounts, so copy it back over SSH if you restore on VPS-1:
-
-```sh
-scp -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP":/srv/backup/restore/srv/backup/madar-*.dump /tmp/
 ```
 
 Restoring an **older** snapshot is the same with `--tag db` plus the snapshot id from
@@ -113,18 +130,23 @@ Restoring an **older** snapshot is the same with `--tag db` plus the snapshot id
 The mirror is a plain copy, so one file comes back with:
 
 ```sh
-sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media \
-  rclone copy oci:madar-media/logos/<file>.webp /srv/media/logos/
+ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T --entrypoint rclone backup-media \
+  copy oci:madar-media/logos/<file>.webp /srv/media/logos/'
 ```
 
-A file deleted from the disk by mistake comes back from the weekly snapshot:
+A file deleted from the disk by mistake comes back from the weekly snapshot. `/srv/media` is
+mounted read-only in the backup container, so restore into a scratch directory and copy across:
 
 ```sh
-sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T backup-media \
-  restic restore latest --tag media --target /restore --include /srv/media/logos
-sudo -iu deploy cp /restore/srv/media/logos/<file>.webp /srv/media/logos/
+# the image deploy.sh pulls, so the tag is never guessed
+image=$(ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps1.yml --profile backup config --images' | grep madar-backup)
+ssh madar-vps1 'sudo install -d -m 700 -o deploy -g deploy /srv/media-restore'
+ssh madar-vps1 "sudo -iu deploy docker run --rm --env-file /srv/madar/.env \
+  -v /srv/media-restore:/restore $image \
+  restic restore latest --tag media --target /restore --include /srv/media/logos"
+ssh madar-vps1 'sudo -iu deploy cp /srv/media-restore/srv/media/logos/<file>.webp /srv/media/logos/'
 ```
 
 ## The monthly restore drill

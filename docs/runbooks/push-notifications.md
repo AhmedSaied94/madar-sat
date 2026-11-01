@@ -31,9 +31,17 @@ Only `app/notifications/sender.py` talks to FCM. Producers only insert outbox ro
    ```bash
    scp -J ubuntu@10.8.0.1 ./fcm.json ubuntu@10.1.0.118:/tmp/fcm.json
    ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118
-   sudo install -d -m 700 -o deploy -g deploy /srv/secrets
-   sudo install -m 600 -o deploy -g deploy /tmp/fcm.json /srv/secrets/fcm.json
-   shred -u /tmp/fcm.json
+   sudo install -d -m 700 -o 10001 -g 10001 /srv/secrets
+   sudo install -m 600 -o 10001 -g 10001 /tmp/fcm.json /srv/secrets/fcm.json
+   sudo shred -u /tmp/fcm.json
+   ```
+
+   `worker-notify` runs as uid 10001 with `cap_drop: ALL`, and `/srv/secrets` is that uid's, mode
+   700 (`bootstrap-vps.sh`), so the key is installed **as root** with that owner: the same command
+   run as `deploy` fails with EPERM, and a `deploy`-owned key is unreadable to the worker. Prove it:
+
+   ```bash
+   docker compose exec worker-notify test -r /srv/secrets/fcm.json && echo 'the key is readable'
    ```
 
 3. **Point the worker at it.** In VPS-2's `/srv/madar/.env`:
