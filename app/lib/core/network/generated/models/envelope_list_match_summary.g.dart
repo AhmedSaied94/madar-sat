@@ -22,8 +22,8 @@ _EnvelopeListMatchSummary _$EnvelopeListMatchSummaryFromJson(
 Map<String, dynamic> _$EnvelopeListMatchSummaryToJson(
   _EnvelopeListMatchSummary instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

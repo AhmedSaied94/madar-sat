@@ -20,6 +20,6 @@ Map<String, dynamic> _$SatelliteRefToJson(_SatelliteRef instance) =>
       'id': instance.id,
       'name_ar': instance.nameAr,
       'name_en': instance.nameEn,
-      'orbital_position': instance.orbitalPosition,
+      'orbital_position': ?instance.orbitalPosition,
       'slug': instance.slug,
     };

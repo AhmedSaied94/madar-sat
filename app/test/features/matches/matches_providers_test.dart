@@ -5,7 +5,11 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/db/app_database.dart';
+import 'package:madar_sat/core/db/database_provider.dart';
+import 'package:madar_sat/core/format/clock.dart';
 import 'package:madar_sat/core/network/generated/models/match_summary.dart';
+import 'package:madar_sat/core/settings/app_settings.dart';
+import 'package:madar_sat/core/settings/settings_providers.dart';
 import 'package:madar_sat/core/network/swr_providers.dart';
 import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/features/matches/data/matches_providers.dart';
@@ -21,9 +25,12 @@ class _CountingRepository extends SwrRepository {
   int dayReads = 0;
 
   @override
-  Stream<SwrSnapshot<List<MatchSummary>>> watchDay(DateTime day) {
+  Stream<SwrSnapshot<List<MatchSummary>>> watchDay(
+    DateTime day, {
+    Set<int> mySatelliteIds = const {},
+  }) {
     dayReads += 1;
-    return super.watchDay(day);
+    return super.watchDay(day, mySatelliteIds: mySatelliteIds);
   }
 }
 
@@ -49,7 +56,11 @@ void main() {
   /// A container listening to [matchesDayProvider], collecting each snapshot it emits.
   (ProviderContainer, List<SwrSnapshot<List<MatchSummary>>>) listening(SwrRepository repo) {
     final container = ProviderContainer(
-      overrides: [swrRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        swrRepositoryProvider.overrideWithValue(repo),
+        // The day provider reads My satellites and the zone, which are settings.
+        appDatabaseProvider.overrideWithValue(database),
+      ],
     );
     final snapshots = <SwrSnapshot<List<MatchSummary>>>[];
     container.listen(matchesDayProvider(day), (previous, next) {
@@ -122,4 +133,101 @@ void main() {
     expect(snapshots.last.failure, isNotNull);
     expect((container.read(matchesDayStateProvider(day)) as DayLoaded).view.rows.map((m) => m.id), [1]);
   });
+  group('S2 follows My satellites and the chosen zone (M-R1-5, M-R1-6)', () {
+    /// A container over [database] with the app's settings and a pinned clock.
+    ProviderContainer zoneContainer({required DateTime clock}) {
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          clockProvider.overrideWithValue(() => clock),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('with satellites chosen, the day request carries my_satellite_ids', () async {
+      await database.writeSetting(SettingsKeys.satelliteIds, '3,7');
+      final http = FakeHttpAdapter()..enqueueData([_json(match)], etag: '"v1"');
+      final repository = _CountingRepository(dio: fakeDio(http), database: database);
+      final container = ProviderContainer(
+        overrides: [
+          swrRepositoryProvider.overrideWithValue(repository),
+          appDatabaseProvider.overrideWithValue(database),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(appSettingsProvider.future);
+
+      container.listen(matchesDayProvider(day), (_, _) {});
+      await container.read(matchesDayProvider(day).future);
+      await pumpEventQueue();
+
+      expect(http.requests.last.uri.queryParameters['my_satellite_ids'], '3,7');
+    });
+
+    test('changing the selection re-reads instead of reusing the old ETag', () async {
+      await database.writeSetting(SettingsKeys.satelliteIds, '3,7');
+      final http = FakeHttpAdapter()
+        ..enqueueData([_json(match)], etag: '"v1"')
+        ..enqueueData([_json(match)], etag: '"v2"');
+      final repository = _CountingRepository(dio: fakeDio(http), database: database);
+      final container = ProviderContainer(
+        overrides: [
+          swrRepositoryProvider.overrideWithValue(repository),
+          appDatabaseProvider.overrideWithValue(database),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(appSettingsProvider.future);
+
+      container.listen(matchesDayProvider(day), (_, _) {});
+      await container.read(matchesDayProvider(day).future);
+      await pumpEventQueue();
+      expect(http.requests.single.uri.queryParameters['my_satellite_ids'], '3,7');
+
+      await container.read(appSettingsProvider.notifier).setSatellites({5});
+      await container.read(appSettingsProvider.future);
+      await container.read(matchesDayProvider(day).future);
+      await pumpEventQueue();
+
+      final changed = http.requests.last;
+      expect(changed.uri.queryParameters['my_satellite_ids'], '5');
+      expect(http.ifNoneMatch(http.requests.length - 1), isNull,
+          reason: 'the old selection\'s ETag cannot confirm the new ranking');
+    });
+
+    test('the local day is the chosen zone\'s, not the device\'s', () async {
+      // 22:30 UTC: 01:30 the next day at GMT+3, 10:30 the same day at GMT−12.
+      final container = zoneContainer(clock: DateTime.utc(2026, 10, 28, 22, 30));
+      await container.read(appSettingsProvider.future);
+
+      await container.read(appSettingsProvider.notifier).setZone(const MadarZone.fixed(Duration(hours: 3)));
+      await container.read(appSettingsProvider.future);
+      final east = container.read(matchesWindowProvider).today;
+      expect(east, DateTime(2026, 10, 29));
+
+      await container
+          .read(appSettingsProvider.notifier)
+          .setZone(const MadarZone.fixed(Duration(hours: -12)));
+      await container.read(appSettingsProvider.future);
+      final west = container.read(matchesWindowProvider).today;
+      expect(west, DateTime(2026, 10, 28));
+    });
+
+    test('the drift layer groups days in the chosen zone', () async {
+      final container = zoneContainer(clock: DateTime.utc(2026, 10, 28, 22, 30));
+      await container.read(appSettingsProvider.future);
+      await container
+          .read(appSettingsProvider.notifier)
+          .setZone(const MadarZone.fixed(Duration(hours: 3)));
+      await container.read(appSettingsProvider.future);
+
+      final selected = container.read(appDatabaseProvider);
+      final window = selected.dayWindow(DateTime(2026, 10, 29));
+      expect(window.from, DateTime.utc(2026, 10, 28, 21));
+      expect(window.to, DateTime.utc(2026, 10, 29, 21));
+    });
+  });
+
 }

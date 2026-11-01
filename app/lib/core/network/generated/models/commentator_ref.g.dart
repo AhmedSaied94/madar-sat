@@ -16,8 +16,8 @@ _CommentatorRef _$CommentatorRefFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CommentatorRefToJson(_CommentatorRef instance) =>
     <String, dynamic>{
-      'audio': instance.audio,
+      'audio': ?instance.audio,
       'id': instance.id,
-      'image': instance.image,
+      'image': ?instance.image,
       'name': instance.name,
     };

@@ -2,11 +2,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/format/clock.dart';
 import '../../../core/network/api_failure.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../core/network/generated/models/match_summary.dart';
 import '../../../core/network/swr_providers.dart';
 import '../../../core/network/swr_repository.dart';
 import '../../live/live_merge.dart';
 import '../../live/live_poller.dart';
+import '../../my_satellites/data/my_satellites_provider.dart';
 import '../domain/matches_day.dart';
 
 part 'matches_providers.g.dart';
@@ -19,9 +21,16 @@ part 'matches_providers.g.dart';
 /// offers «إعادة المحاولة» instead.
 @Riverpod(retry: _never)
 class MatchesDay extends _$MatchesDay {
+  /// The chosen satellites, which rank S2's channel line the same way S3–S5 do (M-R1-5).
+  /// Empty while no choice was made: the server's own order is the default then.
+  Set<int> get _mySatellites => ref.read(chosenSatelliteIdsProvider) ?? const {};
+
   @override
   Stream<SwrSnapshot<List<MatchSummary>>> build(DateTime day) =>
-      ref.watch(swrRepositoryProvider).watchDay(day);
+      ref.watch(swrRepositoryProvider).watchDay(
+            day,
+            mySatelliteIds: ref.watch(chosenSatelliteIdsProvider) ?? const {},
+          );
 
   /// The poll: read the day again. The provider's stream revalidates with `If-None-Match`,
   /// so this costs one request and never doubles the pull to refresh's cycle.
@@ -32,7 +41,10 @@ class MatchesDay extends _$MatchesDay {
   /// cached is shown by the day's own error state after the re-read.
   Future<void> refresh() async {
     try {
-      await ref.read(swrRepositoryProvider).watchDay(day).drain<void>();
+      await ref
+          .read(swrRepositoryProvider)
+          .watchDay(day, mySatelliteIds: _mySatellites)
+          .drain<void>();
     } on ApiFailure {
       // Shown by the day's state below: with a cache it keeps its rows and its age, without
       // one it fails again on the re-read.
@@ -80,6 +92,8 @@ class DayLoaded extends DayState {
 DayState matchesDayState(Ref ref, DateTime day) {
   final source = ref.watch(matchesDayProvider(day));
   final live = ref.watch(liveStatesProvider);
+  // The chosen zone decides which day a kickoff falls in (M-R1-6).
+  final zone = ref.watch(appZoneProvider);
 
   // While a day reloads, its last copy stays (`value` keeps the previous data), so a
   // revalidation never flashes the skeleton.
@@ -87,7 +101,12 @@ DayState matchesDayState(Ref ref, DateTime day) {
   final rows = snapshot?.data;
   if (snapshot != null && rows != null) {
     return DayLoaded(
-      DayView(day: day, snapshot: snapshot, rows: applyLiveStates(rows, live)),
+      DayView(
+        day: day,
+        snapshot: snapshot,
+        rows: applyLiveStates(rows, live),
+        offsetAt: zone.offsetAtUtc,
+      ),
     );
   }
   if (source.hasError) {
@@ -104,11 +123,13 @@ DayState matchesDayState(Ref ref, DateTime day) {
 ///
 /// A phone left with the app open past midnight comes back on yesterday's «اليوم» and a
 /// window of days that starts a day late, so a resume asks this to recompute. Kept alive so
-/// the selection's index means the same day across a rebuild.
+/// the selection's index means the same day across a rebuild. «اليوم» is the chosen zone's
+/// day (M-R1-6), not the device's.
 @Riverpod(keepAlive: true)
 ({DateTime today, List<DateTime> days}) matchesWindow(Ref ref) {
   final now = ref.watch(clockProvider)();
-  final today = DateTime(now.year, now.month, now.day);
+  final wall = ref.watch(appZoneProvider).wallClock(now);
+  final today = DateTime(wall.year, wall.month, wall.day);
   return (today: today, days: MatchesDays.kept(today));
 }
 

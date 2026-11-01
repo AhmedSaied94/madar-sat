@@ -20,6 +20,7 @@ class MadarButton extends StatelessWidget {
     this.variant = MadarButtonVariant.primary,
     this.size = MadarButtonSize.regular,
     this.icon,
+    this.trailingIcon,
     this.busy = false,
     this.expanded = false,
   });
@@ -29,6 +30,10 @@ class MadarButton extends StatelessWidget {
   final MadarButtonVariant variant;
   final MadarButtonSize size;
   final IconData? icon;
+
+  /// After the label, at the row's end: «التالي» points forward on S1.2–S1.4. In RTL an
+  /// `arrow_forward` with `matchTextDirection` draws pointing left, the way forward reads.
+  final IconData? trailingIcon;
 
   /// The action is out: the spinner replaces the icon and the label stays, in the present
   /// tense («جارٍ الحفظ»).
@@ -49,9 +54,10 @@ class MadarButton extends StatelessWidget {
     };
     final height = switch (size) {
       MadarButtonSize.regular => MadarLayout.touchMin,
-      MadarButtonSize.small => MadarSpace.s8 + MadarSpace.s1,
+      MadarButtonSize.small => MadarSpace.s8 + MadarSpace.s2,
       MadarButtonSize.extraSmall => MadarSpace.s8,
     };
+    final iconSize = (MadarText.textBody.fontSize ?? 0) + 4;
     final disabled = onPressed == null;
     final content = Row(
             mainAxisSize: MainAxisSize.min,
@@ -64,7 +70,7 @@ class MadarButton extends StatelessWidget {
                 ),
                 const SizedBox(width: MadarSpace.s2),
               ] else if (icon != null) ...[
-                Icon(icon, size: (MadarText.textBody.fontSize ?? 0) + 4),
+                Icon(icon, size: iconSize),
                 const SizedBox(width: MadarSpace.s2),
               ],
               Flexible(
@@ -80,6 +86,10 @@ class MadarButton extends StatelessWidget {
                   ),
                 ),
               ),
+              if (trailingIcon != null && !busy) ...[
+                const SizedBox(width: MadarSpace.s2),
+                Icon(trailingIcon, size: iconSize, color: disabled ? colors.textDisabled : foreground),
+              ],
             ],
           );
 
@@ -98,18 +108,28 @@ class MadarButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(
             size == MadarButtonSize.regular ? MadarRadii.lg : MadarRadii.md,
           ),
-          child: Container(
-            height: height,
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(
-                size == MadarButtonSize.regular ? MadarRadii.lg : MadarRadii.md,
-              ),
-              border: border == null
-                  ? null
-                  : Border.all(color: border, width: MadarLine.hairline),
+          // The tap area is at least 48 dp in both directions whatever the visual size is:
+          // `sm` draws 40 and `xs` 32, and both still take a 48 dp hit (constitution IV).
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: MadarLayout.touchMin,
+              minHeight: MadarLayout.touchMin,
             ),
-            child: Center(child: content),
+            child: Center(
+              child: Container(
+                height: height,
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s5),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                    size == MadarButtonSize.regular ? MadarRadii.lg : MadarRadii.md,
+                  ),
+                  border: border == null
+                      ? null
+                      : Border.all(color: border, width: MadarLine.hairline),
+                ),
+                child: Center(child: content),
+              ),
+            ),
           ),
         ),
       ),
@@ -144,39 +164,52 @@ class FollowButton extends StatelessWidget {
       selected: following,
       label: following ? followingLabel : label,
       excludeSemantics: true,
+      // The pill draws 28 dp; the pill sits inside a 48 dp target (constitution IV).
       child: Material(
-        color: following ? colors.accentContainer : colors.surface1,
-        shape: const StadiumBorder(),
+        // A transparent surface only so the ink has something to paint on: the pill below
+        // draws its own fill, and the box outside it is the 48 dp target.
+        type: MaterialType.transparency,
         child: InkWell(
           onTap: busy ? null : onPressed,
           customBorder: const StadiumBorder(),
-          child: Container(
-            height: MadarSpace.s8 - MadarSpace.s1,
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s3),
-            decoration: BoxDecoration(
-              shape: BoxShape.rectangle,
-              borderRadius: BorderRadius.circular(MadarRadii.pill),
-              border: following
-                  ? null
-                  : Border.all(color: colors.dividerStrong, width: MadarLine.hairline),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: MadarLayout.touchMin,
+              minHeight: MadarLayout.touchMin,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  following ? Icons.star : Icons.star_border,
-                  size: (MadarText.textLabel.fontSize ?? 0) + 3,
-                  color: foreground,
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Container(
+                height: MadarSpace.s8 - MadarSpace.s1,
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s3),
+                decoration: BoxDecoration(
+                  color: following ? colors.accentContainer : colors.surface1,
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(MadarRadii.pill),
+                  border: following
+                      ? null
+                      : Border.all(color: colors.dividerStrong, width: MadarLine.hairline),
                 ),
-                const SizedBox(width: MadarSpace.s1),
-                Text(
-                  following ? followingLabel : label,
-                  style: MadarText.textLabel.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      following ? Icons.star : Icons.star_border,
+                      size: (MadarText.textLabel.fontSize ?? 0) + 3,
+                      color: foreground,
+                    ),
+                    const SizedBox(width: MadarSpace.s1),
+                    Text(
+                      following ? followingLabel : label,
+                      style: MadarText.textLabel.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

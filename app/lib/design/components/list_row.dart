@@ -99,8 +99,10 @@ class MadarListRow extends StatelessWidget {
             if (showChevron) ...[
               const SizedBox(width: MadarSpace.s1),
               Icon(
-                // RTL: "go" points left, into the screen.
-                Icons.chevron_left,
+                // RTL: `chevron_right` mirrors with the text direction and draws pointing
+                // left, the way "go" reads (constitution III). `chevron_left` would draw a
+                // back arrow.
+                Icons.chevron_right,
                 size: (MadarText.heading2.fontSize ?? 0),
                 color: colors.textTertiary,
               ),

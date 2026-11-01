@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/build_info.dart';
 import '../../../core/l10n/error_copy.dart';
+import '../../../core/links/url_opener.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/platform/reload_page.dart';
 import '../../../core/theme/madar_tokens.dart';
@@ -55,7 +56,13 @@ class LoadFailedView extends StatelessWidget {
     return EmptyState(
       kind: EmptyStateKind.error,
       title: l.loadFailedTitle,
-      body: code == null ? l.s0LoadFailedBody : l.errorCopy(code),
+      body: code == null
+          ? l.s0LoadFailedBody
+          : l.errorCopy(
+              code,
+              retryAfterS: failure?.retryAfterS,
+              maxFollows: failure?.maxFollows,
+            ),
       action: retrying
           ? MadarButton(
               label: l.s0Retrying,
@@ -100,6 +107,17 @@ class ForcedUpdatePage extends ConsumerWidget {
   static const String playStoreUrl =
       'https://play.google.com/store/apps/details?id=com.madarsat.app';
 
+  /// The web reloads the page (a new deployment reaches an installed PWA that way); a
+  /// native build cannot reload its own code, so it opens the store, and the page's own
+  /// «يفتح صفحة التطبيق على Google Play» is what happens (research R29).
+  Future<void> _update(WidgetRef ref) async {
+    if (kIsWeb) {
+      await reloadPage();
+      return;
+    }
+    await ref.read(urlOpenerProvider).open(Uri.parse(playStoreUrl));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
@@ -131,7 +149,7 @@ class ForcedUpdatePage extends ConsumerWidget {
                     label: l.s0UpdateNow,
                     icon: Icons.download,
                     expanded: true,
-                    onPressed: () => reloadPage(),
+                    onPressed: () => _update(ref),
                   ),
                   const SizedBox(height: MadarSpace.s1),
                   Text(
@@ -159,9 +177,14 @@ class ForcedUpdatePage extends ConsumerWidget {
 /// The Android exit rule (S0): on a root tab, back shows «اضغط رجوع مرة أخرى للخروج» and a
 /// second back within two seconds leaves the app. Other platforms keep their own back.
 class ExitGuard extends StatefulWidget {
-  const ExitGuard({super.key, required this.child});
+  const ExitGuard({super.key, required this.child, this.android});
 
   final Widget child;
+
+  /// Whether the Android rule applies. Null reads the platform; a test passes true, because
+  /// changing `debugDefaultTargetPlatformOverride` inside a test is a foundation invariant
+  /// violation.
+  final bool? android;
 
   @override
   State<ExitGuard> createState() => _ExitGuardState();
@@ -179,7 +202,8 @@ class _ExitGuardState extends State<ExitGuard> {
 
   @override
   Widget build(BuildContext context) {
-    final android = defaultTargetPlatform == TargetPlatform.android && !kIsWeb;
+    final android = widget.android ??
+        (defaultTargetPlatform == TargetPlatform.android && !kIsWeb);
     return PopScope(
       canPop: !android,
       onPopInvokedWithResult: (didPop, result) {

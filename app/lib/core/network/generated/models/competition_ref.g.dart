@@ -17,9 +17,9 @@ _CompetitionRef _$CompetitionRefFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CompetitionRefToJson(_CompetitionRef instance) =>
     <String, dynamic>{
-      'id': instance.id,
-      'logo': instance.logo,
+      'id': ?instance.id,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'priority': instance.priority,
-      'stage': instance.stage,
+      'priority': ?instance.priority,
+      'stage': ?instance.stage,
     };

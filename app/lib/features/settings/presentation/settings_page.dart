@@ -4,17 +4,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/config/build_info.dart';
 import '../../../core/format/time.dart';
+import '../../../core/l10n/error_copy.dart';
 import '../../../core/links/url_opener.dart';
+import '../../../core/network/api_failure.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../core/theme/madar_tokens.dart';
+import '../../../design/components/banner.dart';
 import '../../../design/components/dialog.dart';
 import '../../../design/components/list_row.dart';
 import '../../../design/components/segmented.dart';
 import '../../../design/components/top_bar.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../follows/data/follows_repository.dart';
 import '../../devices/data/device_identity_provider.dart';
+import '../../devices/data/device_repository.dart';
+import '../../follows/data/follows_repository.dart';
 import '../../my_satellites/data/my_satellites_provider.dart';
 import '../../onboarding/presentation/steps/satellites_step.dart';
 import '../../../core/config/app_config.dart';
@@ -306,12 +310,25 @@ class SettingsPage extends ConsumerWidget {
       confirmLabel: l.delete,
     );
     if (!confirmed || !context.mounted) return;
-    // The server call (`DELETE /v1/devices/me`) ships with T133's device client; until then
-    // the device's own data is cleared here and the token is dropped, so no further request
-    // counts against this install.
+    // The server row goes first (US2 scenario 10): only a `204` wipes the device locally, so
+    // a failure keeps the follows, the settings and the token, and says what went wrong.
+    final repository = ref.read(deviceRepositoryProvider);
+    try {
+      final identity = await repository.identity();
+      // No token means no server row to delete: the local wipe is the whole story.
+      if (identity.token != null) await repository.deleteDevice();
+    } on ApiFailure catch (failure) {
+      if (!context.mounted) return;
+      MadarSnackbar.show(context, l.failureCopy(failure));
+      return;
+    }
     await ref.read(followsRepositoryProvider).clear();
     await ref.read(deviceIdentityControllerProvider.notifier).forget();
+    // The theme, the zone, the satellites and `onboardingDone` are read through a kept-alive
+    // provider: without this it would keep the old value until a restart.
+    ref.invalidate(appSettingsProvider);
     if (!context.mounted) return;
+    MadarSnackbar.show(context, l.s15Deleted);
     context.go('/onboarding/welcome');
   }
 }

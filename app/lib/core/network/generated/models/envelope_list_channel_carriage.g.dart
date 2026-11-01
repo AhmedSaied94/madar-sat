@@ -22,8 +22,8 @@ _EnvelopeListChannelCarriage _$EnvelopeListChannelCarriageFromJson(
 Map<String, dynamic> _$EnvelopeListChannelCarriageToJson(
   _EnvelopeListChannelCarriage instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

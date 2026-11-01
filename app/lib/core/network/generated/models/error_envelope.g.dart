@@ -16,8 +16,8 @@ _ErrorEnvelope _$ErrorEnvelopeFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ErrorEnvelopeToJson(_ErrorEnvelope instance) =>
     <String, dynamic>{
-      'data': instance.data,
+      'data': ?instance.data,
       'error': instance.error,
-      'meta': instance.meta,
+      'meta': ?instance.meta,
       'success': instance.success,
     };

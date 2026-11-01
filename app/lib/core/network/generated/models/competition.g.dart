@@ -17,9 +17,9 @@ _Competition _$CompetitionFromJson(Map<String, dynamic> json) => _Competition(
 Map<String, dynamic> _$CompetitionToJson(_Competition instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'priority': instance.priority,
+      'priority': ?instance.priority,
       'sport': _$SportEnumMap[instance.sport]!,
     };
 

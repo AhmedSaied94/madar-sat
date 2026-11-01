@@ -28,14 +28,14 @@ _BroadcastEntry _$BroadcastEntryFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$BroadcastEntryToJson(_BroadcastEntry instance) =>
     <String, dynamic>{
-      'access': _$AccessEnumMap[instance.access],
-      'channel_id': instance.channelId,
+      'access': ?_$AccessEnumMap[instance.access],
+      'channel_id': ?instance.channelId,
       'commentators': instance.commentators,
-      'frequency': instance.frequency,
+      'frequency': ?instance.frequency,
       'kind': _$BroadcastEntryKindEnumMap[instance.kind]!,
       'label': instance.label,
-      'logo': instance.logo,
-      'satellite': instance.satellite,
+      'logo': ?instance.logo,
+      'satellite': ?instance.satellite,
     };
 
 const _$AccessEnumMap = {

@@ -1,20 +1,16 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/db/app_database.dart';
 import 'package:madar_sat/core/db/database_provider.dart';
-import 'package:madar_sat/core/network/device_auth_interceptor.dart';
 import 'package:madar_sat/core/platform/push_service.dart';
 import 'package:madar_sat/core/platform/secure_store.dart';
 import 'package:madar_sat/features/devices/data/push_token_sync.dart';
 
-import '../../fixtures/fake_http_adapter.dart';
-
-/// In-memory secure storage: the device token and install id, counted so a test can prove a
-/// token is written once per change.
+/// In-memory secure storage: the two tokens, counted so a test can prove a value is written
+/// once per change and that one key is never mistaken for the other.
 class _FakeSecureStore implements SecureStore {
   final Map<String, String> values = {};
   final Map<String, int> writes = {};
@@ -61,9 +57,9 @@ class _FakePushService implements PushService {
   }
 }
 
-/// The device's own identity (research R27, US2 scenarios 6–7): the token lands in secure
-/// storage once per change and flags `sync_state.device`; the header goes on every `/v1`
-/// request and on nothing else.
+/// The push id and the device token are two different things (M-R1-2, research R27, US2
+/// scenario 7): FCM's installation id is kept under its own key and sent in
+/// `PUT /v1/devices/me`'s body; `Authorization: Device` always carries the server's token.
 void main() {
   late AppDatabase database;
   late _FakeSecureStore store;
@@ -87,68 +83,51 @@ void main() {
     });
   });
 
-  test('the first token is stored once and flags the device for the server', () async {
-    push.rotate('token-1');
+  test('the first push token is stored under its own key and flags the device', () async {
+    push.rotate('fcm-1');
     container.listen(pushTokenSyncProvider, (_, _) {});
     await container.read(pushTokenSyncProvider.future);
     await pumpEventQueue();
 
-    expect(store.values[SecureKeys.deviceToken], 'token-1');
-    expect(store.writes[SecureKeys.deviceToken], 1);
+    expect(store.values[SecureKeys.pushToken], 'fcm-1');
+    expect(store.writes[SecureKeys.pushToken], 1);
+    expect(store.values[SecureKeys.deviceToken], isNull, reason: 'the FCM id is not a token');
     expect((await database.readSyncState('device'))!.dirty, isTrue);
   });
 
   test('a rotated token is written once, and repeating it writes nothing', () async {
-    push.rotate('token-1');
+    push.rotate('fcm-1');
     container.listen(pushTokenSyncProvider, (_, _) {});
     await container.read(pushTokenSyncProvider.future);
     await pumpEventQueue();
 
-    push.rotate('token-2');
+    push.rotate('fcm-2');
     await pumpEventQueue();
-    push.rotate('token-2');
+    push.rotate('fcm-2');
     await pumpEventQueue();
 
-    expect(store.values[SecureKeys.deviceToken], 'token-2');
-    expect(store.writes[SecureKeys.deviceToken], 2);
+    expect(store.values[SecureKeys.pushToken], 'fcm-2');
+    expect(store.writes[SecureKeys.pushToken], 2);
   });
 
-  test('the Authorization header goes on every /v1 request of the API host', () async {
-    final adapter = FakeHttpAdapter();
-    final dio = Dio(
-      BaseOptions(baseUrl: 'https://api.madarsat.test'),
-    )..httpClientAdapter = adapter;
-    dio.interceptors.add(
-      DeviceAuthInterceptor(token: () => 'token-1', baseUrl: 'https://api.madarsat.test'),
-    );
-    adapter.enqueueData(const {'ok': true});
-    adapter.enqueueData(const {'ok': true});
+  test('a push event never overwrites the server-issued device token', () async {
+    store.values[SecureKeys.deviceToken] = 'srv-token';
+    push.rotate('fcm-1');
+    container.listen(pushTokenSyncProvider, (_, _) {});
+    await container.read(pushTokenSyncProvider.future);
+    await pumpEventQueue();
 
-    await dio.get<Object?>('/v1/matches');
-    await dio.get<Object?>('/healthz');
-
-    String? authorization(int index) => adapter.requests[index].headers.entries
-        .where((entry) => entry.key.toLowerCase() == 'authorization')
-        .map((entry) => '${entry.value}')
-        .firstOrNull;
-
-    expect(authorization(0), 'Device token-1');
-    // Every path of this Dio is the API host, so the token rides along; a request to another
-    // host gets nothing (the media host never goes through this Dio at all).
-    expect(authorization(1), 'Device token-1');
+    expect(store.values[SecureKeys.deviceToken], 'srv-token');
+    expect(store.writes[SecureKeys.deviceToken], isNull, reason: 'never written by push');
+    expect(store.values[SecureKeys.pushToken], 'fcm-1');
   });
 
-  test('no token yet means no header at all', () async {
-    final adapter = FakeHttpAdapter();
-    final dio = Dio(BaseOptions(baseUrl: 'https://api.madarsat.test'))
-      ..httpClientAdapter = adapter;
-    dio.interceptors.add(
-      DeviceAuthInterceptor(token: () => null, baseUrl: 'https://api.madarsat.test'),
-    );
-    adapter.enqueueData(const {'ok': true});
+  test('no token at all writes nothing', () async {
+    container.listen(pushTokenSyncProvider, (_, _) {});
+    await container.read(pushTokenSyncProvider.future);
+    await pumpEventQueue();
 
-    await dio.get<Object?>('/v1/matches');
-
-    expect(adapter.requests.single.headers.containsKey('Authorization'), isFalse);
+    expect(store.values, isEmpty);
+    expect(await database.readSyncState('device'), isNull);
   });
 }

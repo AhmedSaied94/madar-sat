@@ -69,7 +69,7 @@ final class MatchesDayProvider
   }
 }
 
-String _$matchesDayHash() => r'56d2200b1e1a0260f589dbead729e9c24fde7159';
+String _$matchesDayHash() => r'30bdff99f0313d4ae0da1b9f36a1e35f61595491';
 
 /// One local day of matches from drift, revalidated against the server (FR-046).
 ///
@@ -218,7 +218,7 @@ final class MatchesDayStateProvider
   }
 }
 
-String _$matchesDayStateHash() => r'3e9e5a47d881a84c40f33ff005f09df11ebc8f4c';
+String _$matchesDayStateHash() => r'54bba6aec7b62a4962ef9b05f428e62d692320c9';
 
 /// A day's matches with the live states merged in (never a cached state as live, SC-008).
 ///
@@ -252,7 +252,8 @@ final class MatchesDayStateFamily extends $Family
 ///
 /// A phone left with the app open past midnight comes back on yesterday's «اليوم» and a
 /// window of days that starts a day late, so a resume asks this to recompute. Kept alive so
-/// the selection's index means the same day across a rebuild.
+/// the selection's index means the same day across a rebuild. «اليوم» is the chosen zone's
+/// day (M-R1-6), not the device's.
 
 @ProviderFor(matchesWindow)
 final matchesWindowProvider = MatchesWindowProvider._();
@@ -261,7 +262,8 @@ final matchesWindowProvider = MatchesWindowProvider._();
 ///
 /// A phone left with the app open past midnight comes back on yesterday's «اليوم» and a
 /// window of days that starts a day late, so a resume asks this to recompute. Kept alive so
-/// the selection's index means the same day across a rebuild.
+/// the selection's index means the same day across a rebuild. «اليوم» is the chosen zone's
+/// day (M-R1-6), not the device's.
 
 final class MatchesWindowProvider
     extends
@@ -275,7 +277,8 @@ final class MatchesWindowProvider
   ///
   /// A phone left with the app open past midnight comes back on yesterday's «اليوم» and a
   /// window of days that starts a day late, so a resume asks this to recompute. Kept alive so
-  /// the selection's index means the same day across a rebuild.
+  /// the selection's index means the same day across a rebuild. «اليوم» is the chosen zone's
+  /// day (M-R1-6), not the device's.
   MatchesWindowProvider._()
     : super(
         from: null,
@@ -311,4 +314,4 @@ final class MatchesWindowProvider
   }
 }
 
-String _$matchesWindowHash() => r'8ab8b3a2a7bbee147805c5784dc300aaa479a893';
+String _$matchesWindowHash() => r'76c6c2d39f5f26fc504a615a11fab9a24c611f1d';

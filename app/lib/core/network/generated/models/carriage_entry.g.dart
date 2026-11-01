@@ -40,22 +40,22 @@ _CarriageEntry _$CarriageEntryFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CarriageEntryToJson(_CarriageEntry instance) =>
     <String, dynamic>{
-      'access': _$AccessEnumMap[instance.access],
-      'beam': _$BeamEnumMap[instance.beam],
-      'category': _$CategoryEnumMap[instance.category],
+      'access': ?_$AccessEnumMap[instance.access],
+      'beam': ?_$BeamEnumMap[instance.beam],
+      'category': ?_$CategoryEnumMap[instance.category],
       'commentators': instance.commentators,
-      'country': instance.country,
-      'display_name': instance.displayName,
-      'frequency': instance.frequency,
-      'frequency_changed_at': instance.frequencyChangedAt?.toIso8601String(),
-      'frequency_note': instance.frequencyNote,
+      'country': ?instance.country,
+      'display_name': ?instance.displayName,
+      'frequency': ?instance.frequency,
+      'frequency_changed_at': ?instance.frequencyChangedAt?.toIso8601String(),
+      'frequency_note': ?instance.frequencyNote,
       'id': instance.id,
       'kind': _$KindEnumMap[instance.kind]!,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'package': instance.package,
-      'provider': instance.provider,
-      'satellite': instance.satellite,
+      'package': ?instance.package,
+      'provider': ?instance.provider,
+      'satellite': ?instance.satellite,
     };
 
 const _$AccessEnumMap = {

@@ -17,7 +17,7 @@ _NotificationPref _$NotificationPrefFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$NotificationPrefToJson(_NotificationPref instance) =>
     <String, dynamic>{
       'on': instance.onValue,
-      'lead_min': _$NotificationPrefLeadMinEnumMap[instance.leadMin],
+      'lead_min': ?_$NotificationPrefLeadMinEnumMap[instance.leadMin],
     };
 
 const _$NotificationPrefLeadMinEnumMap = {

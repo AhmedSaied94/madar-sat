@@ -269,7 +269,7 @@ class _UpcomingCard extends StatelessWidget {
     final kickoff = match.kickoffAt;
     final time = MadarTime.kickoff(kickoff, am: l.amMarker, pm: l.pmMarker, use24h: use24h, zone: zone.fixed);
     final wall = kickoff == null ? null : zone.wallClock(kickoff);
-    final today = DateTime.now();
+    final today = zone.wallClock(DateTime.now());
     final when = time == null
         ? l.timeTbd
         : wall == null

@@ -22,8 +22,8 @@ _EnvelopeDeviceRegistered _$EnvelopeDeviceRegisteredFromJson(
 Map<String, dynamic> _$EnvelopeDeviceRegisteredToJson(
   _EnvelopeDeviceRegistered instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

@@ -28,6 +28,7 @@ import 'package:madar_sat/features/settings/presentation/settings_page.dart';
 import 'package:madar_sat/features/matches/presentation/matches_page.dart';
 import 'package:madar_sat/features/my_satellites/presentation/my_satellites_page.dart';
 import 'package:madar_sat/features/shell/presentation/stub_page.dart';
+import 'package:madar_sat/features/system/presentation/system_views.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
 import '../../fixtures/fake_http_adapter.dart';
@@ -224,4 +225,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(GalleryPage), findsOneWidget);
   });
+  testWidgets('a path URL such as /match/42 opens S3 for match 42 (M-R1-10)', (tester) async {
+    final router = createAppRouter(includeGallery: false);
+    await tester.pumpWidget(_app(router));
+    await tester.pumpAndSettle();
+
+    // What a notification's `fcm_options.link` is: a path, not a `#` fragment. With the
+    // path URL strategy the router reads it as it stands.
+    router.go('/match/42');
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.path, '/match/42');
+    expect(router.state.uri.fragment, isEmpty);
+    expect(tester.widget<MatchDetailPage>(find.byType(MatchDetailPage)).matchId, 42);
+  });
+
+  testWidgets('every root tab carries the exit guard (M-R1-7)', (tester) async {
+    final router = createAppRouter(includeGallery: false);
+    await tester.pumpWidget(_app(router));
+    await tester.pumpAndSettle();
+
+    for (final route in ['/', '/my-satellites', '/satellites', '/favorites', '/more']) {
+      router.go(route);
+      await tester.pumpAndSettle();
+      expect(find.byType(ExitGuard), findsOneWidget, reason: route);
+    }
+  });
+
 }

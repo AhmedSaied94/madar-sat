@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import 'core/router/app_router.dart';
 import 'core/settings/settings_providers.dart';
 import 'core/theme/madar_theme.dart';
 import 'design/components/display_scope.dart';
+import 'features/devices/data/device_sync.dart';
 import 'features/devices/data/push_token_sync.dart';
 import 'features/notifications/presentation/push_route_listener.dart';
 import 'features/system/data/connectivity.dart';
@@ -32,6 +35,19 @@ class _MadarAppState extends ConsumerState<MadarApp> {
   final _RouterRefresh _refresher = _RouterRefresh();
   late final GoRouter _router =
       widget.router ?? createAppRouter(guard: _guard, refreshListenable: _refresher);
+
+  @override
+  void initState() {
+    super.initState();
+    // The launch attempt: anything the last session left dirty is sent now (US2 scenario 6).
+    unawaited(ref.read(deviceSyncProvider.notifier).sync());
+  }
+
+  /// A resume is when unsent device and follow changes are retried (US2 scenario 6): the
+  /// attempt made while the phone was offline has no other trigger.
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onResume: () => ref.read(deviceSyncProvider.notifier).sync(),
+  );
 
   /// Where the current location must really go, or null to stay.
   String? _guard(String location) {
@@ -58,6 +74,7 @@ class _MadarAppState extends ConsumerState<MadarApp> {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _refresher.dispose();
     if (widget.router == null) _router.dispose();
     super.dispose();
@@ -72,6 +89,7 @@ class _MadarAppState extends ConsumerState<MadarApp> {
     ref.listen(remoteConfigProvider, (_, _) => _refresher.ping());
     // The push token and its device sync start with the app, not with a screen.
     ref.watch(pushTokenSyncProvider);
+    ref.watch(deviceSyncProvider);
     // Keeps the connectivity state alive for the offline banner.
     ref.watch(connectivityStatusProvider);
 

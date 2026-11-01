@@ -25,7 +25,7 @@ Map<String, dynamic> _$RightsHolderDetailToJson(_RightsHolderDetail instance) =>
       'carriages': instance.carriages,
       'competitions': instance.competitions,
       'id': instance.id,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'sort_order': instance.sortOrder,
+      'sort_order': ?instance.sortOrder,
     };

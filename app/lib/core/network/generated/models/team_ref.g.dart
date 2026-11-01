@@ -13,7 +13,7 @@ _TeamRef _$TeamRefFromJson(Map<String, dynamic> json) => _TeamRef(
 );
 
 Map<String, dynamic> _$TeamRefToJson(_TeamRef instance) => <String, dynamic>{
-  'id': instance.id,
-  'logo': instance.logo,
+  'id': ?instance.id,
+  'logo': ?instance.logo,
   'name': instance.name,
 };

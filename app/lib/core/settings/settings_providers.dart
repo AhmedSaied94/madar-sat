@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../db/database_provider.dart';
 import 'app_settings.dart';
+import 'zone_holder.dart';
 
 part 'settings_providers.g.dart';
 
@@ -15,8 +16,14 @@ part 'settings_providers.g.dart';
 @Riverpod(keepAlive: true)
 class AppSettings extends _$AppSettings {
   @override
-  Future<AppSettingsValue> build() async =>
-      AppSettingsValue.fromMap(await ref.watch(appDatabaseProvider).readSettings());
+  Future<AppSettingsValue> build() async {
+    final value =
+        AppSettingsValue.fromMap(await ref.watch(appDatabaseProvider).readSettings());
+    // The drift layer groups local days in this zone (M-R1-6): it cannot read this provider
+    // (it is built on the database), so the value is handed over through the holder.
+    ref.read(zoneHolderProvider).zone = value.zone;
+    return value;
+  }
 
   /// The current value, or the bundled defaults before the first read lands.
   AppSettingsValue get value => state.value ?? const AppSettingsValue();

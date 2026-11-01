@@ -18,8 +18,15 @@ abstract interface class SecureStore {
 
 /// The keys stored here. One place, so the device layer and the tests agree.
 abstract final class SecureKeys {
+  /// The server-issued `Authorization: Device` token (one per install).
   static const String deviceToken = 'device.token';
+
+  /// The random install id, generated once and sent to `POST /v1/devices`.
   static const String installId = 'device.install_id';
+
+  /// The push id (FCM's registered installation id). **Not** the device token: this one
+  /// travels only in the body of `PUT /v1/devices/me` as `push_token` (M-R1-2).
+  static const String pushToken = 'device.push_token';
 }
 
 class FlutterSecureStore implements SecureStore {
