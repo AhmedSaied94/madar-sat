@@ -17,22 +17,34 @@ from app.workers.base import Retryable
 
 
 class FakePushSender:
-    """Records each page and answers per token: ``ok``, ``UNREGISTERED`` or ``UNAVAILABLE``.
+    """Records each page and answers per token, the way ``send_each`` does (B1-R1-6).
 
-    A token with ``UNAVAILABLE`` fails the whole call, as FCM does when its service is down.
-    ``fail_page=2`` makes the second ``send_page`` call fail the same way.
+    A token's behaviour is ``ok`` (default), ``UNREGISTERED`` (a dead token, which the dispatcher
+    clears) or ``failed`` (any other per-message error: an outage, a bad message field). The real
+    sender returns those as ``SendOutcome`` counts and never raises for one device, so the fake does
+    the same. A *whole call* failure, the one case ``send_each`` raises, is ``fail_page`` (that call
+    only) or ``fail_every_page``.
     """
 
-    def __init__(self, behaviour: dict[str, str] | None = None, fail_page: int | None = None) -> None:
+    def __init__(
+        self,
+        behaviour: dict[str, str] | None = None,
+        fail_page: int | None = None,
+        fail_every_page: bool = False,
+        pwa_origin: str | None = None,
+    ) -> None:
         self.behaviour = behaviour or {}
         self.fail_page = fail_page
+        self.fail_every_page = fail_every_page
+        self.pwa_origin = pwa_origin
         self.pages: list[list[PushMessage]] = []
         self.calls = 0
 
     def send_page(self, messages: list[PushMessage]) -> SendOutcome:
+        """Answer one page; raises ``Retryable`` only for a whole-call failure."""
         self.calls += 1
         self.pages.append(list(messages))
-        if self.fail_page is not None and self.calls == self.fail_page:
+        if self.fail_every_page or (self.fail_page is not None and self.calls == self.fail_page):
             raise Retryable("UNAVAILABLE")
         sent = failed = 0
         unregistered: list[str] = []
@@ -42,8 +54,6 @@ class FakePushSender:
                 sent += 1
             elif answer == "UNREGISTERED":
                 unregistered.append(message.token)
-            elif answer == "UNAVAILABLE":
-                raise Retryable("UNAVAILABLE")
             else:
                 failed += 1
         return SendOutcome(sent=sent, failed=failed, unregistered=tuple(unregistered))
@@ -77,6 +87,7 @@ def build_match(
     satellite_slugs: tuple[str, ...] = ("nilesat-7-0w",),
     links: bool = True,
     status: str = "scheduled",
+    status_source: str = "clock",
     time_tbd: bool = False,
     access: str = "free",
     show_in_match: bool = True,
@@ -95,6 +106,7 @@ def build_match(
         home_team_name=home.name,
         away_team_name=away.name,
         status=status,
+        status_source=status_source,
         time_tbd=time_tbd,
         locked_fields=[],
     )

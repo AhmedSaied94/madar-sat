@@ -1,6 +1,6 @@
 # Database migrations
 
-The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), `0004` adds the `broadcast_presets` and `sources` dataset names ([below](#revision-0004)), `0005` adds devices' satellites, the outbox cursor, source health, the run log and placeholder markers ([below](#revision-0005)),, and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
+The schema is managed by Alembic, inside the backend image. Revision `0001` is the old app's `schema.sql` unchanged, `0002` adds the MVP tables, `0003` adds `audit_log.source` and `match_channels.imported_by` ([below](#revision-0003)), `0004` adds the `broadcast_presets` and `sources` dataset names ([below](#revision-0004)), `0005` adds devices' satellites, the outbox cursor, source health, the run log and placeholder markers ([below](#revision-0005)), `0006` adds the outbox attempt counter ([below](#revision-0006)), and every later change follows expand/contract, so the old and new releases both run against the same schema (constitution, "Migrations"). Every deploy runs `alembic upgrade head` before it starts the new release. This runbook covers what happens then, how to read the state, and what to do when a migration fails. It touches production's database. Background: `backend/alembic/`, research R13.
 
 ## How a migration runs in a deploy
 
@@ -110,3 +110,18 @@ SELECT column_name FROM information_schema.columns
 ```
 
 Nine rows. The downgrade drops them all and leaves every other row unchanged; no data migration is needed.
+
+## Revision 0006
+
+Added on D3, round 1 (`backend/alembic/versions/0006_outbox_attempts.py`). Expand-only: one column with a default, so the release before it keeps running on the new schema.
+
+- `notification_outbox.attempts integer NOT NULL DEFAULT 0`, `ck_notification_outbox_attempts` (`>= 0`): how many whole-call failures a reminder has had. At 5 the dispatcher marks the row `failed` and stops claiming it, so a broken FCM credential cannot leave a row `pending` for ever (the every-minute beat used to re-claim it as a new task, so the Celery retry count never ran out).
+
+Check it after a deploy:
+
+```sql
+SELECT column_name FROM information_schema.columns
+ WHERE table_name = 'notification_outbox' AND column_name = 'attempts';
+```
+
+One row. The downgrade drops it and leaves every other row unchanged; no data migration is needed.

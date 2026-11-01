@@ -17,8 +17,10 @@ REMINDER_MINUTES = 15
 WINDOW_HOURS = 24
 MAX_DUE_NOW = 10
 
-# A followed match in the next 24 h, at least one follower, and a reminder that is still pending:
-# the upsert moves ``due_at`` for a moved kickoff and never re-sends a row that already went out.
+# A followed match in the next 24 h, at least one follower, and a reminder that is still open:
+# the upsert moves ``due_at`` for a moved kickoff, never re-sends a row that already went out, and
+# revives a row that was cancelled (a postponed match that is scheduled again, a TBD match that
+# gets a time, a kickoff that moved past 24 h and back) — B1-R1-3.
 _UPSERT = """
 INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status)
 SELECT 'kickoff_reminder',
@@ -39,10 +41,14 @@ SELECT 'kickoff_reminder',
              OR f.competition_id = m.competition_id)
 ON CONFLICT (dedupe_key) DO UPDATE
    SET due_at = EXCLUDED.due_at,
-       payload = EXCLUDED.payload
- WHERE notification_outbox.status = 'pending'
+       payload = EXCLUDED.payload,
+       status = 'pending',
+       claimed_at = NULL
+ WHERE notification_outbox.status IN ('pending', 'cancelled')
 """
 
+# ``sent`` and ``failed`` are final; ``sending`` is in flight. A kickoff that has passed cancels the
+# row here too, so an outage cannot leave a reminder queued for a match already in play (B1-R1-5).
 _CANCEL = """
 UPDATE notification_outbox o
    SET status = 'cancelled'
@@ -50,8 +56,9 @@ UPDATE notification_outbox o
  WHERE o.dedupe_key = 'kickoff_reminder:' || m.id
    AND o.status IN ('pending', 'sending')
    AND (m.time_tbd = true
-        OR m.status IN ('postponed', 'cancelled', 'abandoned')
+        OR m.status IN ('postponed', 'cancelled', 'abandoned', 'live', 'finished')
         OR m.kickoff_at IS NULL
+        OR m.kickoff_at <= :now
         OR m.kickoff_at > :now + make_interval(hours => :window))
 """
 

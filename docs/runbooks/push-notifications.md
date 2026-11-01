@@ -15,9 +15,9 @@ Three steps, no HTTP request in the path (FR-007):
    audience   = {"kind": "match_followers", "match_id": <id>}
    ```
 
-   `ON CONFLICT (dedupe_key) DO UPDATE … WHERE status = 'pending'`, so a moved kickoff moves a pending row and a sent one is never touched or duplicated. A second statement cancels pending rows whose match became `time_tbd`, `postponed`, `cancelled` or `abandoned`, or whose kickoff moved past 24 h.
+   `ON CONFLICT (dedupe_key) DO UPDATE … WHERE status IN ('pending', 'cancelled')`, so a moved kickoff moves a pending row and a sent or failed one is never touched or duplicated; a row that was `cancelled` and whose match qualifies again (a postponed match that is scheduled again, a TBD match that gets a time, a kickoff that moved past 24 h and back) goes back to `pending` with the new `due_at`. A second statement cancels pending rows whose match became `time_tbd`, `postponed`, `cancelled`, `abandoned`, `live` or `finished`, whose kickoff has already passed, or whose kickoff moved past 24 h.
 
-2. **Dispatch** — `notifications.dispatch_due` on `notifications`, every minute (`notify-dispatch`) and queued by the scheduler when a row is due now. It reclaims rows stuck in `sending` for more than 10 minutes, claims up to 10 due rows with `FOR UPDATE SKIP LOCKED`, and for each row resolves the audience in pages of 500 with one `SELECT DISTINCT` (`AUDIENCE` in `backend/app/notifications/dispatcher.py`), builds each device's message from the match's visible links and the device's satellites, sends the page through `firebase_admin.messaging.send_each`, and records `sent`, `failed` and `cursor_device_id`. A whole-call failure puts the row back to `pending` with its cursor, so a retry resumes where it stopped; after 5 retries the row is `failed`. A token FCM answers `UNREGISTERED` (or an invalid registration token) is set to `NULL`, so the device stops receiving.
+2. **Dispatch** — `notifications.dispatch_due` on `notifications`, every minute (`notify-dispatch`) and queued by the scheduler when a row is due now. It reclaims rows stuck in `sending` for more than 10 minutes, claims up to 10 due rows with `FOR UPDATE SKIP LOCKED`, and for each row resolves the audience in pages of 500 with one `SELECT DISTINCT` (`AUDIENCE` in `backend/app/notifications/dispatcher.py`), builds each device's message from the match's visible links and the device's satellites, sends the page through `firebase_admin.messaging.send_each`, and records `sent`, `failed` and `cursor_device_id`. A row whose kickoff has passed, or whose match is `live` or `finished`, is `cancelled` instead of sent: a late reminder never says a started match begins in a minute. A whole-call failure puts the row back to `pending` with its cursor, so a retry resumes where it stopped, and every row claimed behind it goes back to `pending` too (no row is stranded in `sending`). The row's `attempts` column counts those failures; at 5 the row is `failed` and is never claimed again. A token FCM answers `UNREGISTERED` for (or `INVALID_ARGUMENT` naming the registration token) is set to `NULL`, so the device stops receiving; any other per-message error counts as `failed` and logs `fcm_message_failed` / `push_page_failed` at ERROR, and the token is left alone.
 
 3. **Prune** — `notifications.prune_outbox` on `maintenance`, daily at 04:30 UTC (`notify-prune`). Deletes `sent`, `failed` and `cancelled` rows older than 30 days.
 
@@ -44,7 +44,7 @@ Only `app/notifications/sender.py` talks to FCM. Producers only insert outbox ro
    PWA_ORIGIN=https://app.<ip1>.sslip.io
    ```
 
-   `infra/compose/vps2.yml` mounts that one file read-only into `worker-notify` and no other service. `PWA_ORIGIN` is the web push link's origin (`<PWA_ORIGIN>/match/<id>`); a value with a wrong origin sends users to a dead link.
+   `infra/compose/vps2.yml` mounts that one file read-only into `worker-notify` and no other service. `PWA_ORIGIN` is the web push link's origin (`<PWA_ORIGIN>/match/<id>`); a value with a wrong origin sends users to a dead link, and a plain `http://` value is refused at startup (FCM rejects every web message whose `fcm_options.link` is not https).
 
 4. **Restart and check.** On VPS-2:
 
@@ -79,7 +79,7 @@ SELECT status, count(*) FROM notification_outbox
  WHERE created_at > now() - interval '1 day' GROUP BY status ORDER BY status;
 
 -- the newest rows, with how many devices each reached
-SELECT id, dedupe_key, status, due_at, sent, failed, cursor_device_id, sent_at
+SELECT id, dedupe_key, status, due_at, attempts, sent, failed, cursor_device_id, sent_at
   FROM notification_outbox ORDER BY id DESC LIMIT 20;
 
 -- stuck in sending: the worker died mid-row
@@ -96,9 +96,11 @@ The notification tag is `match_<id>`: a repeat replaces the notification on the 
 ```sql
 UPDATE notification_outbox
    SET status = 'pending', claimed_at = NULL, cursor_device_id = 0,
-       failed = 0, sent_at = NULL, due_at = now()
+       attempts = 0, failed = 0, sent_at = NULL, due_at = now()
  WHERE id = <id> AND status = 'failed';
 ```
+
+`attempts = 0` gives the row its five tries again; without it the first failure marks it `failed` once more.
 
 Then let the next `notify-dispatch` (≤ 1 minute) send it, or run it by hand: `dc exec worker-notify celery -A app.workers call notifications.dispatch_due`. Keep `cursor_device_id` instead of resetting it if only the tail failed; the devices before the cursor already received it.
 
@@ -109,5 +111,5 @@ Do not edit a `sent` row: the scheduler will not create a second one, so clearin
 1. `SELECT * FROM notification_outbox ORDER BY id DESC LIMIT 5;` — is there a row? If not, nobody follows the match (`device_follows`) or the match is `time_tbd` / postponed / cancelled / outside 24 h.
 2. Is `due_at` in the past and `status = 'pending'`? Look for `notifications.dispatch_due` in VPS-2's worker logs, and whether `beat` runs at all ([workers.md](workers.md)).
 3. `status = 'failed'` with `error`/`failed` counts: the FCM credentials are wrong or the key rotated. Check `dc logs worker-notify | grep -F 'fcm'`.
-4. A device with `push_token = NULL` was told `UNREGISTERED`; it registers again the next time the app opens.
+4. A device with `push_token = NULL` was told `UNREGISTERED`: FCM says that token no longer exists. The app only sends a token when FCM gives it a new one, so the device stays silent until then; check the device row with `SELECT id, platform, last_seen_at, push_token FROM devices WHERE id = <id>` and ask the user to reopen the app, which re-registers the device (a new `POST /v1/devices` with the same `install_id` keeps the row and rotates its token).
 5. `FCM_DRY_RUN=true` on the host means nothing is delivered. Check the value in `/srv/madar/.env`.

@@ -186,7 +186,7 @@ def test_0002_downgrades_cleanly_and_upgrades_again(empty_database):
 
 
 def test_session_database_is_at_head(sync_session):
-    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0005"
+    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0006"
 
 
 @pytest.mark.parametrize(
@@ -423,3 +423,25 @@ def test_0005_downgrade_drops_them_and_leaves_every_row_unchanged(empty_database
 
     command.upgrade(cfg, "head")
     assert COLUMNS_0005 <= _schema(empty_database)["columns"]
+
+
+# --- Revision 0006: the outbox attempt counter (B1-R1-4) ------------------------------------------
+
+
+def test_0006_adds_the_attempt_counter_and_defaults_it_to_zero(empty_database):
+    cfg = _alembic(empty_database)
+    command.upgrade(cfg, "0005")
+    with psycopg.connect(empty_database, autocommit=True) as conn:
+        conn.execute(
+            "INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status) "
+            "VALUES ('kickoff_reminder', 'kickoff_reminder:1', '{}', '{}', now(), 'pending')"
+        )
+
+    command.upgrade(cfg, "head")
+
+    assert "notification_outbox.attempts" in _schema(empty_database)["columns"]
+    with psycopg.connect(empty_database) as conn:
+        assert conn.execute("SELECT attempts FROM notification_outbox").fetchall() == [(0,)]
+
+    command.downgrade(cfg, "0005")
+    assert "notification_outbox.attempts" not in _schema(empty_database)["columns"]

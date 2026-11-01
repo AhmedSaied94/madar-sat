@@ -32,6 +32,11 @@ Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
   devices with one `SELECT DISTINCT` over `device_follows` (`AUDIENCE` in
   `app/notifications/dispatcher.py`, reviewed by the owner), and sends through FCM in pages of 500.
   **Only `app/notifications/` imports `firebase_admin`** (`sender.py`); nothing else talks to FCM.
+  A token is cleared only when FCM says the registration token is dead (`UnregisteredError`, or
+  `INVALID_ARGUMENT` naming the token); any other per-message error is `failed` and logged, and one
+  unusable message never fails the page. `notification_outbox.attempts` bounds whole-call retries
+  (5 → `failed`), and a row whose kickoff has passed or whose match is `live`/`finished` is
+  `cancelled` at dispatch and by the scheduler, never sent late.
 - **Devices and follows** (`app/devices/`): `POST /v1/devices` upserts on `install_id` and rotates
   the token; the row keeps only `sha256(token)` and the token is returned once. `PUT
   /v1/devices/me/follows` replaces the whole set atomically under a device row lock (≤ 500).
