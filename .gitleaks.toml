@@ -24,3 +24,18 @@ paths = [
   '''^admin/src/api/generated/admin\.msw\.ts$''',
 ]
 regexes = ['''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIzIn0\.signature''']
+
+[[allowlists]]
+description = """The documented example device token in D3's device-registration contract, the \
+public schema and route that publish it, and the OpenAPI export. It is the base64url of the literal \
+"ChangeMe-43-chars-base64url-token", shown to the client generators as a 43-character token; the \
+real token is generated per registration, stored only as sha256, and returned once."""
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''^backend/app/api/public/devices\.py$''',
+  '''^backend/app/schemas/public\.py$''',
+  '''^backend/openapi/public\.json$''',
+  '''^specs/003-d03-follow-push-sources/contracts/public-devices\.md$''',
+]
+regexes = ['''Q2hhbmdlTWUtNDMtY2hhcnMtYmFzZTY0dXJsLXRva2Vu''']
