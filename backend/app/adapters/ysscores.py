@@ -146,10 +146,11 @@ class YsscoresAdapter:
                 if not home or not away:
                     continue
                 time_element = next(iter(_children_with_class(anchor, "b", "match-date")), None)
-                if time_element is None:
-                    # A match in play or finished: the page shows its score instead of a time.
-                    # It is not a fixture, and importing it without a kickoff would wipe the one
-                    # already stored, so it is skipped (R16: fixtures only).
+                if time_element is None or _children_with_class(time_element, "span", "first-team-result"):
+                    # A match in play (no `.match-date`) or finished (its `.match-date` holds the
+                    # score spans): not a fixture. Importing it without a kickoff would wipe the one
+                    # already stored, so it is skipped (R16: fixtures only). `.match-with-result`
+                    # can't tell them apart: the page puts it on upcoming matches too.
                     continue
                 wall_time = _wall_time(time_element)
                 href = _attr(anchor, "href")
