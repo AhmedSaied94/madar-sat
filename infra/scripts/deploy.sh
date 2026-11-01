@@ -21,13 +21,18 @@
 #   6. poll both /healthz endpoints and worker-media's healthcheck for 60 s;
 #   7. on failure, start the previous tag again, re-check, and exit non-zero.
 #
+# Both hosts also create the D3 folders (/srv/backup, /srv/kuma, /srv/secrets) and install their
+# backup timers from infra/systemd (`systemctl enable --now`), so a fresh host needs no manual step.
+#
 # VPS-2, steps for <image-tag>:
 #   1. record the running tag;
-#   2. pull with the token from stdin (nothing to migrate: migrations run on VPS-1);
-#   3. `compose --profile workers up -d worker-imports worker-scrape worker-maintenance beat`;
-#   4. wait up to 90 s for all four to report healthy (each worker answers `celery inspect ping`;
+#   2. create the D3 folders and install backup-db.timer;
+#   3. pull with the token from stdin (nothing to migrate: migrations run on VPS-1);
+#   4. `compose --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify
+#      uptime-kuma beat`;
+#   5. wait up to 90 s for all of them to report healthy (each worker answers `celery inspect ping`;
 #      beat is healthy when its pid file's process lives);
-#   5. on failure, restore the previous tag and exit non-zero.
+#   6. on failure, restore the previous tag and exit non-zero.
 #
 # HEALTHZ_FORCE_FAIL=true in the environment deploys the new tag with a failing /healthz, for the
 # rollback drill (backend.yml, break_healthcheck). It applies to VPS-1 only.
@@ -44,11 +49,15 @@ health_urls=(http://127.0.0.1:8000/healthz http://10.8.0.1:8001/admin/api/health
 health_timeout=60
 workers_timeout=90
 acl_gid=999  # the `redis` user's gid in redis:7.4.12, and the group bootstrap-vps.sh gives deploy
+app_uid=10001  # the `madar` user inside the backend image (backend/Dockerfile)
 redis_acl_changed=0
 api_services=(api-public api-admin)
 media_service=worker-media
 vps1_stateful=(postgres redis caddy)
-vps2_services=(worker-imports worker-scrape worker-maintenance beat)
+# `worker-notify` holds the outbox dispatcher and `uptime-kuma` watches every host (D3, R20).
+vps2_services=(worker-imports worker-scrape worker-maintenance worker-notify uptime-kuma beat)
+vps1_timers=(backup-media.timer backup-media-weekly.timer)
+vps2_timers=(backup-db.timer)
 
 compose=(docker compose --env-file "$env_file")
 vps1_compose=("${compose[@]}" -f "$infra_dir/compose/vps1.yml")
@@ -158,6 +167,40 @@ acl_answers() {
   return 1
 }
 
+# The directories the D3 services mount. Idempotent, so a deploy, a re-run and bootstrap agree.
+# /srv/backup is the staging file's home, /srv/kuma holds Uptime Kuma's SQLite, and /srv/secrets
+# holds the FCM service account: mode 700, owned by the backend image's user (uid 10001), because
+# only worker-notify mounts it, read-only (R9, R19, R20).
+ensure_dirs() {
+  local host=$1
+  install -d -m 750 -o deploy -g deploy "$state_dir"
+  if [[ $host == vps2 ]]; then
+    install -d -m 700 -o deploy -g deploy /srv/backup
+    install -d -m 755 -o deploy -g deploy /srv/kuma
+    install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/secrets
+    [[ -f /srv/secrets/fcm.json ]] \
+      || log "no /srv/secrets/fcm.json yet: worker-notify starts, and the dispatcher refuses until the owner installs the key"
+  fi
+}
+
+# Install the host's backup timers (R19). `install` overwrites every time, so the units on a host
+# always match the repository, and `enable --now` is harmless on an enabled timer.
+install_timers() {
+  local host=$1 timer unit
+  if [[ $host == vps2 ]]; then
+    local timers=("${vps2_timers[@]}")
+  else
+    local timers=("${vps1_timers[@]}")
+  fi
+  for timer in "${timers[@]}"; do
+    unit=${timer%.timer}.service
+    install -m 644 "$infra_dir/systemd/$unit" "$infra_dir/systemd/$timer" /etc/systemd/system/
+  done
+  systemctl daemon-reload
+  systemctl enable --now "${timers[@]}"
+  log "timers: $(systemctl list-timers --no-pager --no-legend "${timers[@]}" 2>/dev/null | awk '{print $NF}' | tr '\n' ' ')"
+}
+
 # Put back the ACL the last render replaced, so Redis can start on it (B2-R2-11, B2-R3-2).
 restore_previous_acl() {
   [[ -f $acl_previous ]] || return 1
@@ -212,10 +255,12 @@ deploy_vps1() {
   export IMAGE_TAG=${current:-none} HEALTHZ_FORCE_FAIL=false
 
   # 1. Render the ACL, apply the synced infra, and load a changed ACL before the APIs move.
+  ensure_dirs vps1
   render_redis_acl
   apply_stateful_infra
   reload_redis_acl
   "${vps1_compose[@]}" exec -T caddy caddy reload --config "$caddy_config" --adapter caddyfile
+  install_timers vps1
 
   # 2. Record the running tag; it is the rollback target.
   if [[ -n $current ]]; then
@@ -273,6 +318,9 @@ deploy_vps2() {
     printf '%s\n' "$current" > "$state_dir/previous_tag"
   fi
   previous=$(cat "$state_dir/previous_tag" 2>/dev/null || true)
+
+  ensure_dirs vps2
+  install_timers vps2
 
   token=$GHCR_TOKEN
   owner=$(env_get GHCR_OWNER)
@@ -341,11 +389,13 @@ exec </dev/null
 trap 'docker logout ghcr.io >/dev/null 2>&1 || true; unset GHCR_TOKEN' EXIT
 
 if [[ $mode == --infra-only ]]; then
+  ensure_dirs vps1
   render_redis_acl
   export IMAGE_TAG=${IMAGE_TAG:-none} HEALTHZ_FORCE_FAIL=false
   apply_stateful_infra
   reload_redis_acl
   "${vps1_compose[@]}" exec -T caddy caddy reload --config "$caddy_config" --adapter caddyfile
+  install_timers vps1
   log "infra applied"
   exit 0
 fi

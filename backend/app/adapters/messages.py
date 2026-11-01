@@ -14,13 +14,13 @@ import warnings
 import zlib
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.adapters.base import ParsedFixture, RawPage
 
-CURRENT_SCHEMA = 1
+CURRENT_SCHEMA = 2
 MAX_BYTES = 2 * 1024 * 1024
 MAX_ERROR = 120
 # The fetcher's per-page cap. The compressed message is capped at 2 MB, but gzip can inflate
@@ -29,7 +29,17 @@ MAX_PAGE_BYTES = 5 * 1024 * 1024
 # A window (today to +3) is at most four pages, and the whole run is bounded too: 250 small pages
 # fit under 2 MB compressed and still inflate to gigabytes (B2-R2-16).
 MAX_PAGES = 4
+# LiveSoccerTV fetches a team page and a match page per planned match, so a run carries many more
+# pages than a fixture window. Planning caps a run at MAX_TARGETS targets (12 => 24 pages, about
+# 1.2 MB compressed), which keeps the 2 MB and 16 MB caps below reachable (R14).
+MAX_BROADCAST_PAGES = 24
 MAX_TOTAL_BYTES = 16 * 1024 * 1024
+MAX_CHANNEL_NAME = 120
+MAX_COUNTRY = 80
+# The two message kinds (contracts §ScrapeResult v2).
+Kind = Literal["fixtures", "broadcasts"]
+KIND_FIXTURES: Kind = "fixtures"
+KIND_BROADCASTS: Kind = "broadcasts"
 
 
 class MessageTooLarge(Exception):
@@ -49,28 +59,61 @@ class PageMessage(BaseModel):
     gz_b64: str
 
 
+class BroadcastChannel(BaseModel):
+    """One broadcaster the match page lists for one country (``ScrapeResult`` v2, R14)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=MAX_CHANNEL_NAME)
+    country: str = Field(min_length=1, max_length=MAX_COUNTRY)
+
+
+class BroadcastItem(BaseModel):
+    """The channel list of one Madar match, read from its LiveSoccerTV match page."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    match_id: int
+    match_url: str
+    channels: list[BroadcastChannel] = Field(default_factory=list)
+
+
+class UnmatchedMatch(BaseModel):
+    """A planned match whose LiveSoccerTV page was not found or not readable."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    match_id: int
+    why: str = Field(min_length=1, max_length=MAX_ERROR)
+
+
 # ``schema`` is the wire name in contracts/ingestion.md. It shadows ``BaseModel.schema()``, a
 # method pydantic deprecated: the warning is about that method, not about this field.
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
 
     class ScrapeResult(BaseModel):
-        """contracts/ingestion.md §ScrapeResult message (schema 1)."""
+        """contracts/ingestion.md §ScrapeResult message, schema 2 (v1 is still read)."""
 
         model_config = ConfigDict(extra="forbid")
 
         # `schema` is the wire name (contracts/ingestion.md); pydantic's BaseModel has a deprecated
         # `schema()` method, hence the ignore.
         schema: int  # type: ignore[assignment]
+        # "fixtures" (ysscores, legacy) or "broadcasts" (livesoccertv) — D3's contract.
+        kind: Kind = KIND_FIXTURES
         source: str
         run_id: str
         started_at: datetime
         finished_at: datetime
         fetched_on: str
         pages: list[PageMessage] = Field(default_factory=list)
-        items: list[ParsedFixture] = Field(default_factory=list)
+        items: list[ParsedFixture | BroadcastItem] = Field(default_factory=list)
         http_errors: int = 0
         error: str | None = None
+        # Broadcasts only: how many matches were planned, and the ones no page answered for.
+        targets: int | None = Field(default=None, ge=0)
+        unmatched: list[UnmatchedMatch] = Field(default_factory=list)
 
         @classmethod
         def accepted_schemas(cls, current: int = CURRENT_SCHEMA) -> frozenset[int]:
@@ -90,6 +133,18 @@ with warnings.catch_warnings():
             return value[:MAX_ERROR] if value else None
 
         @model_validator(mode="after")
+        def _items_match_the_kind(self) -> Self:
+            """A broadcasts message carries broadcast items and a fixtures message carries fixtures."""
+            wanted = BroadcastItem if self.kind == "broadcasts" else ParsedFixture
+            for item in self.items:
+                if not isinstance(item, wanted):
+                    other = "ParsedFixture" if wanted is BroadcastItem else "BroadcastItem"
+                    raise ValueError(f"a {self.kind} message carries {other} items")
+            if self.kind == "fixtures" and (self.targets is not None or self.unmatched):
+                raise ValueError("targets and unmatched belong to a broadcasts message")
+            return self
+
+        @model_validator(mode="after")
         def _size_cap(self) -> Self:
             if len(self.model_dump_json().encode("utf-8")) > MAX_BYTES:
                 raise MessageTooLarge(f"the message is over the {MAX_BYTES} byte cap; split the run")
@@ -106,6 +161,11 @@ with warnings.catch_warnings():
             return data
 
         @classmethod
+        def page_cap(cls, kind: Kind) -> int:
+            """A fixtures window carries four pages; a broadcast run carries up to 24 (R14)."""
+            return MAX_BROADCAST_PAGES if kind == "broadcasts" else MAX_PAGES
+
+        @classmethod
         def build(
             cls,
             *,
@@ -115,16 +175,21 @@ with warnings.catch_warnings():
             finished_at: datetime,
             fetched_on: str,
             pages: Sequence[RawPage],
-            items: Sequence[ParsedFixture] = (),
+            items: Sequence[ParsedFixture | BroadcastItem] = (),
             http_errors: int = 0,
             error: str | None = None,
+            kind: Kind = KIND_FIXTURES,
+            targets: int | None = None,
+            unmatched: Sequence[UnmatchedMatch] = (),
         ) -> ScrapeResult:
-            if len(pages) > MAX_PAGES:
+            cap = cls.page_cap(kind)
+            if len(pages) > cap:
                 raise MessageTooLarge(
-                    f"the message carries {len(pages)} pages; a window is at most {MAX_PAGES} (B2-R2-16)"
+                    f"the message carries {len(pages)} pages; a {kind} run carries at most {cap} (B2-R2-16)"
                 )
             return cls(
                 schema=CURRENT_SCHEMA,
+                kind=kind,
                 source=source,
                 run_id=run_id,
                 started_at=started_at,
@@ -134,6 +199,8 @@ with warnings.catch_warnings():
                 items=list(items),
                 http_errors=http_errors,
                 error=error,
+                targets=targets,
+                unmatched=list(unmatched),
             )
 
         @classmethod
@@ -147,6 +214,8 @@ with warnings.catch_warnings():
             fetched_on: str,
             http_errors: int,
             error: str,
+            kind: Kind = KIND_FIXTURES,
+            targets: int | None = None,
         ) -> ScrapeResult:
             """A failed fetch still travels, so the run row records the failure (R15)."""
             return cls.build(
@@ -159,11 +228,14 @@ with warnings.catch_warnings():
                 items=[],
                 http_errors=http_errors,
                 error=error,
+                kind=kind,
+                targets=targets,
             )
 
         def raw_pages(self) -> list[RawPage]:
-            if len(self.pages) > MAX_PAGES:
-                raise MessageTooLarge(f"the message carries {len(self.pages)} pages; at most {MAX_PAGES} are expected")
+            cap = self.page_cap(self.kind)
+            if len(self.pages) > cap:
+                raise MessageTooLarge(f"the message carries {len(self.pages)} pages; at most {cap} are expected")
             pages: list[RawPage] = []
             total = 0
             for page in self.pages:

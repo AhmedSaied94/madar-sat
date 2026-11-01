@@ -193,6 +193,11 @@ ensure_dirs() {
     # The raw pages. Docker would create the missing bind source as root:root, and the uid-10001
     # workers with cap_drop ALL could not write it (B2-R1-5).
     install -d -m 755 -o "$app_uid" -g "$app_uid" /srv/raw
+    # D3: the backup staging file, Uptime Kuma's SQLite, and the FCM service account. The secrets
+    # directory and the key belong to the image's user, because only worker-notify mounts it (R9).
+    install -d -m 700 -o deploy -g deploy /srv/backup
+    install -d -m 755 -o deploy -g deploy /srv/kuma
+    install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/secrets
   fi
 }
 

@@ -97,3 +97,22 @@ https://10.8.0.1 {
 		file_server
 	}
 }
+
+# Uptime Kuma on VPS-2 (R20), reachable only over WireGuard like the admin site: the whole site is
+# bound to the hub's wg0 address and uses the same internal CA, so nothing about it is public.
+#
+# It gets its own site name instead of a `/kuma/` path on 10.8.0.1: Uptime Kuma 1 serves its assets
+# and its websocket from the site root and has no supported sub-path mode, so a path prefix would
+# load a broken UI. `10-8-0-1.sslip.io` resolves to 10.8.0.1 for the peers, and the certificate is
+# Caddy's internal CA, which the peers' devices already trust for the admin site.
+https://kuma.10-8-0-1.sslip.io {
+	bind 10.8.0.1
+	tls internal
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+	header -Server
+	reverse_proxy {$PEER_VCN_IP}:3001
+}

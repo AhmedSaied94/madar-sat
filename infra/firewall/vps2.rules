@@ -30,6 +30,9 @@
 
 # Ports published on 127.0.0.1 (Flower): never from outside the host.
 -A DOCKER-USER -m conntrack --ctorigdst 127.0.0.0/8 --ctdir ORIGINAL -j DROP
+# Uptime Kuma on the VCN IP:3001 (R20): VPS-1's Caddy is the only client, over the VCN. Kuma's UI
+# and its push endpoints are never reachable from anywhere else.
+-A DOCKER-USER ! -s ${PEER_VCN_IP}/32 -p tcp -m conntrack --ctorigdst ${VCN_IP} --ctorigdstport 3001 --ctdir ORIGINAL -j DROP
 -A DOCKER-USER -j RETURN
 
 # @OCI_INSTANCE_SERVICES@

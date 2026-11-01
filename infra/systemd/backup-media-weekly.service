@@ -1,0 +1,18 @@
+# Sunday 04:00 Africa/Cairo: the weekly restic snapshot of the media disk, beside the nightly mirror
+# (R19). A separate unit, so its `forget --keep-weekly 4` never prunes the nightly run's heartbeat.
+[Unit]
+Description=Madar Sat: weekly media snapshot into the B2 repository
+Documentation=file:/srv/madar/infra/../docs/runbooks/backups.md
+Wants=network-online.target docker.service
+After=network-online.target docker.service backup-media.service
+# The mirror and the snapshot both read the media disk and both use the uplink.
+Conflicts=backup-media.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps1.yml run --rm -T backup-media-weekly
+WorkingDirectory=/srv/madar/infra
+User=root
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=4h

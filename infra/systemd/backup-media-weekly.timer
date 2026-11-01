@@ -1,0 +1,14 @@
+# Sunday 04:00 Africa/Cairo (R19): one restic snapshot of /srv/media per week, four kept.
+[Unit]
+Description=Madar Sat: weekly media snapshot on Sundays at 04:00 Africa/Cairo
+Documentation=file:/srv/madar/infra/../docs/runbooks/backups.md
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 Africa/Cairo
+Persistent=true
+AccuracySec=1min
+RandomizedDelaySec=10min
+Unit=backup-media-weekly.service
+
+[Install]
+WantedBy=timers.target

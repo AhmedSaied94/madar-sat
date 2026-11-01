@@ -10,13 +10,13 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 
 | Path | What it is |
 | --- | --- |
-| `compose/vps1.yml` | VPS-1: `caddy`, `api-public`, `api-admin`, `worker-media`, `postgres`, `redis` (ACL file), plus `migrate` and `cli` (profile `tools`) |
-| `compose/vps2.yml` | VPS-2: `worker-imports`, `worker-scrape`, `worker-maintenance`, the single `beat`, and `flower` (which stays down on D2), all under profile `workers` |
+| `compose/vps1.yml` | VPS-1: `caddy`, `api-public`, `api-admin`, `worker-media`, `postgres`, `redis` (ACL file), plus `migrate` and `cli` (profile `tools`) and the one-shot `backup-media` / `backup-media-weekly` (profile `backup`) |
+| `compose/vps2.yml` | VPS-2: `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify` (the only service that mounts `/srv/secrets`), the single `beat` and `uptime-kuma`, all under profile `workers`; `flower` stays down, and `backup-db` is a one-shot (profile `backup`) |
 | `compose/home-box.yml` | The owner's x86-64 box: one `worker-scrape` on `scrape_home`, from `madar-backend-amd64:stable`, with no database credentials |
 | `compose/dev.yml` | Local development: PostgreSQL 16, Redis 7 and a `tls internal` Caddy at `https://localhost:8443` |
 | `compose/example.env` | Every variable name the Compose files, Caddyfile and scripts use, with fake values |
 | `redis/users.acl.tmpl` | The `default` and `homebox` Redis users; `scripts/render-redis-acl.sh` renders it with the two passwords (file 640, directory 750, group 999) |
-| `Caddyfile` | The public sites `api.`, `media.` and `app.130.110.117.215.sslip.io`, and the admin site `https://10.8.0.1` on `wg0` |
+| `Caddyfile` | The public sites `api.`, `media.` and `app.130.110.117.215.sslip.io`, and two `wg0`-only sites: the admin at `https://10.8.0.1` and Uptime Kuma at `https://kuma.10-8-0-1.sslip.io` |
 | `firewall/vps1.rules`, `vps2.rules`, `rules.v6` | iptables templates, rendered into `/etc/iptables/rules.v4` and `rules.v6` |
 | `wireguard/wg0.conf.tmpl`, `peer.conf.tmpl` | The hub and peer configs, with key placeholders only |
 | `scripts/bootstrap-vps.sh` | Idempotent host setup (Docker, WireGuard, the `deploy` user, `/srv` folders, firewall) |
@@ -26,6 +26,8 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 | `scripts/wg-add-peer.sh` | Adds a WireGuard peer; generates its keys on the host |
 | `scripts/deploy.sh` | Runs on VPS-1 (APIs and `worker-media`) or on VPS-2 (`--host vps2`: workers and `beat`): pull, roll out, health-check, roll back |
 | `scripts/home-box-update.sh`, `.service`, `.timer` | Pull `madar-backend-amd64:stable` on the home box every 10 minutes and recreate the worker if it moved |
+| `backup/` | The `madar-backup` image (`Dockerfile`: postgres client 16, restic, rclone) and the two scripts the timers run |
+| `systemd/` | The three backup timers and their services (database nightly on VPS-2, media nightly and weekly on VPS-1) |
 | `firebase/` | Firebase Hosting config for the PWA preview channel |
 | `admin-placeholder/index.html` | Served on `https://10.8.0.1` until the admin ships (D4) |
 
@@ -33,7 +35,7 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 
 | | VPS-1 "app" (public) | VPS-2 "workers" | Home box (x86-64) |
 | --- | --- | --- | --- |
-| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7 | `worker-imports`, `worker-scrape`, `worker-maintenance`, `beat` (exactly one); Flower later | `worker-scrape -Q scrape_home`, and a 10-minute systemd timer that updates it |
+| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `beat` (exactly one), Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home`, and a 10-minute systemd timer that updates it |
 | Memory | PostgreSQL ≈ 2 GB (`shared_buffers` 1.5 GB), Redis 512 MB, APIs 0.5 GB, `worker-media` ≤ 256 MB | Workers ≈ 1.2 GB, Flower 0.1 GB | The owner's machine; one worker process |
 | Disk | Database, `/srv/media`, `/srv/app-mirror` | Raw pages `/srv/raw` (5 days), backup staging | None; it holds no data |
 | Reaches | The internet, both VCN peers, `wg0` peers | VPS-1's VCN addresses only | `10.8.0.1:6379` only, as the `homebox` Redis user |

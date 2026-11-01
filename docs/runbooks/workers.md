@@ -11,12 +11,18 @@ The Celery processes of SD §6.1, the one `beat`, and the deploy that keeps them
 | VPS-2 | `worker-imports` | `-Q imports` | `celery inspect ping` |
 | VPS-2 | `worker-scrape` | `-Q scrape` | `celery inspect ping` |
 | VPS-2 | `worker-maintenance` | `-Q maintenance` | `celery inspect ping` |
+| VPS-2 | `worker-notify` | `-Q notifications`, `-c 2`, `/srv/secrets` read-only (FCM only) | `celery inspect ping` |
 | VPS-2 | `beat` | `celery beat` with a fixed `container_name` | `kill -0 $(cat /tmp/celerybeat.pid)` |
+| VPS-2 | `uptime-kuma` | `louislam/uptime-kuma:1`, `/srv/kuma`, the VCN address `:3001` | `extra/healthcheck` |
 | VPS-1 | `worker-media` | `-Q media`, `-c 1`, 256 MB, `/srv/media` read-write | `celery inspect ping` |
 
-`worker-live`, `worker-notify` and `flower` are defined in `compose/vps2.yml` and are **not**
-started on D2. Exactly one `beat` runs: the fixed `container_name: madar-beat` makes a second one
-fail instead of double-scheduling everything.
+`worker-live` and `flower` are defined in `compose/vps2.yml` and are **not** started. Exactly one
+`beat` runs: the fixed `container_name: madar-beat` makes a second one fail instead of
+double-scheduling everything.
+
+`worker-notify` is the only service that mounts `/srv/secrets`: the FCM service account is mode 600,
+owned by the image's uid 10001, and no other worker can read it (R9). Uptime Kuma and its monitors
+are in [uptime-kuma.md](uptime-kuma.md); the backups it watches are in [backups.md](backups.md).
 
 `worker-media` exists because importer-found logos must land on VPS-1's disk, where Caddy serves
 them. VPS-2's import workers only queue `adapters.rehost_logo`; they never download media
@@ -69,9 +75,9 @@ printf '%s\n' "$GHCR_TOKEN" \
   | ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" "sudo -iu deploy /srv/madar/infra/scripts/deploy.sh --host vps2 $sha"
 ```
 
-The script pulls the four services, starts them, and waits up to 90 s for each to report healthy.
-Migrations are not run here: VPS-1's deploy runs `alembic upgrade head` first, and this job runs
-after it.
+The script pulls its services, starts them, and waits up to 90 s for each to report healthy, then
+installs and enables the host's backup timers (`systemctl enable --now`). Migrations are not run
+here: VPS-1's deploy runs `alembic upgrade head` first, and this job runs after it.
 
 ## Roll back VPS-2
 

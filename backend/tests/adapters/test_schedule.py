@@ -1,48 +1,40 @@
-"""The three beat entries and their queues (T076, contracts/ingestion.md §Queues)."""
+"""The beat entries and their queues (T076 D2, extended by D3's T066).
+
+Every source entry now calls ``adapters.schedule_fetch`` on VPS-2, which applies the pause and the
+breaker before it sends the fetch to the source's own queue (R17). ``test_schedule_fetch.py`` covers
+that task and the planning; this file keeps the schedule's own contract.
+"""
 
 from __future__ import annotations
 
-import pytest
-
-from app.adapters.config import get_adapter_settings
 from app.adapters.schedule import BEAT_SCHEDULE, build_beat_schedule
 
 
-@pytest.fixture(autouse=True)
-def _fresh_settings():
-    """The adapter settings are cached for the worker's life; each test needs its own environment."""
-    get_adapter_settings.cache_clear()
-    yield
-    get_adapter_settings.cache_clear()
-
-
-def test_the_three_entries_and_their_utc_schedules() -> None:
-    schedule = BEAT_SCHEDULE
-    assert set(schedule) == {"ysscores-fixtures", "satair-bridge", "prune-raw-pages"}
-
-    ysscores = schedule["ysscores-fixtures"]
-    assert ysscores["task"] == "adapters.fetch"
-    assert ysscores["args"] == ("ysscores",)
-    assert str(ysscores["schedule"]) == "<crontab: 0 */3 * * * (m/h/dM/MY/d)>"
-
-    bridge = schedule["satair-bridge"]
-    assert bridge["task"] == "adapters.fetch"
-    assert bridge["args"] == ("legacy",)
-    assert str(bridge["schedule"]) == "<crontab: 30 1-22/3 * * * (m/h/dM/MY/d)>"
-
-    prune = schedule["prune-raw-pages"]
+def test_the_prune_entry_is_unchanged() -> None:
+    prune = BEAT_SCHEDULE["prune-raw-pages"]
     assert prune["task"] == "adapters.prune_raw_pages"
     assert prune["args"] == ()
+    assert prune["options"] == {"queue": "maintenance"}
     assert str(prune["schedule"]) == "<crontab: 15 3 * * * (m/h/dM/MY/d)>"
 
 
-def test_the_queues_follow_the_hosts() -> None:
-    schedule = build_beat_schedule()
-    assert schedule["ysscores-fixtures"]["options"] == {"queue": "scrape_home"}
-    assert schedule["satair-bridge"]["options"] == {"queue": "scrape"}
-    assert schedule["prune-raw-pages"]["options"] == {"queue": "maintenance"}
+def test_the_source_entries_run_schedule_fetch_on_vps2() -> None:
+    for name, args in (
+        ("ysscores-fixtures", ("ysscores",)),
+        ("satair-bridge", ("legacy",)),
+        ("livesoccertv-48h", ("livesoccertv",)),
+    ):
+        entry = BEAT_SCHEDULE[name]
+        assert entry["task"] == "adapters.schedule_fetch"
+        assert entry["args"] == args
+        # The pause and the breaker are in the database, which only VPS-2 can read (R17).
+        assert entry["options"] == {"queue": "imports"}
 
 
-def test_ysscores_moves_to_vps2_when_the_setting_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("YSSCORES_FETCH_QUEUE", "scrape")
-    assert build_beat_schedule()["ysscores-fixtures"]["options"] == {"queue": "scrape"}
+def test_the_windows_are_utc() -> None:
+    assert str(BEAT_SCHEDULE["ysscores-fixtures"]["schedule"]) == "<crontab: 0 */3 * * * (m/h/dM/MY/d)>"
+    assert str(BEAT_SCHEDULE["satair-bridge"]["schedule"]) == "<crontab: 30 1-22/3 * * * (m/h/dM/MY/d)>"
+
+
+def test_building_the_schedule_twice_gives_the_same_entries() -> None:
+    assert build_beat_schedule().keys() == BEAT_SCHEDULE.keys()
