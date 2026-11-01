@@ -13,7 +13,7 @@ Checks what the internet can reach on both VMs, and that the public sites carry 
 ```bash
 nmap -Pn -p 22,80,443,5432,6379,8000,8001 130.110.117.215     # 80 and 443 open; everything else filtered
 sudo nmap -Pn -sU -p 51820 130.110.117.215                       # open|filtered
-nmap -Pn -p 22,80,443,5432,6379,5555,8000 130.110.97.25       # everything filtered
+nmap -Pn -p 22,80,443,3001,5432,6379,5555,8000 130.110.97.25   # everything filtered, Kuma's 3001 included
 ```
 
 - `filtered` is right for a closed port: the security list drops it, or iptables rejects it.
@@ -72,6 +72,14 @@ curl -s --cacert madar-admin-root.crt https://10.8.0.1/admin/api/healthz | jq .d
 ```
 
 `api-admin` itself (`10.8.0.1:8001`) is reachable only from `wg0`: `8001` must show `filtered` in step 1.
+
+Uptime Kuma (D3) is the same shape: `3001` on VPS-2 is published on the VCN address and the firewall
+accepts it from VPS-1 alone, so the probe above leaves it `filtered`. Off WireGuard, Kuma's wg0 site
+answers nothing:
+
+```sh
+curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' https://kuma.10-8-0-1.sslip.io/   # 000: no route
+```
 
 Redis over `wg0` (`10.8.0.1:6379`) is open to the home box only. From a **second** WireGuard peer
 (your laptop, not the home box):
