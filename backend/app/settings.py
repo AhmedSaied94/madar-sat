@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # admin apps start without them, so the credential file is not a required setting.
     fcm_credentials_file: Path | None = Field(default=None, alias="FCM_CREDENTIALS_FILE")
     fcm_dry_run: bool = Field(default=False, alias="FCM_DRY_RUN")
+    # The web push link's origin. https only: an ``http://`` origin makes FCM refuse every web
+    # message with INVALID_ARGUMENT on ``fcm_options.link`` (B1-R1-2).
     pwa_origin: AnyHttpUrl | None = Field(default=None, alias="PWA_ORIGIN")
 
     # D3 response cache (research R10).
@@ -62,6 +64,13 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
+
+    @field_validator("pwa_origin")
+    @classmethod
+    def _pwa_origin_is_https(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is not None and value.scheme != "https":
+            raise ValueError("PWA_ORIGIN must be an https origin")
+        return value
 
 
 @lru_cache

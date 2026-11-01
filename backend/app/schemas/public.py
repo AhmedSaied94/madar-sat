@@ -454,12 +454,24 @@ class DeviceUpdate(BaseModel):
         },
     )
 
-    push_token: Annotated[str | None, StringConstraints(max_length=4096)] = None
+    push_token: Annotated[str | None, StringConstraints(min_length=1, max_length=4096)] = None
     app_version: Annotated[str | None, StringConstraints(max_length=32)] = None
     tz: Annotated[str | None, StringConstraints(max_length=64)] = None
     locale: Annotated[str | None, StringConstraints(max_length=16)] = None
     satellite_ids: Annotated[list[Annotated[int, Field(ge=1, le=2**63 - 1)]], Field(max_length=32)] | None = None
     prefs: NotificationPrefs | None = None
+
+    @field_validator("push_token")
+    @classmethod
+    def _push_token_is_usable(cls, value: str | None) -> str | None:
+        """An empty token is in every audience and makes FCM reject the whole page (B1-R1-1)."""
+        if value is None:
+            return None
+        if not value.strip():
+            raise ValueError("must be a non-empty push token")
+        if "\x00" in value:
+            raise ValueError("must not contain a NUL character")
+        return value
 
     @field_validator("tz")
     @classmethod

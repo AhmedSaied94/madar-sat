@@ -91,17 +91,31 @@ class FcmSender:
         if not messages:
             return SendOutcome()
         messaging = self._messaging()
-        batch = [self._message(messaging, message) for message in messages]
+        # A page must never fail whole because of one device: firebase-admin raises while encoding
+        # a message with an empty fid, which used to turn the entire page into a retry (B1-R1-1).
+        encoded: list[tuple[PushMessage, Any]] = []
+        failed = 0
+        for message in messages:
+            if not _is_usable(message):
+                failed += 1
+                log.error("fcm_message_unusable", extra={"why": "empty_token"})
+                continue
+            try:
+                encoded.append((message, self._message(messaging, message)))
+            except Exception as exc:  # noqa: BLE001 - one bad message is one failed device
+                failed += 1
+                log.error("fcm_message_unencodable", extra={"why": repr(exc)})
+        if not encoded:
+            return SendOutcome(failed=failed)
         try:
-            response = messaging.send_each(batch, dry_run=self.dry_run)
+            response = messaging.send_each([message for _, message in encoded], dry_run=self.dry_run)
         except Exception as exc:  # noqa: BLE001 - a whole-call failure is transient
-            log.warning("fcm_call_failed", extra={"messages": len(batch), "why": repr(exc)})
+            log.warning("fcm_call_failed", extra={"messages": len(encoded), "why": repr(exc)})
             raise Retryable(f"send_each failed: {exc!r}") from exc
 
         sent = 0
-        failed = 0
         unregistered: list[str] = []
-        for message, result in zip(messages, response.responses, strict=True):
+        for (message, _), result in zip(encoded, response.responses, strict=True):
             if result.success:
                 sent += 1
                 continue
@@ -110,8 +124,14 @@ class FcmSender:
                 unregistered.append(message.token)
             else:
                 failed += 1
-                log.info("fcm_message_failed", extra={"why": repr(problem)})
+                log.error("fcm_message_failed", extra={"why": repr(problem)})
         return SendOutcome(sent=sent, failed=failed, unregistered=tuple(unregistered))
+
+
+def _is_usable(message: PushMessage) -> bool:
+    """A token FCM can address: no empty string, no blank, no NUL (B1-R1-1)."""
+    token = message.token
+    return bool(token and token.strip() and "\x00" not in token)
 
 
 def _token_field(messaging: Any) -> str:
@@ -120,12 +140,17 @@ def _token_field(messaging: Any) -> str:
 
 
 def _is_unregistered(messaging: Any, exc: BaseException | None) -> bool:
-    """FCM's ``UNREGISTERED``, and an ``INVALID_ARGUMENT`` on the token (research R7)."""
+    """Only FCM's ``UNREGISTERED``, or an ``INVALID_ARGUMENT`` that names the registration token.
+
+    FCM uses ``INVALID_ARGUMENT`` for bad message fields too (an ``http://`` ``fcm_options.link``,
+    for one). Treating those as a dead token would wipe the page's tokens, and the app never
+    re-sends an unchanged token (B1-R1-2).
+    """
     if exc is None:
         return False
     if isinstance(exc, messaging.UnregisteredError):
         return True
-    code = getattr(exc, "code", None)
-    return (
-        code == "INVALID_ARGUMENT" or "INVALID_ARGUMENT" in str(exc) or "not a valid FCM registration token" in str(exc)
-    )
+    detail = str(exc).lower()
+    if getattr(exc, "code", None) != "INVALID_ARGUMENT" and "invalid_argument" not in detail:
+        return False
+    return "registration token" in detail or "registration-token" in detail

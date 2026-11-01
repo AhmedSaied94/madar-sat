@@ -6,6 +6,8 @@ import re
 from dataclasses import replace
 from datetime import timedelta
 
+import pytest
+
 from app.notifications.dispatcher import visible_links
 from app.notifications.messages import (
     FSI,
@@ -84,10 +86,23 @@ def test_the_title_says_the_real_minutes_with_arabic_agreement(frozen_now):
     assert "بعد 7 دقائق" in build_message(_view(frozen_now, 7), [], (), PWA, frozen_now).title
     assert "بعد دقيقتين" in build_message(_view(frozen_now, 2), [], (), PWA, frozen_now).title
     assert "بعد دقيقة" in build_message(_view(frozen_now, 1), [], (), PWA, frozen_now).title
-    # A match created a minute late still says at least one minute.
-    assert "بعد دقيقة" in build_message(_view(frozen_now, 0), [], (), PWA, frozen_now).title
     assert minutes_phrase(3) == "دقائق"
     assert minutes_phrase(11) == "دقيقة"
+
+
+def test_a_lead_under_a_minute_still_says_one_minute(frozen_now):
+    """The row is due at kickoff − 15 min, but a late schedule can leave 20 seconds."""
+    view = MatchView(id=1, kickoff_at=frozen_now + timedelta(seconds=20), home_name="أ", away_name="ب")
+
+    assert "بعد دقيقة" in build_message(view, [], (), PWA, frozen_now).title
+
+
+def test_a_kickoff_that_has_passed_is_never_worded_as_one_minute(frozen_now):
+    """A negative lead is the dispatcher's to cancel, not the copy's to round up (B1-R1-5)."""
+    view = MatchView(id=1, kickoff_at=frozen_now - timedelta(minutes=45), home_name="أ", away_name="ب")
+
+    with pytest.raises(ValueError):
+        build_message(view, [], (), PWA, frozen_now)
 
 
 def test_every_name_is_isolated_and_the_digits_are_western(frozen_now):

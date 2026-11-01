@@ -95,8 +95,16 @@ def build_message(
     pwa_origin: str | None,
     now: datetime,
 ) -> PushMessage:
-    """One device's reminder: title, body, ``data`` and the collapsing tag/link."""
-    minutes = max(int(round((match.kickoff_at - now).total_seconds() / 60)), 1)
+    """One device's reminder: title, body, ``data`` and the collapsing tag/link.
+
+    The caller cancels a row whose kickoff has passed (``dispatcher._cancelled``), so a lead in the
+    past is a bug here, never a message: rounding it up to «بعد دقيقة» would tell followers that a
+    match already in play starts in a minute (B1-R1-5).
+    """
+    lead_seconds = (match.kickoff_at - now).total_seconds()
+    if lead_seconds <= 0:
+        raise ValueError("a reminder for a kickoff that has passed must be cancelled, not built")
+    minutes = max(int(round(lead_seconds / 60)), 1)
     channel = choose_channel(links, device_satellite_ids)
     # Arabic keeps the dual and the singular unnumbered: «بعد دقيقتين», «بعد دقيقة».
     when = minutes_phrase(minutes) if minutes in (1, 2) else f"{minutes} {minutes_phrase(minutes)}"

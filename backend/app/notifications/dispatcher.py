@@ -26,7 +26,12 @@ log = logging.getLogger("madar.notifications")
 PAGE_SIZE = 500
 CLAIM_LIMIT = 10
 STUCK_AFTER = timedelta(minutes=10)
-DEAD_STATUSES = ("postponed", "cancelled", "abandoned")
+# A row is tried this many times before it is marked failed: the same bound as the worker's
+# ``max_retries``, but counted on the row so the every-minute beat cannot retry it for ever
+# (B1-R1-4).
+MAX_ATTEMPTS = 5
+# A reminder whose match is in one of these states must never go out (B1-R1-5).
+DEAD_STATUSES = ("postponed", "cancelled", "abandoned", "live", "finished")
 
 
 @dataclass
@@ -36,6 +41,7 @@ class DispatchReport:
     failed: int = 0
     cancelled: int = 0
     retry_row_id: int | None = None
+    failed_row_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -87,12 +93,14 @@ SELECT c.id,
 
 # The owner reviews this query (brief, research R7): one DISTINCT audience per page, bound
 # parameters only, and the device's type switch honoured in SQL so a page never carries a device
-# that turned the reminder off.
+# that turned the reminder off. An empty token is not a device FCM can reach, and it would fail
+# the whole page (B1-R1-1), so it is filtered here as well as refused by the API.
 AUDIENCE = """
 SELECT DISTINCT d.id, d.push_token, d.satellite_ids, d.prefs
   FROM devices d
   JOIN device_follows f ON f.device_id = d.id
  WHERE d.push_token IS NOT NULL
+   AND btrim(d.push_token) <> ''
    AND d.id > :cursor
    AND (f.match_id = :match_id
         OR f.competition_id = :competition_id
@@ -110,9 +118,19 @@ UPDATE notification_outbox
 
 _CLEAR_TOKENS = "UPDATE devices SET push_token = NULL WHERE push_token = ANY(:tokens)"
 
-_MARK_FAILED = "UPDATE notification_outbox SET status = 'failed' WHERE id = ANY(:ids) AND status = 'sending'"
+# A row's attempts are counted on the row, not on the worker: the beat claims a released row
+# again every minute, so the task's own retry counter alone never runs out (B1-R1-4).
+_MARK_FAILED = """
+UPDATE notification_outbox SET status = 'failed', claimed_at = NULL
+ WHERE id = ANY(:ids) AND status IN ('pending', 'sending')
+"""
 
-_RELEASE = "UPDATE notification_outbox SET status = 'pending', claimed_at = NULL WHERE id = :id AND status = 'sending'"
+_BUMP_ATTEMPTS = "UPDATE notification_outbox SET attempts = attempts + 1 WHERE id = :id RETURNING attempts"
+
+_RELEASE = """
+UPDATE notification_outbox SET status = 'pending', claimed_at = NULL
+ WHERE id = ANY(:ids) AND status = 'sending'
+"""
 
 _PRUNE = """
 DELETE FROM notification_outbox
@@ -181,8 +199,19 @@ def audience_page(session: Session, match: Match, cursor: int, limit: int = PAGE
     ]
 
 
-def _cancelled(match: Match | None) -> bool:
-    return match is None or match.kickoff_at is None or match.time_tbd or match.status in DEAD_STATUSES
+def _cancelled(match: Match | None, now: datetime) -> bool:
+    """A row that must not go out: no kickoff, a dead status, or a kickoff that has passed.
+
+    The last one is what stops an outage from telling followers that a match already in play starts
+    in a minute (B1-R1-5).
+    """
+    return (
+        match is None
+        or match.kickoff_at is None
+        or match.time_tbd
+        or match.kickoff_at <= now
+        or match.status in DEAD_STATUSES
+    )
 
 
 def dispatch_row(session: Session, outbox_id: int, sender: PushSender, now: datetime, pwa_origin: str | None) -> str:
@@ -196,7 +225,7 @@ def dispatch_row(session: Session, outbox_id: int, sender: PushSender, now: date
         return "gone"
     match_id = int((row.payload or {}).get("match_id", 0))
     match = session.get(Match, match_id) if match_id else None
-    if _cancelled(match):
+    if _cancelled(match, now):
         row.status = "cancelled"
         session.commit()
         return "cancelled"
@@ -233,6 +262,10 @@ def dispatch_row(session: Session, outbox_id: int, sender: PushSender, now: date
         outcome = sender.send_page(messages)
         if outcome.unregistered:
             session.execute(text(_CLEAR_TOKENS), {"tokens": list(outcome.unregistered)})
+        if outcome.failed:
+            # A device that did not get the reminder is worth an alert: it is usually a bad message
+            # field or an outage, not a dead token (B1-R1-2).
+            log.error("push_page_failed", extra={"row": outbox_id, "failed": outcome.failed})
         session.execute(
             text(_RECORD_PAGE),
             {"id": outbox_id, "sent": outcome.sent, "failed": outcome.failed, "cursor": devices[-1].id},
@@ -257,21 +290,36 @@ def dispatch_due(
     pwa_origin: str | None = None,
     limit: int = CLAIM_LIMIT,
 ) -> DispatchReport:
-    """Reclaim, claim and dispatch. A whole-call failure stops the run at its row."""
+    """Reclaim, claim and dispatch. A whole-call failure stops the run at its row.
+
+    The failing row goes back to ``pending`` with its cursor while it has attempts left; at
+    :data:`MAX_ATTEMPTS` it becomes ``failed`` and is never claimed again. Every row claimed after
+    it goes back to ``pending`` too, so a failed page never strands them in ``sending`` for
+    :data:`STUCK_AFTER` (B1-R1-1, B1-R1-4).
+    """
     report = DispatchReport()
     reclaim_stuck(session, now)
     session.commit()
 
     report.claimed = claim(session, now, limit)
-    for outbox_id in report.claimed:
+    for index, outbox_id in enumerate(report.claimed):
         try:
             outcome = dispatch_row(session, outbox_id, sender, now, pwa_origin)
         except Retryable:
             # The pages already recorded stay recorded; the row goes back to pending with its cursor,
             # so the retry resumes where it stopped and never sends page one twice.
-            session.execute(text(_RELEASE), {"id": outbox_id})
+            attempts = int(session.execute(text(_BUMP_ATTEMPTS), {"id": outbox_id}).scalar_one())
+            if attempts >= MAX_ATTEMPTS:
+                session.execute(text(_MARK_FAILED), {"ids": [outbox_id]})
+                report.failed_row_id = outbox_id
+                log.error("dispatch_failed", extra={"row": outbox_id, "attempts": attempts})
+            else:
+                session.execute(text(_RELEASE), {"ids": [outbox_id]})
+                report.retry_row_id = outbox_id
+            stranded = report.claimed[index + 1 :]
+            if stranded:
+                session.execute(text(_RELEASE), {"ids": stranded})
             session.commit()
-            report.retry_row_id = outbox_id
             break
         if outcome == "cancelled":
             report.cancelled += 1
@@ -281,7 +329,7 @@ def dispatch_due(
 
 
 def mark_failed(session: Session, outbox_id: int) -> None:
-    """The row whose retries are exhausted."""
+    """The row whose retries are exhausted, whatever state the retry left it in."""
     session.execute(text(_MARK_FAILED), {"ids": [outbox_id]})
     session.commit()
 

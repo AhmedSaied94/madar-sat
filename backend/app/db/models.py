@@ -487,6 +487,8 @@ class NotificationOutbox(Base):
     # 0005: stuck-in-sending reclaim and the page cursor that resumes a retry (research R7).
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cursor_device_id: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    # 0006: whole-call failures so far, counted on the row so the beat cannot retry it for ever.
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

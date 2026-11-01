@@ -32,6 +32,9 @@ async def test_every_field_is_stored(device_client, session, make_match, frozen_
 async def test_the_length_rules_and_the_time_zone_are_validated(device_client):
     cases = [
         ({"push_token": "x" * 4097}, None),
+        ({"push_token": ""}, None),
+        ({"push_token": "   "}, None),
+        ({"push_token": "a\x00b"}, None),
         ({"app_version": "x" * 33}, None),
         ({"locale": "x" * 17}, None),
         ({"tz": "Mars/Olympus"}, None),
@@ -42,6 +45,18 @@ async def test_the_length_rules_and_the_time_zone_are_validated(device_client):
         response = await device_client.put("/v1/devices/me", json=body)
         assert response.status_code == 422, (body, response.text)
         assert response.json()["error"]["code"] == (code or "validation_error")
+
+
+async def test_an_empty_push_token_is_refused_and_leaves_the_stored_one(device_client):
+    """An empty token would join every audience and fail the whole page at FCM (B1-R1-1)."""
+    first = await device_client.put("/v1/devices/me", json={"push_token": "kept-token"})
+    assert first.status_code == 200, first.text
+
+    response = await device_client.put("/v1/devices/me", json={"push_token": ""})
+
+    assert response.status_code == 422
+    current = await device_client.put("/v1/devices/me", json={"locale": "ar-EG"})
+    assert current.json()["data"]["has_push_token"] is True
 
 
 async def test_an_unknown_satellite_names_the_ids(device_client):

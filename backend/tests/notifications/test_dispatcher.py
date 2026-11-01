@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import delete, select, text
 
 from app.db.models import Device, NotificationOutbox
-from app.notifications.dispatcher import claim, dispatch_due, reclaim_stuck
+from app.notifications.dispatcher import MAX_ATTEMPTS, claim, dispatch_due, mark_failed, reclaim_stuck
 from tests import support
 from tests.support import FakePushSender
 
@@ -225,3 +225,96 @@ def test_sent_failed_and_sent_at_are_recorded(sync_session, frozen_now):
     outbox = sync_session.execute(select(NotificationOutbox)).scalar_one()
     assert (outbox.status, outbox.sent, outbox.failed) == ("sent", 1, 1)
     assert outbox.sent_at == frozen_now
+
+
+# --- B1-R1-1: one empty push token must never block the queue -------------------------------------
+
+
+def test_an_empty_push_token_is_not_in_the_audience_and_delays_nobody(sync_session, frozen_now):
+    bag = support.create_match_sync(sync_session, frozen_now)
+    good = support.new_device(sync_session, token="good-token", push_token="good-push")
+    empty = support.new_device(sync_session, token="empty-token", push_token="")
+    support.follow(sync_session, good, team=bag.home.id)
+    support.follow(sync_session, empty, team=bag.home.id)
+    _row(sync_session, bag.match, due_at=frozen_now)
+    sender = FakePushSender()
+
+    report = dispatch_due(sync_session, sender, frozen_now)
+
+    assert sender.tokens_sent == ["good-push"]
+    assert report.sent == 1
+    outbox = sync_session.execute(select(NotificationOutbox)).scalar_one()
+    assert outbox.status == "sent"
+
+
+def test_a_failed_page_releases_every_claimed_row_it_did_not_process(sync_session, frozen_now):
+    """A whole-call failure must not strand the rows behind it in ``sending`` for 10 minutes."""
+    bags = [support.create_match_sync(sync_session, frozen_now) for _ in range(3)]
+    for bag in bags:
+        device = support.new_device(sync_session, token=f"tok-{bag.match.id}", push_token=f"push-{bag.match.id}")
+        support.follow(sync_session, device, team=bag.home.id)
+        _row(sync_session, bag.match, due_at=frozen_now)
+
+    report = dispatch_due(sync_session, FakePushSender(fail_page=1), frozen_now)
+
+    assert report.retry_row_id is not None
+    statuses = list(sync_session.execute(select(NotificationOutbox.status)).scalars())
+    assert statuses == ["pending", "pending", "pending"]
+
+
+# --- B1-R1-4: a row whose retries are used up ends ``failed`` -------------------------------------
+
+
+def test_a_row_that_always_fails_ends_failed_after_the_retry_limit(sync_session, frozen_now):
+    bag, _ = _bag_with_follower(sync_session, frozen_now)
+    outbox = _row(sync_session, bag.match, due_at=frozen_now)
+    sender = FakePushSender(fail_every_page=True)
+
+    for _ in range(MAX_ATTEMPTS):
+        report = dispatch_due(sync_session, sender, frozen_now)
+        assert report.failed_row_id is None or report.failed_row_id == outbox.id
+
+    sync_session.refresh(outbox)
+    assert outbox.status == "failed"
+    assert outbox.attempts == MAX_ATTEMPTS
+
+    later = dispatch_due(sync_session, sender, frozen_now)
+    assert later.claimed == []
+
+
+def test_mark_failed_matches_a_row_that_was_released_to_pending(sync_session, frozen_now):
+    bag, _ = _bag_with_follower(sync_session, frozen_now)
+    outbox = _row(sync_session, bag.match, due_at=frozen_now)
+
+    mark_failed(sync_session, outbox.id)
+
+    sync_session.refresh(outbox)
+    assert outbox.status == "failed"
+
+
+# --- B1-R1-5: a late reminder is cancelled, never sent as "in one minute" --------------------------
+
+
+def test_a_match_that_kicked_off_45_minutes_ago_is_cancelled(sync_session, frozen_now):
+    bag, _ = _bag_with_follower(sync_session, frozen_now, kickoff_in=timedelta(minutes=-45))
+    _row(sync_session, bag.match, due_at=frozen_now)
+    sender = FakePushSender()
+
+    report = dispatch_due(sync_session, sender, frozen_now)
+
+    assert report.cancelled == 1
+    assert sender.pages == []
+    outbox = sync_session.execute(select(NotificationOutbox)).scalar_one()
+    assert outbox.status == "cancelled"
+
+
+def test_a_live_or_finished_match_is_cancelled(sync_session, frozen_now):
+    for status in ("live", "finished"):
+        bag, _ = _bag_with_follower(sync_session, frozen_now, status=status, status_source="feed")
+        _row(sync_session, bag.match, due_at=frozen_now)
+    sender = FakePushSender()
+
+    report = dispatch_due(sync_session, sender, frozen_now)
+
+    assert report.cancelled == 2
+    assert sender.pages == []
