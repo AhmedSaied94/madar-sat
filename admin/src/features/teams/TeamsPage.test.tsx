@@ -135,6 +135,27 @@ describe('TeamsPage (A5)', () => {
     expect(ifMatch).toBe('"team-7"');
   });
 
+  it('refuses a team with no name, with the field error and without sending', async () => {
+    const patches: string[] = [];
+    renderPage();
+    await waitForRows();
+
+    server.use(
+      mswHttp.patch('*/admin/api/teams/:id', async ({ request }) => {
+        patches.push(request.url);
+        return HttpResponse.json(envelope(teamDetail()), { headers: { ETag: '"team-8"' } });
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل الأهلي' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل الفريق' });
+    await userEvent.clear(within(drawer).getByLabelText('اسم الفريق'));
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    expect(await within(drawer).findByText('هذا الحقل مطلوب')).toBeInTheDocument();
+    expect(patches).toHaveLength(0);
+  });
+
   it('creates a team from an empty editor', async () => {
     let sent: Record<string, unknown> | null = null;
     renderPage();
@@ -196,6 +217,31 @@ describe('TeamsPage (A5)', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'إعادة التحميل' }));
     expect(within(drawer).getByLabelText('اسم الفريق')).toHaveValue('الأهلي الجديد');
+  });
+
+  it('previews the chosen logo on a dark and on a light tile', async () => {
+    renderPage();
+    await waitForRows();
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل الأهلي' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل الفريق' });
+
+    await userEvent.upload(
+      within(drawer).getByLabelText('رفع شعار'),
+      new File(['crest'], 'crest.png', { type: 'image/png' }),
+    );
+
+    const dark = await within(drawer).findByTestId('logo-tile-dark');
+    const light = within(drawer).getByTestId('logo-tile-light');
+
+    // Both grounds, each in its own theme, with the same artwork (T095, A-R1-6).
+    expect(dark).toHaveAttribute('data-theme', 'dark');
+    expect(light).toHaveAttribute('data-theme', 'light');
+    for (const tile of [dark, light]) {
+      expect(tile.querySelector('img')?.getAttribute('src')).toBe('https://media.example/logo/cd/cd34.webp');
+    }
+    expect(within(drawer).getByText('على خلفية داكنة')).toBeInTheDocument();
+    expect(within(drawer).getByText('على خلفية فاتحة')).toBeInTheDocument();
   });
 
   it('asks before dropping unsaved edits', async () => {

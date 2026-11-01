@@ -1,9 +1,9 @@
 import { clsx } from 'clsx';
 import { useState, type ReactElement } from 'react';
 
-import { deleteCommentator } from '../../api/generated/admin';
+import { deleteCommentator, getCommentator } from '../../api/generated/admin';
 import type { AdminCommentator, ListCommentatorsParams } from '../../api/generated/admin.schemas';
-import { ApiError, NETWORK_ERROR } from '../../api/http';
+import { ApiError, etagOf, NETWORK_ERROR } from '../../api/http';
 import { AudioPlayer } from '../../components/AudioPlayer/AudioPlayer';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
@@ -43,13 +43,21 @@ export function CommentatorsPage(): ReactElement {
   async function remove(person: AdminCommentator): Promise<void> {
     setDeleting(true);
     try {
-      await deleteCommentator(person.id);
+      // Every DELETE needs `If-Match` (admin-api D2), and the list rows carry no ETag yet (the same
+      // recorded contract gap as A6/A7), so the version comes from the commentator's own record.
+      const detail = await getCommentator(person.id);
+      const etag = etagOf(detail);
+      await deleteCommentator(person.id, etag ? { headers: { 'If-Match': etag } } : {});
       refresh();
       toast.show({ kind: 'success', title: toastCopy.saved });
       setRemoving(null);
     } catch (failure) {
       const code = failure instanceof ApiError ? failure.code : NETWORK_ERROR;
-      toast.show({ kind: 'error', title: copy.delete.confirm, description: copyForErrorCode(code) });
+      toast.show({
+        kind: 'error',
+        title: copy.delete.confirm,
+        description: code === 'in_use' ? copy.delete.inUse(person.usage.matches) : copyForErrorCode(code),
+      });
     } finally {
       setDeleting(false);
     }

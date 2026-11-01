@@ -3,6 +3,7 @@ import { useState, type ReactElement } from 'react';
 
 import type { Access, Category, ChannelItem, ListChannelsParams } from '../../api/generated/admin.schemas';
 import { DataTable, type DataTableColumn } from '../../components/DataTable/DataTable';
+import { FrequencyReadout } from '../../components/FrequencyReadout/FrequencyReadout';
 import { Icon } from '../../components/Icon/Icon';
 import { focusRing } from '../../components/focus';
 import { channels as copy, copyForErrorCode } from '../../i18n/ar';
@@ -77,16 +78,7 @@ export function ChannelsPage(): ReactElement {
       header: copy.columns.frequency,
       cell: (row) =>
         row.frequency ? (
-          <span
-            dir="ltr"
-            className="text-micro inline-flex items-center gap-1 rounded-xs bg-text-primary px-2 py-1 font-mono tabular-nums text-text-on-inverse"
-          >
-            <span>{row.frequency.mhz}</span>
-            <span aria-hidden="true" className="rounded-xs bg-surface-3 px-1 text-text-secondary">
-              {row.frequency.pol}
-            </span>
-            <span>{row.frequency.sr}</span>
-          </span>
+          <FrequencyReadout frequency={row.frequency} />
         ) : (
           <span className="text-caption text-text-tertiary">{copy.noFrequency}</span>
         ),

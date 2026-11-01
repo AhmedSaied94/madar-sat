@@ -121,6 +121,37 @@ export const field = {
   lockedLabel: 'مقفل من المحرر',
 } as const;
 
+/** LogoField: the two neutral grounds every logo is previewed on (Logo README, T095). */
+export const logoPreview = {
+  onDark: 'على خلفية داكنة',
+  onLight: 'على خلفية فاتحة',
+} as const;
+
+/** FrequencyReadout: the dark LTR well, its labels, and what a screen reader hears. */
+export const readout = {
+  symbolRate: 'معدل الترميز',
+  /** «التردد 11843، أفقي، معدل الترميز 27500». */
+  spoken: (mhz: number, polarization: string, sr: number): string =>
+    `التردد ${mhz}، ${polarization}، معدل الترميز ${sr}`,
+  polarizations: {
+    H: 'أفقي',
+    V: 'رأسي',
+    L: 'دائري يسار',
+    R: 'دائري يمين',
+  } as Record<string, string>,
+} as const;
+
+/** Zod's own messages, in the admin's voice, so no schema refusal ever reaches the screen in English. */
+export const validation = {
+  required: 'هذا الحقل مطلوب',
+  tooLong: 'النص أطول من الحد المسموح',
+  invalid: 'قيمة غير صحيحة',
+  number: 'أدخل رقماً صحيحاً',
+  position: 'أدخل موقعاً بين 0 و 180 درجة',
+  satelliteRequired: 'اختر قمراً، أو اجعل القناة منصة بلا قمر',
+  frequencyRequired: 'أدخل التردد ومعدل الترميز، أو أزل «إظهار في صفحات المباريات»',
+} as const;
+
 export const dialogs = {
   cancel: 'إلغاء',
   typeToConfirm: (phrase: string): string => `للتأكيد اكتب ${phrase}`,
@@ -379,8 +410,6 @@ export const teams = {
     country: 'الدولة',
     logo: 'الشعار',
     logoUpload: 'رفع شعار',
-    logoOnDark: 'على خلفية داكنة',
-    logoOnLight: 'على خلفية فاتحة',
     externalIds: 'المعرفات الخارجية',
     externalHint: 'تأتي من المصادر ولا تُعدّل من هنا.',
     noCompetition: 'بلا بطولة',
@@ -482,6 +511,8 @@ export const channels = {
   platform: 'منصة',
   noSatellite: 'منصات بلا قمر',
   noFrequency: 'بلا تردد',
+  yes: 'نعم',
+  no: 'لا',
   columns: {
     channel: 'القناة',
     frequency: 'التردد',
@@ -503,6 +534,7 @@ export const channels = {
     category: 'الفئة',
     country: 'الدولة',
     satellite: 'القمر',
+    kindLocked: 'هذه القناة أُنشئت كمنصة، وتحويلها إلى قناة على قمر غير متاح بعد.',
     showInMatch: 'إظهار في صفحات المباريات',
     logo: 'الشعار',
     logoUpload: 'رفع شعار',
@@ -534,6 +566,7 @@ export const commentators = {
   delete: {
     title: (name: string): string => `حذف «${name}»؟`,
     body: (matches: number): string => `يُستخدم في ${matches} مباراة. سيُزال من كل القنوات المرتبطة.`,
+    inUse: (matches: number): string => `لم يُحذف: يُستخدم في ${matches} مباراة. أزله منها أولاً.`,
     confirm: 'حذف',
   },
   editor: {
@@ -544,6 +577,7 @@ export const commentators = {
     photoUpload: 'رفع صورة',
     audio: 'المقطع الصوتي',
     audioUpload: 'رفع مقطع',
+    unsavedBody: 'إذا غادرت الآن ستفقد تعديلات المعلق.',
     empty: 'لا معلقين بهذا البحث',
     emptyBody: 'جرّب اسماً آخر أو أزل الفلاتر.',
   },

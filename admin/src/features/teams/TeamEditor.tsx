@@ -1,32 +1,42 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
+import { z } from 'zod';
 
 import { createTeam, patchTeam, useGetTeam } from '../../api/generated/admin';
 import type { AdminTeam, TeamCreate, TeamPatch } from '../../api/generated/admin.schemas';
+import { createTeamBody } from '../../api/generated/admin.zod';
 import { ApiError, etagOf, NETWORK_ERROR } from '../../api/http';
-import { ConflictDialog, type ConflictChange } from '../../components/ConfirmDialog/ConflictDialog';
+import { ConflictDialog } from '../../components/ConfirmDialog/ConflictDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { EditorDrawer } from '../../components/EditorDrawer/EditorDrawer';
 import { Field } from '../../components/Field/Field';
+import { LogoField } from '../../components/LogoField/LogoField';
 import { useToast } from '../../components/Toast/Toast';
-import { common, copyForErrorCode, teams as copy, toast as toastCopy } from '../../i18n/ar';
-import { conflictParty, diffDrafts, type ConflictField } from '../../lib/conflict';
+import { common, copyForErrorCode, logoPreview, teams as copy, toast as toastCopy, validation } from '../../i18n/ar';
+import { editorConflict, type ConflictField, type EditorConflict } from '../../lib/conflict';
 import { uploadAsset } from '../../lib/media';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import '../../lib/validation';
 import { useCompetitionOptions } from './queries';
 
 // A5's editor (admin board "Teams"): name, logo, main and other competitions, stadium and country.
 // Aliases have no field in D2's admin contract yet, so they are not invented here; the external ids
-// stay read-only, as the board has them. Each save is one PATCH under the version the editor loaded.
+// stay read-only, as the board has them. The form validates through the same Zod schema the API
+// enforces (constitution VIII), and each save is one PATCH under the version — and the ETag — the
+// editor loaded, so a stale copy gets a 409 and the conflict dialog instead of overwriting (A-R1-2).
 
-interface TeamDraft {
-  name: string;
-  primaryCompetitionId: string;
-  competitionIds: number[];
-  stadium: string;
-  country: string;
-  logoAssetId: number | null;
-  logoUrl: string | null;
-}
+const formSchema = z.object({
+  name: createTeamBody.shape.name.trim().min(1, validation.required),
+  primaryCompetitionId: z.string(),
+  competitionIds: z.array(z.number()),
+  stadium: z.string(),
+  country: z.string(),
+  logoAssetId: z.number().nullable(),
+  logoUrl: z.string().nullable(),
+});
+
+type TeamDraft = z.infer<typeof formSchema>;
 
 const emptyDraft = (): TeamDraft => ({
   name: '',
@@ -67,13 +77,6 @@ export function buildTeamPatch(draft: TeamDraft, original: TeamDraft): TeamPatch
   return patch;
 }
 
-interface ConflictState {
-  changedBy: ReturnType<typeof conflictParty>;
-  changes: ConflictChange[];
-  theirs: TeamDraft;
-  etag: string | null;
-}
-
 interface TeamEditorProps {
   /** `null` creates a team; a number edits that one. */
   teamId: number | null;
@@ -89,16 +92,33 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
   const refresh = useRefreshAdmin();
   const toast = useToast();
 
+  const form = useForm<TeamDraft>({
+    resolver: zodResolver(formSchema) as Resolver<TeamDraft>,
+    defaultValues: emptyDraft(),
+    mode: 'onSubmit',
+  });
+  const { register, handleSubmit, formState, watch, reset, setValue } = form;
+
   const [baseline, setBaseline] = useState<TeamDraft>(emptyDraft);
-  const [draft, setDraft] = useState<TeamDraft>(emptyDraft);
+  /** The version the baseline was read at. It travels with the draft, never from the live refetch. */
+  const [baselineEtag, setBaselineEtag] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<ConflictState | null>(null);
+  const [conflict, setConflict] = useState<EditorConflict<TeamDraft> | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const seeded = useRef<string | null>(null);
 
+  const draft = watch();
   const serverTeam = detail.data?.data;
-  const serverEtag = etagOf(detail.data);
+
+  const adopt = useCallback(
+    (next: TeamDraft, etag: string | null) => {
+      setBaseline(next);
+      setBaselineEtag(etag);
+      reset(next);
+    },
+    [reset],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -108,19 +128,15 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
     if (teamId === null) {
       if (seeded.current === 'new') return;
       seeded.current = 'new';
-      const empty = emptyDraft();
-      setBaseline(empty);
-      setDraft(empty);
+      adopt(emptyDraft(), null);
       setSaveError(null);
       return;
     }
     if (!serverTeam || seeded.current === `team-${teamId}`) return;
     seeded.current = `team-${teamId}`;
-    const loaded = fromTeam(serverTeam);
-    setBaseline(loaded);
-    setDraft(loaded);
+    adopt(fromTeam(serverTeam), etagOf(detail.data));
     setSaveError(null);
-  }, [open, teamId, serverTeam]);
+  }, [open, teamId, serverTeam, detail.data, adopt]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
   const competitionName = (id: string | number): string =>
@@ -150,12 +166,12 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
   }
 
   function toggleCompetition(id: number): void {
-    setDraft((current) => ({
-      ...current,
-      competitionIds: current.competitionIds.includes(id)
-        ? current.competitionIds.filter((candidate) => candidate !== id)
-        : [...current.competitionIds, id],
-    }));
+    const current = form.getValues('competitionIds');
+    setValue(
+      'competitionIds',
+      current.includes(id) ? current.filter((candidate) => candidate !== id) : [...current, id],
+      { shouldDirty: true },
+    );
   }
 
   async function uploadLogo(file: File): Promise<void> {
@@ -163,7 +179,8 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
     setSaveError(null);
     try {
       const asset = await uploadAsset(file, 'image');
-      setDraft((current) => ({ ...current, logoAssetId: asset.id, logoUrl: asset.url }));
+      setValue('logoAssetId', asset.id, { shouldDirty: true });
+      setValue('logoUrl', asset.url, { shouldDirty: true });
     } catch (error) {
       setSaveError(copyForErrorCode(error instanceof ApiError ? error.code : NETWORK_ERROR));
     } finally {
@@ -171,29 +188,27 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
     }
   }
 
-  async function save(): Promise<void> {
+  async function submit(parsed: TeamDraft): Promise<void> {
+    // A open conflict is answered in its dialog: nothing is re-sent from behind it.
+    if (conflict) return;
     setSaveError(null);
-    if (draft.name.trim() === '') {
-      setSaveError(copyForErrorCode('validation_error'));
-      return;
-    }
     setBusy(true);
     try {
       if (teamId === null) {
-        const body: TeamCreate = { name: draft.name.trim() };
-        if (draft.primaryCompetitionId !== '') body.primary_competition_id = Number(draft.primaryCompetitionId);
-        if (draft.competitionIds.length > 0) body.competition_ids = draft.competitionIds;
-        if (draft.stadium.trim() !== '') body.stadium = draft.stadium.trim();
-        if (draft.country.trim() !== '') body.country = draft.country.trim();
-        if (draft.logoAssetId !== null) body.logo_asset_id = draft.logoAssetId;
+        const body: TeamCreate = { name: parsed.name };
+        if (parsed.primaryCompetitionId !== '') body.primary_competition_id = Number(parsed.primaryCompetitionId);
+        if (parsed.competitionIds.length > 0) body.competition_ids = parsed.competitionIds;
+        if (parsed.stadium.trim() !== '') body.stadium = parsed.stadium.trim();
+        if (parsed.country.trim() !== '') body.country = parsed.country.trim();
+        if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
         await createTeam(body);
       } else {
-        const body = buildTeamPatch(draft, baseline);
+        const body = buildTeamPatch(parsed, baseline);
         if (Object.keys(body).length === 0) {
           onClose();
           return;
         }
-        await patchTeam(teamId, body, { headers: serverEtag ? { 'If-Match': serverEtag } : {} });
+        await patchTeam(teamId, body, { headers: baselineEtag ? { 'If-Match': baselineEtag } : {} });
       }
       refresh();
       toast.show({ kind: 'success', title: toastCopy.saved });
@@ -215,13 +230,7 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
       setSaveError(copyForErrorCode(refreshed.error?.code ?? failure.code));
       return;
     }
-    const theirs = fromTeam(current);
-    setConflict({
-      changedBy: conflictParty(failure.meta),
-      changes: diffDrafts(fields, baseline, theirs),
-      theirs,
-      etag: etagOf(refreshed.data),
-    });
+    setConflict(editorConflict(failure, fields, baseline, fromTeam(current), etagOf(refreshed.data)));
   }
 
   return (
@@ -233,32 +242,23 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
         formLabel={teamId === null ? copy.editor.newTitle : copy.editor.title}
         saving={busy || detail.isFetching}
         saveError={saveError}
-        onSave={() => void save()}
+        onSave={() => void handleSubmit(submit)()}
         onClose={requestClose}
       >
         <Field
           label={copy.editor.name}
-          value={draft.name}
-          onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+          error={formState.errors.name?.message}
+          {...register('name')}
         />
-        <Field
-          label={copy.editor.stadium}
-          value={draft.stadium}
-          onChange={(event) => setDraft((current) => ({ ...current, stadium: event.target.value }))}
-        />
-        <Field
-          label={copy.editor.country}
-          value={draft.country}
-          onChange={(event) => setDraft((current) => ({ ...current, country: event.target.value }))}
-          ltr
-        />
+        <Field label={copy.editor.stadium} {...register('stadium')} />
+        <Field label={copy.editor.country} ltr {...register('country')} />
 
         <label className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-text-secondary">{copy.editor.primary}</span>
           <select
             aria-label={copy.editor.primary}
             value={draft.primaryCompetitionId}
-            onChange={(event) => setDraft((current) => ({ ...current, primaryCompetitionId: event.target.value }))}
+            onChange={(event) => setValue('primaryCompetitionId', event.target.value, { shouldDirty: true })}
             className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
           >
             <option value="">{copy.editor.noCompetition}</option>
@@ -287,31 +287,14 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
           </div>
         </fieldset>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-caption font-semibold text-text-secondary">{copy.editor.logo}</span>
-          <div className="flex items-center gap-3">
-            <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
-              {draft.logoUrl ? (
-                <img src={draft.logoUrl} alt="" className="size-12 object-contain" />
-              ) : (
-                <span className="text-caption text-text-tertiary">—</span>
-              )}
-            </span>
-            <label className="text-label inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-lg bg-surface-2 px-3 font-semibold text-text-primary hover:bg-surface-3">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                aria-label={copy.editor.logoUpload}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void uploadLogo(file);
-                }}
-              />
-              {copy.editor.logoUpload}
-            </label>
-          </div>
-        </div>
+        <LogoField
+          label={copy.editor.logo}
+          darkLabel={logoPreview.onDark}
+          lightLabel={logoPreview.onLight}
+          uploadLabel={copy.editor.logoUpload}
+          url={draft.logoUrl}
+          onUpload={(file) => void uploadLogo(file)}
+        />
 
         {teamId !== null && serverTeam ? (
           <div className="flex flex-col gap-2">
@@ -343,14 +326,13 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
         changes={conflict?.changes ?? []}
         onReload={() => {
           if (!conflict) return;
-          setDraft(conflict.theirs);
-          setBaseline(conflict.theirs);
+          adopt(conflict.theirs, conflict.etag);
           seeded.current = `team-${teamId ?? 'new'}`;
           setConflict(null);
           setSaveError(null);
         }}
         onDiscard={() => {
-          setDraft(baseline);
+          reset(baseline);
           setConflict(null);
           setSaveError(null);
         }}

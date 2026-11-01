@@ -5,6 +5,7 @@ import { getSatellite, orderSatellites } from '../../api/generated/admin';
 import type { AdminSatellite } from '../../api/generated/admin.schemas';
 import { ApiError, etagOf } from '../../api/http';
 import { ConflictDialog, type ConflictChange } from '../../components/ConfirmDialog/ConflictDialog';
+import { FrequencyReadout } from '../../components/FrequencyReadout/FrequencyReadout';
 import { Icon } from '../../components/Icon/Icon';
 import { SortableList } from '../../components/SortableList/SortableList';
 import { useToast } from '../../components/Toast/Toast';
@@ -105,35 +106,37 @@ export function SatellitesPage(): ReactElement {
             disabled={saving}
             selectedKey={editing === null ? null : String(editing)}
             onReorder={(keys) => void saveOrder(keys)}
-            render={(row: AdminSatellite) => (
-              <>
-                <span
-                  dir="ltr"
-                  className="text-micro flex h-6 min-w-12 flex-none items-center justify-center rounded-xs bg-text-primary px-2 font-mono font-semibold text-text-on-inverse"
-                >
-                  {formatPosition(row.orbital_position) ?? '—'}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <bdi className="text-label truncate font-semibold text-text-primary">{row.name_ar}</bdi>
-                  <bdi dir="ltr" className="text-micro truncate text-text-tertiary">
-                    {row.name_en}
-                  </bdi>
-                </span>
-                {row.best_frequency === null && row.worst_frequency === null ? (
-                  <span className="text-micro rounded-xs bg-postponed-container px-2 py-1 font-semibold text-postponed">
-                    {copy.noFrequencies}
+            render={(row: AdminSatellite) => {
+              const position = formatPosition(row.orbital_position);
+              return (
+                <>
+                  {position === null ? (
+                    <span className="text-caption text-text-tertiary">—</span>
+                  ) : (
+                    <FrequencyReadout text={position} />
+                  )}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <bdi className="text-label truncate font-semibold text-text-primary">{row.name_ar}</bdi>
+                    <bdi dir="ltr" className="text-micro truncate text-text-tertiary">
+                      {row.name_en}
+                    </bdi>
                   </span>
-                ) : null}
-                <button
-                  type="button"
-                  aria-label={copy.editNamed(row.name_ar)}
-                  onClick={() => setEditing(row.id)}
-                  className={`inline-flex size-12 flex-none items-center justify-center rounded-md text-text-secondary hover:bg-surface-3 ${focusRing}`}
-                >
-                  <Icon name="edit" size="md" />
-                </button>
-              </>
-            )}
+                  {row.best_frequency === null && row.worst_frequency === null ? (
+                    <span className="text-micro rounded-xs bg-postponed-container px-2 py-1 font-semibold text-postponed">
+                      {copy.noFrequencies}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    aria-label={copy.editNamed(row.name_ar)}
+                    onClick={() => setEditing(row.id)}
+                    className={`inline-flex size-12 flex-none items-center justify-center rounded-md text-text-secondary hover:bg-surface-3 ${focusRing}`}
+                  >
+                    <Icon name="edit" size="md" />
+                  </button>
+                </>
+              );
+            }}
           />
         )}
       </div>

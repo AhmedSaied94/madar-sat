@@ -1,37 +1,101 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { Controller, useForm, type Resolver } from 'react-hook-form';
+import { z } from 'zod';
 
 import { createSatellite, patchSatellite, useGetSatellite } from '../../api/generated/admin';
 import type { AdminSatellite, Frequency, SatelliteCreate, SatellitePatch } from '../../api/generated/admin.schemas';
+import {
+  createSatelliteBody,
+  createSatelliteBodyOrbitalPositionMaxOne,
+  createSatelliteBodyReceptionUrlRegExpOne,
+  createSatelliteBodySlugRegExp,
+} from '../../api/generated/admin.zod';
 import { ApiError, etagOf, NETWORK_ERROR } from '../../api/http';
+import { ConflictDialog } from '../../components/ConfirmDialog/ConflictDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { EditorDrawer } from '../../components/EditorDrawer/EditorDrawer';
 import { Field } from '../../components/Field/Field';
 import { FrequencyField, type FrequencyValue } from '../../components/FrequencyField/FrequencyField';
+import { LogoField } from '../../components/LogoField/LogoField';
 import { useToast } from '../../components/Toast/Toast';
-import { common, copyForErrorCode, satellites as copy, toast as toastCopy } from '../../i18n/ar';
+import { common, copyForErrorCode, logoPreview, satellites as copy, toast as toastCopy, validation } from '../../i18n/ar';
+import { editorConflict, type ConflictField, type EditorConflict } from '../../lib/conflict';
 import { uploadAsset } from '../../lib/media';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import '../../lib/validation';
 
 // A7's editor (admin board "Satellites"): the two names, the orbital position stored as "east
 // positive", the best and worst frequency, the reception clip and the logo. The position, the
-// frequencies and the https-only reception link are the fields the app reads, so they are validated
-// here as the contract states them.
-
-interface SatelliteDraft {
-  nameAr: string;
-  nameEn: string;
-  degree: string;
-  direction: 'E' | 'W';
-  best: FrequencyValue;
-  hasBest: boolean;
-  worst: FrequencyValue;
-  hasWorst: boolean;
-  receptionUrl: string;
-  logoAssetId: number | null;
-  logoUrl: string | null;
-}
+// frequencies, the https-only reception link and the slug are the fields the app and the API read,
+// so they are validated here by the created body's own Zod schema (constitution VIII), and a stale
+// save opens the conflict dialog instead of overwriting (A-R1-2).
 
 const emptyFrequency = (): FrequencyValue => ({ mhz: '', pol: 'H', sr: '' });
+
+const toValue = (frequency: Frequency | null): FrequencyValue =>
+  frequency === null ? emptyFrequency() : { mhz: String(frequency.mhz), pol: frequency.pol, sr: String(frequency.sr) };
+
+export function frequencyBody(value: FrequencyValue): Frequency {
+  return { mhz: Number(value.mhz), pol: value.pol, sr: Number(value.sr) };
+}
+
+export const frequencyFilled = (value: FrequencyValue): boolean => value.mhz !== '' && value.sr !== '';
+
+/** A slug the API accepts, derived from the English name (the field the board doesn't show). */
+export function slugOf(nameEn: string): string {
+  return nameEn
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+const frequencyShape = z.object({
+  mhz: z.string(),
+  pol: z.enum(['H', 'V', 'L', 'R']),
+  sr: z.string(),
+});
+
+const formSchema = z
+  .object({
+    nameAr: createSatelliteBody.shape.name_ar.trim().min(1, validation.required),
+    nameEn: createSatelliteBody.shape.name_en
+      .trim()
+      .min(1, validation.required)
+      // The API derives nothing here: the slug it stores must be a slug, and it comes from this name.
+      .refine((value) => createSatelliteBodySlugRegExp.test(slugOf(value)), validation.invalid),
+    degree: z
+      .string()
+      .refine((value) => value.trim() === '' || Number.isFinite(Number(value)), validation.number)
+      .refine(
+        (value) => value.trim() === '' || Math.abs(Number(value)) <= createSatelliteBodyOrbitalPositionMaxOne,
+        validation.position,
+      ),
+    direction: z.enum(['E', 'W']),
+    best: frequencyShape,
+    hasBest: z.boolean(),
+    worst: frequencyShape,
+    hasWorst: z.boolean(),
+    receptionUrl: z
+      .string()
+      .refine(
+        (value) => value.trim() === '' || createSatelliteBodyReceptionUrlRegExpOne.test(value.trim()),
+        copy.editor.receptionInvalid,
+      ),
+    logoAssetId: z.number().nullable(),
+    logoUrl: z.string().nullable(),
+  })
+  .superRefine((draft, ctx) => {
+    // Ticked «أقوى تردد» with half a tuning would save as "no frequency" silently.
+    if (draft.hasBest && !frequencyFilled(draft.best)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['best', 'mhz'], message: validation.frequencyRequired });
+    }
+    if (draft.hasWorst && !frequencyFilled(draft.worst)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['worst', 'mhz'], message: validation.frequencyRequired });
+    }
+  });
+
+export type SatelliteDraft = z.infer<typeof formSchema>;
 
 const emptyDraft = (): SatelliteDraft => ({
   nameAr: '',
@@ -46,9 +110,6 @@ const emptyDraft = (): SatelliteDraft => ({
   logoAssetId: null,
   logoUrl: null,
 });
-
-const toValue = (frequency: Frequency | null): FrequencyValue =>
-  frequency === null ? emptyFrequency() : { mhz: String(frequency.mhz), pol: frequency.pol, sr: String(frequency.sr) };
 
 function fromSatellite(satellite: AdminSatellite): SatelliteDraft {
   const position = satellite.orbital_position;
@@ -81,20 +142,6 @@ export function formatPosition(position: number | null): string | null {
   return `${Math.abs(position).toFixed(1)}${position < 0 ? 'W' : 'E'}`;
 }
 
-export function frequencyBody(value: FrequencyValue): Frequency {
-  return { mhz: Number(value.mhz), pol: value.pol, sr: Number(value.sr) };
-}
-
-const frequencyFilled = (value: FrequencyValue): boolean => value.mhz !== '' && value.sr !== '';
-
-/** A slug the API accepts, derived from the English name (the field the board doesn't show). */
-export function slugOf(nameEn: string): string {
-  return nameEn
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
 interface SatelliteEditorProps {
   satelliteId: number | null;
   open: boolean;
@@ -108,15 +155,33 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
   const refresh = useRefreshAdmin();
   const toast = useToast();
 
+  const form = useForm<SatelliteDraft>({
+    resolver: zodResolver(formSchema) as Resolver<SatelliteDraft>,
+    defaultValues: emptyDraft(),
+    mode: 'onSubmit',
+  });
+  const { register, handleSubmit, formState, watch, reset, setValue, control } = form;
+
   const [baseline, setBaseline] = useState<SatelliteDraft>(emptyDraft);
-  const [draft, setDraft] = useState<SatelliteDraft>(emptyDraft);
+  /** The version the baseline was read at; it never follows the live refetch. */
+  const [baselineEtag, setBaselineEtag] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<EditorConflict<SatelliteDraft> | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const seeded = useRef<string | null>(null);
 
+  const draft = watch();
   const server = detail.data?.data;
-  const serverEtag = etagOf(detail.data);
+
+  const adopt = useCallback(
+    (next: SatelliteDraft, etag: string | null) => {
+      setBaseline(next);
+      setBaselineEtag(etag);
+      reset(next);
+    },
+    [reset],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -126,23 +191,37 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
     if (satelliteId === null) {
       if (seeded.current === 'new') return;
       seeded.current = 'new';
-      const empty = emptyDraft();
-      setBaseline(empty);
-      setDraft(empty);
+      adopt(emptyDraft(), null);
       setSaveError(null);
       return;
     }
     if (!server || seeded.current === `sat-${satelliteId}`) return;
     seeded.current = `sat-${satelliteId}`;
-    const loaded = fromSatellite(server);
-    setBaseline(loaded);
-    setDraft(loaded);
+    adopt(fromSatellite(server), etagOf(detail.data));
     setSaveError(null);
-  }, [open, satelliteId, server]);
+  }, [open, satelliteId, server, detail.data, adopt]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
-  const receptionInvalid =
-    draft.receptionUrl.trim() !== '' && !/^https:\/\/\S+$/u.test(draft.receptionUrl.trim());
+  const frequencyText = (value: FrequencyValue): string | null =>
+    frequencyFilled(value) ? `${value.mhz} ${value.pol} ${value.sr}` : null;
+
+  const fields: readonly ConflictField<SatelliteDraft>[] = [
+    { key: 'nameAr', label: copy.editor.nameAr, text: (value) => (value.nameAr.trim() === '' ? null : value.nameAr.trim()) },
+    { key: 'nameEn', label: copy.editor.nameEn, text: (value) => (value.nameEn.trim() === '' ? null : value.nameEn.trim()) },
+    { key: 'orbitalPosition', label: copy.editor.position, text: (value) => formatPosition(orbitalPosition(value)) },
+    {
+      key: 'best',
+      label: copy.editor.bestFrequency,
+      text: (value) => (value.hasBest ? frequencyText(value.best) : null),
+    },
+    {
+      key: 'worst',
+      label: copy.editor.worstFrequency,
+      text: (value) => (value.hasWorst ? frequencyText(value.worst) : null),
+    },
+    { key: 'receptionUrl', label: copy.editor.reception, text: (value) => (value.receptionUrl.trim() === '' ? null : value.receptionUrl.trim()) },
+    { key: 'logoAssetId', label: copy.editor.logo, text: (value) => value.logoUrl },
+  ];
 
   function requestClose(): void {
     if (dirty) setLeaving(true);
@@ -154,7 +233,8 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
     setSaveError(null);
     try {
       const asset = await uploadAsset(file, 'image');
-      setDraft((current) => ({ ...current, logoAssetId: asset.id, logoUrl: asset.url }));
+      setValue('logoAssetId', asset.id, { shouldDirty: true });
+      setValue('logoUrl', asset.url, { shouldDirty: true });
     } catch (error) {
       setSaveError(copyForErrorCode(error instanceof ApiError ? error.code : NETWORK_ERROR));
     } finally {
@@ -162,53 +242,49 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
     }
   }
 
-  async function save(): Promise<void> {
+  async function submit(parsed: SatelliteDraft): Promise<void> {
+    if (conflict) return;
     setSaveError(null);
-    if (draft.nameAr.trim() === '' || draft.nameEn.trim() === '' || receptionInvalid) {
-      setSaveError(copyForErrorCode('validation_error'));
-      return;
-    }
-    const position = orbitalPosition(draft);
-    const best = draft.hasBest && frequencyFilled(draft.best) ? frequencyBody(draft.best) : null;
-    const worst = draft.hasWorst && frequencyFilled(draft.worst) ? frequencyBody(draft.worst) : null;
+    const position = orbitalPosition(parsed);
+    const best = parsed.hasBest && frequencyFilled(parsed.best) ? frequencyBody(parsed.best) : null;
+    const worst = parsed.hasWorst && frequencyFilled(parsed.worst) ? frequencyBody(parsed.worst) : null;
 
     setBusy(true);
     try {
       if (satelliteId === null) {
-        const slug = slugOf(draft.nameEn);
-        if (slug === '') {
-          setSaveError(copyForErrorCode('validation_error'));
-          return;
-        }
-        const body: SatelliteCreate = { name_ar: draft.nameAr.trim(), name_en: draft.nameEn.trim(), slug };
+        const body: SatelliteCreate = {
+          name_ar: parsed.nameAr,
+          name_en: parsed.nameEn,
+          slug: slugOf(parsed.nameEn),
+        };
         if (position !== null) body.orbital_position = position;
         if (best) body.best_frequency = best;
         if (worst) body.worst_frequency = worst;
-        if (draft.receptionUrl.trim() !== '') body.reception_url = draft.receptionUrl.trim();
-        if (draft.logoAssetId !== null) body.logo_asset_id = draft.logoAssetId;
+        if (parsed.receptionUrl.trim() !== '') body.reception_url = parsed.receptionUrl.trim();
+        if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
         await createSatellite(body);
       } else {
         const body: SatellitePatch = {};
-        if (draft.nameAr !== baseline.nameAr) body.name_ar = draft.nameAr.trim();
-        if (draft.nameEn !== baseline.nameEn) body.name_en = draft.nameEn.trim();
+        if (parsed.nameAr !== baseline.nameAr) body.name_ar = parsed.nameAr;
+        if (parsed.nameEn !== baseline.nameEn) body.name_en = parsed.nameEn;
         if (JSON.stringify({ p: position }) !== JSON.stringify({ p: orbitalPosition(baseline) })) {
           body.orbital_position = position;
         }
-        if (JSON.stringify(best) !== JSON.stringify(frequencyOrNull(baseline.hasBest, baseline.best))) {
+        if (JSON.stringify(best) !== JSON.stringify(baselineFrequency(baseline.hasBest, baseline.best))) {
           body.best_frequency = best;
         }
-        if (JSON.stringify(worst) !== JSON.stringify(frequencyOrNull(baseline.hasWorst, baseline.worst))) {
+        if (JSON.stringify(worst) !== JSON.stringify(baselineFrequency(baseline.hasWorst, baseline.worst))) {
           body.worst_frequency = worst;
         }
-        if (draft.receptionUrl !== baseline.receptionUrl) {
-          body.reception_url = draft.receptionUrl.trim() === '' ? null : draft.receptionUrl.trim();
+        if (parsed.receptionUrl !== baseline.receptionUrl) {
+          body.reception_url = parsed.receptionUrl.trim() === '' ? null : parsed.receptionUrl.trim();
         }
-        if (draft.logoAssetId !== baseline.logoAssetId) body.logo_asset_id = draft.logoAssetId;
+        if (parsed.logoAssetId !== baseline.logoAssetId) body.logo_asset_id = parsed.logoAssetId;
         if (Object.keys(body).length === 0) {
           onClose();
           return;
         }
-        await patchSatellite(satelliteId, body, { headers: serverEtag ? { 'If-Match': serverEtag } : {} });
+        await patchSatellite(satelliteId, body, { headers: baselineEtag ? { 'If-Match': baselineEtag } : {} });
       }
       refresh();
       toast.show({ kind: 'success', title: toastCopy.saved });
@@ -217,10 +293,20 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
     } catch (error) {
       const failure = error instanceof ApiError ? error : new ApiError(NETWORK_ERROR, null);
       setSaveError(copyForErrorCode(failure.code));
-      if (failure.code === 'edit_conflict') void detail.refetch();
+      if (failure.code === 'edit_conflict' && satelliteId !== null) await openConflict(failure);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function openConflict(failure: ApiError): Promise<void> {
+    const refreshed = await detail.refetch();
+    const current = refreshed.data?.data;
+    if (!current) {
+      setSaveError(copyForErrorCode(refreshed.error?.code ?? failure.code));
+      return;
+    }
+    setConflict(editorConflict(failure, fields, baseline, fromSatellite(current), etagOf(refreshed.data)));
   }
 
   return (
@@ -236,34 +322,35 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
         formLabel={satelliteId === null ? copy.editor.newTitle : copy.editor.title}
         saving={busy}
         saveError={saveError}
-        onSave={() => void save()}
+        onSave={() => void handleSubmit(submit)()}
         onClose={requestClose}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label={copy.editor.nameAr}
-            value={draft.nameAr}
-            onChange={(event) => setDraft((current) => ({ ...current, nameAr: event.target.value }))}
-          />
-          <Field
-            label={copy.editor.nameEn}
-            value={draft.nameEn}
-            onChange={(event) => setDraft((current) => ({ ...current, nameEn: event.target.value }))}
-            ltr
-          />
+          <Field label={copy.editor.nameAr} error={formState.errors.nameAr?.message} {...register('nameAr')} />
+          <Field label={copy.editor.nameEn} ltr error={formState.errors.nameEn?.message} {...register('nameEn')} />
         </div>
 
         <fieldset className="flex flex-col gap-2">
           <legend className="text-caption font-semibold text-text-secondary">{copy.editor.position}</legend>
           <div className="flex items-center gap-2">
-            <Field
-              label={copy.editor.degree}
-              value={draft.degree}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, degree: event.target.value.replace(/[^0-9.]/g, '') }))
-              }
-              ltr
-              mono
+            <Controller
+              control={control}
+              name="degree"
+              render={({ field, fieldState }) => (
+                <Field
+                  label={copy.editor.degree}
+                  ltr
+                  mono
+                  name={field.name}
+                  ref={field.ref}
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  error={fieldState.error?.message}
+                  // Only digits and the decimal point reach the draft, so «7..5» can be refused instead
+                  // of quietly stored as no position at all.
+                  onChange={(event) => field.onChange(event.target.value.replace(/[^0-9.]/g, ''))}
+                />
+              )}
             />
             <div role="radiogroup" aria-label={copy.editor.position} className="flex flex-none gap-1 rounded-lg bg-bg p-1">
               {(['E', 'W'] as const).map((direction) => (
@@ -272,7 +359,7 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
                   type="button"
                   role="radio"
                   aria-checked={draft.direction === direction}
-                  onClick={() => setDraft((current) => ({ ...current, direction }))}
+                  onClick={() => setValue('direction', direction, { shouldDirty: true })}
                   className={`text-label size-12 rounded-sm font-mono font-semibold ${
                     draft.direction === direction
                       ? 'bg-text-primary text-text-on-inverse'
@@ -294,7 +381,7 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
             <input
               type="checkbox"
               checked={draft.hasBest}
-              onChange={(event) => setDraft((current) => ({ ...current, hasBest: event.target.checked }))}
+              onChange={(event) => setValue('hasBest', event.target.checked, { shouldDirty: true })}
               className="size-4 accent-accent"
             />
             {copy.editor.bestFrequency}
@@ -304,7 +391,8 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
               label={copy.editor.bestFrequency}
               icon="signal"
               value={draft.best}
-              onChange={(best) => setDraft((current) => ({ ...current, best }))}
+              onChange={(best) => setValue('best', best, { shouldDirty: true })}
+              error={formState.errors.best?.mhz?.message}
             />
           ) : null}
         </div>
@@ -314,7 +402,7 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
             <input
               type="checkbox"
               checked={draft.hasWorst}
-              onChange={(event) => setDraft((current) => ({ ...current, hasWorst: event.target.checked }))}
+              onChange={(event) => setValue('hasWorst', event.target.checked, { shouldDirty: true })}
               className="size-4 accent-accent"
             />
             {copy.editor.worstFrequency}
@@ -324,46 +412,49 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
               label={copy.editor.worstFrequency}
               icon="signal"
               value={draft.worst}
-              onChange={(worst) => setDraft((current) => ({ ...current, worst }))}
+              onChange={(worst) => setValue('worst', worst, { shouldDirty: true })}
+              error={formState.errors.worst?.mhz?.message}
             />
           ) : null}
         </div>
 
         <Field
           label={copy.editor.reception}
-          value={draft.receptionUrl}
-          onChange={(event) => setDraft((current) => ({ ...current, receptionUrl: event.target.value }))}
           ltr
-          error={receptionInvalid ? copy.editor.receptionInvalid : undefined}
+          error={formState.errors.receptionUrl?.message}
           hint={copy.editor.receptionHint}
+          {...register('receptionUrl')}
         />
 
-        <div className="flex flex-col gap-2">
-          <span className="text-caption font-semibold text-text-secondary">{copy.editor.logo}</span>
-          <div className="flex items-center gap-3">
-            <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
-              {draft.logoUrl ? (
-                <img src={draft.logoUrl} alt="" className="size-12 object-contain" />
-              ) : (
-                <span className="text-caption text-text-tertiary">—</span>
-              )}
-            </span>
-            <label className="text-label inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-lg bg-surface-2 px-3 font-semibold text-text-primary hover:bg-surface-3">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                aria-label={copy.editor.logoUpload}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void uploadLogo(file);
-                }}
-              />
-              {copy.editor.logoUpload}
-            </label>
-          </div>
-        </div>
+        <LogoField
+          label={copy.editor.logo}
+          darkLabel={logoPreview.onDark}
+          lightLabel={logoPreview.onLight}
+          uploadLabel={copy.editor.logoUpload}
+          url={draft.logoUrl}
+          onUpload={(file) => void uploadLogo(file)}
+        />
       </EditorDrawer>
+
+      <ConflictDialog
+        open={conflict !== null}
+        subject={draft.nameAr}
+        changedBy={conflict?.changedBy ?? { kind: 'admin', name: '', at: '' }}
+        changes={conflict?.changes ?? []}
+        onReload={() => {
+          if (!conflict) return;
+          adopt(conflict.theirs, conflict.etag);
+          seeded.current = `sat-${satelliteId ?? 'new'}`;
+          setConflict(null);
+          setSaveError(null);
+        }}
+        onDiscard={() => {
+          reset(baseline);
+          setConflict(null);
+          setSaveError(null);
+        }}
+        onDismiss={() => setConflict(null)}
+      />
 
       <ConfirmDialog
         open={leaving}
@@ -382,6 +473,6 @@ export function SatelliteEditor({ satelliteId, open, onClose }: SatelliteEditorP
   );
 }
 
-function frequencyOrNull(has: boolean, value: FrequencyValue): Frequency | null {
+function baselineFrequency(has: boolean, value: FrequencyValue): Frequency | null {
   return has && frequencyFilled(value) ? frequencyBody(value) : null;
 }

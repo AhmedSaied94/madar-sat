@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { Controller, useForm, type Resolver } from 'react-hook-form';
+import { z } from 'zod';
 
 import { createChannel, patchChannel, useGetChannel } from '../../api/generated/admin';
 import type {
@@ -8,40 +11,66 @@ import type {
   ChannelCreate,
   ChannelItem,
   ChannelPatch,
-  Kind,
 } from '../../api/generated/admin.schemas';
+import { createChannelBody } from '../../api/generated/admin.zod';
 import { ApiError, etagOf, NETWORK_ERROR } from '../../api/http';
+import { ConflictDialog } from '../../components/ConfirmDialog/ConflictDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { EditorDrawer } from '../../components/EditorDrawer/EditorDrawer';
 import { Field } from '../../components/Field/Field';
 import { FrequencyField, type FrequencyValue } from '../../components/FrequencyField/FrequencyField';
+import { LogoField } from '../../components/LogoField/LogoField';
 import { useToast } from '../../components/Toast/Toast';
-import { channels as copy, common, copyForErrorCode, toast as toastCopy } from '../../i18n/ar';
+import { channels as copy, common, copyForErrorCode, logoPreview, toast as toastCopy, validation } from '../../i18n/ar';
+import { editorConflict, type ConflictField, type EditorConflict } from '../../lib/conflict';
 import { uploadAsset } from '../../lib/media';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import '../../lib/validation';
 import { useSatelliteOptions } from './queries';
 
 // A8's editor drawer: every field of PB A8 — matching and display name, carriage (frequency or a
 // platform without a satellite), access, category, country, "shown on match pages" and the logo.
 // Completing a placeholder (one the importer created) is this same form: set the carriage and turn
-// "shown on match pages" on, and the save clears `placeholder_source` server-side.
+// "shown on match pages" on, and the save clears `placeholder_source` server-side. The form validates
+// through the created body's Zod schema (constitution VIII), and a stale save opens the conflict
+// dialog instead of overwriting the other editor's change (A-R1-2).
 
-export interface ChannelDraft {
-  name: string;
-  displayName: string;
-  kind: Kind;
-  satelliteId: string;
-  hasFrequency: boolean;
-  frequency: FrequencyValue;
-  access: Access;
-  provider: string;
-  packageName: string;
-  category: Category;
-  country: string;
-  showInMatch: boolean;
-  logoAssetId: number | null;
-  logoUrl: string | null;
-}
+const carriage = z.object({
+  mhz: z.string(),
+  pol: z.enum(['H', 'V', 'L', 'R']),
+  sr: z.string(),
+});
+
+const formSchema = z
+  .object({
+    name: createChannelBody.shape.name.trim().min(1, validation.required),
+    displayName: z.string(),
+    kind: z.enum(['satellite', 'terrestrial', 'platform']),
+    satelliteId: z.string(),
+    hasFrequency: z.boolean(),
+    frequency: carriage,
+    access: z.enum(['free', 'encrypted']),
+    provider: z.string(),
+    packageName: z.string(),
+    category: z.enum(['sports', 'entertainment']),
+    country: z.string(),
+    showInMatch: z.boolean(),
+    logoAssetId: z.number().nullable(),
+    logoUrl: z.string().nullable(),
+  })
+  .superRefine((draft, ctx) => {
+    // What the API refuses anyway (``ck_channels_kind_fields``): say it on the field, once. A platform
+    // carries no satellite and needs no frequency to be shown on match pages (that is A-R1-5's half).
+    if (draft.kind === 'platform') return;
+    if (draft.satelliteId === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['satelliteId'], message: validation.satelliteRequired });
+    }
+    if (draft.showInMatch && !(draft.hasFrequency && carriageFilled(draft.frequency))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['frequency', 'mhz'], message: validation.frequencyRequired });
+    }
+  });
+
+export type ChannelDraft = z.infer<typeof formSchema>;
 
 export const emptyChannelDraft = (): ChannelDraft => ({
   name: '',
@@ -60,8 +89,14 @@ export const emptyChannelDraft = (): ChannelDraft => ({
   logoUrl: null,
 });
 
-const frequencyValue = (frequency: { mhz: number; pol: FrequencyValue['pol']; sr: number } | null): FrequencyValue =>
-  frequency === null ? { mhz: '', pol: 'H', sr: '' } : { mhz: String(frequency.mhz), pol: frequency.pol, sr: String(frequency.sr) };
+const carriageFilled = (value: FrequencyValue): boolean => value.mhz !== '' && value.sr !== '';
+
+const frequencyValue = (
+  frequency: { mhz: number; pol: FrequencyValue['pol']; sr: number } | null,
+): FrequencyValue =>
+  frequency === null
+    ? { mhz: '', pol: 'H', sr: '' }
+    : { mhz: String(frequency.mhz), pol: frequency.pol, sr: String(frequency.sr) };
 
 function draftOf(channel: AdminChannel | ChannelItem): ChannelDraft {
   return {
@@ -89,14 +124,15 @@ export function draftOnAnotherSatellite(row: ChannelItem): ChannelDraft {
 
 const orNull = (value: string): string | null => (value.trim() === '' ? null : value.trim());
 
-function carriage(draft: ChannelDraft): Pick<ChannelCreate, 'kind' | 'satellite_id' | 'frequency'> {
+function carriageBody(draft: ChannelDraft): Pick<ChannelCreate, 'kind' | 'satellite_id' | 'frequency'> {
   if (draft.kind === 'platform') return { kind: 'platform', satellite_id: null, frequency: null };
   return {
     kind: draft.kind,
     satellite_id: draft.satelliteId === '' ? null : Number(draft.satelliteId),
-    frequency: draft.hasFrequency && draft.frequency.mhz !== '' && draft.frequency.sr !== ''
-      ? { mhz: Number(draft.frequency.mhz), pol: draft.frequency.pol, sr: Number(draft.frequency.sr) }
-      : null,
+    frequency:
+      draft.hasFrequency && carriageFilled(draft.frequency)
+        ? { mhz: Number(draft.frequency.mhz), pol: draft.frequency.pol, sr: Number(draft.frequency.sr) }
+        : null,
   };
 }
 
@@ -112,8 +148,8 @@ export function buildChannelPatch(draft: ChannelDraft, original: ChannelDraft): 
   if (draft.showInMatch !== original.showInMatch) patch.show_in_match = draft.showInMatch;
   if (draft.logoAssetId !== original.logoAssetId) patch.logo_asset_id = draft.logoAssetId;
 
-  const nextCarriage = carriage(draft);
-  const beforeCarriage = carriage(original);
+  const nextCarriage = carriageBody(draft);
+  const beforeCarriage = carriageBody(original);
   // `ChannelPatch` carries no `kind` (recorded contract gap: B1 adds it), so the carriage a save can
   // change is the satellite and the frequency; the kind only travels on a create.
   if ((nextCarriage.satellite_id ?? null) !== (beforeCarriage.satellite_id ?? null)) {
@@ -123,15 +159,6 @@ export function buildChannelPatch(draft: ChannelDraft, original: ChannelDraft): 
     patch.frequency = nextCarriage.frequency ?? null;
   }
   return patch;
-}
-
-/** What the form must refuse before it sends: a carriage the API would reject anyway. */
-export function carriageError(draft: ChannelDraft): boolean {
-  if (draft.name.trim() === '') return true;
-  if (draft.kind === 'platform') return false;
-  if (draft.satelliteId === '') return true;
-  if (draft.showInMatch && !(draft.hasFrequency && draft.frequency.mhz !== '' && draft.frequency.sr !== '')) return true;
-  return false;
 }
 
 interface ChannelEditorProps {
@@ -150,15 +177,38 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
   const refresh = useRefreshAdmin();
   const toast = useToast();
 
+  const form = useForm<ChannelDraft>({
+    resolver: zodResolver(formSchema) as Resolver<ChannelDraft>,
+    defaultValues: emptyChannelDraft(),
+    mode: 'onSubmit',
+  });
+  const { register, handleSubmit, formState, watch, reset, setValue, control } = form;
+
   const [baseline, setBaseline] = useState<ChannelDraft>(emptyChannelDraft);
-  const [draft, setDraft] = useState<ChannelDraft>(emptyChannelDraft);
+  /** The version the baseline was read at; it never follows the live refetch. */
+  const [baselineEtag, setBaselineEtag] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<EditorConflict<ChannelDraft> | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const seeded = useRef<string | null>(null);
 
+  const draft = watch();
   const server = detail.data?.data;
-  const serverEtag = etagOf(detail.data);
+
+  // The importers create placeholders as `kind='platform'`, and `ChannelPatch` cannot change the kind
+  // yet (recorded contract gap: B1 adds it), so the carriage choice stays locked on those rows rather
+  // than offering a save the API answers with 422 (A-R1-5).
+  const kindLocked = channelId !== null && baseline.kind === 'platform';
+
+  const adopt = useCallback(
+    (next: ChannelDraft, etag: string | null) => {
+      setBaseline(next);
+      setBaselineEtag(etag);
+      reset(next);
+    },
+    [reset],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -170,19 +220,51 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
       seeded.current = 'new';
       const start = seed ?? emptyChannelDraft();
       setBaseline(emptyChannelDraft());
-      setDraft(start);
+      setBaselineEtag(null);
+      reset(start);
       setSaveError(null);
       return;
     }
     if (!server || seeded.current === `channel-${channelId}`) return;
     seeded.current = `channel-${channelId}`;
-    const loaded = draftOf(server);
-    setBaseline(loaded);
-    setDraft(loaded);
+    adopt(draftOf(server), etagOf(detail.data));
     setSaveError(null);
-  }, [open, channelId, server, seed]);
+  }, [open, channelId, server, seed, detail.data, adopt, reset]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
+
+  const fields: readonly ConflictField<ChannelDraft>[] = [
+    { key: 'name', label: copy.editor.matchName, text: (value) => (value.name.trim() === '' ? null : value.name.trim()) },
+    { key: 'display_name', label: copy.editor.displayName, text: (value) => orNull(value.displayName) },
+    {
+      key: 'satellite_id',
+      label: copy.editor.satellite,
+      text: (value) =>
+        value.kind === 'platform'
+          ? null
+          : (satellites.find((satellite) => String(satellite.id) === value.satelliteId)?.name_ar ??
+            value.satelliteId),
+    },
+    {
+      key: 'frequency',
+      label: copy.editor.frequency,
+      text: (value) =>
+        value.hasFrequency && carriageFilled(value.frequency)
+          ? `${value.frequency.mhz} ${value.frequency.pol} ${value.frequency.sr}`
+          : null,
+    },
+    { key: 'access', label: copy.editor.access, text: (value) => (value.access === 'free' ? copy.free : copy.encrypted) },
+    { key: 'provider', label: copy.editor.provider, text: (value) => orNull(value.provider) },
+    { key: 'package', label: copy.editor.package, text: (value) => orNull(value.packageName) },
+    { key: 'category', label: copy.editor.category, text: (value) => (value.category === 'sports' ? copy.sports : copy.entertainment) },
+    { key: 'country', label: copy.editor.country, text: (value) => orNull(value.country) },
+    {
+      key: 'show_in_match',
+      label: copy.editor.showInMatch,
+      text: (value) => (value.showInMatch ? copy.yes : copy.no),
+    },
+    { key: 'logo_asset_id', label: copy.editor.logo, text: (value) => value.logoUrl },
+  ];
 
   function requestClose(): void {
     if (dirty) setLeaving(true);
@@ -194,7 +276,8 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
     setSaveError(null);
     try {
       const asset = await uploadAsset(file, 'image');
-      setDraft((current) => ({ ...current, logoAssetId: asset.id, logoUrl: asset.url }));
+      setValue('logoAssetId', asset.id, { shouldDirty: true });
+      setValue('logoUrl', asset.url, { shouldDirty: true });
     } catch (error) {
       setSaveError(copyForErrorCode(error instanceof ApiError ? error.code : NETWORK_ERROR));
     } finally {
@@ -202,32 +285,29 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
     }
   }
 
-  async function save(): Promise<void> {
+  async function submit(parsed: ChannelDraft): Promise<void> {
+    if (conflict) return;
     setSaveError(null);
-    if (carriageError(draft)) {
-      setSaveError(copyForErrorCode('validation_error'));
-      return;
-    }
     setBusy(true);
     try {
       if (channelId === null) {
-        const body: ChannelCreate = { ...carriage(draft), name: draft.name.trim() };
-        body.access = draft.access;
-        body.category = draft.category;
-        if (draft.displayName.trim() !== '') body.display_name = draft.displayName.trim();
-        if (draft.provider.trim() !== '') body.provider = draft.provider.trim();
-        if (draft.packageName.trim() !== '') body.package = draft.packageName.trim();
-        if (draft.country.trim() !== '') body.country = draft.country.trim();
-        body.show_in_match = draft.showInMatch;
-        if (draft.logoAssetId !== null) body.logo_asset_id = draft.logoAssetId;
+        const body: ChannelCreate = { ...carriageBody(parsed), name: parsed.name };
+        body.access = parsed.access;
+        body.category = parsed.category;
+        if (parsed.displayName.trim() !== '') body.display_name = parsed.displayName.trim();
+        if (parsed.provider.trim() !== '') body.provider = parsed.provider.trim();
+        if (parsed.packageName.trim() !== '') body.package = parsed.packageName.trim();
+        if (parsed.country.trim() !== '') body.country = parsed.country.trim();
+        body.show_in_match = parsed.showInMatch;
+        if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
         await createChannel(body);
       } else {
-        const body = buildChannelPatch(draft, baseline);
+        const body = buildChannelPatch(parsed, baseline);
         if (Object.keys(body).length === 0) {
           onClose();
           return;
         }
-        await patchChannel(channelId, body, { headers: serverEtag ? { 'If-Match': serverEtag } : {} });
+        await patchChannel(channelId, body, { headers: baselineEtag ? { 'If-Match': baselineEtag } : {} });
       }
       refresh();
       toast.show({ kind: 'success', title: toastCopy.saved });
@@ -236,10 +316,20 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
     } catch (error) {
       const failure = error instanceof ApiError ? error : new ApiError(NETWORK_ERROR, null);
       setSaveError(copyForErrorCode(failure.code));
-      if (failure.code === 'edit_conflict') void detail.refetch();
+      if (failure.code === 'edit_conflict' && channelId !== null) await openConflict(failure);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function openConflict(failure: ApiError): Promise<void> {
+    const refreshed = await detail.refetch();
+    const current = refreshed.data?.data;
+    if (!current) {
+      setSaveError(copyForErrorCode(refreshed.error?.code ?? failure.code));
+      return;
+    }
+    setConflict(editorConflict(failure, fields, baseline, draftOf(current), etagOf(refreshed.data)));
   }
 
   const title = channelId === null ? copy.editor.newTitle : copy.editor.title;
@@ -253,38 +343,33 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
         formLabel={title}
         saving={busy}
         saveError={saveError}
-        onSave={() => void save()}
+        onSave={() => void handleSubmit(submit)()}
         onClose={requestClose}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label={copy.editor.matchName}
-            value={draft.name}
-            onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-            ltr
-          />
-          <Field
-            label={copy.editor.displayName}
-            value={draft.displayName}
-            onChange={(event) => setDraft((current) => ({ ...current, displayName: event.target.value }))}
-            ltr
-          />
+          <Field label={copy.editor.matchName} ltr error={formState.errors.name?.message} {...register('name')} />
+          <Field label={copy.editor.displayName} ltr {...register('displayName')} />
         </div>
 
         <label className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-text-secondary">{copy.editor.satellite}</span>
           <select
             aria-label={copy.editor.satellite}
+            disabled={kindLocked}
             value={draft.kind === 'platform' ? '' : draft.satelliteId}
             onChange={(event) => {
               const value = event.target.value;
-              setDraft((current) =>
-                value === ''
-                  ? { ...current, kind: 'platform', satelliteId: '', hasFrequency: false }
-                  : { ...current, kind: 'satellite', satelliteId: value, hasFrequency: true },
-              );
+              if (value === '') {
+                setValue('kind', 'platform', { shouldDirty: true });
+                setValue('satelliteId', '', { shouldDirty: true });
+                setValue('hasFrequency', false, { shouldDirty: true });
+              } else {
+                setValue('kind', 'satellite', { shouldDirty: true });
+                setValue('satelliteId', value, { shouldDirty: true });
+                setValue('hasFrequency', true, { shouldDirty: true });
+              }
             }}
-            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
+            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">{copy.noSatellite}</option>
             {satellites.map((satellite) => (
@@ -293,14 +378,30 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
               </option>
             ))}
           </select>
+          {kindLocked ? (
+            <span className="text-caption text-text-tertiary">{copy.editor.kindLocked}</span>
+          ) : null}
+          {formState.errors.satelliteId ? (
+            <span className="text-caption text-error">{formState.errors.satelliteId.message}</span>
+          ) : null}
         </label>
 
         {draft.kind === 'satellite' ? (
-          <FrequencyField
-            label={copy.editor.frequency}
-            value={draft.frequency}
-            onChange={(frequency) => setDraft((current) => ({ ...current, frequency, hasFrequency: true }))}
-            hint={copy.editor.frequencyHint}
+          <Controller
+            control={control}
+            name="frequency"
+            render={({ field }) => (
+              <FrequencyField
+                label={copy.editor.frequency}
+                value={field.value}
+                onChange={(frequency) => {
+                  field.onChange(frequency);
+                  setValue('hasFrequency', true, { shouldDirty: true });
+                }}
+                error={formState.errors.frequency?.mhz?.message}
+                hint={copy.editor.frequencyHint}
+              />
+            )}
           />
         ) : null}
 
@@ -314,7 +415,7 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
                   type="button"
                   role="radio"
                   aria-checked={draft.access === access}
-                  onClick={() => setDraft((current) => ({ ...current, access }))}
+                  onClick={() => setValue('access', access as Access, { shouldDirty: true })}
                   className={`text-caption h-8 rounded-sm px-3 font-semibold ${
                     draft.access === access
                       ? 'bg-text-primary text-text-on-inverse'
@@ -327,17 +428,8 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
             </div>
             {draft.access === 'encrypted' ? (
               <>
-                <Field
-                  label={copy.editor.provider}
-                  value={draft.provider}
-                  onChange={(event) => setDraft((current) => ({ ...current, provider: event.target.value }))}
-                  ltr
-                />
-                <Field
-                  label={copy.editor.package}
-                  value={draft.packageName}
-                  onChange={(event) => setDraft((current) => ({ ...current, packageName: event.target.value }))}
-                />
+                <Field label={copy.editor.provider} ltr {...register('provider')} />
+                <Field label={copy.editor.package} {...register('packageName')} />
               </>
             ) : null}
           </div>
@@ -349,55 +441,55 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
             <select
               aria-label={copy.editor.category}
               value={draft.category}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, category: event.target.value as Category }))
-              }
+              onChange={(event) => setValue('category', event.target.value as Category, { shouldDirty: true })}
               className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
             >
               <option value="sports">{copy.sports}</option>
               <option value="entertainment">{copy.entertainment}</option>
             </select>
           </label>
-          <Field
-            label={copy.editor.country}
-            value={draft.country}
-            onChange={(event) => setDraft((current) => ({ ...current, country: event.target.value }))}
-            ltr
-          />
+          <Field label={copy.editor.country} ltr {...register('country')} />
         </div>
 
         <label className="text-label flex items-center gap-3 rounded-lg bg-bg px-3 py-2 text-text-primary">
           <input
             type="checkbox"
             checked={draft.showInMatch}
-            onChange={(event) => setDraft((current) => ({ ...current, showInMatch: event.target.checked }))}
+            onChange={(event) => setValue('showInMatch', event.target.checked, { shouldDirty: true })}
             className="size-4 accent-accent"
           />
           {copy.editor.showInMatch}
         </label>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-caption font-semibold text-text-secondary">{copy.editor.logo}</span>
-          <div className="flex items-center gap-3">
-            <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
-              {draft.logoUrl ? <img src={draft.logoUrl} alt="" className="size-8 object-contain" /> : <span className="text-caption text-text-tertiary">—</span>}
-            </span>
-            <label className="text-label inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-lg bg-surface-2 px-3 font-semibold text-text-primary hover:bg-surface-3">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                aria-label={copy.editor.logoUpload}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void uploadLogo(file);
-                }}
-              />
-              {copy.editor.logoUpload}
-            </label>
-          </div>
-        </div>
+        <LogoField
+          label={copy.editor.logo}
+          darkLabel={logoPreview.onDark}
+          lightLabel={logoPreview.onLight}
+          uploadLabel={copy.editor.logoUpload}
+          url={draft.logoUrl}
+          onUpload={(file) => void uploadLogo(file)}
+        />
       </EditorDrawer>
+
+      <ConflictDialog
+        open={conflict !== null}
+        subject={draft.name}
+        changedBy={conflict?.changedBy ?? { kind: 'admin', name: '', at: '' }}
+        changes={conflict?.changes ?? []}
+        onReload={() => {
+          if (!conflict) return;
+          adopt(conflict.theirs, conflict.etag);
+          seeded.current = `channel-${channelId ?? 'new'}`;
+          setConflict(null);
+          setSaveError(null);
+        }}
+        onDiscard={() => {
+          reset(baseline);
+          setConflict(null);
+          setSaveError(null);
+        }}
+        onDismiss={() => setConflict(null)}
+      />
 
       <ConfirmDialog
         open={leaving}

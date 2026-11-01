@@ -19,8 +19,8 @@ interface FrequencyFieldProps {
   label: string;
   value: FrequencyValue;
   onChange: (next: FrequencyValue) => void;
-  hint?: string;
-  error?: string;
+  hint?: string | undefined;
+  error?: string | undefined;
   /** A leading mark in the label, e.g. the station-strength glyph. */
   icon?: 'signal';
 }

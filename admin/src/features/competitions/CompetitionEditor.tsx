@@ -1,24 +1,36 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
+import { z } from 'zod';
 
 import { createCompetition, patchCompetition, useGetCompetition } from '../../api/generated/admin';
 import type { AdminCompetition, CompetitionCreate, CompetitionPatch } from '../../api/generated/admin.schemas';
+import { createCompetitionBody } from '../../api/generated/admin.zod';
 import { ApiError, etagOf, NETWORK_ERROR } from '../../api/http';
+import { ConflictDialog } from '../../components/ConfirmDialog/ConflictDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { EditorDrawer } from '../../components/EditorDrawer/EditorDrawer';
 import { Field } from '../../components/Field/Field';
+import { LogoField } from '../../components/LogoField/LogoField';
 import { useToast } from '../../components/Toast/Toast';
-import { common, competitions as copy, copyForErrorCode, toast as toastCopy } from '../../i18n/ar';
+import { common, competitions as copy, copyForErrorCode, logoPreview, toast as toastCopy, validation } from '../../i18n/ar';
+import { editorConflict, type ConflictField, type EditorConflict } from '../../lib/conflict';
 import { uploadAsset } from '../../lib/media';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import '../../lib/validation';
 
 // A6's editor. Aliases have no field in D2's contract yet (recorded follow-up), so the drawer edits
-// what the API has: the name and the logo.
+// what the API has: the name and the logo. The form validates through the created body's Zod schema
+// (constitution VIII) and saves under the ETag it loaded, so a stale copy opens the conflict dialog
+// instead of overwriting the other editor's save (A-R1-2).
 
-interface CompetitionDraft {
-  name: string;
-  logoAssetId: number | null;
-  logoUrl: string | null;
-}
+const formSchema = z.object({
+  name: createCompetitionBody.shape.name.trim().min(1, validation.required),
+  logoAssetId: z.number().nullable(),
+  logoUrl: z.string().nullable(),
+});
+
+type CompetitionDraft = z.infer<typeof formSchema>;
 
 const emptyDraft = (): CompetitionDraft => ({ name: '', logoAssetId: null, logoUrl: null });
 
@@ -41,15 +53,33 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
   const refresh = useRefreshAdmin();
   const toast = useToast();
 
+  const form = useForm<CompetitionDraft>({
+    resolver: zodResolver(formSchema) as Resolver<CompetitionDraft>,
+    defaultValues: emptyDraft(),
+    mode: 'onSubmit',
+  });
+  const { register, handleSubmit, formState, watch, reset, setValue } = form;
+
   const [baseline, setBaseline] = useState<CompetitionDraft>(emptyDraft);
-  const [draft, setDraft] = useState<CompetitionDraft>(emptyDraft);
+  /** The version the baseline was read at; it never follows the live refetch. */
+  const [baselineEtag, setBaselineEtag] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<EditorConflict<CompetitionDraft> | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const seeded = useRef<string | null>(null);
 
+  const draft = watch();
   const server = detail.data?.data;
-  const serverEtag = etagOf(detail.data);
+
+  const adopt = useCallback(
+    (next: CompetitionDraft, etag: string | null) => {
+      setBaseline(next);
+      setBaselineEtag(etag);
+      reset(next);
+    },
+    [reset],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -59,21 +89,22 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
     if (competitionId === null) {
       if (seeded.current === 'new') return;
       seeded.current = 'new';
-      const empty = emptyDraft();
-      setBaseline(empty);
-      setDraft(empty);
+      adopt(emptyDraft(), null);
       setSaveError(null);
       return;
     }
     if (!server || seeded.current === `competition-${competitionId}`) return;
     seeded.current = `competition-${competitionId}`;
-    const loaded = fromCompetition(server);
-    setBaseline(loaded);
-    setDraft(loaded);
+    adopt(fromCompetition(server), etagOf(detail.data));
     setSaveError(null);
-  }, [open, competitionId, server]);
+  }, [open, competitionId, server, detail.data, adopt]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
+
+  const fields: readonly ConflictField<CompetitionDraft>[] = [
+    { key: 'name', label: copy.editor.name, text: (value) => (value.name.trim() === '' ? null : value.name.trim()) },
+    { key: 'logoAssetId', label: copy.editor.logo, text: (value) => value.logoUrl },
+  ];
 
   function requestClose(): void {
     if (dirty) setLeaving(true);
@@ -85,7 +116,8 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
     setSaveError(null);
     try {
       const asset = await uploadAsset(file, 'image');
-      setDraft((current) => ({ ...current, logoAssetId: asset.id, logoUrl: asset.url }));
+      setValue('logoAssetId', asset.id, { shouldDirty: true });
+      setValue('logoUrl', asset.url, { shouldDirty: true });
     } catch (error) {
       setSaveError(copyForErrorCode(error instanceof ApiError ? error.code : NETWORK_ERROR));
     } finally {
@@ -93,27 +125,24 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
     }
   }
 
-  async function save(): Promise<void> {
+  async function submit(parsed: CompetitionDraft): Promise<void> {
+    if (conflict) return;
     setSaveError(null);
-    if (draft.name.trim() === '') {
-      setSaveError(copyForErrorCode('validation_error'));
-      return;
-    }
     setBusy(true);
     try {
       if (competitionId === null) {
-        const body: CompetitionCreate = { name: draft.name.trim() };
-        if (draft.logoAssetId !== null) body.logo_asset_id = draft.logoAssetId;
+        const body: CompetitionCreate = { name: parsed.name };
+        if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
         await createCompetition(body);
       } else {
         const body: CompetitionPatch = {};
-        if (draft.name !== baseline.name) body.name = draft.name.trim();
-        if (draft.logoAssetId !== baseline.logoAssetId) body.logo_asset_id = draft.logoAssetId;
+        if (parsed.name !== baseline.name) body.name = parsed.name;
+        if (parsed.logoAssetId !== baseline.logoAssetId) body.logo_asset_id = parsed.logoAssetId;
         if (Object.keys(body).length === 0) {
           onClose();
           return;
         }
-        await patchCompetition(competitionId, body, { headers: serverEtag ? { 'If-Match': serverEtag } : {} });
+        await patchCompetition(competitionId, body, { headers: baselineEtag ? { 'If-Match': baselineEtag } : {} });
       }
       refresh();
       toast.show({ kind: 'success', title: toastCopy.saved });
@@ -122,11 +151,20 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
     } catch (error) {
       const failure = error instanceof ApiError ? error : new ApiError(NETWORK_ERROR, null);
       setSaveError(copyForErrorCode(failure.code));
-      // A stale copy is refetched so the next save is made against the version that exists.
-      if (failure.code === 'edit_conflict') void detail.refetch();
+      if (failure.code === 'edit_conflict' && competitionId !== null) await openConflict(failure);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function openConflict(failure: ApiError): Promise<void> {
+    const refreshed = await detail.refetch();
+    const current = refreshed.data?.data;
+    if (!current) {
+      setSaveError(copyForErrorCode(refreshed.error?.code ?? failure.code));
+      return;
+    }
+    setConflict(editorConflict(failure, fields, baseline, fromCompetition(current), etagOf(refreshed.data)));
   }
 
   return (
@@ -138,41 +176,40 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
         formLabel={competitionId === null ? copy.editor.newTitle : copy.editor.title}
         saving={busy}
         saveError={saveError}
-        onSave={() => void save()}
+        onSave={() => void handleSubmit(submit)()}
         onClose={requestClose}
       >
-        <Field
-          label={copy.editor.name}
-          value={draft.name}
-          onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-        />
+        <Field label={copy.editor.name} error={formState.errors.name?.message} {...register('name')} />
 
-        <div className="flex flex-col gap-2">
-          <span className="text-caption font-semibold text-text-secondary">{copy.editor.logo}</span>
-          <div className="flex items-center gap-3">
-            <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg bg-bg ring-1 ring-inset ring-divider">
-              {draft.logoUrl ? (
-                <img src={draft.logoUrl} alt="" className="size-12 object-contain" />
-              ) : (
-                <span className="text-caption text-text-tertiary">—</span>
-              )}
-            </span>
-            <label className="text-label inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-lg bg-surface-2 px-3 font-semibold text-text-primary hover:bg-surface-3">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                aria-label={copy.editor.logoUpload}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void uploadLogo(file);
-                }}
-              />
-              {copy.editor.logoUpload}
-            </label>
-          </div>
-        </div>
+        <LogoField
+          label={copy.editor.logo}
+          darkLabel={logoPreview.onDark}
+          lightLabel={logoPreview.onLight}
+          uploadLabel={copy.editor.logoUpload}
+          url={draft.logoUrl}
+          onUpload={(file) => void uploadLogo(file)}
+        />
       </EditorDrawer>
+
+      <ConflictDialog
+        open={conflict !== null}
+        subject={draft.name}
+        changedBy={conflict?.changedBy ?? { kind: 'admin', name: '', at: '' }}
+        changes={conflict?.changes ?? []}
+        onReload={() => {
+          if (!conflict) return;
+          adopt(conflict.theirs, conflict.etag);
+          seeded.current = `competition-${competitionId ?? 'new'}`;
+          setConflict(null);
+          setSaveError(null);
+        }}
+        onDiscard={() => {
+          reset(baseline);
+          setConflict(null);
+          setSaveError(null);
+        }}
+        onDismiss={() => setConflict(null)}
+      />
 
       <ConfirmDialog
         open={leaving}

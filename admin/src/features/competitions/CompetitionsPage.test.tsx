@@ -117,4 +117,68 @@ describe('CompetitionsPage (A6)', () => {
 
     await waitFor(() => expect(listReads).toBeGreaterThan(0));
   });
+
+  it('refuses a competition with no name, with the field error and without sending', async () => {
+    const patches: string[] = [];
+    renderPage();
+    await screen.findByText('الدوري المصري الممتاز');
+
+    server.use(
+      mswHttp.patch('*/admin/api/competitions/:id', async ({ request }) => {
+        patches.push(request.url);
+        return HttpResponse.json(envelope(competitions[0]), { headers: { ETag: '"c-12b"' } });
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل كأس مصر' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل البطولة' });
+    await userEvent.clear(within(drawer).getByLabelText('اسم البطولة'));
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    // The message is Zod's, through the admin's Arabic error map: never the schema's English.
+    expect(await within(drawer).findByText('هذا الحقل مطلوب')).toBeInTheDocument();
+    expect(patches).toHaveLength(0);
+  });
+
+  it('opens the conflict dialog on a stale edit and sends nothing on a second save', async () => {
+    let patches = 0;
+    renderPage();
+    await screen.findByText('الدوري المصري الممتاز');
+
+    server.use(
+      mswHttp.patch('*/admin/api/competitions/:id', () => {
+        patches += 1;
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code: 'edit_conflict', message: 'x' },
+            meta: { changed_by: { kind: 'admin', name: 'سارة' }, changed_at: '2026-11-01T09:30:00Z' },
+          },
+          { status: 409 },
+        );
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل كأس مصر' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل البطولة' });
+    const name = within(drawer).getByLabelText('اسم البطولة');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'اسمي');
+
+    server.use(
+      mswHttp.get('*/admin/api/competitions/:id', () =>
+        HttpResponse.json(envelope({ ...competitions[2], name: 'كأس مصر الجديد' }), { headers: { ETag: '"c-55b"' } }),
+      ),
+    );
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: /عدّل سارة هذا العنصر/ });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'اعرض التغييرات' }));
+    expect(within(dialog).getByText('كأس مصر الجديد')).toBeInTheDocument();
+
+    // Save is answered by the dialog: my older version never travels under their newer ETag (A-R1-2).
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+    expect(patches).toBe(1);
+  });
 });

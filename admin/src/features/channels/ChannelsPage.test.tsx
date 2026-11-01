@@ -33,10 +33,12 @@ const bein = {
   placeholder_source: null,
 };
 
+// What the importers leave behind: a platform, with no satellite and no frequency at all.
 const placeholder = {
   ...bein,
   id: 777,
   name: 'Al Kass Two HD',
+  kind: 'platform',
   display_name: null,
   satellite_id: null,
   frequency: null,
@@ -129,12 +131,15 @@ describe('ChannelsPage (A8)', () => {
     });
   });
 
-  it('shows the carriage and marks a placeholder as needing completion', async () => {
+  it('shows the carriage in the readout well and marks a placeholder as needing completion', async () => {
     renderPage();
     await waitForRows();
 
     const row = screen.getByText('beIN SPORTS 1').closest('tr');
     if (!row) throw new Error('expected a row');
+    const readout = within(row).getByTestId('frequency-readout');
+    expect(readout).toHaveAttribute('dir', 'ltr');
+    expect(readout).toHaveClass('bg-readout-bg', 'text-readout');
     expect(row).toHaveTextContent('11013');
     expect(row).toHaveTextContent('27500');
     expect(row).toHaveTextContent('beIN');
@@ -145,7 +150,7 @@ describe('ChannelsPage (A8)', () => {
     expect(incomplete).toHaveTextContent('بلا تردد');
   });
 
-  it('completes a placeholder by setting its carriage and showing it on match pages', async () => {
+  it('keeps the carriage of a placeholder locked while the contract cannot change its kind', async () => {
     let sent: Record<string, unknown> | null = null;
     renderPage();
     await waitForRows();
@@ -159,18 +164,84 @@ describe('ChannelsPage (A8)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'تعديل Al Kass Two HD' }));
     const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
-    await userEvent.selectOptions(within(drawer).getByLabelText('القمر'), '2');
-    await userEvent.type(within(drawer).getByLabelText('التردد · MHz'), '11919');
-    await userEvent.type(within(drawer).getByLabelText('التردد · symbol rate'), '27500');
+
+    // The importers' placeholder is a platform, and `ChannelPatch` has no `kind` yet (A-R1-5).
+    expect(within(drawer).getByLabelText('القمر')).toBeDisabled();
+    expect(
+      within(drawer).getByText('هذه القناة أُنشئت كمنصة، وتحويلها إلى قناة على قمر غير متاح بعد.'),
+    ).toBeInTheDocument();
+
     await userEvent.click(within(drawer).getByRole('checkbox', { name: 'إظهار في صفحات المباريات' }));
     await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
 
     await waitFor(() => expect(sent).not.toBeNull());
-    expect(sent).toMatchObject({
-      show_in_match: true,
-      satellite_id: 2,
-      frequency: { mhz: 11919, pol: 'H', sr: 27500 },
-    });
+    expect(sent).toMatchObject({ show_in_match: true });
+    expect(sent).not.toHaveProperty('satellite_id');
+    expect(sent).not.toHaveProperty('frequency');
+  });
+
+  it('refuses a channel with no name, with the field error and without sending', async () => {
+    const patches: string[] = [];
+    renderPage();
+    await waitForRows();
+
+    server.use(
+      mswHttp.patch('*/admin/api/channels/:id', async ({ request }) => {
+        patches.push(request.url);
+        return HttpResponse.json(envelope(channelDetail()), { headers: { ETag: '"ch-502"' } });
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل beIN SPORTS 1' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
+    await userEvent.clear(within(drawer).getByLabelText('اسم المطابقة'));
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    expect(await within(drawer).findByText('هذا الحقل مطلوب')).toBeInTheDocument();
+    expect(patches).toHaveLength(0);
+  });
+
+  it('opens the conflict dialog on a stale edit and sends nothing on a second save', async () => {
+    let patches = 0;
+    renderPage();
+    await waitForRows();
+
+    server.use(
+      mswHttp.patch('*/admin/api/channels/:id', () => {
+        patches += 1;
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code: 'edit_conflict', message: 'x' },
+            meta: { changed_by: { kind: 'admin', name: 'سارة' }, changed_at: '2026-11-01T09:30:00Z' },
+          },
+          { status: 409 },
+        );
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل beIN SPORTS 1' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
+    const displayName = within(drawer).getByLabelText('اسم العرض');
+    await userEvent.clear(displayName);
+    await userEvent.type(displayName, 'beIN SPORTS 1 ME');
+
+    server.use(
+      mswHttp.get('*/admin/api/channels/:id', () =>
+        HttpResponse.json(envelope(channelDetail({ display_name: 'beIN SPORTS 1 HD 2' })), {
+          headers: { ETag: '"ch-502"' },
+        }),
+      ),
+    );
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: /عدّل سارة هذا العنصر/ });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'اعرض التغييرات' }));
+    expect(within(dialog).getByText('beIN SPORTS 1 HD 2')).toBeInTheDocument();
+
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+    expect(patches).toBe(1);
   });
 
   it('copies a channel onto another satellite as a new carriage', async () => {
