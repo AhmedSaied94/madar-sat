@@ -7,6 +7,7 @@ import '../../../design/components/logo.dart';
 import '../../../design/components/match_row.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/matches_day.dart';
+import '../../../core/config/media_image.dart';
 
 /// A competition on S2: its header (logo, name, stage) over a card of its match rows.
 class CompetitionSection extends StatelessWidget {
@@ -33,7 +34,7 @@ class CompetitionSection extends StatelessWidget {
         stage: group.stage,
         leading: LogoTile(
           kind: LogoTileKind.competition,
-          logo: logo == null ? null : NetworkImage(logo),
+          logo: mediaImage(context, logo),
           size: _logoSize,
         ),
       ),

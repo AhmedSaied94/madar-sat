@@ -76,6 +76,57 @@ class CachedDocuments extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
+/// The device's own settings: onboarding progress, theme, time zone, clock format, font
+/// scale and my satellites (D3, research R27). Values are text; the typed accessors and the
+/// enums live in `core/settings/app_settings.dart`, so a new setting needs no migration.
+@DataClassName('StoredSetting')
+class AppSettingsTable extends Table {
+  @override
+  String get tableName => 'app_settings';
+
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
+/// The device's follow set: the source of truth (P1), mirrored to the server by
+/// `FollowsRepository`. [kind] is one of `team`, `competition`, `channel`, `commentator`
+/// and `match`; [targetId] is the server id.
+@DataClassName('StoredFollow')
+class Follows extends Table {
+  TextColumn get kind => text()();
+  IntColumn get targetId => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {kind, targetId};
+}
+
+/// What still needs sending, and what happened to the last attempt: `follows` and `device`
+/// (research R27). Retried on launch, on resume and on reconnect.
+@DataClassName('StoredSyncState')
+class SyncState extends Table {
+  TextColumn get key => text()();
+  BoolColumn get dirty => boolean()();
+  TextColumn get lastError => text().nullable()();
+  DateTimeColumn get attemptedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
+/// One `sync_state` row. [attemptedAt] is UTC.
+class SyncRecord {
+  const SyncRecord({required this.dirty, this.lastError, this.attemptedAt});
+
+  final bool dirty;
+  final String? lastError;
+  final DateTime? attemptedAt;
+}
+
 /// A day's revalidation record. [fetchedAt] is UTC.
 class CachedWindow {
   const CachedWindow({required this.day, required this.etag, required this.fetchedAt});
@@ -102,10 +153,14 @@ class CachedDocument {
 
 /// The app's drift database (P6). Native and web both go through `drift_flutter`.
 ///
-/// Schema 2 (D2) adds [MatchWindows] and [CachedDocuments]. [now] and [offsetAt] are the
+/// Schema 2 (D2) adds [MatchWindows] and [CachedDocuments]; schema 3 (D3) adds
+/// [AppSettingsTable], [Follows] and [SyncState] (research R27). [now] and [offsetAt] are the
 /// device clock and zone, injectable so day windows and pruning are testable without the
-/// host zone; [offsetAt] has the shape `MadarTime.dayWindow` takes.
-@DriftDatabase(tables: [Matches, MatchWindows, CachedDocuments])
+/// host zone; [offsetAt] has the shape `MadarTime.dayWindow` takes. D3 passes the user's
+/// chosen zone here, so every local day and every wall clock follows it.
+@DriftDatabase(
+  tables: [Matches, MatchWindows, CachedDocuments, AppSettingsTable, Follows, SyncState],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase(
     super.e, {
@@ -115,7 +170,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Opens the app's database. The web needs both assets shipped in `web/` (no CDN): the
   /// SQLite WebAssembly module and drift's worker (see `app/CLAUDE.md`).
-  AppDatabase.open()
+  AppDatabase.open({Duration Function(DateTime local)? offsetAt})
       : this(
           driftDatabase(
             name: 'madar',
@@ -124,6 +179,7 @@ class AppDatabase extends _$AppDatabase {
               driftWorker: Uri.parse('drift_worker.js'),
             ),
           ),
+          offsetAt: offsetAt,
         );
 
   /// The device's local wall clock.
@@ -135,7 +191,7 @@ class AppDatabase extends _$AppDatabase {
   static const Duration documentRetention = Retention.documents;
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -145,15 +201,26 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(matchWindows);
             await migrator.createTable(cachedDocuments);
           }
+          if (from < 3) {
+            await migrator.createTable(appSettingsTable);
+            await migrator.createTable(follows);
+            await migrator.createTable(syncState);
+          }
         },
         beforeOpen: (details) => pruneOutsideWindow(),
       );
 
   /// The UTC bounds of the local [day].
-  DayWindow dayWindow(DateTime day) => MadarTime.dayWindow(day, offsetAt: _offsetAt);
+  DayWindow dayWindow(DateTime day) => MadarTime.dayWindow(day, offsetAt: zoneAt);
+
+  /// The zone offset in force: the user's choice (D3) or the device's own.
+  Duration zoneAt(DateTime local) => _offsetAt?.call(local) ?? local.timeZoneOffset;
+
+  /// The wall clock of the zone the app is set to, built from the device's instant.
+  DateTime get wallClockNow => now().toUtc().add(zoneAt(now()));
 
   DateTime get today {
-    final wall = now();
+    final wall = wallClockNow;
     return DateTime(wall.year, wall.month, wall.day);
   }
 
@@ -288,8 +355,171 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  Future<void> _writeWindow(String day, String? etag, DateTime fetchedAt) =>
-      into(matchWindows).insertOnConflictUpdate(
+  // D3: the device's own state (research R27). The follows and the settings are drift's;
+  // the device token and install id are in `flutter_secure_storage`, never here.
+
+  /// Every stored setting, as text.
+  Future<Map<String, String>> readSettings() async {
+    final rows = await select(appSettingsTable).get();
+    return {for (final row in rows) row.key: row.value};
+  }
+
+  /// Every stored setting, re-emitted on each write.
+  Stream<Map<String, String>> watchSettings() =>
+      select(appSettingsTable).watch().map(
+            (rows) => {for (final row in rows) row.key: row.value},
+          );
+
+  Future<String?> readSetting(String key) async {
+    final row = await (select(appSettingsTable)..where((t) => t.key.equals(key)))
+        .getSingleOrNull();
+    return row?.value;
+  }
+
+  Stream<String?> watchSetting(String key) => (select(appSettingsTable)
+        ..where((t) => t.key.equals(key)))
+      .watchSingleOrNull()
+      .map((row) => row?.value);
+
+  /// Writes one setting; a null [value] removes it, so the bundled default applies again.
+  Future<void> writeSetting(String key, String? value) => transaction(() async {
+        if (value == null) {
+          await (delete(appSettingsTable)..where((t) => t.key.equals(key))).go();
+        } else {
+          await into(appSettingsTable).insertOnConflictUpdate(
+            AppSettingsTableCompanion.insert(
+              key: key,
+              value: value,
+              updatedAt: now().toUtc(),
+            ),
+          );
+        }
+      });
+
+  /// Several settings in one transaction: onboarding writes its step and its flag together.
+  Future<void> writeSettings(Map<String, String?> values) => transaction(() async {
+        for (final entry in values.entries) {
+          await writeSettingNoTransaction(entry.key, entry.value);
+        }
+      });
+
+  /// The body of [writeSetting] without opening a transaction of its own.
+  Future<void> writeSettingNoTransaction(String key, String? value) async {
+    if (value == null) {
+      await (delete(appSettingsTable)..where((t) => t.key.equals(key))).go();
+      return;
+    }
+    await into(appSettingsTable).insertOnConflictUpdate(
+      AppSettingsTableCompanion.insert(
+        key: key,
+        value: value,
+        updatedAt: now().toUtc(),
+      ),
+    );
+  }
+
+  /// The follow set, oldest first.
+  Future<List<StoredFollow>> readFollows() =>
+      (select(follows)..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).get();
+
+  Stream<List<StoredFollow>> watchFollows() => (select(follows)
+        ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+      .watch();
+
+  /// Adds or removes one follow. Repeating it is harmless; the local set stays the source
+  /// of truth (P1).
+  Future<void> setFollow({
+    required String kind,
+    required int targetId,
+    required bool on,
+  }) async {
+    if (!on) {
+      await (delete(follows)
+            ..where((t) => t.kind.equals(kind) & t.targetId.equals(targetId)))
+          .go();
+      return;
+    }
+    await into(follows).insertOnConflictUpdate(
+      FollowsCompanion.insert(
+        kind: kind,
+        targetId: targetId,
+        createdAt: now().toUtc(),
+      ),
+    );
+  }
+
+  /// Replaces one kind's whole set, so a picker's result is written in one step.
+  Future<void> replaceFollowsOfKind(String kind, Set<int> targetIds) => transaction(() async {
+        await (delete(follows)..where((t) => t.kind.equals(kind))).go();
+        await batch((batch) {
+          batch.insertAll(
+            follows,
+            [
+              for (final id in targetIds)
+                FollowsCompanion.insert(
+                  kind: kind,
+                  targetId: id,
+                  createdAt: now().toUtc(),
+                ),
+            ],
+          );
+        });
+      });
+
+  /// `DELETE /devices/me` clears the device's own data after the server answered.
+  Future<void> clearDeviceData() => transaction(() async {
+        await delete(follows).go();
+        await delete(appSettingsTable).go();
+        await delete(syncState).go();
+      });
+
+  Future<SyncRecord?> readSyncState(String key) async {
+    final row =
+        await (select(syncState)..where((t) => t.key.equals(key))).getSingleOrNull();
+    return row == null
+        ? null
+        : SyncRecord(
+            dirty: row.dirty,
+            lastError: row.lastError,
+            attemptedAt: row.attemptedAt?.toUtc(),
+          );
+  }
+
+  Stream<SyncRecord?> watchSyncState(String key) => (select(syncState)
+        ..where((t) => t.key.equals(key)))
+      .watchSingleOrNull()
+      .map(
+        (row) => row == null
+            ? null
+            : SyncRecord(
+                dirty: row.dirty,
+                lastError: row.lastError,
+                attemptedAt: row.attemptedAt?.toUtc(),
+              ),
+      );
+
+  /// Flags a sync that still has to reach the server, with the reason the last try failed.
+  Future<void> markSyncDirty(String key, {String? error}) =>
+      into(syncState).insertOnConflictUpdate(
+        SyncStateCompanion.insert(
+          key: key,
+          dirty: true,
+          lastError: Value(error),
+          attemptedAt: Value(now().toUtc()),
+        ),
+      );
+
+  /// Flags a sync the server accepted.
+  Future<void> markSyncClean(String key) => into(syncState).insertOnConflictUpdate(
+        SyncStateCompanion.insert(
+          key: key,
+          dirty: false,
+          lastError: const Value(null),
+          attemptedAt: Value(now().toUtc()),
+        ),
+      );
+
+  Future<void> _writeWindow(String day, String? etag, DateTime fetchedAt) =>      into(matchWindows).insertOnConflictUpdate(
         MatchWindowsCompanion.insert(day: day, etag: Value(etag), fetchedAt: fetchedAt.toUtc()),
       );
 

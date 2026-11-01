@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/logo.dart';
 import '../domain/competition_groups.dart';
+import '../../../core/config/media_image.dart';
 
 /// The heading of one competition's group: its logo, its name and, when the matches share
 /// it, the round («الجولة 8»).
@@ -30,7 +31,7 @@ class CompetitionHeader extends StatelessWidget {
           children: [
             LogoTile(
               kind: LogoTileKind.competition,
-              logo: logo == null ? null : NetworkImage(logo),
+              logo: mediaImage(context, logo),
               size: MadarSpace.s8,
             ),
             const SizedBox(width: MadarSpace.s2),

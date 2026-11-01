@@ -8,6 +8,7 @@ import '../../core/theme/madar_tokens.dart';
 import '../../core/network/generated/models/score.dart';
 import '../../core/network/generated/models/status.dart';
 import '../../l10n/app_localizations.dart';
+import 'display_scope.dart';
 
 /// The centre cell of every match row and hero: exactly one of a kickoff time, a live
 /// score with its minute, a final score, or a status word.
@@ -23,7 +24,7 @@ class StatusBlock extends StatelessWidget {
     this.minute,
     this.estimated = false,
     this.timeTbd = false,
-    this.use24h = false,
+    this.use24h,
     this.now,
   });
 
@@ -33,7 +34,8 @@ class StatusBlock extends StatelessWidget {
   final String? minute;
   final bool estimated;
   final bool timeTbd;
-  final bool use24h;
+  /// 12 vs 24 hours. Null takes the app's setting; a component test keeps the default.
+  final bool? use24h;
   final DateTime? now;
 
   @override
@@ -64,7 +66,8 @@ class StatusBlock extends StatelessWidget {
         }
         final time = MadarTime.kickoff(
           kickoff,
-          use24h: use24h,
+          use24h: use24h ?? MadarDisplayScope.use24hOf(context),
+          zone: MadarDisplayScope.zoneOf(context).fixed,
           am: l.amMarker,
           pm: l.pmMarker,
         );

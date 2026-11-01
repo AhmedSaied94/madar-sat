@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:madar_sat/core/config/remote_config.dart';
 import 'package:madar_sat/core/db/app_database.dart';
 import 'package:madar_sat/core/db/database_provider.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
@@ -67,9 +68,12 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('the bundled defaults are 60 s and 30 s', (tester) async {
+  testWidgets('the bundled defaults are 60 s for matches and 30 s for live', (tester) async {
     expect(PollIntervals.matches, const Duration(seconds: 60));
-    expect(PollIntervals.live, const Duration(seconds: 30));
+    expect(
+      RemoteConfigValues.bundled.livePollInterval,
+      const Duration(seconds: 30),
+    );
   });
 
   testWidgets('with a live match on screen: live every 30 s, matches every 60 s', (tester) async {

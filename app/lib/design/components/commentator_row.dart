@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +7,7 @@ import '../../core/theme/madar_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import 'badges.dart';
 import 'logo.dart';
+import '../../core/config/media_image.dart';
 
 /// The commentator for a broadcast, with an optional short voice sample (CommentatorRow
 /// README). It reads the app's one shared player, so starting this clip stops any other,
@@ -35,7 +35,7 @@ class CommentatorRow extends ConsumerWidget {
     return CommentatorRowView(
       name: commentator.name,
       hasSample: url != null,
-      avatar: commentator.image == null ? null : CachedNetworkImageProvider(commentator.image!),
+      avatar: mediaImage(context, commentator.image),
       phase: phase,
       progress: progress,
       onTap: url == null ? null : () => ref.read(clipControllerProvider.notifier).toggle(url),

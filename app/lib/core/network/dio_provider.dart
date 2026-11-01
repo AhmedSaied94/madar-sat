@@ -1,25 +1,47 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../config/app_config.dart';
+import '../../features/devices/data/device_identity_provider.dart';
+import '../../features/system/data/connectivity.dart';
+import '../config/remote_config.dart';
+import 'device_auth_interceptor.dart';
 import 'etag_interceptor.dart';
 import 'generated/export.dart';
 
 part 'dio_provider.g.dart';
 
-/// One Dio for the app: base URL from the bundled flavor config, timeouts, and the
-/// ETag interceptor (research R17).
+/// One Dio for the app: base URL from Remote Config (the flavor's bundled value until the
+/// fetch answers), timeouts, and the ETag interceptor (research R17, R28).
 @Riverpod(keepAlive: true)
 Dio dio(Ref ref) {
-  AppConfig.ensureConfigured();
+  final baseUrl = ref.watch(apiBaseUrlProvider);
+  if (baseUrl.isEmpty) {
+    throw StateError(
+      'API_BASE_URL must be passed with --dart-define-from-file=env/<flavor>.json',
+    );
+  }
   return Dio(
     BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
+      baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 20),
       headers: const {'Accept': 'application/json'},
     ),
-  )..interceptors.add(EtagInterceptor());
+  )..interceptors.addAll([
+      EtagInterceptor(),
+      // Every `/v1` request carries the device token once one exists, so the API's limits
+      // count each phone separately (R11, R27). The media host never goes through this Dio.
+      DeviceAuthInterceptor(
+        token: () => ref.read(deviceIdentityControllerProvider).value?.token,
+        baseUrl: baseUrl,
+      ),
+      // R29: no new connectivity plugin; a transport failure is "offline", the next answer
+      // is "online".
+      ConnectivityInterceptor(
+        onOnline: () => ref.read(connectivityStatusProvider.notifier).markOnline(),
+        onOffline: () => ref.read(connectivityStatusProvider.notifier).markOffline(),
+      ),
+    ]);
 }
 
 /// The generated client (swagger_parser, never hand-edited).

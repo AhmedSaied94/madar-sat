@@ -1107,6 +1107,600 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'جرّب اسم قناة أو أرقاماً من التردد.'**
   String get s5NoResultsBody;
+
+  /// No description provided for @cancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء'**
+  String get cancel;
+
+  /// No description provided for @delete.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف'**
+  String get delete;
+
+  /// No description provided for @skip.
+  ///
+  /// In ar, this message translates to:
+  /// **'تخطي'**
+  String get skip;
+
+  /// No description provided for @next.
+  ///
+  /// In ar, this message translates to:
+  /// **'التالي'**
+  String get next;
+
+  /// No description provided for @nextCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'التالي ({count})'**
+  String nextCount(int count);
+
+  /// No description provided for @gotIt.
+  ///
+  /// In ar, this message translates to:
+  /// **'فهمت'**
+  String get gotIt;
+
+  /// No description provided for @later.
+  ///
+  /// In ar, this message translates to:
+  /// **'لاحقاً'**
+  String get later;
+
+  /// No description provided for @notNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس الآن'**
+  String get notNow;
+
+  /// No description provided for @add.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف'**
+  String get add;
+
+  /// No description provided for @onbProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخطوة {step} من {count}'**
+  String onbProgress(int step, int count);
+
+  /// No description provided for @onbWelcomeTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرحباً بك في مدار'**
+  String get onbWelcomeTitle;
+
+  /// No description provided for @onbWelcomeBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'مباراتك، القناة الناقلة، وترددها على طبقك — في مكان واحد.'**
+  String get onbWelcomeBody;
+
+  /// No description provided for @onbChooseTheme.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المظهر'**
+  String get onbChooseTheme;
+
+  /// No description provided for @themeAuto.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلقائي'**
+  String get themeAuto;
+
+  /// No description provided for @themeChangeLater.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقدر تغيّره في أي وقت من الإعدادات'**
+  String get themeChangeLater;
+
+  /// No description provided for @onbTeamsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر فرقك المفضلة'**
+  String get onbTeamsTitle;
+
+  /// No description provided for @onbTeamsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سنعرض مبارياتها أولاً ونذكّرك قبل انطلاقها.'**
+  String get onbTeamsBody;
+
+  /// No description provided for @onbSearchTeam.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن فريق...'**
+  String get onbSearchTeam;
+
+  /// No description provided for @onbTeamsEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم نجد فريقاً بهذا الاسم'**
+  String get onbTeamsEmpty;
+
+  /// No description provided for @onbTeamsEmptyBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'جرّب اسماً آخر أو تخطَّ هذه الخطوة.'**
+  String get onbTeamsEmptyBody;
+
+  /// No description provided for @onbSatellitesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر الأقمار التي يستقبلها طبقك'**
+  String get onbSatellitesTitle;
+
+  /// No description provided for @onbSatellitesBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سنعرض القنوات على أقمارك أولاً، والمجانية قبل المشفرة.'**
+  String get onbSatellitesBody;
+
+  /// No description provided for @mostUsed.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأكثر استخداماً'**
+  String get mostUsed;
+
+  /// No description provided for @channelCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} قناة'**
+  String channelCount(int count);
+
+  /// No description provided for @onbSatellitesNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'إذا تخطيت هذه الخطوة سنعرض نايل سات وبدر افتراضياً.'**
+  String get onbSatellitesNote;
+
+  /// No description provided for @onbNotificationsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تفوّت أي مباراة'**
+  String get onbNotificationsTitle;
+
+  /// No description provided for @onbNotificationsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'فعّل التنبيهات لتصلك فقط عن الفرق والقنوات التي تتابعها.'**
+  String get onbNotificationsBody;
+
+  /// No description provided for @onbBenefitReminders.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكير قبل البداية مع القناة والتردد'**
+  String get onbBenefitReminders;
+
+  /// No description provided for @onbBenefitGoals.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأهداف والنتيجة النهائية'**
+  String get onbBenefitGoals;
+
+  /// No description provided for @onbBenefitFrequency.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيّر تردد قناة تتابعها'**
+  String get onbBenefitFrequency;
+
+  /// No description provided for @enableNotifications.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل التنبيهات'**
+  String get enableNotifications;
+
+  /// No description provided for @onbInstallTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ثبّت مدار على iPhone'**
+  String get onbInstallTitle;
+
+  /// No description provided for @onbInstallBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'على iPhone لا تصل التنبيهات إلا بعد إضافة مدار إلى الشاشة الرئيسية وفتحه من أيقونته. يتطلب iOS 16.4 أو أحدث.'**
+  String get onbInstallBody;
+
+  /// No description provided for @onbInstallStep1.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط زر المشاركة في Safari'**
+  String get onbInstallStep1;
+
+  /// No description provided for @onbInstallStep2.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر «إضافة إلى الشاشة الرئيسية»'**
+  String get onbInstallStep2;
+
+  /// No description provided for @onbInstallStep3.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتح مدار من أيقونته'**
+  String get onbInstallStep3;
+
+  /// No description provided for @s9Upcoming.
+  ///
+  /// In ar, this message translates to:
+  /// **'مبارياتي القادمة'**
+  String get s9Upcoming;
+
+  /// No description provided for @s9ShowAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض الكل'**
+  String get s9ShowAll;
+
+  /// No description provided for @s9TeamsSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفرق'**
+  String get s9TeamsSection;
+
+  /// No description provided for @s9EmptyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تتابع شيئاً بعد'**
+  String get s9EmptyTitle;
+
+  /// No description provided for @s9EmptyBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع فرقك لتصلك مبارياتها وتنبيهاتها.'**
+  String get s9EmptyBody;
+
+  /// No description provided for @addTeams.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف فرقاً'**
+  String get addTeams;
+
+  /// No description provided for @s9NoUpcoming.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا مباريات قادمة لفرقك الآن'**
+  String get s9NoUpcoming;
+
+  /// No description provided for @s9RemoveTeam.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة {name} من المفضلة'**
+  String s9RemoveTeam(String name);
+
+  /// No description provided for @todayAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'اليوم · {time}'**
+  String todayAt(String time);
+
+  /// No description provided for @dayAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'{weekday} · {time}'**
+  String dayAt(String weekday, String time);
+
+  /// No description provided for @s15SectionTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'التوقيت'**
+  String get s15SectionTime;
+
+  /// No description provided for @s15TimeZone.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنطقة الزمنية'**
+  String get s15TimeZone;
+
+  /// No description provided for @s15AutomaticWithOffset.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلقائي ({offset})'**
+  String s15AutomaticWithOffset(String offset);
+
+  /// No description provided for @s15TimeFormat.
+  ///
+  /// In ar, this message translates to:
+  /// **'صيغة الوقت'**
+  String get s15TimeFormat;
+
+  /// No description provided for @s15H12.
+  ///
+  /// In ar, this message translates to:
+  /// **'12 ساعة · {time}'**
+  String s15H12(String time);
+
+  /// No description provided for @s15H24.
+  ///
+  /// In ar, this message translates to:
+  /// **'24 ساعة · {time}'**
+  String s15H24(String time);
+
+  /// No description provided for @s15SectionAppearance.
+  ///
+  /// In ar, this message translates to:
+  /// **'المظهر'**
+  String get s15SectionAppearance;
+
+  /// No description provided for @s15Mode.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوضع'**
+  String get s15Mode;
+
+  /// No description provided for @s15FontSize.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجم الخط'**
+  String get s15FontSize;
+
+  /// No description provided for @s15FontNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُضاف إلى حجم خط الجهاز'**
+  String get s15FontNote;
+
+  /// No description provided for @s15FontNormal.
+  ///
+  /// In ar, this message translates to:
+  /// **'عادي'**
+  String get s15FontNormal;
+
+  /// No description provided for @s15FontLarge.
+  ///
+  /// In ar, this message translates to:
+  /// **'كبير'**
+  String get s15FontLarge;
+
+  /// No description provided for @s15FontXLarge.
+  ///
+  /// In ar, this message translates to:
+  /// **'كبير جداً'**
+  String get s15FontXLarge;
+
+  /// No description provided for @s15SectionSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقماري'**
+  String get s15SectionSatellites;
+
+  /// No description provided for @s15ChooseSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر أقماري'**
+  String get s15ChooseSatellites;
+
+  /// No description provided for @s15NoSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تختر أقماراً'**
+  String get s15NoSatellites;
+
+  /// No description provided for @s15SectionOnboarding.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطوات البداية'**
+  String get s15SectionOnboarding;
+
+  /// No description provided for @s15RestartOnboarding.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة خطوات البداية'**
+  String get s15RestartOnboarding;
+
+  /// No description provided for @s15SectionAbout.
+  ///
+  /// In ar, this message translates to:
+  /// **'عن التطبيق'**
+  String get s15SectionAbout;
+
+  /// No description provided for @s15Version.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإصدار'**
+  String get s15Version;
+
+  /// No description provided for @s15Privacy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة الخصوصية'**
+  String get s15Privacy;
+
+  /// No description provided for @s15DeleteDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف بيانات جهازي'**
+  String get s15DeleteDevice;
+
+  /// No description provided for @s15DeleteDeviceBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتابعات ورمز الإشعارات من الخادم'**
+  String get s15DeleteDeviceBody;
+
+  /// No description provided for @s15DeleteTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف بيانات جهازي؟'**
+  String get s15DeleteTitle;
+
+  /// No description provided for @s15DeleteConsequence.
+  ///
+  /// In ar, this message translates to:
+  /// **'سنحذف متابعاتك ورمز الإشعارات من الخادم، وسيبدأ التطبيق من جديد.'**
+  String get s15DeleteConsequence;
+
+  /// No description provided for @s15Deleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'حُذفت بيانات جهازك'**
+  String get s15Deleted;
+
+  /// No description provided for @s16InstallBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لتصلك تنبيهات المباريات وتغيّر الترددات'**
+  String get s16InstallBody;
+
+  /// No description provided for @s16Share.
+  ///
+  /// In ar, this message translates to:
+  /// **'شارك التطبيق'**
+  String get s16Share;
+
+  /// No description provided for @s16ShareBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ساعد في انتشار التطبيق'**
+  String get s16ShareBody;
+
+  /// No description provided for @s16SettingsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'التوقيت، المظهر، أقماري'**
+  String get s16SettingsBody;
+
+  /// No description provided for @s16Tagline.
+  ///
+  /// In ar, this message translates to:
+  /// **'مواعيد المباريات والقنوات الناقلة والترددات'**
+  String get s16Tagline;
+
+  /// No description provided for @s16Version.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإصدار {version}'**
+  String s16Version(String version);
+
+  /// No description provided for @s16ShareText.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدار سات — {tagline} {link}'**
+  String s16ShareText(String tagline, String link);
+
+  /// No description provided for @s0UpdateTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث مطلوب'**
+  String get s0UpdateTitle;
+
+  /// No description provided for @s0UpdateBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد إصدار جديد من التطبيق. يرجى التحديث للاستمرار.'**
+  String get s0UpdateBody;
+
+  /// No description provided for @s0YourVersion.
+  ///
+  /// In ar, this message translates to:
+  /// **'إصدارك {version}'**
+  String s0YourVersion(String version);
+
+  /// No description provided for @s0UpdateNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث الآن'**
+  String get s0UpdateNow;
+
+  /// No description provided for @s0UpdateOpensStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'يفتح صفحة التطبيق على Google Play'**
+  String get s0UpdateOpensStore;
+
+  /// No description provided for @s0OfflineBanner.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت غير متصل — آخر تحديث {age}'**
+  String s0OfflineBanner(String age);
+
+  /// No description provided for @s0ExitToClose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط رجوع مرة أخرى للخروج'**
+  String get s0ExitToClose;
+
+  /// No description provided for @s0LoadFailedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى بعد قليل.'**
+  String get s0LoadFailedBody;
+
+  /// No description provided for @s0Retrying.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ المحاولة...'**
+  String get s0Retrying;
+
+  /// No description provided for @followMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع المباراة'**
+  String get followMatch;
+
+  /// No description provided for @followingMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتابع المباراة'**
+  String get followingMatch;
+
+  /// No description provided for @unfollow.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء المتابعة'**
+  String get unfollow;
+
+  /// No description provided for @s3ChooseSatellitesChip.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدد أقمارك'**
+  String get s3ChooseSatellitesChip;
+
+  /// No description provided for @remindersOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'التنبيهات مفعّلة'**
+  String get remindersOn;
+
+  /// No description provided for @remindersOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل التنبيهات'**
+  String get remindersOff;
+
+  /// No description provided for @pushPermissionDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات غير مسموحة لهذا التطبيق — افتح إعدادات الجهاز لتفعيلها'**
+  String get pushPermissionDenied;
+
+  /// No description provided for @errorRateLimited.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات كثيرة، حاول بعد {seconds} ثانية'**
+  String errorRateLimited(int seconds);
+
+  /// No description provided for @errorUnknownFollowTarget.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعض العناصر لم تعد متاحة، أزلناها من متابعاتك'**
+  String get errorUnknownFollowTarget;
+
+  /// No description provided for @errorTooManyFollows.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصلت للحد الأقصى ({max}) من المتابعات'**
+  String errorTooManyFollows(int max);
+
+  /// No description provided for @errorUnknownSatellite.
+  ///
+  /// In ar, this message translates to:
+  /// **'أحد الأقمار لم يعد متاحاً، أعد اختيار أقماري'**
+  String get errorUnknownSatellite;
 }
 
 class _AppLocalizationsDelegate

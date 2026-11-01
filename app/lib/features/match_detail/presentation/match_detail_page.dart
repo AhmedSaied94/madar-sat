@@ -15,6 +15,7 @@ import '../../../core/network/generated/models/match_detail.dart';
 import '../../../core/network/generated/models/satellite_ref.dart';
 import '../../../core/network/swr_snapshot.dart';
 import '../../../core/theme/madar_tokens.dart';
+import '../../../design/components/button.dart';
 import '../../../design/components/empty_state.dart';
 import '../../../design/components/skeleton.dart';
 import '../../../design/components/stale_hint.dart';
@@ -22,6 +23,8 @@ import '../../../design/components/top_bar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../live/live_merge.dart';
 import '../../live/live_poller.dart';
+import '../../follows/data/follows_repository.dart';
+import '../../follows/domain/follow_set.dart';
 import '../../my_satellites/data/my_satellites_provider.dart';
 import '../data/match_detail_providers.dart';
 import '../domain/carriage_order.dart';
@@ -164,7 +167,25 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
       body: SafeArea(
         child: Column(
           children: [
-            MadarTopBar.detail(title: l.s3Title, onBack: _back),
+            MadarTopBar.detail(
+              title: l.s3Title,
+              onBack: _back,
+              actions: shown == null
+                  ? const []
+                  : [
+                      FollowButton(
+                        following: ref
+                            .watch(followSetValueProvider)
+                            .matches
+                            .contains(widget.matchId),
+                        label: l.followMatch,
+                        followingLabel: l.followingMatch,
+                        onPressed: () => ref
+                            .read(followsRepositoryProvider)
+                            .toggle(FollowKind.match, widget.matchId),
+                      ),
+                    ],
+            ),
             Expanded(
               child: LivePollingScope(
                 hasLiveOrImminent:
@@ -215,13 +236,23 @@ class _Loaded extends ConsumerWidget {
             // «على نايل سات وبدر»: the names joined as the design writes them.
             : l.s3OnSatellites(mineNames.join(' و'));
 
-    final all = orderCarriages(carriages: match.carriages, platforms: match.platforms);
+    // My satellites by id: the person's own set once chosen, otherwise O10's defaults
+    // resolved through the catalogue (D3, constitution I).
+    final mine = ref.watch(mySatelliteIdsProvider);
+    final all = orderCarriages(
+      carriages: match.carriages,
+      platforms: match.platforms,
+      isMine: (satellite) => satellite != null && mine.contains(satellite.id),
+    );
     final shown = filterWhereToWatch(all, freeOnly: state.freeOnly, query: state.query);
     final manual = manualBroadcasts(match);
     final age = snapshot.staleAge(Freshness.matchDetail, now: now);
 
     final whereToWatch = WhereToWatchSlivers(
       l: l,
+      matchId: match.id,
+      showChooseSatellites: ref.watch(usesDefaultSatellitesProvider),
+      onChooseSatellites: () => context.push('/settings/satellites'),
       all: all,
       shown: shown,
       state: state,

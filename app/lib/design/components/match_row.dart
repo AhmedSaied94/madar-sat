@@ -8,8 +8,10 @@ import '../../core/network/generated/models/match_summary.dart';
 import '../../core/network/generated/models/sport.dart';
 import '../../core/network/generated/models/status.dart';
 import '../../l10n/app_localizations.dart';
+import 'display_scope.dart';
 import 'logo.dart';
 import 'status_block.dart';
+import '../../core/config/media_image.dart';
 
 /// One match in a list: home team, status, away team, and the channel line that answers
 /// where it airs (up to two channels, free first).
@@ -22,7 +24,7 @@ class MatchRow extends StatelessWidget {
     required this.match,
     this.onTap,
     this.onLongPress,
-    this.use24h = false,
+    this.use24h,
     this.followed = false,
     this.reminder = false,
     this.now,
@@ -31,7 +33,8 @@ class MatchRow extends StatelessWidget {
   final MatchSummary match;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
-  final bool use24h;
+  /// 12 vs 24 hours. Null takes the app's setting; a component test keeps the default.
+  final bool? use24h;
   final bool followed;
   final bool reminder;
   final DateTime? now;
@@ -45,7 +48,7 @@ class MatchRow extends StatelessWidget {
     final firstChannel = headline.isEmpty ? null : headline.first.name;
 
     return Semantics(
-      label: _semantics(l, firstChannel),
+      label: _semantics(context, l, firstChannel),
       button: onTap != null,
       excludeSemantics: true,
       onTap: onTap,
@@ -126,13 +129,14 @@ class MatchRow extends StatelessWidget {
     );
   }
 
-  String _semantics(AppLocalizations l, String? channel) {
+  String _semantics(BuildContext context, AppLocalizations l, String? channel) {
     final parts = <String>[l.vs(match.away.name, match.home.name)];
     switch (match.status) {
       case Status.scheduled:
         final time = MadarTime.kickoff(
           match.kickoffAt,
-          use24h: use24h,
+          use24h: use24h ?? MadarDisplayScope.use24hOf(context),
+          zone: MadarDisplayScope.zoneOf(context).fixed,
           am: l.amMarker,
           pm: l.pmMarker,
         );
@@ -217,7 +221,7 @@ class _Team extends StatelessWidget {
         ? null
         : TeamCrest(
             name: name,
-            logo: logo == null ? null : NetworkImage(logo!),
+            logo: mediaImage(context, logo),
             size: MadarSpace.s6,
           );
     final nameWidget = Flexible(

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:madar_sat/core/db/app_database.dart';
 import 'package:madar_sat/core/format/clock.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
+import 'package:madar_sat/core/db/database_provider.dart';
 import 'package:madar_sat/core/network/swr_providers.dart';
 import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/core/router/app_router.dart';
@@ -17,7 +18,13 @@ import 'package:madar_sat/features/gallery/presentation/gallery_page.dart';
 import 'package:madar_sat/features/frequencies/presentation/frequencies_page.dart';
 import 'package:madar_sat/features/frequencies/presentation/satellite_channels_page.dart';
 import 'package:madar_sat/features/live/live_poller.dart';
+import 'package:madar_sat/features/favorites/data/favorites_providers.dart';
+import 'package:madar_sat/features/favorites/presentation/favorites_page.dart';
 import 'package:madar_sat/features/match_detail/presentation/match_detail_page.dart';
+import 'package:madar_sat/features/more/presentation/more_page.dart';
+import 'package:madar_sat/features/onboarding/presentation/install_page.dart';
+import 'package:madar_sat/features/onboarding/presentation/onboarding_page.dart';
+import 'package:madar_sat/features/settings/presentation/settings_page.dart';
 import 'package:madar_sat/features/matches/presentation/matches_page.dart';
 import 'package:madar_sat/features/my_satellites/presentation/my_satellites_page.dart';
 import 'package:madar_sat/features/shell/presentation/stub_page.dart';
@@ -39,10 +46,15 @@ Widget _app(GoRouter router, {List<MatchSummary> rows = const []}) {
   }
   return ProviderScope(
     overrides: [
+      appDatabaseProvider.overrideWithValue(database),
       swrRepositoryProvider.overrideWithValue(
         SwrRepository(dio: fakeDio(http), database: database),
       ),
       clockProvider.overrideWithValue(() => clock),
+      // S9's two sections answer at once, so no skeleton is animating when the route test
+      // settles (a repeating skeleton never settles).
+      favoriteUpcomingProvider.overrideWith((ref) async => const <MatchSummary>[]),
+      favoriteTeamsProvider.overrideWith((ref) async => const <TeamDetail>[]),
       liveFetcherProvider.overrideWithValue(() async => const []),
     ],
     child: MaterialApp.router(
@@ -72,14 +84,10 @@ void main() {
     '/channel/1',
     '/team/1',
     '/competition/1',
-    '/favorites',
     '/rights',
     '/rights/1',
     '/feeds',
     '/search?q=الأهلي',
-    '/settings',
-    '/settings/theme',
-    '/install',
   ];
 
   for (final route in routes) {
@@ -117,6 +125,16 @@ void main() {
                 .satelliteId,
             3,
           ),
+      '/favorites': (tester) => expect(find.byType(FavoritesPage), findsOneWidget),
+      '/more': (tester) => expect(find.byType(MorePage), findsOneWidget),
+      '/settings': (tester) => expect(find.byType(SettingsPage), findsOneWidget),
+      '/settings/theme': (tester) => expect(
+            tester.widget<SettingsPage>(find.byType(SettingsPage)).section,
+            'theme',
+          ),
+      '/install': (tester) => expect(find.byType(InstallPage), findsOneWidget),
+      '/onboarding/welcome': (tester) => expect(find.byType(OnboardingPage), findsOneWidget),
+      '/onboarding/teams': (tester) => expect(find.byType(OnboardingPage), findsOneWidget),
     };
 
     screens.forEach((route, expectScreen) {

@@ -1,5 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format/bidi.dart';
 import '../../../core/format/digits.dart';
@@ -13,14 +13,18 @@ import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/badges.dart';
 import '../../../design/components/carriage_row.dart';
 import '../../../design/components/commentator_row.dart';
+import '../../../design/components/button.dart';
 import '../../../design/components/empty_state.dart';
 import '../../../design/components/filter_chip_row.dart';
 import '../../../design/components/logo.dart';
 import '../../../design/components/search_field.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/carriage_mapper.dart';
+import '../../follows/data/follows_repository.dart';
+import '../../follows/domain/follow_set.dart';
 import '../domain/carriage_order.dart';
 import 'where_to_watch_state.dart';
+import '../../../core/config/media_image.dart';
 
 /// The search field shows once there is more than a handful to look through.
 const int _searchFrom = 7;
@@ -42,6 +46,9 @@ class WhereToWatchSlivers {
     required this.receptionOf,
     required this.onWatchReception,
     required this.onRefresh,
+    required this.matchId,
+    this.showChooseSatellites = false,
+    this.onChooseSatellites,
   });
 
   final AppLocalizations l;
@@ -63,10 +70,19 @@ class WhereToWatchSlivers {
   final void Function(Uri url) onWatchReception;
   final VoidCallback onRefresh;
 
+  /// The match the empty state offers to follow (S3, US2 scenario 9).
+  final int matchId;
+
+  /// True while the O10 default satellites stand in: the toolbar then offers «حدد أقمارك».
+  final bool showChooseSatellites;
+  final VoidCallback? onChooseSatellites;
+
   List<Widget> build() {
     final slivers = <Widget>[
       SliverToBoxAdapter(
         child: _Toolbar(
+          showChooseSatellites: showChooseSatellites,
+          onChooseSatellites: onChooseSatellites,
           title: l.s3WhereToWatch,
           countText: all.isEmpty ? null : l.s3ChannelsCount(all.total),
           showFilters: !all.isEmpty,
@@ -79,7 +95,7 @@ class WhereToWatchSlivers {
     ];
 
     if (all.isEmpty) {
-      return [...slivers, SliverToBoxAdapter(child: _NoChannels(onRefresh: onRefresh))];
+      return [...slivers, SliverToBoxAdapter(child: _NoChannels(matchId: matchId))];
     }
     if (shown.isEmpty) {
       return [...slivers, SliverToBoxAdapter(child: _Note(text: l.s3NoResults))];
@@ -242,6 +258,8 @@ class WhereToWatchSlivers {
 
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
+    required this.showChooseSatellites,
+    required this.onChooseSatellites,
     required this.title,
     required this.countText,
     required this.showFilters,
@@ -250,6 +268,10 @@ class _Toolbar extends StatelessWidget {
     required this.onToggleFree,
     required this.onQuery,
   });
+
+  /// «حدد أقمارك», shown while the O10 defaults stand in (constitution I).
+  final bool showChooseSatellites;
+  final VoidCallback? onChooseSatellites;
 
   final String title;
   final String? countText;
@@ -285,6 +307,8 @@ class _Toolbar extends StatelessWidget {
                   style: MadarText.textCaption.copyWith(color: colors.textTertiary),
                 ),
               ],
+              const Spacer(),
+              if (showChooseSatellites) _ChooseSatellitesChip(onTap: onChooseSatellites),
             ],
           ),
         ),
@@ -592,7 +616,7 @@ class _PlatformItem extends StatelessWidget {
                   children: [
                     LogoTile(
                       kind: LogoTileKind.channel,
-                      logo: item.logo == null ? null : CachedNetworkImageProvider(item.logo!),
+                      logo: mediaImage(context, item.logo),
                       fallbackText: item.name,
                       size: MadarSpace.s5 * 2,
                     ),
@@ -639,29 +663,54 @@ class _Note extends StatelessWidget {
   }
 }
 
-/// «لم تُضف القنوات الناقلة بعد», with «تحديث» as the next action until follows arrive on D3
-/// (constitution I: a state always offers one).
-class _NoChannels extends StatelessWidget {
-  const _NoChannels({required this.onRefresh});
+/// «لم تُضف القنوات الناقلة بعد», with «تابع المباراة» as the next action (US2 scenario 9):
+/// following the match means its reminder reaches the device when a channel is found.
+class _NoChannels extends ConsumerWidget {
+  const _NoChannels({required this.matchId});
 
-  final VoidCallback onRefresh;
+  final int matchId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final follows = ref.watch(followSetValueProvider);
+    final following = follows.matches.contains(matchId);
+    return EmptyState(
+      title: l.s3NoChannelsTitle,
+      body: l.s3NoChannelsBody,
+      action: FollowButton(
+        following: following,
+        label: l.followMatch,
+        followingLabel: l.followingMatch,
+        onPressed: () => ref
+            .read(followsRepositoryProvider)
+            .toggle(FollowKind.match, matchId),
+      ),
+    );
+  }
+}
+
+/// «حدد أقمارك»: shown while the O10 default satellites stand in, so S3 never calls two
+/// bundled defaults "yours" (constitution I, US2 scenario 4).
+class _ChooseSatellitesChip extends StatelessWidget {
+  const _ChooseSatellitesChip({required this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
-    return EmptyState(
-      title: l.s3NoChannelsTitle,
-      body: l.s3NoChannelsBody,
-      action: FilledButton.icon(
-        onPressed: onRefresh,
-        icon: const Icon(Icons.refresh),
-        label: Text(l.s3Refresh),
-        style: FilledButton.styleFrom(
-          backgroundColor: colors.accent,
-          foregroundColor: colors.onAccent,
-          minimumSize: const Size(MadarLayout.touchMin, MadarLayout.touchMin),
-        ),
+    return ActionChip(
+      avatar: Icon(Icons.satellite_alt, size: MadarText.textLabel.fontSize),
+      label: Text(l.s3ChooseSatellitesChip),
+      onPressed: onTap,
+      backgroundColor: colors.accentContainer,
+      side: BorderSide.none,
+      shape: const StadiumBorder(),
+      labelStyle: MadarText.textLabel.copyWith(
+        color: colors.accentText,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

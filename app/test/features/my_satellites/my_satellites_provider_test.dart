@@ -34,7 +34,11 @@ class _FakeSatellites extends Satellites {
 }
 
 ProviderContainer _container(List<Satellite>? satellites) => ProviderContainer(
-      overrides: [satellitesProvider.overrideWith(() => _FakeSatellites(satellites))],
+      overrides: [
+        satellitesProvider.overrideWith(() => _FakeSatellites(satellites)),
+        // No chosen set: these tests describe the O10 default, before D3 stored a choice.
+        chosenSatelliteIdsProvider.overrideWith((ref) => null),
+      ],
     );
 
 /// Holds a listener, as a screen would: Riverpod 3 pauses a provider nobody listens to.

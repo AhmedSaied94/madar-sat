@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 
 build_dir="${1:-build/web}"
 missing=0
-for asset in sqlite3.wasm drift_worker.js; do
+for asset in sqlite3.wasm drift_worker.js firebase-messaging-sw.js firebase-config.js; do
   if [[ ! -s "$build_dir/$asset" ]]; then
     echo "missing from $build_dir: $asset" >&2
     missing=1
@@ -20,4 +20,4 @@ if [[ "$missing" -ne 0 ]]; then
   exit 1
 fi
 
-echo "the web build ships sqlite3.wasm and drift_worker.js"
+echo "the web build ships sqlite3.wasm, drift_worker.js and the FCM worker"
