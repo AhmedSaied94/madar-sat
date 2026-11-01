@@ -1,5 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
-
 import { useListChannels, useListSatellites } from '../../api/generated/admin';
 import type { ListChannelsParams } from '../../api/generated/admin.schemas';
 
@@ -12,11 +10,4 @@ export function useChannels(params: ListChannelsParams) {
 export function useSatelliteOptions() {
   const query = useListSatellites();
   return query.data?.data ?? [];
-}
-
-export function useRefreshAdmin(): () => void {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries();
-  };
 }

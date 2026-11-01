@@ -18,7 +18,8 @@ import { FrequencyField, type FrequencyValue } from '../../components/FrequencyF
 import { useToast } from '../../components/Toast/Toast';
 import { channels as copy, common, copyForErrorCode, toast as toastCopy } from '../../i18n/ar';
 import { uploadAsset } from '../../lib/media';
-import { useRefreshAdmin, useSatelliteOptions } from './queries';
+import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import { useSatelliteOptions } from './queries';
 
 // A8's editor drawer: every field of PB A8 — matching and display name, carriage (frequency or a
 // platform without a satellite), access, category, country, "shown on match pages" and the logo.

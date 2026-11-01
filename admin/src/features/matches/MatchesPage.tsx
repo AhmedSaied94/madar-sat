@@ -126,7 +126,7 @@ export function MatchesPage(): ReactElement {
   const { data, isPending, isError, error, refetch } = useMatches(params);
   const { competitions, sources } = useMatchLookups();
 
-  const rows = data?.data ?? [];
+  const rows = useMemo(() => data?.data ?? [], [data]);
   const missingCount = rows.filter((row) => row.missing_channels).length;
   const competitionCount = useMemo(() => new Set(rows.map((row) => row.competition.id)).size, [rows]);
 
@@ -345,7 +345,7 @@ export function MatchesPage(): ReactElement {
             groupBy={groupLabel}
             selectable
             rowState={(row) => ({
-              ...(row.missing_channels ? { warning: copy.groupMissing(row.channel_count) } : {}),
+              ...(row.missing_channels ? { warning: copy.missingChannels } : {}),
               ...(row.locked ? { locked: true } : {}),
             })}
             bulkActions={(keys) => (

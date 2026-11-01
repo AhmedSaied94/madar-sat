@@ -222,21 +222,21 @@ export function SourcesPage(): ReactElement {
               <caption className="sr-only">{copy.runsTitle(selected)}</caption>
               <thead>
                 <tr className="text-micro border-b border-divider text-start text-text-tertiary">
-                  <th scope="col" className="px-2 py-2 text-start">{copy.columns.started}</th>
-                  <th scope="col" className="px-2 py-2 text-start">{copy.columns.status}</th>
-                  <th scope="col" className="px-2 py-2 text-end">{copy.columns.found}</th>
-                  <th scope="col" className="px-2 py-2 text-end">{copy.columns.upserted}</th>
-                  <th scope="col" className="px-2 py-2 text-end">{copy.columns.httpErrors}</th>
-                  <th scope="col" className="px-2 py-2" />
+                  <th scope="col" className="p-2 text-start">{copy.columns.started}</th>
+                  <th scope="col" className="p-2 text-start">{copy.columns.status}</th>
+                  <th scope="col" className="p-2 text-end">{copy.columns.found}</th>
+                  <th scope="col" className="p-2 text-end">{copy.columns.upserted}</th>
+                  <th scope="col" className="p-2 text-end">{copy.columns.httpErrors}</th>
+                  <th scope="col" className="p-2" />
                 </tr>
               </thead>
               <tbody>
                 {runRows.map((run) => (
                   <tr key={run.id} data-testid={`run-${run.id}`} className="border-b border-divider last:border-0">
-                    <td className="text-caption px-2 py-2 text-text-secondary">
+                    <td className="text-caption p-2 text-text-secondary">
                       {formatCairoTime(run.started_at)} · {formatCairoTime(run.started_at)}
                     </td>
-                    <td className="text-caption px-2 py-2">
+                    <td className="text-caption p-2">
                       <span
                         data-status={run.status}
                         className={clsx(
@@ -253,10 +253,10 @@ export function SourcesPage(): ReactElement {
                         {copy.runStatus[RUN_STATUS_KEY[run.status]]}
                       </span>
                     </td>
-                    <td className="text-caption px-2 py-2 text-end tabular-nums text-text-primary">{run.items_found}</td>
-                    <td className="text-caption px-2 py-2 text-end tabular-nums text-text-primary">{run.items_upserted}</td>
-                    <td className="text-caption px-2 py-2 text-end tabular-nums text-text-secondary">{run.http_errors}</td>
-                    <td className="px-2 py-2 text-end">
+                    <td className="text-caption p-2 text-end tabular-nums text-text-primary">{run.items_found}</td>
+                    <td className="text-caption p-2 text-end tabular-nums text-text-primary">{run.items_upserted}</td>
+                    <td className="text-caption p-2 text-end tabular-nums text-text-secondary">{run.http_errors}</td>
+                    <td className="p-2 text-end">
                       <Link
                         to={`/import-runs/${run.id}`}
                         className={`text-caption font-semibold text-accent-text ${focusRing}`}

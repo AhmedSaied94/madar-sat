@@ -186,6 +186,7 @@ export const matches = {
   },
   groupCount: (count: number): string => `${count}`,
   groupMissing: (count: number): string => `${count} بلا قنوات`,
+  missingChannels: 'بلا قنوات',
   selected: (count: number): string => `تم تحديد ${count}`,
   bulkToolbar: 'إجراءات جماعية',
   bulk: {

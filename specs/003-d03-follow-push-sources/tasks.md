@@ -300,6 +300,8 @@ Not review findings: three contract gaps found while building, each needing Lane
 - **No per-row version on the competition and satellite lists.** `PUT /competitions/order` and `PUT /satellites/order` require `if_match` per item, but `AdminCompetition` and `AdminSatellite` carry no `etag` (unlike `AdminMatchRow`, A-F3). T101 reads each moved row's version from its detail immediately before the reorder, so a change between the list render and the save is not detected; adding `etag` to both rows closes it.
 - **`ChannelPatch` has no `kind`.** `contracts/admin-api.md` says a placeholder "moved to `kind: satellite`" saves through `PATCH /channels/{id}`, but the patch model omits `kind`. A platform placeholder can therefore gain a satellite and frequency but cannot become a satellite channel; the importers' placeholders are `platform` (R18), so completing one needs `kind` in the patch.
 
+A4: `GET /commentators` has only `q` and a cursor, so A10 ships the search alone and not the board's «بلا صورة» / «بلا صوت» filters; adding them is a contract change with a list filter each.
+
 Two test fixtures were updated for the contract change rather than weakened: the `GET /sources` handlers now answer `SourceHealth` (health fields), and the channel fixtures carry `placeholder_source`. A3's group-header query moved from `rowheader` to `columnheader` because the shared `DataTable` marks its group row with `scope="colgroup"`, and its lock glyph is now named by the table.
 
 ---

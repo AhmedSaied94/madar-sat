@@ -1,7 +1,7 @@
 import { useListCompetitions } from '../../api/generated/admin';
 
-// A6 and A7's reads. Ordering writes arrive with the contract's order endpoints (T101); the lists
-// already read the order the server keeps.
+// A6's read: the competitions in the order the server keeps. Ordering writes go through the shared
+// PUT /competitions/order (T101).
 
 export function useCompetitions() {
   const query = useListCompetitions();
