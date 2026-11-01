@@ -17,6 +17,7 @@ is not ours and is not used (R14).
 from __future__ import annotations
 
 import logging
+import unicodedata
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
@@ -58,12 +59,59 @@ TEAM_PAGE_MARKER = "Fixtures, Results"
 MATCH_PAGE_MARKER = "dynamic-international-tv"
 
 
-def team_slug(name: str | None) -> str:
-    """``"Real Madrid"`` -> ``"real-madrid"``: the form LiveSoccerTV puts in its URLs."""
+# Club-name noise that the two sides spell differently: the mapping table's slug drops it
+# (``bayern-munchen``, ``pyramids-fc``) while the team page prints it (``FC Bayern München``,
+# ``Pyramids FC``), and the other way round for ``fenerbahce-sk`` / ``Fenerbahçe SK``.
+NOISE_TOKENS = frozenset({"fc", "cf", "afc", "sc", "ac", "ssc", "sk", "club", "cd", "ca", "fk", "bk"})
+
+
+def _fold(name: str | None) -> str:
+    """Lower-case, fold Latin accents to ASCII (NFKD), then apply ``ar_normalize``.
+
+    ``ar_normalize`` already lower-cases and turns punctuation (``'``, ``.``) into spaces, but it
+    does not touch Latin diacritics, which is why ``"Atlético"`` used to keep its ``é`` (B2-R1-8).
+    """
     if not name:
         return ""
-    lowered = ar_normalize(name).replace("'", "").replace(".", "")
-    return "-".join(part for part in lowered.split() if part)
+    decomposed = unicodedata.normalize("NFKD", name)
+    return ar_normalize("".join(char for char in decomposed if not unicodedata.combining(char)))
+
+
+def team_slug(name: str | None) -> str:
+    """``"Atlético Madrid"`` -> ``"atletico-madrid"``: the form LiveSoccerTV puts in its URLs."""
+    return "-".join(_fold(name).split())
+
+
+def team_key(name: str | None) -> str:
+    """A separator-free, noise-free form, so a slug and a printed name compare equal.
+
+    ``"cote-divoire"`` and ``"Côte d'Ivoire"`` both give ``"cotedivoire"``; ``"bayern-munchen"``
+    and ``"FC Bayern München"`` both give ``"bayernmunchen"`` (B2-R1-8). ``ar_normalize`` already
+    turns the hyphen into a space, so only the tokens have to be rejoined.
+    """
+    return "".join(token for token in _fold(name).split() if token not in NOISE_TOKENS)
+
+
+def match_url_slugs(url: str | None) -> frozenset[str] | None:
+    """The two team slugs of a ``/match/<a>-vs-<b>/<id>`` link, or ``None``.
+
+    LiveSoccerTV's own URL carries the same slugs the mapping table stores, which is the most
+    reliable comparison: it is what the site itself links to (B2-R1-8).
+    """
+    if not url:
+        return None
+    parts = [part for part in urlsplit(url).path.split("/") if part]
+    if "match" not in parts:
+        return None
+    segment = parts.index("match") + 1
+    if segment >= len(parts):
+        return None
+    for separator in ("-vs-", "-v-"):
+        if separator in parts[segment]:
+            home, away = parts[segment].split(separator, 1)
+            if home and away:
+                return frozenset({home, away})
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -377,14 +425,23 @@ def _valid_channel_name(name: str) -> bool:
 
 
 def pick_match(rows: Sequence[ParsedFixture], target: LivesoccertvTarget) -> ParsedFixture | None:
-    """The row of the target's match: same Cairo day, and the same two teams in either order (T054)."""
-    wanted = {team_slug(target.home_slug), team_slug(target.away_slug)}
+    """The row of the target's match: same Cairo day, and the same two teams in either order (T054).
+
+    The mapping table holds LiveSoccerTV's URL slug while the team page prints the display name
+    (``atletico-madrid`` vs ``Atlético Madrid``), so the match link's own slug pair is compared
+    first, and the folded, noise-free names second (B2-R1-8).
+    """
+    wanted_slugs = frozenset(
+        slug for slug in (target.home_slug.strip("/").lower(), target.away_slug.strip("/").lower()) if slug
+    )
+    wanted_keys = {key for key in (team_key(target.home_slug), team_key(target.away_slug)) if key}
     day = cairo_day(target.kickoff_at)
     for row in rows:
         if row.match_date != day:
             continue
-        teams = {team_slug(row.home), team_slug(row.away)}
-        if teams == wanted:
+        if wanted_slugs and match_url_slugs(row.url) == wanted_slugs:
+            return row
+        if wanted_keys and {team_key(row.home), team_key(row.away)} == wanted_keys:
             return row
     return None
 
@@ -534,9 +591,11 @@ __all__ = [
     "RedisRecentFetches",
     "cairo_day",
     "last_plan_log",
+    "match_url_slugs",
     "store_plan_log",
     "pick_match",
     "plan_targets",
+    "team_key",
     "team_slug",
     "targets_from_args",
     "wall_clock",
