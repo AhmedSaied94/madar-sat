@@ -290,7 +290,7 @@ Each screen is checked against its board in `madar-design/admin-react/SCREENS.md
 
 - [ ] T106 [US4] Walk [quickstart Lane A](quickstart.md#lane-a-admin) steps 1–8 with `pnpm dev:wg` against VPS-1 (needs B1's T047 deploy), including the two-browser reorder conflict and the keyboard-only reorder.
 - [ ] T107 [US4] Take screenshots at 1440 and 1024 against `Main.png`, `Teams.png`, `Competitions.png`, `Satellites.png`, `Channels.png`, `Commentators.png`, `Sources.png` and `SourceRun.png`, in the theme each board uses, and attach them to the PR.
-- [ ] T108 [US4] Add the D3 Lane A items to `docs/owner-actions.md` (after merge: the editor walk-through over WireGuard), each with its task ID, and update the "Open now" table.
+- [x] T108 [US4] Add the D3 Lane A items to `docs/owner-actions.md` (after merge: the editor walk-through over WireGuard), each with its task ID, and update the "Open now" table.
 
 #### Notes from the implementation (Lane A, 2026-11-01)
 
