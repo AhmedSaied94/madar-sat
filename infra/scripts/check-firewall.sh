@@ -65,6 +65,11 @@ check_expectations() {
       echo "IPv4: VPS-2 accepts SSH from anywhere; only VPS-1 may" >&2
       status=1
     fi
+    # Uptime Kuma on 3001 is published for VPS-1's Caddy only (R20).
+    if ! grep -qE '^-A DOCKER-USER ! -s [0-9.]+/32 -p tcp -m conntrack --ctorigdst [0-9.]+ --ctorigdstport 3001 --ctdir ORIGINAL -j DROP$' <<<"$active"; then
+      echo "IPv4: Kuma's 3001 is not limited to VPS-1 (DOCKER-USER rule missing)" >&2
+      status=1
+    fi
   fi
   ((status == 0)) && echo "IPv4: the $host_role expectations are in place"
   return "$status"

@@ -1,0 +1,15 @@
+# 03:30 Africa/Cairo, every night (R19). The database backup starts 30 minutes earlier, so the two
+# uploads do not share the uplink at full speed.
+[Unit]
+Description=Madar Sat: nightly media mirror at 03:30 Africa/Cairo
+Documentation=file:/srv/madar/infra/../docs/runbooks/backups.md
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Africa/Cairo
+Persistent=true
+AccuracySec=1min
+RandomizedDelaySec=5min
+Unit=backup-media.service
+
+[Install]
+WantedBy=timers.target
