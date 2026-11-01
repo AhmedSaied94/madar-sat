@@ -101,7 +101,7 @@ class MorePage extends ConsumerWidget {
                                       ],
                                     ),
                                   ),
-                                  Icon(Icons.chevron_left, color: colors.textSecondary),
+                                  Icon(Icons.chevron_right, color: colors.textSecondary),
                                 ],
                               ),
                             ),

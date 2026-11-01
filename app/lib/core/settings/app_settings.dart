@@ -36,6 +36,10 @@ class MadarZone {
   /// The offset of a local wall-clock instant, in the shape `MadarTime.dayWindow` takes.
   Duration offsetAt(DateTime local) => fixed ?? local.timeZoneOffset;
 
+  /// The offset of a UTC instant, in the shape `LocalDays.of` takes (the chosen zone, or
+  /// the device's own).
+  Duration offsetAtUtc(DateTime utc) => fixed ?? utc.toLocal().timeZoneOffset;
+
   /// [instant]'s wall clock in this zone. With no fixed offset the device's own wall clock
   /// stays exact across DST; a fixed offset is a plain shift of UTC.
   DateTime wallClock(DateTime instant) =>

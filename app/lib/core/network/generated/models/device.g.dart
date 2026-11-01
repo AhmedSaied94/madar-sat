@@ -20,14 +20,14 @@ _Device _$DeviceFromJson(Map<String, dynamic> json) => _Device(
 );
 
 Map<String, dynamic> _$DeviceToJson(_Device instance) => <String, dynamic>{
-  'app_version': instance.appVersion,
+  'app_version': ?instance.appVersion,
   'device_id': instance.deviceId,
   'has_push_token': instance.hasPushToken,
-  'locale': instance.locale,
+  'locale': ?instance.locale,
   'platform': _$DevicePlatformEnumMap[instance.platform]!,
   'prefs': instance.prefs,
   'satellite_ids': instance.satelliteIds,
-  'tz': instance.tz,
+  'tz': ?instance.tz,
 };
 
 const _$DevicePlatformEnumMap = {

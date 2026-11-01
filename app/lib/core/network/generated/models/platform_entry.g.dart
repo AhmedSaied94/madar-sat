@@ -17,7 +17,7 @@ _PlatformEntry _$PlatformEntryFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$PlatformEntryToJson(_PlatformEntry instance) =>
     <String, dynamic>{
       'channel_id': instance.channelId,
-      'country': instance.country,
-      'logo': instance.logo,
+      'country': ?instance.country,
+      'logo': ?instance.logo,
       'name': instance.name,
     };

@@ -37,21 +37,21 @@ _ChannelCarriage _$ChannelCarriageFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ChannelCarriageToJson(_ChannelCarriage instance) =>
     <String, dynamic>{
-      'access': _$AccessEnumMap[instance.access],
-      'beam': _$BeamEnumMap[instance.beam],
-      'category': _$CategoryEnumMap[instance.category],
-      'country': instance.country,
-      'display_name': instance.displayName,
-      'frequency': instance.frequency,
-      'frequency_changed_at': instance.frequencyChangedAt?.toIso8601String(),
-      'frequency_note': instance.frequencyNote,
+      'access': ?_$AccessEnumMap[instance.access],
+      'beam': ?_$BeamEnumMap[instance.beam],
+      'category': ?_$CategoryEnumMap[instance.category],
+      'country': ?instance.country,
+      'display_name': ?instance.displayName,
+      'frequency': ?instance.frequency,
+      'frequency_changed_at': ?instance.frequencyChangedAt?.toIso8601String(),
+      'frequency_note': ?instance.frequencyNote,
       'id': instance.id,
       'kind': _$KindEnumMap[instance.kind]!,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'package': instance.package,
-      'provider': instance.provider,
-      'satellite': instance.satellite,
+      'package': ?instance.package,
+      'provider': ?instance.provider,
+      'satellite': ?instance.satellite,
     };
 
 const _$AccessEnumMap = {

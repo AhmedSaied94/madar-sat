@@ -45,11 +45,17 @@ class SwrRepository {
   final AppDatabase _db;
 
   /// One local day of matches. The ETag is stored under the day alone, so the request
-  /// carries nothing else that could change the answer; a query that does (D3's own
-  /// satellites) needs its own cache key, as `DocumentKeys.matchesBySatellites` has.
-  Stream<SwrSnapshot<List<MatchSummary>>> watchDay(DateTime day) async* {
+  /// carries nothing else that could change the answer; the ranking D3 sends
+  /// (`my_satellite_ids`) does change the channel line, so its ETag is kept under the day
+  /// with the selection (M-R1-5) and changing satellites never reuses the old one.
+  Stream<SwrSnapshot<List<MatchSummary>>> watchDay(
+    DateTime day, {
+    Set<int> mySatelliteIds = const {},
+  }) async* {
     final dayKey = LocalDays.key(day);
-    final window = await _db.windowFor(dayKey);
+    final selection = _sortedIds(mySatelliteIds);
+    final windowKey = selection.isEmpty ? dayKey : '$dayKey|$selection';
+    final window = await _db.windowFor(windowKey);
     List<MatchSummary>? cached;
     if (window != null) {
       try {
@@ -71,13 +77,14 @@ class SwrRepository {
         send: (client) => client.listMatchesV1MatchesGet(
           from: bounds.from.toUtc(),
           to: bounds.to.toUtc(),
+          mySatelliteIds: selection.isEmpty ? null : selection,
         ),
         unwrap: (envelope) => _dataOf(envelope.success, envelope.error, envelope.data),
       );
       final now = _db.now().toUtc();
       if (fetched.notModified) {
         if (cached == null) throw const ApiFailure();
-        await _db.touchWindow(dayKey, now);
+        await _db.touchWindow(windowKey, now);
         yield SwrSnapshot(data: cached, fetchedAt: now);
         return;
       }
@@ -85,7 +92,13 @@ class SwrRepository {
       // server said, and the next open re-reads the cache.
       var written = true;
       try {
-        await _db.replaceDay(day, fetched.value!, etag: fetched.etag, fetchedAt: now);
+        await _db.replaceDay(
+          day,
+          fetched.value!,
+          etag: fetched.etag,
+          fetchedAt: now,
+          windowKey: windowKey,
+        );
       } catch (error, stackTrace) {
         written = false;
         _log('writing the day $dayKey failed', error, stackTrace);

@@ -14,6 +14,6 @@ _NamedRef _$NamedRefFromJson(Map<String, dynamic> json) => _NamedRef(
 
 Map<String, dynamic> _$NamedRefToJson(_NamedRef instance) => <String, dynamic>{
   'id': instance.id,
-  'logo': instance.logo,
+  'logo': ?instance.logo,
   'name': instance.name,
 };

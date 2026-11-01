@@ -22,11 +22,11 @@ _TeamSearchItem _$TeamSearchItemFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$TeamSearchItemToJson(_TeamSearchItem instance) =>
     <String, dynamic>{
-      'country': instance.country,
+      'country': ?instance.country,
       'id': instance.id,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'primary_competition': instance.primaryCompetition,
+      'primary_competition': ?instance.primaryCompetition,
       'sport': _$SportEnumMap[instance.sport]!,
     };
 

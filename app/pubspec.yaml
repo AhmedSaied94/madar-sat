@@ -12,6 +12,10 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # `usePathUrlStrategy`: the PWA reads `/match/42` from the path, not the fragment
+  # (M-R1-10), so a notification's `fcm_options.link` opens the match.
+  flutter_web_plugins:
+    sdk: flutter
 
   # State, navigation and networking (constitution VIII).
   flutter_riverpod: ^3.4.3

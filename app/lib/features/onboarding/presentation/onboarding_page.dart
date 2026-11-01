@@ -75,7 +75,9 @@ class OnboardingPage extends ConsumerWidget {
                       l.nextCount(settings.satelliteIds.length),
                     _ => l.next,
                   },
-                  icon: Icons.arrow_back,
+                  // S1.2–S1.4's forward action: the arrow sits after the label and, mirrored
+                  // in RTL, points left (constitution III, `Onb-Teams.png`).
+                  trailingIcon: Icons.arrow_forward,
                   expanded: true,
                   onPressed: goNext,
                 ),
@@ -112,7 +114,8 @@ class _Chrome extends ConsumerWidget {
                       await controller.back();
                       if (context.mounted) context.go('/onboarding/${previous.slug}');
                     },
-                    icon: const Icon(Icons.arrow_forward),
+                    // Back: mirrored in RTL, `arrow_back` points right, the way back reads.
+                    icon: const Icon(Icons.arrow_back),
                   ),
           ),
           Expanded(

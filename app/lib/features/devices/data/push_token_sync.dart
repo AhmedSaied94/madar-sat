@@ -4,16 +4,19 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/db/database_provider.dart';
 import '../../../core/platform/push_service.dart';
+import '../../../core/platform/secure_store.dart';
 import 'device_identity_provider.dart';
 
 part 'push_token_sync.g.dart';
 
-/// Keeps the device's push token in secure storage and flags the change for the server
-/// (research R27, US2 scenario 7).
+/// Keeps the device's push id in secure storage and flags the change for the server
+/// (research R27, US2 scenario 7, M-R1-2).
 ///
 /// A token arrives on first start and again whenever FCM rotates it. Each new value is
-/// written once and marks `sync_state.device` dirty, which is what `PUT /v1/devices/me` acts
-/// on (T133); repeating the same token does nothing, so a resume does not re-send it.
+/// written once under [SecureKeys.pushToken] — never under [SecureKeys.deviceToken], which
+/// carries the server's auth token — and marks `sync_state.device` dirty, which
+/// [DeviceSync] sends in `PUT /v1/devices/me`'s body. Repeating the same token does nothing,
+/// so a resume does not re-send it.
 @Riverpod(keepAlive: true)
 class PushTokenSync extends _$PushTokenSync {
   StreamSubscription<String?>? _subscription;
@@ -27,8 +30,8 @@ class PushTokenSync extends _$PushTokenSync {
     Future<void> apply(String? token) async {
       if (token == null || token.isEmpty) return;
       final identity = await ref.read(deviceIdentityControllerProvider.future);
-      if (identity.token == token) return;
-      await ref.read(deviceIdentityControllerProvider.notifier).setToken(token);
+      if (identity.pushToken == token) return;
+      await ref.read(deviceIdentityControllerProvider.notifier).setPushToken(token);
       await database.markSyncDirty('device');
     }
 

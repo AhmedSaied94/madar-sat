@@ -22,8 +22,8 @@ _EnvelopeChannelDetail _$EnvelopeChannelDetailFromJson(
 Map<String, dynamic> _$EnvelopeChannelDetailToJson(
   _EnvelopeChannelDetail instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

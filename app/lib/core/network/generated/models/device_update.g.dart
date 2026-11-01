@@ -22,10 +22,10 @@ _DeviceUpdate _$DeviceUpdateFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$DeviceUpdateToJson(_DeviceUpdate instance) =>
     <String, dynamic>{
-      'app_version': instance.appVersion,
-      'locale': instance.locale,
-      'prefs': instance.prefs,
-      'push_token': instance.pushToken,
-      'satellite_ids': instance.satelliteIds,
-      'tz': instance.tz,
+      'app_version': ?instance.appVersion,
+      'locale': ?instance.locale,
+      'prefs': ?instance.prefs,
+      'push_token': ?instance.pushToken,
+      'satellite_ids': ?instance.satelliteIds,
+      'tz': ?instance.tz,
     };

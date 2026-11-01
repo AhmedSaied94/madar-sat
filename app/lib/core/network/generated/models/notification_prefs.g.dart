@@ -15,4 +15,4 @@ _NotificationPrefs _$NotificationPrefsFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$NotificationPrefsToJson(_NotificationPrefs instance) =>
-    <String, dynamic>{'types': instance.types};
+    <String, dynamic>{'types': ?instance.types};

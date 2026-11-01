@@ -47,7 +47,12 @@ GoRouter createAppRouter({
     refreshListenable: refreshListenable,
     redirect: (context, state) => guard?.call(state.matchedLocation),
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const MatchesPage()),
+      // The five root tabs carry S0's exit rule: a back press on any of them shows the
+      // snackbar, and a second press within the window leaves the app (US2 scenario 13).
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const ExitGuard(child: MatchesPage()),
+      ),
       GoRoute(path: '/live', builder: (context, state) => const StubPage(title: '/live')),
       GoRoute(
         path: '/day/:date',
@@ -58,8 +63,14 @@ GoRouter createAppRouter({
         redirect: _requireIntegerId,
         builder: (context, state) => MatchDetailPage(matchId: _idOf(state)),
       ),
-      GoRoute(path: '/my-satellites', builder: (context, state) => const MySatellitesPage()),
-      GoRoute(path: '/satellites', builder: (context, state) => const FrequenciesPage()),
+      GoRoute(
+        path: '/my-satellites',
+        builder: (context, state) => const ExitGuard(child: MySatellitesPage()),
+      ),
+      GoRoute(
+        path: '/satellites',
+        builder: (context, state) => const ExitGuard(child: FrequenciesPage()),
+      ),
       GoRoute(
         path: '/satellites/:id',
         redirect: _requireIntegerId,
@@ -78,6 +89,8 @@ GoRouter createAppRouter({
         builder: (context, state) =>
             StubPage(title: '/competition/${state.pathParameters['id']}'),
       ),
+      // S9 and S16 carry the same rule inside their pages; these three are wrapped here, so
+      // every root tab answers a back press the same way.
       GoRoute(path: '/favorites', builder: (context, state) => const FavoritesPage()),
       GoRoute(path: '/more', builder: (context, state) => const MorePage()),
       GoRoute(

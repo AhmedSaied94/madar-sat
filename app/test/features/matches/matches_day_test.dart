@@ -219,4 +219,33 @@ void main() {
       expect(old.staleAge(now), const Duration(hours: 3));
     });
   });
+  group('the chosen zone (M-R1-6)', () {
+    test('the same set of matches groups into different days under two zones', () {
+      // 22:30 UTC is 01:30 the next day at GMT+3 and 10:30 the same day at GMT−12.
+      final late = sampleMatch(id: 90, kickoff: DateTime.utc(2026, 10, 28, 22, 30));
+      Duration plus3(DateTime _) => const Duration(hours: 3);
+      Duration minus12(DateTime _) => const Duration(hours: -12);
+
+      expect(groupDay(DateTime(2026, 10, 28), [late], offsetAt: plus3).matchCount, 0);
+      expect(groupDay(DateTime(2026, 10, 29), [late], offsetAt: plus3).matchCount, 1);
+      expect(groupDay(DateTime(2026, 10, 28), [late], offsetAt: minus12).matchCount, 1);
+      expect(groupDay(DateTime(2026, 10, 29), [late], offsetAt: minus12).matchCount, 0);
+    });
+
+    test('a match shown at 23:30 in the chosen zone appears under that day', () {
+      // 20:30 UTC is 23:30 at GMT+3 and 08:30 at GMT−12: the clock it shows and the day it
+      // is listed under must be the same zone's.
+      final evening = sampleMatch(id: 91, kickoff: DateTime.utc(2026, 10, 28, 20, 30));
+
+      final groups = groupDay(
+        DateTime(2026, 10, 28),
+        [evening],
+        offsetAt: (_) => const Duration(hours: 3),
+      );
+
+      expect(groups.matchCount, 1);
+      expect(groups.competitions.single.matches.single.id, 91);
+    });
+  });
+
 }

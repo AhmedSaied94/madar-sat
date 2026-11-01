@@ -26,9 +26,9 @@ _FollowSet _$FollowSetFromJson(Map<String, dynamic> json) => _FollowSet(
 
 Map<String, dynamic> _$FollowSetToJson(_FollowSet instance) =>
     <String, dynamic>{
-      'channels': instance.channels,
-      'commentators': instance.commentators,
-      'competitions': instance.competitions,
-      'matches': instance.matches,
-      'teams': instance.teams,
+      'channels': ?instance.channels,
+      'commentators': ?instance.commentators,
+      'competitions': ?instance.competitions,
+      'matches': ?instance.matches,
+      'teams': ?instance.teams,
     };

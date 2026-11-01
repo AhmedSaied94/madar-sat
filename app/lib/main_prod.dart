@@ -6,6 +6,7 @@ import 'core/config/app_config.dart';
 import 'core/config/remote_config.dart';
 import 'core/config/remote_config_repository.dart';
 import 'core/platform/firebase_bootstrap.dart';
+import 'core/platform/url_strategy.dart';
 
 /// The prod flavor: production.
 ///
@@ -14,6 +15,8 @@ import 'core/platform/firebase_bootstrap.dart';
 /// so the API and media hosts never change mid-session (research R28).
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // `/match/42` from a notification link is a path, not a fragment (M-R1-10).
+  applyUrlStrategy();
   AppConfig.ensureConfigured();
   await FirebaseBootstrap.start();
   final remote = await const RemoteConfigRepository().load();

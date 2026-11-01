@@ -250,15 +250,22 @@ class AppDatabase extends _$AppDatabase {
     List<MatchSummary> rows, {
     required String? etag,
     required DateTime fetchedAt,
+    String? windowKey,
   }) {
     final window = dayWindow(day);
     final key = LocalDays.key(day);
+    // Under [windowKey], which is the day alone or the day with the ranking it was fetched
+    // for (M-R1-5). The rows belong to that answer, so no other ETag may confirm them.
+    final etagKey = windowKey ?? key;
     return transaction(() async {
       await (delete(matches)..where((t) => _inDay(t, window, key))).go();
       await batch((batch) {
         batch.insertAllOnConflictUpdate(matches, rows.map(_toRow).toList());
       });
-      await _writeWindow(key, etag, fetchedAt);
+      await (delete(matchWindows)
+            ..where((t) => t.day.equals(key) | t.day.like('$key|%')))
+          .go();
+      await _writeWindow(etagKey, etag, fetchedAt);
     });
   }
 
@@ -337,9 +344,15 @@ class AppDatabase extends _$AppDatabase {
                           t.matchDate.isBiggerThanValue(lastKey))),
             ))
           .go();
-      await (delete(matchWindows)
-            ..where((t) => t.day.isSmallerThanValue(firstKey) | t.day.isBiggerThanValue(lastKey)))
-          .go();
+      // A window's key is the day, or the day with the ranking it was fetched for
+      // (`2026-11-01|3,7`): prune on the day part, so today's keyed window stays.
+      final windows = await (select(matchWindows)).map((row) => row.day).get();
+      for (final window in windows) {
+        final day = window.split('|').first;
+        if (day.compareTo(firstKey) < 0 || day.compareTo(lastKey) > 0) {
+          await (delete(matchWindows)..where((t) => t.day.equals(window))).go();
+        }
+      }
 
       final dayKeyed = await (select(cachedDocuments)..where((t) => t.key.like('matches:%')))
           .map((row) => row.key)

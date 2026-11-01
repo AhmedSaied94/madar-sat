@@ -32,14 +32,14 @@ _TeamDetail _$TeamDetailFromJson(Map<String, dynamic> json) => _TeamDetail(
 Map<String, dynamic> _$TeamDetailToJson(_TeamDetail instance) =>
     <String, dynamic>{
       'competitions': instance.competitions,
-      'country': instance.country,
+      'country': ?instance.country,
       'id': instance.id,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'primary_competition': instance.primaryCompetition,
+      'primary_competition': ?instance.primaryCompetition,
       'recent': instance.recent,
       'sport': _$SportEnumMap[instance.sport]!,
-      'stadium': instance.stadium,
+      'stadium': ?instance.stadium,
       'upcoming': instance.upcoming,
     };
 

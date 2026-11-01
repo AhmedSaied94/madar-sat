@@ -22,8 +22,8 @@ _EnvelopeListSatellite _$EnvelopeListSatelliteFromJson(
 Map<String, dynamic> _$EnvelopeListSatelliteToJson(
   _EnvelopeListSatellite instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

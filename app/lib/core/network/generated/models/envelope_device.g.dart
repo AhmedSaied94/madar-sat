@@ -20,8 +20,8 @@ _EnvelopeDevice _$EnvelopeDeviceFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$EnvelopeDeviceToJson(_EnvelopeDevice instance) =>
     <String, dynamic>{
-      'data': instance.data,
-      'error': instance.error,
-      'meta': instance.meta,
+      'data': ?instance.data,
+      'error': ?instance.error,
+      'meta': ?instance.meta,
       'success': instance.success,
     };

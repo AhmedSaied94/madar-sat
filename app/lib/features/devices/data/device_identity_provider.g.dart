@@ -10,22 +10,22 @@ part of 'device_identity_provider.dart';
 // ignore_for_file: type=lint, type=warning
 /// The identity in force, read from secure storage on start.
 ///
-/// Registration itself (`POST /v1/devices`) is T133's, against B1's regenerated client; this
-/// holds the state it writes and the interceptor reads.
+/// Registration (`POST /v1/devices`) is [DeviceRepository]'s, and it writes the token this
+/// holds; the interceptor reads it on every `/v1` request.
 
 @ProviderFor(DeviceIdentityController)
 final deviceIdentityControllerProvider = DeviceIdentityControllerProvider._();
 
 /// The identity in force, read from secure storage on start.
 ///
-/// Registration itself (`POST /v1/devices`) is T133's, against B1's regenerated client; this
-/// holds the state it writes and the interceptor reads.
+/// Registration (`POST /v1/devices`) is [DeviceRepository]'s, and it writes the token this
+/// holds; the interceptor reads it on every `/v1` request.
 final class DeviceIdentityControllerProvider
     extends $AsyncNotifierProvider<DeviceIdentityController, DeviceIdentity> {
   /// The identity in force, read from secure storage on start.
   ///
-  /// Registration itself (`POST /v1/devices`) is T133's, against B1's regenerated client; this
-  /// holds the state it writes and the interceptor reads.
+  /// Registration (`POST /v1/devices`) is [DeviceRepository]'s, and it writes the token this
+  /// holds; the interceptor reads it on every `/v1` request.
   DeviceIdentityControllerProvider._()
     : super(
         from: null,
@@ -46,12 +46,12 @@ final class DeviceIdentityControllerProvider
 }
 
 String _$deviceIdentityControllerHash() =>
-    r'1296e13052bd17c9d0352e99f976695497c6e52f';
+    r'f39728762dfa77e22352ddeb9c12ee5523de01fc';
 
 /// The identity in force, read from secure storage on start.
 ///
-/// Registration itself (`POST /v1/devices`) is T133's, against B1's regenerated client; this
-/// holds the state it writes and the interceptor reads.
+/// Registration (`POST /v1/devices`) is [DeviceRepository]'s, and it writes the token this
+/// holds; the interceptor reads it on every `/v1` request.
 
 abstract class _$DeviceIdentityController
     extends $AsyncNotifier<DeviceIdentity> {

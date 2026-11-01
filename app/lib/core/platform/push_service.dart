@@ -54,13 +54,71 @@ class NoPushService implements PushService {
   Stream<String> get openedRoutes => const Stream.empty();
 }
 
-/// `firebase_messaging` for Android, iOS and the web.
-class FirebasePushService implements PushService {
-  FirebasePushService({InstallGuide? guide}) : _guide = guide ?? createInstallGuide();
+/// The `firebase_messaging` calls [FirebasePushService] makes, as an interface.
+///
+/// T118's test file exists because of this seam: without it every case of the service needs
+/// a real Firebase app, and none of them would ever be written. Only this file touches the
+/// plugin.
+abstract interface class PushMessaging {
+  Future<AuthorizationStatus> requestPermission();
+
+  /// Registers for push; the id arrives on [onRegistered] (plugin v17 replaced the FCM
+  /// token API with this pair).
+  Future<void> register({String? vapidKey});
+
+  Stream<String> get onRegistered;
+
+  Stream<RemoteMessage> get onMessage;
+
+  Stream<RemoteMessage> get onMessageOpenedApp;
+
+  Future<RemoteMessage?> get getInitialMessage;
+}
+
+/// The plugin behind [PushMessaging].
+class FirebasePushMessaging implements PushMessaging {
+  const FirebasePushMessaging();
 
   static FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
+  @override
+  Future<AuthorizationStatus> requestPermission() async {
+    final settings = await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    return settings.authorizationStatus;
+  }
+
+  @override
+  Future<void> register({String? vapidKey}) => _messaging.register(vapidKey: vapidKey);
+
+  @override
+  Stream<String> get onRegistered => _messaging.onRegistered;
+
+  @override
+  Stream<RemoteMessage> get onMessage => FirebaseMessaging.onMessage;
+
+  @override
+  Stream<RemoteMessage> get onMessageOpenedApp => FirebaseMessaging.onMessageOpenedApp;
+
+  @override
+  Future<RemoteMessage?> get getInitialMessage => _messaging.getInitialMessage();
+}
+
+/// `firebase_messaging` for Android, iOS and the web.
+class FirebasePushService implements PushService {
+  FirebasePushService({
+    InstallGuide? guide,
+    PushMessaging? messaging,
+    bool? isWeb,
+    String? vapidKey,
+  })  : _guide = guide ?? createInstallGuide(),
+        _messaging = messaging ?? const FirebasePushMessaging(),
+        _isWeb = isWeb ?? kIsWeb,
+        _vapidKey = vapidKey ?? AppConfig.firebaseVapidKey;
+
   final InstallGuide _guide;
+  final PushMessaging _messaging;
+  final bool _isWeb;
+  final String _vapidKey;
 
   @override
   bool get canRequestPermission => !_guide.needsInstallSteps;
@@ -68,19 +126,14 @@ class FirebasePushService implements PushService {
   @override
   Future<bool> requestPermission() async {
     if (!canRequestPermission) return false;
-    if (kIsWeb && AppConfig.firebaseVapidKey.isEmpty) return false;
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    return settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional;
+    if (_isWeb && _vapidKey.isEmpty) return false;
+    final status = await _messaging.requestPermission();
+    return status == AuthorizationStatus.authorized || status == AuthorizationStatus.provisional;
   }
 
   /// The Firebase installation id registered for this app instance: FCM's direct-send
-  /// target, which is what `push_token` carries (the plugin's `register()`/`onRegistered`
-  /// pair replaced the FCM token API in v17).
+  /// target, which is what `push_token` carries. It is **not** the device's auth token
+  /// (M-R1-2).
   @override
   Future<String?> currentToken() async {
     final registered = Completer<String?>();
@@ -88,11 +141,7 @@ class FirebasePushService implements PushService {
       if (!registered.isCompleted) registered.complete(id);
     });
     try {
-      await _messaging.register(
-        vapidKey: kIsWeb && AppConfig.firebaseVapidKey.isNotEmpty
-            ? AppConfig.firebaseVapidKey
-            : null,
-      );
+      await _messaging.register(vapidKey: _isWeb && _vapidKey.isNotEmpty ? _vapidKey : null);
       return await registered.future.timeout(const Duration(seconds: 10));
     } on Object {
       // No APNs token yet on an iPhone, no permission, or the service worker is not
@@ -104,22 +153,23 @@ class FirebasePushService implements PushService {
   }
 
   @override
-  Stream<String?> get tokenChanges => _messaging.onRegistered.map<String?>((String id) => id);
+  Stream<String?> get tokenChanges =>
+      _messaging.onRegistered.map<String?>((String id) => id).distinct();
 
   @override
   Stream<String> get openedRoutes => Stream<String>.multi((controller) {
         final subscriptions = [
-          FirebaseMessaging.onMessageOpenedApp.listen((message) => _addRoute(controller, message)),
-          FirebaseMessaging.onMessage.listen((message) => _addRoute(controller, message)),
+          _messaging.onMessageOpenedApp.listen((message) => _addRoute(controller, message)),
+          _messaging.onMessage.listen((message) => _addRoute(controller, message)),
         ];
         controller.onCancel = () async {
           for (final subscription in subscriptions) {
             await subscription.cancel();
           }
         };
-        if (kIsWeb) return;
+        if (_isWeb) return;
         unawaited(
-          _messaging.getInitialMessage().then((message) {
+          _messaging.getInitialMessage.then((message) {
             if (message != null) _addRoute(controller, message);
           }),
         );

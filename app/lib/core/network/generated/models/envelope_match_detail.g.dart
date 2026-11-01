@@ -21,8 +21,8 @@ _EnvelopeMatchDetail _$EnvelopeMatchDetailFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$EnvelopeMatchDetailToJson(
   _EnvelopeMatchDetail instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

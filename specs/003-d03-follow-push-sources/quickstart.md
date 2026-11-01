@@ -91,7 +91,7 @@ On a real Android phone (dev flavor against VPS-1, then the closed-test build):
 
 On an iPhone (iOS ≥ 16.4), in Safari, open the PWA preview:
 
-7. S1.4 shows the install guide, not a prompt. Add to Home Screen, open from the icon, reach S1.4 → «تفعيل التنبيهات» → allow. Repeat step 3 → the reminder arrives on the iPhone (SC-001, iPhone) and opens `/match/<id>`.
+7. S1.4 shows the install guide, not a prompt. Add to Home Screen, open from the icon, reach S1.4 → «تفعيل التنبيهات» → allow. Repeat step 3 → the reminder arrives on the iPhone (SC-001, iPhone) and opens `/match/<id>`: the PWA reads routes from the path (`usePathUrlStrategy`, M-R1-10), so the address bar shows the match's path with no `#`, and the screen is S3 for that match.
 
 Screens are compared with `Splash.png`, `Onb-*.png`, `Favorites.png`, `Settings.png`, `More.png`, `Sys-*.png`, `Matches-Banners.png` in both themes.
 
