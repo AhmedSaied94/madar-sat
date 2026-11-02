@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/settings/settings_providers.dart';
 import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/button.dart';
@@ -9,14 +11,25 @@ import '../../../l10n/app_localizations.dart';
 
 /// S1.5: the three steps that put the PWA on an iPhone's home screen, which is the only
 /// place iOS ≥ 16.4 grants Web Push (research R26). Also reachable from S16.
-class InstallPage extends StatelessWidget {
+///
+/// From S1.4 this screen takes that step's place (PB S1.4), so «فهمت» and «لاحقًا» finish
+/// onboarding and open the home screen; the close button goes back to S1.4.
+class InstallPage extends ConsumerWidget {
   const InstallPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
     void close() => context.canPop() ? context.pop() : context.go('/');
+
+    Future<void> done() async {
+      final settings = await ref.read(appSettingsProvider.future);
+      if (!context.mounted) return;
+      if (settings.onboardingDone) return close();
+      await ref.read(appSettingsProvider.notifier).completeOnboarding();
+      if (context.mounted) context.go('/');
+    }
 
     return Scaffold(
       backgroundColor: colors.bg,
@@ -95,13 +108,13 @@ class InstallPage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  MadarButton(label: l.gotIt, expanded: true, onPressed: close),
+                  MadarButton(label: l.gotIt, expanded: true, onPressed: done),
                   const SizedBox(height: MadarSpace.s1),
                   MadarButton(
                     label: l.later,
                     variant: MadarButtonVariant.ghost,
                     expanded: true,
-                    onPressed: close,
+                    onPressed: done,
                   ),
                 ],
               ),

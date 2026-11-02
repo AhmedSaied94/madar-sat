@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/madar_line.dart';
@@ -64,29 +66,42 @@ class _OrbitMarkPainter extends CustomPainter {
   final Color dot;
   final BrandMarkTone tone;
 
+  /// The design package's SVG (`components.css` `.mk`) on its 32-unit grid: a planet at the
+  /// centre, an orbit tilted −28° around it, and a satellite on the orbit's upper end.
+  static const double _grid = 32;
+  static const double _orbitTilt = -28 * math.pi / 180;
+  static const double _orbitStroke = 1.8;
+  static const double _orbitStrokeMono = 2.2;
+  static const double _satellite = 2.1;
+  static const double _satelliteMono = 2.3;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final unit = size.shortestSide / _grid;
     final center = size.center(Offset.zero);
-    final radius = size.shortestSide * 0.28;
-    final stroke = size.shortestSide * 0.09;
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..color = ring;
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center,
-        width: radius * 2.6,
-        height: radius * 1.5,
-      ),
-      paint,
-    );
-    final dotPaint = Paint()..color = dot;
-    canvas.drawCircle(
-      center + Offset(radius * 1.05, -radius * 0.28),
-      stroke * 0.75,
-      dotPaint,
-    );
+    final mono = tone == BrandMarkTone.mono;
+
+    canvas
+      ..save()
+      ..translate(center.dx, center.dy)
+      ..rotate(_orbitTilt)
+      ..drawOval(
+        Rect.fromCenter(center: Offset.zero, width: 24 * unit, height: 10 * unit),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = (mono ? _orbitStrokeMono : _orbitStroke) * unit
+          ..color = ring,
+      )
+      ..restore();
+
+    final fill = Paint()..color = dot;
+    canvas
+      ..drawCircle(center, 5.2 * unit, fill)
+      ..drawCircle(
+        center + Offset(10.6 * unit, -5.6 * unit),
+        (mono ? _satelliteMono : _satellite) * unit,
+        fill,
+      );
   }
 
   @override
