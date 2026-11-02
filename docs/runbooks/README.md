@@ -2,14 +2,16 @@
 
 Each runbook covers one area. The first-time setup crosses several of them, so this page gives the order. Do the steps top to bottom. Each one links to the section that has the commands.
 
+**Placeholders.** The runbooks never carry the deployment's public IPs or its own hostnames: they write `<VPS1_IP>`, `<VPS2_IP>`, `<KUMA_HOST>`, `<PWA_HOST>`, `<PWA_PREVIEW_HOST>` and `<FIREBASE_AUTH_DOMAIN>` (a public host reads `api.<VPS1_IP>.sslip.io`). The values are in `docs/runbooks/hosts.env`, which is git-ignored: copy [hosts.env.example](hosts.env.example) to it once per checkout and fill it in, or copy the file from a checkout that has it. Load it with `set -a; . docs/runbooks/hosts.env; set +a` and paste a command with `$VPS1_IP` where the runbook says `<VPS1_IP>`. A new IP or host goes into both files, never into a runbook. The private addresses (`10.1.0.x`, `10.8.0.x`) stay written out: nothing outside the VCN and WireGuard reaches them.
+
 Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's x86-64 home box. VPS-1 is public; VPS-2 has nothing public and is reached through VPS-1; the home box reaches only Redis:
 
 | | VPS-1 "app" | VPS-2 "workers" | Home box |
 | --- | --- | --- | --- |
-| Reserved public IP | `130.110.117.215` | `130.110.97.25` | none |
+| Reserved public IP | `<VPS1_IP>` | `<VPS2_IP>` | none |
 | VCN private IP | `10.1.0.97` | `10.1.0.118` | none |
 | WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` | Peer, outbound only |
-| Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None | None |
+| Public hostnames | `api.<VPS1_IP>.sslip.io`, `media.<VPS1_IP>.sslip.io`, `app.<VPS1_IP>.sslip.io` | None | None |
 | Admin | `https://10.8.0.1`, over WireGuard only | None | None |
 | Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `beat`, Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home` and a 10-minute update timer |
 

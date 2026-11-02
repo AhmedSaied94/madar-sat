@@ -2,7 +2,7 @@
 
 Use this runbook when you can't reach a VM the normal way: VPS-1 over WireGuard (`ssh ubuntu@10.8.0.1`), or VPS-2 through it (`ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118`). Typical causes: `wg0` is broken, the hub key is lost, every device with a peer is gone, or a firewall or sshd change locked you out. It also covers Oracle stopping an instance. Background: SD §7.2 ("Break-glass access", "OCI gotchas") and FR-023.
 
-The public API usually keeps serving through all of this, since only the private side is affected. Check `curl -s https://api.130.110.117.215.sslip.io/healthz` before you change anything.
+The public API usually keeps serving through all of this, since only the private side is affected. Check `curl -s https://api.<VPS1_IP>.sslip.io/healthz` before you change anything.
 
 VPS-2 is normally reached through VPS-1. If VPS-1 is down or its WireGuard is broken, VPS-2's only way in is its own serial console.
 
@@ -129,11 +129,11 @@ Use this when the serial console doesn't work. You fix the A1 instance's disk fr
 
 Oracle may stop an Always Free instance it considers idle over 7 days (SD §7.2 quotes under 10–20 % CPU, network and memory). The boot volume is kept. VPS-2, with no worker code before D3, is the likelier one.
 
-- **Signs:** the console shows the instance as **Stopped**. For VPS-1, `https://api.130.110.117.215.sslip.io/healthz` stops answering. Uptime Kuma alerts from D3.
+- **Signs:** the console shows the instance as **Stopped**. For VPS-1, `https://api.<VPS1_IP>.sslip.io/healthz` stops answering. Uptime Kuma alerts from D3.
 - **Fix:** choose **Start**. On "Out of host capacity", retry later.
 - **After it starts:**
   - Check that the reserved IP is still attached to the VNIC.
-  - `curl https://api.130.110.117.215.sslip.io/healthz`.
+  - `curl https://api.<VPS1_IP>.sslip.io/healthz`.
   - Over WireGuard, `sudo docker ps`. The `unless-stopped` restart policies bring every container back.
   - Look at the instance's utilization for the week before the stop, and note it in research.md R12.
 - Don't add artificial load to dodge the rule. SD §7.2 notes that upgrading the account to pay-as-you-go, still free within the limits, reportedly removes the risk: an owner decision.

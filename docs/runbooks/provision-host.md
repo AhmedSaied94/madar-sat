@@ -15,7 +15,7 @@ The commands below use `<role>`, `<ip>` and `<private-ip>` for the VM you're wor
 | `<role>` (`bootstrap-vps.sh` argument) | `vps1` | `vps2` |
 | Shape | `VM.Standard.A1.Flex`, 1 OCPU / 6 GB | `VM.Standard.A1.Flex`, 1 OCPU / 6 GB |
 | Boot volume | 100 GB | 47 GB |
-| `<ip>`, the reserved public IP | `130.110.117.215` | `130.110.97.25` |
+| `<ip>`, the reserved public IP | `<VPS1_IP>` | `<VPS2_IP>` |
 | `<private-ip>`, the VCN private IP (`VCN_IP` in its `.env`) | `10.1.0.97` | `10.1.0.118` |
 | `PEER_VCN_IP` in its `.env` | `10.1.0.118` | `10.1.0.97` |
 | WireGuard | Hub `10.8.0.1/24`, UDP 51820 | None |
@@ -133,7 +133,7 @@ sudo tee /srv/madar/.env >/dev/null <<EOF
 GHCR_OWNER=ahmedsaied94
 VCN_IP=10.1.0.97
 PEER_VCN_IP=10.1.0.118
-VPS1_IP=130.110.117.215
+VPS1_IP=<VPS1_IP>
 ACME_EMAIL=$ACME
 FIREBASE_PROJECT_ID=madar-sat
 DEPLOY_SSH_PUBLIC_KEY=
@@ -144,10 +144,10 @@ REDIS_PASSWORD=$RD
 DATABASE_URL=postgresql+asyncpg://madar:$PG@postgres:5432/madar
 DATABASE_URL_SYNC=postgresql+psycopg://madar:$PG@postgres:5432/madar
 REDIS_URL=redis://:$RD@redis:6379/0
-MEDIA_BASE_URL=https://media.130.110.117.215.sslip.io
+MEDIA_BASE_URL=https://media.<VPS1_IP>.sslip.io
 MEDIA_ROOT=/srv/media
 MEDIA_REHOST_ALLOWED_HOSTS=pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev,imgs.ysscores.com
-CORS_ORIGINS=https://madar-sat.web.app,https://madar-sat.firebaseapp.com
+CORS_ORIGINS=https://<PWA_HOST>,https://<FIREBASE_AUTH_DOMAIN>
 CONTRACT_VERSION=1.0.0
 CELERY_BROKER_URL=redis://:$RD@redis:6379/0
 EOF
@@ -162,7 +162,7 @@ It prints `-rw------- 1 deploy deploy … /srv/madar/.env` and `20`. What each v
 | --- | --- |
 | `GHCR_OWNER` | `ahmedsaied94` (the repository owner, lowercase) |
 | `VCN_IP`, `PEER_VCN_IP` | `10.1.0.97`, `10.1.0.118` |
-| `VPS1_IP` | `130.110.117.215` |
+| `VPS1_IP` | `<VPS1_IP>` |
 | `ACME_EMAIL` | Your email, for Let's Encrypt |
 | `FIREBASE_PROJECT_ID` | `madar-sat` (as in `infra/firebase/.firebaserc`) |
 | `DEPLOY_SSH_PUBLIC_KEY` | Leave it empty for now (`DEPLOY_SSH_PUBLIC_KEY=`). Step 8 fills it. |
@@ -171,10 +171,10 @@ It prints `-rw------- 1 deploy deploy … /srv/madar/.env` and `20`. What each v
 | `DATABASE_URL` | `postgresql+asyncpg://madar:<POSTGRES_PASSWORD>@postgres:5432/madar` |
 | `DATABASE_URL_SYNC` | `postgresql+psycopg://madar:<POSTGRES_PASSWORD>@postgres:5432/madar` |
 | `REDIS_URL` | `redis://:<REDIS_PASSWORD>@redis:6379/0` |
-| `MEDIA_BASE_URL` | `https://media.130.110.117.215.sslip.io` |
+| `MEDIA_BASE_URL` | `https://media.<VPS1_IP>.sslip.io` |
 | `MEDIA_ROOT` | `/srv/media` |
 | `MEDIA_REHOST_ALLOWED_HOSTS` | The old app's media hosts, comma-separated. A scan of every URL in `../old_app/migration/data/` (the 2026-10-28 snapshot) finds two: the old R2 bucket (5,973 logos, commentator images and audio) and `imgs.ysscores.com` (6 team logos). Its other hosts, `www.livesoccertv.com` (match links) and `www.youtube.com` (reception videos), aren't media. A new host after a re-export shows up as `host_not_allowed` ([snapshot-load.md](snapshot-load.md)) |
-| `CORS_ORIGINS` | `https://madar-sat.web.app,https://madar-sat.firebaseapp.com` ([firebase-hosting.md §3](firebase-hosting.md#3-firebaserc-and-the-hosts)) |
+| `CORS_ORIGINS` | `https://<PWA_HOST>,https://<FIREBASE_AUTH_DOMAIN>` ([firebase-hosting.md §3](firebase-hosting.md#3-firebaserc-and-the-hosts)) |
 | `CONTRACT_VERSION` | `1.0.0` |
 | `CELERY_BROKER_URL` | `redis://:<REDIS_PASSWORD>@redis:6379/0` (unused until the workers exist, D3) |
 
@@ -213,7 +213,7 @@ sudo tee /srv/madar/.env >/dev/null <<EOF
 GHCR_OWNER=ahmedsaied94
 VCN_IP=10.1.0.118
 PEER_VCN_IP=10.1.0.97
-VPS1_IP=130.110.117.215
+VPS1_IP=<VPS1_IP>
 POSTGRES_USER=madar
 POSTGRES_PASSWORD=$PG
 POSTGRES_DB=madar
@@ -221,10 +221,10 @@ REDIS_PASSWORD=$RD
 DATABASE_URL=postgresql+asyncpg://madar:$PG@10.1.0.97:5432/madar
 DATABASE_URL_SYNC=postgresql+psycopg://madar:$PG@10.1.0.97:5432/madar
 REDIS_URL=redis://:$RD@10.1.0.97:6379/0
-MEDIA_BASE_URL=https://media.130.110.117.215.sslip.io
+MEDIA_BASE_URL=https://media.<VPS1_IP>.sslip.io
 MEDIA_ROOT=/srv/media
 MEDIA_REHOST_ALLOWED_HOSTS=pub-01ffc6064b9b435aa726a53a561a6f53.r2.dev,imgs.ysscores.com
-CORS_ORIGINS=https://madar-sat.web.app,https://madar-sat.firebaseapp.com
+CORS_ORIGINS=https://<PWA_HOST>,https://<FIREBASE_AUTH_DOMAIN>
 CONTRACT_VERSION=1.0.0
 CELERY_BROKER_URL=redis://:$RD@10.1.0.97:6379/0
 FLOWER_BASIC_AUTH=admin:$FL
@@ -336,8 +336,8 @@ The script makes this decision again on **every** run. On VPS-1, a run when no p
 Once both VMs are through step 6, remove the `<your public ip>/32` TCP 22 rule from the security list. Keep the `10.1.0.97/32` TCP 22 rule: it is the jump to VPS-2. Then, **off** WireGuard:
 
 ```bash
-nc -vz -w 5 130.110.117.215 22     # times out
-nc -vz -w 5 130.110.97.25 22     # times out
+nc -vz -w 5 <VPS1_IP> 22     # times out
+nc -vz -w 5 <VPS2_IP> 22     # times out
 ```
 
 ## 8. Deploy peer and keys
@@ -380,7 +380,7 @@ gh secret list -R "$R"                       # the three secrets, plus FIREBASE_
 ```
 
 - `gh secret set … < file` reads the value from the file, so it never shows on screen.
-- The `ci` config's `Endpoint` is `130.110.117.215:51820` and its `AllowedIPs` is `10.8.0.1/32`.
+- The `ci` config's `Endpoint` is `<VPS1_IP>:51820` and its `AllowedIPs` is `10.8.0.1/32`.
 - `bootstrap-vps.sh` only ever **adds** keys to `authorized_keys`. Replacing a key: [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key).
 - The deploy key has no forced command: whoever holds it and the `ci` config gets a shell as `deploy`, which is in the docker group. Keep both only in GitHub.
 

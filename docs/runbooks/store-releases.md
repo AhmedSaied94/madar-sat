@@ -96,7 +96,7 @@ Play App Signing makes Google hold the key that signs what users install, and yo
 | Play: "Version code 12 has already been used" | You uploaded the same build twice, or re-ran a run. Push a new tag so the run number moves. |
 | The run is green but no artifact | `if-no-files-found: error` makes the job fail instead, so look at the `aab` job's log for the `flutter build appbundle` error. |
 | A tester sees "App not available" | The tester is not on the list for this track, is on a different Google account than the one listed, or has not accepted the opt-in link yet. Re-send the link and check the account. |
-| The app opens but shows no matches | VPS-1 is not serving `/v1`, or the phone is offline: open `https://api.130.110.117.215.sslip.io/healthz` in the phone's browser (it should answer with `"db": "ok"` and `"redis": "ok"`). The PWA preview has its own CORS step ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)); the Android app does not need it. |
+| The app opens but shows no matches | VPS-1 is not serving `/v1`, or the phone is offline: open `https://api.<VPS1_IP>.sslip.io/healthz` in the phone's browser (it should answer with `"db": "ok"` and `"redis": "ok"`). The PWA preview has its own CORS step ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)); the Android app does not need it. |
 
 ## Push setup
 

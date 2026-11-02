@@ -9,7 +9,7 @@ from VPS-1 alone (VPS-2's `DOCKER-USER` rule, and the subnet's security list: `1
 [provision-host.md step 1.7](provision-host.md#1-reserve-the-ip-and-create-the-vm); without it `https://kuma.…` answers 502),
 and VPS-1's Caddy serves it over WireGuard at:
 
-**`https://kuma.10-8-0-1.sslip.io`** (connected to `wg0`; Caddy's internal CA, which your device
+**`https://<KUMA_HOST>`** (connected to `wg0`; Caddy's internal CA, which your device
 already trusts for `https://10.8.0.1` — [private-network.md](private-network.md#install-the-admin-ca-root)).
 
 Kuma has no config file, so the monitors below are created once in its UI. They live in `/srv/kuma`,
@@ -69,7 +69,7 @@ push says "I ran", so no push at all is the alarm.
 ### The push URL on each host
 
 Kuma shows a push monitor's URL as
-`https://kuma.10-8-0-1.sslip.io/api/push/<token>?status=up&msg=OK&ping=`. Do not paste it: that
+`https://<KUMA_HOST>/api/push/<token>?status=up&msg=OK&ping=`. Do not paste it: that
 address exists on `wg0` only, VPS-2 is not a WireGuard peer, and the backup image does not trust
 Caddy's internal CA. The token is the last path segment, between `/api/push/` and the `?`. Write
 the host-reachable URL with that token and **no query**; the workers and the backup scripts add

@@ -49,10 +49,10 @@ Only `app/notifications/sender.py` talks to FCM. Producers only insert outbox ro
    ```text
    FCM_CREDENTIALS_FILE=/srv/secrets/fcm.json
    FCM_DRY_RUN=false
-   PWA_ORIGIN=https://madar-sat--master-p2bbuj53.web.app
+   PWA_ORIGIN=https://<PWA_PREVIEW_HOST>
    ```
 
-   `infra/compose/vps2.yml` mounts that one file read-only into `worker-notify` and no other service. `PWA_ORIGIN` is the web push link's origin (`<PWA_ORIGIN>/match/<id>`): the origin the installed PWA is served from. Until D4 that is the Firebase Hosting preview channel `master` above ([firebase-hosting.md](firebase-hosting.md)); when the first `web-v*` release reaches the live channel, set it to `https://madar-sat.web.app` and recreate `worker-notify` (the `app.130.110.117.215.sslip.io` mirror also arrives on D4). A value with a wrong origin sends users to a dead link, and a plain `http://` value is refused at startup (FCM rejects every web message whose `fcm_options.link` is not https).
+   `infra/compose/vps2.yml` mounts that one file read-only into `worker-notify` and no other service. `PWA_ORIGIN` is the web push link's origin (`<PWA_ORIGIN>/match/<id>`): the origin the installed PWA is served from. Until D4 that is the Firebase Hosting preview channel `master` above ([firebase-hosting.md](firebase-hosting.md)); when the first `web-v*` release reaches the live channel, set it to `https://<PWA_HOST>` and recreate `worker-notify` (the `app.<VPS1_IP>.sslip.io` mirror also arrives on D4). A value with a wrong origin sends users to a dead link, and a plain `http://` value is refused at startup (FCM rejects every web message whose `fcm_options.link` is not https).
 
 4. **Restart and check.** On VPS-2:
 
