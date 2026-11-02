@@ -241,10 +241,7 @@ async def test_parallel_wrong_logins_verify_at_most_five_passwords(
     monkeypatch.setattr(passwords, "verify_password", counting)
 
     responses = await asyncio.gather(
-        *(
-            parallel_admin_client.post(LOGIN, json={"email": email, "password": "wrong wrong wrong"})
-            for _ in range(10)
-        )
+        *(parallel_admin_client.post(LOGIN, json={"email": email, "password": "wrong wrong wrong"}) for _ in range(10))
     )
 
     statuses = [response.status_code for response in responses]

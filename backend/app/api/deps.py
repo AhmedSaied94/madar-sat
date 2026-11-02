@@ -8,6 +8,7 @@ from fastapi import Depends, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import cache
 from app.api.errors import NotModified, validator_headers
 from app.api.etag import compute_etag, if_none_match
 from app.db.models import DatasetVersion
@@ -44,7 +45,13 @@ class ETag:
                 select(DatasetVersion.name, DatasetVersion.version).where(DatasetVersion.name.in_(self.datasets))
             )
             versions = {name: version for name, version in rows}
-        etag = compute_etag(self.route_id, request.query_params, versions, self.bucket_s)
+        etag = compute_etag(self.route_id, request.query_params, versions, self.bucket_s, path=request.url.path)
         if if_none_match(request.headers.get("if-none-match"), etag):
             raise NotModified(etag)
+        ttl = cache.ttl_for(self.route_id)
+        if ttl is not None:
+            request.state.cache_ttl = ttl
+            stored = await cache.lookup(etag)
+            if stored is not None:
+                raise cache.CachedResponse(etag, stored)
         response.headers.update(validator_headers(etag))

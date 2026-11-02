@@ -20,8 +20,8 @@ _EnvelopeTeamDetail _$EnvelopeTeamDetailFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$EnvelopeTeamDetailToJson(_EnvelopeTeamDetail instance) =>
     <String, dynamic>{
-      'data': instance.data,
-      'error': instance.error,
-      'meta': instance.meta,
+      'data': ?instance.data,
+      'error': ?instance.error,
+      'meta': ?instance.meta,
       'success': instance.success,
     };

@@ -34,6 +34,7 @@ def to_view(competition: Competition, logo: str | None) -> a.AdminCompetition:
         logo_asset_id=competition.logo_asset_id,
         logo=logo,
         priority=competition.priority,
+        etag=versions.row_version(competition),
     )
 
 

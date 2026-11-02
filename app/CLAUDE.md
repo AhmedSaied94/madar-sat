@@ -143,7 +143,8 @@ a hand-written `/v1` path or a raw `Dio.get` anywhere in `lib/` outside `generat
 
 ## Drift schema
 
-`AppDatabase.schemaVersion` is 2 (D2 added `match_windows` and `cached_documents`). Changing
+`AppDatabase.schemaVersion` is 3 (D2 added `match_windows` and `cached_documents`; D3 added
+`app_settings`, `follows` and `sync_state`). Changing
 a table means: bump the version, add the step to `onUpgrade`, run
 `dart run build_runner build -d`, and add a migration test that builds the previous
 version's DDL by hand, opens it at the new version and checks the rows survived
@@ -158,6 +159,12 @@ On the web the database needs two assets in `web/`, served from the app's own ho
 `test/core/db/web_assets_test.dart` green. `AppDatabase.open()` passes them as
 `DriftWebOptions`; without them `drift_flutter` throws and every screen shows the
 load-failed state in the PWA.
+
+Device and follow sync (D3): a change write calls `markSyncDirty`, which moves the key's
+in-memory `syncRevision` and announces it on `syncChanges`, so every change leads to a send.
+`DeviceSync` reads the revision before reading what it sends, and clears the durable `dirty`
+flag only through `markSyncCleanIfUnchanged`; a change made while a PUT is in flight keeps the
+flag set and sends again. A flag left set by an earlier run is sent at launch.
 
 ## Providers
 

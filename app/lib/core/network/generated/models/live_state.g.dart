@@ -27,12 +27,12 @@ Map<String, dynamic> _$LiveStateToJson(_LiveState instance) =>
     <String, dynamic>{
       'estimated': instance.estimated,
       'match_id': instance.matchId,
-      'minute': instance.minute,
-      'period': _$PeriodEnumMap[instance.period],
-      'score': instance.score,
+      'minute': ?instance.minute,
+      'period': ?_$PeriodEnumMap[instance.period],
+      'score': ?instance.score,
       'status': _$StatusEnumMap[instance.status]!,
-      'status_label': instance.statusLabel,
-      'status_updated_at': instance.statusUpdatedAt?.toIso8601String(),
+      'status_label': ?instance.statusLabel,
+      'status_updated_at': ?instance.statusUpdatedAt?.toIso8601String(),
     };
 
 const _$PeriodEnumMap = {

@@ -22,8 +22,8 @@ _EnvelopeCompetitionDetail _$EnvelopeCompetitionDetailFromJson(
 Map<String, dynamic> _$EnvelopeCompetitionDetailToJson(
   _EnvelopeCompetitionDetail instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

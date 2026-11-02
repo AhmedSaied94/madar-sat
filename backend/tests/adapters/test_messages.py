@@ -62,10 +62,10 @@ def _result(pages: list[RawPage] | None = None) -> ScrapeResult:
     )
 
 
-def test_a_schema_1_message_round_trips_on_both_ends() -> None:
-    assert CURRENT_SCHEMA == 1
+def test_the_current_message_round_trips_on_both_ends() -> None:
+    assert CURRENT_SCHEMA == 2
     built = _result()
-    assert built.schema == 1
+    assert built.schema == 2
     payload = built.model_dump_json()
     again = ScrapeResult.model_validate_json(payload)
     assert again == built
@@ -86,12 +86,13 @@ def test_the_pages_travel_gzipped_and_come_back_as_bytes() -> None:
 
 
 def test_the_previous_schema_is_accepted_once_a_second_one_exists() -> None:
-    assert ScrapeResult.accepted_schemas() == frozenset({1})
-    # Simulating the next contract step: the current and the one before it are accepted.
-    assert ScrapeResult.accepted_schemas(current=2) == frozenset({1, 2})
+    # D3 made V2 current: the current schema and the one before it are accepted (contracts §ScrapeResult).
+    assert ScrapeResult.accepted_schemas() == frozenset({1, 2})
+    assert ScrapeResult.accepted_schemas(current=3) == frozenset({2, 3})
+    assert ScrapeResult.accepted_schemas(current=1) == frozenset({1})
 
 
-@pytest.mark.parametrize("schema", [0, 2, 99])
+@pytest.mark.parametrize("schema", [0, 3, 99])
 def test_any_other_schema_is_rejected_loudly(schema: int) -> None:
     payload = _result().model_dump()
     payload["schema"] = schema

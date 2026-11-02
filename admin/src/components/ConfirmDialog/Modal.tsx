@@ -1,3 +1,4 @@
+import { clsx } from 'clsx';
 import { useEffect, useId, useRef, type ReactElement, type ReactNode } from 'react';
 
 // The modal shell behind ConfirmDialog and ConflictDialog (Dialog README): an overlay panel that
@@ -15,11 +16,27 @@ interface ModalProps {
   /** Test hook: `alertdialog` for the two dialogs of Dialogs.png. */
   role?: 'dialog' | 'alertdialog';
   labelledBy?: string;
+  /** `drawer` slides the same trap in from the inline-start edge, as A7 and A8's editors do. */
+  variant?: 'dialog' | 'drawer';
 }
 
-export function Modal({ open, onClose, children, role = 'alertdialog', labelledBy }: ModalProps): ReactElement | null {
+export function Modal({
+  open,
+  onClose,
+  children,
+  role = 'alertdialog',
+  labelledBy,
+  variant = 'dialog',
+}: ModalProps): ReactElement | null {
   const panelRef = useRef<HTMLDivElement>(null);
   const generatedId = useId();
+  // The trap is installed once per opening: a parent that recreates `onClose` on every render must
+  // not make the effect re-run, because its cleanup and setup would steal focus from the field the
+  // editor is typing in.
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -30,7 +47,7 @@ export function Modal({ open, onClose, children, role = 'alertdialog', labelledB
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        onClose();
+        close.current();
         return;
       }
       if (event.key !== 'Tab' || !panel) return;
@@ -57,19 +74,31 @@ export function Modal({ open, onClose, children, role = 'alertdialog', labelledB
       document.removeEventListener('keydown', onKeyDown);
       trigger?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
   return (
-    <div data-testid="modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-6">
+    <div
+      data-testid="modal-overlay"
+      data-variant={variant}
+      className={clsx(
+        'fixed inset-0 z-50 flex bg-overlay',
+        variant === 'drawer' ? 'items-stretch justify-start' : 'items-center justify-center p-6',
+      )}
+    >
       <div
         ref={panelRef}
         role={role}
         aria-modal="true"
         aria-labelledby={labelledBy ?? generatedId}
         tabIndex={-1}
-        className="flex w-full max-w-list-pane-width flex-col gap-4 rounded-2xl bg-elevated p-6 text-text-primary shadow-raised outline-none ring-1 ring-inset ring-divider"
+        className={clsx(
+          'flex w-full flex-col gap-4 bg-elevated text-text-primary shadow-raised outline-none ring-1 ring-inset ring-divider',
+          variant === 'drawer'
+            ? 'h-full max-w-list-pane-width p-6'
+            : 'max-w-list-pane-width rounded-2xl p-6',
+        )}
       >
         {children}
       </div>

@@ -100,16 +100,42 @@ function serveMatches(role: 'admin' | 'editor' = 'editor', list: readonly unknow
     mswHttp.get('*/admin/api/competitions', () =>
       HttpResponse.json(
         envelope([
-          { id: 12, sport: 'football', name: 'الدوري المصري الممتاز', logo: null, logo_asset_id: null, priority: 3 },
-          { id: 40, sport: 'football', name: 'دوري أبطال آسيا 2', logo: null, logo_asset_id: null, priority: 5 },
+          { id: 12, sport: 'football', name: 'الدوري المصري الممتاز', logo: null, logo_asset_id: null, priority: 3, etag: '"c-12"' },
+          { id: 40, sport: 'football', name: 'دوري أبطال آسيا 2', logo: null, logo_asset_id: null, priority: 5, etag: '"c-40"' },
         ]),
       ),
     ),
     mswHttp.get('*/admin/api/sources', () =>
       HttpResponse.json(
         envelope([
-          { name: 'ysscores', kind: 'scraper', is_enabled: true },
-          { name: 'legacy', kind: 'scraper', is_enabled: true },
+          {
+            name: 'ysscores',
+            kind: 'scraper',
+            is_enabled: true,
+            breaker: 'closed',
+            breaker_opened_at: null,
+            consecutive_failures: 0,
+            paused: false,
+            last_success_at: null,
+            last_run: null,
+            items_24h: [],
+            error_rate_24h: null,
+            running: false,
+          },
+          {
+            name: 'legacy',
+            kind: 'scraper',
+            is_enabled: true,
+            breaker: 'closed',
+            breaker_opened_at: null,
+            consecutive_failures: 0,
+            paused: false,
+            last_success_at: null,
+            last_run: null,
+            items_24h: [],
+            error_rate_24h: null,
+            running: false,
+          },
         ]),
       ),
     ),
@@ -183,7 +209,8 @@ describe('MatchesPage (A3)', () => {
     expect(first).toHaveTextContent('مدحت شلبي');
     expect(first).toHaveTextContent('YSS');
     expect(first).toHaveTextContent('LST');
-    expect(first.querySelector('[aria-label="حقول مقفلة"]')).not.toBeNull();
+    // The shared table names the lock glyph itself (A-F2).
+    expect(first.querySelector('[aria-label="قيمة مقفلة: لن يغيّرها الاستيراد"]')).not.toBeNull();
 
     const live = screen.getByTestId('match-row-48214');
     expect(live).toHaveTextContent('مباشر · تقديري');

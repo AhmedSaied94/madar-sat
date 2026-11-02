@@ -4,7 +4,6 @@ import { useBlocker, useNavigate, useParams } from 'react-router-dom';
 
 import { createMatch, patchMatch, useGetMatch, useListCommentators, useListCompetitions } from '../../api/generated/admin';
 import type { AdminMatch, MatchCreate, MatchPatch, Period, Status } from '../../api/generated/admin.schemas';
-import { createMatchBody, patchMatchBody } from '../../api/generated/admin.zod';
 import { ApiError, etagOf, NETWORK_ERROR } from '../../api/http';
 import { Button } from '../../components/Button/Button';
 import { ConflictDialog, type ConflictChange } from '../../components/ConfirmDialog/ConflictDialog';
@@ -15,6 +14,7 @@ import { EditorSections } from './editor/FieldsSection';
 import { BroadcastSlots } from './editor/BroadcastSlots';
 import { ChannelsSection } from './editor/ChannelsSection';
 import { StatusSection } from './editor/StatusSection';
+import { useMatchForm } from './patchForm';
 import { cairoDay, cairoWallTimeToUtc, formatCairoTime, utcToCairoWallTime } from '../../lib/cairoTime';
 import { copyForErrorCode, editor as copy, matchStatus, toast as toastCopy } from '../../i18n/ar';
 
@@ -257,8 +257,8 @@ export function buildPatch(current: EditorState, original: EditorState): MatchPa
   return patch;
 }
 
-/** A new match's body, validated by Orval's `createMatchBody`: no cast, no shape guessing (A-R1-4). */
-export function buildCreate(current: EditorState): MatchCreate | null {
+/** A new match's body, typed without a cast; the form's resolver checks it (A-R1-4, A-F1). */
+export function buildCreate(current: EditorState): MatchCreate {
   const wall = current.date && current.time ? `${current.date}T${current.time}` : '';
   const candidate: MatchCreate = {
     match_date: current.date,
@@ -270,8 +270,7 @@ export function buildCreate(current: EditorState): MatchCreate | null {
   if (current.competitionId !== '') candidate.competition_id = Number(current.competitionId);
   if (current.stage !== '') candidate.competition_stage = current.stage;
   if (current.stadium !== '') candidate.stadium = current.stadium;
-  const parsed = createMatchBody.safeParse(candidate);
-  return parsed.success ? (parsed.data as MatchCreate) : null;
+  return candidate;
 }
 
 /** The difference between the version the editor loaded and the one the server now holds. */
@@ -409,6 +408,7 @@ export function MatchEditor(): ReactElement {
   const matchId = validId ? numericId : null;
   const navigate = useNavigate();
   const toast = useToast();
+  const { validatePatch, validateCreate } = useMatchForm();
   const [baseline, setBaseline] = useState<EditorBaseline | null>(null);
   const [state, setState] = useState<EditorState>(emptyState);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
@@ -547,7 +547,7 @@ export function MatchEditor(): ReactElement {
     try {
       if (matchId === null) {
         const body = buildCreate(state);
-        if (body === null) {
+        if (!(await validateCreate(body))) {
           setSaveError(copyForErrorCode('validation_error'));
           return null;
         }
@@ -567,13 +567,12 @@ export function MatchEditor(): ReactElement {
         setSaveError(copy.scoreRequired);
         return null;
       }
-      const parsed = patchMatchBody.safeParse(built);
-      if (!parsed.success) {
+      if (!(await validatePatch(built))) {
         setSaveError(copyForErrorCode('validation_error'));
         return null;
       }
 
-      const saved = await patchMatch(matchId, parsed.data as MatchPatch, {
+      const saved = await patchMatch(matchId, built, {
         headers: baseline.etag ? { 'If-Match': baseline.etag } : {},
       });
       void queryClient.invalidateQueries();

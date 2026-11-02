@@ -48,6 +48,17 @@
 }
 
 @layer components {
+  /* FrequencyReadout: the glow the design system puts on the cyan digits (a text shadow, which no
+     Tailwind utility expresses). The dim parts switch it off. */
+  .readout-glow {
+    text-shadow: var(--readout-glow);
+  }
+
+  /* The symbol rate sits dim and unlit (FrequencyReadout README). */
+  .readout-dim {
+    text-shadow: none;
+  }
+
   /* Login backdrop: the orbit motif of the A1 board (rings and one satellite dot). */
   .login-orbits {
     position: absolute;

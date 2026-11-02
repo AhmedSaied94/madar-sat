@@ -39,14 +39,20 @@ class FakeHttpAdapter implements HttpClientAdapter {
         ),
       );
 
-  /// A non-2xx API answer with the envelope's `error.code`.
-  void enqueueError(String code, {int status = 500}) => enqueue(
+  /// A non-2xx API answer with the envelope's `error.code` and, where the contract has
+  /// one, its `meta` (`unknown`, `retry_after_s`, `max`).
+  void enqueueError(
+    String code, {
+    int status = 500,
+    Map<String, Object?> meta = const {},
+  }) =>
+      enqueue(
         (_) => ResponseBody.fromString(
           jsonEncode({
             'success': false,
             'data': null,
             'error': {'code': code, 'message': 'for logs only'},
-            'meta': <String, Object?>{},
+            'meta': meta,
           }),
           status,
           headers: {

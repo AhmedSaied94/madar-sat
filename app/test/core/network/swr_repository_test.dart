@@ -496,6 +496,7 @@ class _FailingWrites extends AppDatabase {
     List<MatchSummary> rows, {
     required String? etag,
     required DateTime fetchedAt,
+    String? windowKey,
   }) async =>
       throw StateError('disk full');
 }

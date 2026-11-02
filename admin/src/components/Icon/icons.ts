@@ -596,6 +596,227 @@ export const icons = {
         }
       ]
     ]
+  },
+  "grip": {
+    "filled": false,
+    "strokeWidth": "3",
+    "children": [
+      [
+        "path",
+        {
+          "d": "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"
+        }
+      ]
+    ]
+  },
+  "play": {
+    "filled": false,
+    "strokeWidth": null,
+    "children": [
+      [
+        "path",
+        {
+          "fill": "currentColor",
+          "d": "M8 5.2v13.6c0 .8.9 1.3 1.5.8l10.2-6.8a1 1 0 0 0 0-1.6L9.5 4.4c-.6-.5-1.5 0-1.5.8z"
+        }
+      ]
+    ]
+  },
+  "pause": {
+    "filled": false,
+    "strokeWidth": null,
+    "children": [
+      [
+        "rect",
+        {
+          "x": "6.5",
+          "y": "5",
+          "width": "4",
+          "height": "14",
+          "rx": "1.2",
+          "fill": "currentColor"
+        }
+      ],
+      [
+        "rect",
+        {
+          "x": "13.5",
+          "y": "5",
+          "width": "4",
+          "height": "14",
+          "rx": "1.2",
+          "fill": "currentColor"
+        }
+      ]
+    ]
+  },
+  "signal": {
+    "filled": false,
+    "strokeWidth": "2",
+    "children": [
+      [
+        "path",
+        {
+          "d": "M4 20v-3M9 20v-7M14 20V9M19 20V4"
+        }
+      ]
+    ]
+  },
+  "image": {
+    "filled": false,
+    "strokeWidth": "1.8",
+    "children": [
+      [
+        "rect",
+        {
+          "x": "3",
+          "y": "4",
+          "width": "18",
+          "height": "16",
+          "rx": "2.5"
+        }
+      ],
+      [
+        "circle",
+        {
+          "cx": "9",
+          "cy": "10",
+          "r": "2"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "m21 16-5-5-9 9"
+        }
+      ]
+    ]
+  },
+  "globe": {
+    "filled": false,
+    "strokeWidth": "1.8",
+    "children": [
+      [
+        "circle",
+        {
+          "cx": "12",
+          "cy": "12",
+          "r": "9"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3"
+        }
+      ]
+    ]
+  },
+  "link": {
+    "filled": false,
+    "strokeWidth": "1.8",
+    "children": [
+      [
+        "path",
+        {
+          "d": "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"
+        }
+      ]
+    ]
+  },
+  "upload": {
+    "filled": false,
+    "strokeWidth": "1.8",
+    "children": [
+      [
+        "path",
+        {
+          "d": "M12 16V4M7 9l5-5 5 5M5 20h14"
+        }
+      ]
+    ]
+  },
+  "merge": {
+    "filled": false,
+    "strokeWidth": "1.8",
+    "children": [
+      [
+        "circle",
+        {
+          "cx": "6",
+          "cy": "5",
+          "r": "2"
+        }
+      ],
+      [
+        "circle",
+        {
+          "cx": "6",
+          "cy": "19",
+          "r": "2"
+        }
+      ],
+      [
+        "circle",
+        {
+          "cx": "18",
+          "cy": "12",
+          "r": "2"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M6 7v10M8 5.5c5 .5 8 2.5 8 6.5"
+        }
+      ]
+    ]
+  },
+  "audio": {
+    "filled": false,
+    "strokeWidth": "2",
+    "children": [
+      [
+        "path",
+        {
+          "d": "M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4"
+        }
+      ]
+    ]
+  },
+  "unlock": {
+    "filled": false,
+    "strokeWidth": "2",
+    "children": [
+      [
+        "rect",
+        {
+          "x": "5",
+          "y": "11",
+          "width": "14",
+          "height": "10",
+          "rx": "2"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M8 11V7a4 4 0 0 1 7.6-1.7"
+        }
+      ]
+    ]
+  },
+  "refresh": {
+    "filled": false,
+    "strokeWidth": "1.8",
+    "children": [
+      [
+        "path",
+        {
+          "d": "M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"
+        }
+      ]
+    ]
   }
 } as const satisfies Record<string, IconDefinition>;
 

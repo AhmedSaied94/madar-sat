@@ -91,4 +91,5 @@ This deletes the local database and Caddy's data. The next start makes a **new**
 
 - **`port is already allocated`:** something else uses 5434, 6380 or 8443. Move it with `DEV_POSTGRES_PORT` or `DEV_REDIS_PORT`. 8443 is fixed in `dev.yml`.
 - **`https://localhost:8443` answers 502:** the API isn't listening where Caddy looks. Start it on `172.17.0.1:8000`, not `127.0.0.1`.
+- **Still 502 with the API on `172.17.0.1:8000`:** a host firewall drops traffic from the compose network. Check from the container with `docker compose -f infra/compose/dev.yml exec -T caddy wget -T 5 -qO- http://host.docker.internal:8000/healthz`; a timeout means the firewall. With `ufw`, allow that bridge only (find it with `docker network inspect madar-dev_default --format '{{.Id}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'`; the bridge is `br-` plus the first 12 characters of the id): `sudo ufw allow in on br-<id12> from <subnet> to 172.17.0.1 port 8000 proto tcp comment 'madar dev caddy to api'`.
 - **`password authentication failed`:** an older `madar-dev_pgdata` volume was created with other credentials. `down -v` and start again.

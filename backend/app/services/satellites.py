@@ -35,6 +35,7 @@ async def list_satellites(session: AsyncSession) -> list[s.Satellite]:
         .where(
             Channel.satellite_id.is_not(None),
             Channel.deleted_at.is_(None),
+            Channel.placeholder_source.is_(None),
             Channel.name_norm.not_in(hidden_names()),
             func.ar_normalize(func.coalesce(Channel.display_name, "")).not_in(hidden_names()),
         )
@@ -76,7 +77,11 @@ async def list_satellite_channels(
     if sat is None:
         return None
 
-    conditions = [Channel.satellite_id == satellite_id, Channel.deleted_at.is_(None)]
+    conditions = [
+        Channel.satellite_id == satellite_id,
+        Channel.deleted_at.is_(None),
+        Channel.placeholder_source.is_(None),
+    ]
     if category:
         conditions.append(Channel.category == category)
     if q:

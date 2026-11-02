@@ -253,7 +253,7 @@ Then re-run the script:
 sudo ./madar-infra/scripts/bootstrap-vps.sh <role>
 ```
 
-It checks the required keys, warns about any value still left from `example.env`, and creates the `/srv` folders.
+It checks the required keys, warns about any value still left from `example.env`, and creates the `/srv` folders. It also installs and enables the host's backup timers as root (B2-R1-4): they start on the next trigger, or straight away once the backup keys (`RESTIC_*`, `B2_ACCOUNT_*`, and on VPS-1 the `RCLONE_CONFIG_OCI_*` keys) are in `.env` — the script says which ones are still missing.
 
 Re-run it on **VPS-1 before the first D2 deploy**: `deploy.sh` refuses to render the Redis ACL without
 gid 999's group, and the script is what creates it and makes `deploy` a member (`ensure_redis_acl_group`).
@@ -269,6 +269,8 @@ Check what it did:
 
 ```bash
 sudo ls -l /srv/madar/.env                         # -rw------- deploy deploy (/srv/madar is 750, so sudo)
+sudo ls -ld /srv/backup /srv/secrets               # VPS-2: drwx------ 10001 10001 (the backup and worker user)
+systemctl list-timers 'backup-*' --no-pager        # the role's timers, enabled by the script
 sudo iptables -S INPUT | grep -- '--dport 22'      # VPS-1: the wg0 rule and the public rule; VPS-2: -s 10.1.0.97/32 and the public rule
 ip -4 -o addr show wg0                             # VPS-1 only: 10.8.0.1/24
 systemctl show docker -p After | grep -o 'wg-quick@wg0.service'   # VPS-1 only

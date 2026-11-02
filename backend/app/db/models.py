@@ -53,6 +53,11 @@ class Source(Base):
     kind: Mapped[str] = mapped_column(Text)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     paused_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 0005: the circuit breaker and the zero-items alarm (research R17).
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    breaker_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_zero_alert_on: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -141,6 +146,9 @@ class Channel(Base):
     beam: Mapped[str | None] = mapped_column(Text)
     show_in_match: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int | None] = mapped_column(Integer)
+    # 0005: set on an importer-created placeholder; hidden from every public read until an editor
+    # saves it with ``show_in_match = true`` (research R18, R13).
+    placeholder_source: Mapped[str | None] = mapped_column(ForeignKey("sources.name"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     locked_fields: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     frequency_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -381,6 +389,8 @@ class ImportRun(Base):
     http_errors: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(Text, default="running")
     raw_path: Mapped[str | None] = mapped_column(Text)
+    # 0005: the compact run log (≤ 64 KB), read by the admin API on VPS-1 (contracts/admin-api.md).
+    log: Mapped[Any | None] = mapped_column(JSONB)
 
 
 # --- 0002 additions (used from D2; 0003 adds audit_log.source) -----------------
@@ -439,6 +449,9 @@ class Device(Base):
     locale: Mapped[str | None] = mapped_column(Text)
     tz: Mapped[str | None] = mapped_column(Text)
     prefs: Mapped[Any] = mapped_column(JSONB, default=dict)
+    # 0005: the device's satellites, which word its reminders (research R3). Not a foreign key:
+    # arrays can't be; the API checks ids on write and the dispatcher ignores ids that vanished.
+    satellite_ids: Mapped[list[int]] = mapped_column(ARRAY(BigInteger), default=list, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -471,6 +484,11 @@ class NotificationOutbox(Base):
     status: Mapped[str] = mapped_column(Text, default="pending")
     sent: Mapped[int] = mapped_column(Integer, default=0)
     failed: Mapped[int] = mapped_column(Integer, default=0)
+    # 0005: stuck-in-sending reclaim and the page cursor that resumes a retry (research R7).
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cursor_device_id: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    # 0006: whole-call failures so far, counted on the row so the beat cannot retry it for ever.
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

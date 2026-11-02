@@ -20,6 +20,6 @@ Map<String, dynamic> _$ValidationErrorToJson(_ValidationError instance) =>
       'loc': instance.loc,
       'msg': instance.msg,
       'type': instance.type,
-      'ctx': instance.ctx,
-      'input': instance.input,
+      'ctx': ?instance.ctx,
+      'input': ?instance.input,
     };

@@ -41,8 +41,10 @@ import type {
   EnvelopeAdminTeam,
   EnvelopeAdminUser,
   EnvelopeBulkResult,
+  EnvelopeDashboard,
   EnvelopeHealthStatus,
   EnvelopeHiddenChannelName,
+  EnvelopeImportRunDetail,
   EnvelopeListAdminCommentator,
   EnvelopeListAdminCompetition,
   EnvelopeListAdminMatchRow,
@@ -50,20 +52,26 @@ import type {
   EnvelopeListBroadcastPreset,
   EnvelopeListChannelItem,
   EnvelopeListHiddenChannelName,
-  EnvelopeListSourceItem,
+  EnvelopeListImportRunRow,
+  EnvelopeListSourceHealth,
   EnvelopeListTeamItem,
   EnvelopeMediaAsset,
   EnvelopeNoneType,
   EnvelopeSession,
+  EnvelopeSourceHealth,
+  EnvelopeSourceRunQueued,
   ErrorEnvelope,
+  GetDashboardParams,
   HiddenChannelNameCreate,
   ListChannelsParams,
   ListCommentatorsParams,
   ListMatchesParams,
+  ListSourceRunsParams,
   ListTeamsParams,
   LoginRequest,
   MatchCreate,
   MatchPatch,
+  OrderRequest,
   SatelliteCreate,
   SatellitePatch,
   TeamCreate,
@@ -1372,6 +1380,70 @@ export const useCreateCompetition = <TError = ErrorType<ErrorEnvelope>,
     }
     
 /**
+ * @summary A6: set the competition order (each row carries its version)
+ */
+export const orderCompetitions = (
+    orderRequest: OrderRequest,
+ options?: SecondParameter<typeof adminHttp>,) => {
+      
+      
+      return adminHttp<EnvelopeBulkResult>(
+      {url: `/admin/api/competitions/order`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: orderRequest
+    },
+      options);
+    }
+  
+
+
+export const getOrderCompetitionsMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof orderCompetitions>>, TError,{data: OrderRequest}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof orderCompetitions>>, TError,{data: OrderRequest}, TContext> => {
+
+const mutationKey = ['orderCompetitions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof orderCompetitions>>, {data: OrderRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  orderCompetitions(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OrderCompetitionsMutationResult = NonNullable<Awaited<ReturnType<typeof orderCompetitions>>>
+    export type OrderCompetitionsMutationBody = OrderRequest
+    export type OrderCompetitionsMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary A6: set the competition order (each row carries its version)
+ */
+export const useOrderCompetitions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof orderCompetitions>>, TError,{data: OrderRequest}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof orderCompetitions>>,
+        TError,
+        {data: OrderRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getOrderCompetitionsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
  * @summary Delete a competition that nothing references
  */
 export const deleteCompetition = (
@@ -1591,6 +1663,100 @@ export const usePatchCompetition = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(mutationOptions, queryClient);
     }
     
+/**
+ * @summary A2: today's matches without a channel, placeholders, sources and recent changes
+ */
+export const getDashboard = (
+    params: GetDashboardParams,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeDashboard>(
+      {url: `/admin/api/dashboard`, method: 'GET',
+        params, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getGetDashboardQueryKey = (params?: GetDashboardParams,) => {
+    return [
+    `/admin/api/dashboard`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<void | ErrorEnvelope>>(params: GetDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDashboardQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboard>>> = ({ signal }) => getDashboard(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboard>>>
+export type GetDashboardQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params: GetDashboardParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDashboard>>,
+          TError,
+          Awaited<ReturnType<typeof getDashboard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params: GetDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDashboard>>,
+          TError,
+          Awaited<ReturnType<typeof getDashboard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params: GetDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A2: today's matches without a channel, placeholders, sources and recent changes
+ */
+
+export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params: GetDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDashboardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * @summary Health Endpoint
  */
@@ -1904,6 +2070,99 @@ export const useRemoveHiddenChannelName = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(mutationOptions, queryClient);
     }
     
+/**
+ * @summary A13: one run with the log written by ingest
+ */
+export const getImportRun = (
+    runId: number,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeImportRunDetail>(
+      {url: `/admin/api/import-runs/${runId}`, method: 'GET', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getGetImportRunQueryKey = (runId?: number,) => {
+    return [
+    `/admin/api/import-runs/${runId}`
+    ] as const;
+    }
+
+    
+export const getGetImportRunQueryOptions = <TData = Awaited<ReturnType<typeof getImportRun>>, TError = ErrorType<void | ErrorEnvelope>>(runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRun>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetImportRunQueryKey(runId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportRun>>> = ({ signal }) => getImportRun(runId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(runId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getImportRun>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetImportRunQueryResult = NonNullable<Awaited<ReturnType<typeof getImportRun>>>
+export type GetImportRunQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useGetImportRun<TData = Awaited<ReturnType<typeof getImportRun>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRun>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportRun>>,
+          TError,
+          Awaited<ReturnType<typeof getImportRun>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetImportRun<TData = Awaited<ReturnType<typeof getImportRun>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRun>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportRun>>,
+          TError,
+          Awaited<ReturnType<typeof getImportRun>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetImportRun<TData = Awaited<ReturnType<typeof getImportRun>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRun>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A13: one run with the log written by ingest
+ */
+
+export function useGetImportRun<TData = Awaited<ReturnType<typeof getImportRun>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRun>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetImportRunQueryOptions(runId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * @summary A3: the matches of a window of at most 8 days
  */
@@ -2513,6 +2772,70 @@ export const useCreateSatellite = <TError = ErrorType<ErrorEnvelope>,
     }
     
 /**
+ * @summary A7: set the satellite order (each row carries its version)
+ */
+export const orderSatellites = (
+    orderRequest: OrderRequest,
+ options?: SecondParameter<typeof adminHttp>,) => {
+      
+      
+      return adminHttp<EnvelopeBulkResult>(
+      {url: `/admin/api/satellites/order`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: orderRequest
+    },
+      options);
+    }
+  
+
+
+export const getOrderSatellitesMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof orderSatellites>>, TError,{data: OrderRequest}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof orderSatellites>>, TError,{data: OrderRequest}, TContext> => {
+
+const mutationKey = ['orderSatellites'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof orderSatellites>>, {data: OrderRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  orderSatellites(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OrderSatellitesMutationResult = NonNullable<Awaited<ReturnType<typeof orderSatellites>>>
+    export type OrderSatellitesMutationBody = OrderRequest
+    export type OrderSatellitesMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary A7: set the satellite order (each row carries its version)
+ */
+export const useOrderSatellites = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof orderSatellites>>, TError,{data: OrderRequest}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof orderSatellites>>,
+        TError,
+        {data: OrderRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getOrderSatellitesMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
  * @summary Delete a satellite that no channel references
  */
 export const deleteSatellite = (
@@ -2733,7 +3056,7 @@ export const usePatchSatellite = <TError = ErrorType<ErrorEnvelope>,
     }
     
 /**
- * @summary List Sources
+ * @summary A13: every source's health (breaker, pause, running, 24 h counts)
  */
 export const listSources = (
     
@@ -2741,7 +3064,7 @@ export const listSources = (
 ) => {
       
       
-      return adminHttp<EnvelopeListSourceItem>(
+      return adminHttp<EnvelopeListSourceHealth>(
       {url: `/admin/api/sources`, method: 'GET', ...(signal ? { signal }: {})
     },
       options);
@@ -2804,7 +3127,7 @@ export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, 
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List Sources
+ * @summary A13: every source's health (breaker, pause, running, 24 h counts)
  */
 
 export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, TError = ErrorType<void | ErrorEnvelope>>(
@@ -2813,6 +3136,296 @@ export function useListSources<TData = Awaited<ReturnType<typeof listSources>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListSourcesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary A13: pause a source (audited; bumps `sources`)
+ */
+export const pauseSource = (
+    name: string,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeSourceHealth>(
+      {url: `/admin/api/sources/${name}/pause`, method: 'POST', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getPauseSourceMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pauseSource>>, TError,{name: string}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof pauseSource>>, TError,{name: string}, TContext> => {
+
+const mutationKey = ['pauseSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pauseSource>>, {name: string}> = (props) => {
+          const {name} = props ?? {};
+
+          return  pauseSource(name,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PauseSourceMutationResult = NonNullable<Awaited<ReturnType<typeof pauseSource>>>
+    
+    export type PauseSourceMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary A13: pause a source (audited; bumps `sources`)
+ */
+export const usePauseSource = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pauseSource>>, TError,{name: string}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof pauseSource>>,
+        TError,
+        {name: string},
+        TContext
+      > => {
+
+      const mutationOptions = getPauseSourceMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary A13: resume a source, reset the breaker and queue one manual run
+ */
+export const resumeSource = (
+    name: string,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeSourceHealth>(
+      {url: `/admin/api/sources/${name}/resume`, method: 'POST', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getResumeSourceMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeSource>>, TError,{name: string}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof resumeSource>>, TError,{name: string}, TContext> => {
+
+const mutationKey = ['resumeSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumeSource>>, {name: string}> = (props) => {
+          const {name} = props ?? {};
+
+          return  resumeSource(name,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResumeSourceMutationResult = NonNullable<Awaited<ReturnType<typeof resumeSource>>>
+    
+    export type ResumeSourceMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary A13: resume a source, reset the breaker and queue one manual run
+ */
+export const useResumeSource = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeSource>>, TError,{name: string}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof resumeSource>>,
+        TError,
+        {name: string},
+        TContext
+      > => {
+
+      const mutationOptions = getResumeSourceMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary A13: «تشغيل الآن» — queue one manual run through `adapters.schedule_fetch`
+ */
+export const runSource = (
+    name: string,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeSourceRunQueued>(
+      {url: `/admin/api/sources/${name}/run`, method: 'POST', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getRunSourceMutationOptions = <TError = ErrorType<ErrorEnvelope | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runSource>>, TError,{name: string}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof runSource>>, TError,{name: string}, TContext> => {
+
+const mutationKey = ['runSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runSource>>, {name: string}> = (props) => {
+          const {name} = props ?? {};
+
+          return  runSource(name,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunSourceMutationResult = NonNullable<Awaited<ReturnType<typeof runSource>>>
+    
+    export type RunSourceMutationError = ErrorType<ErrorEnvelope | void>
+
+    /**
+ * @summary A13: «تشغيل الآن» — queue one manual run through `adapters.schedule_fetch`
+ */
+export const useRunSource = <TError = ErrorType<ErrorEnvelope | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runSource>>, TError,{name: string}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof runSource>>,
+        TError,
+        {name: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRunSourceMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary A13: a source's run history (keyset cursor)
+ */
+export const listSourceRuns = (
+    name: string,
+    params?: ListSourceRunsParams,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeListImportRunRow>(
+      {url: `/admin/api/sources/${name}/runs`, method: 'GET',
+        params, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getListSourceRunsQueryKey = (name?: string,
+    params?: ListSourceRunsParams,) => {
+    return [
+    `/admin/api/sources/${name}/runs`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListSourceRunsQueryOptions = <TData = Awaited<ReturnType<typeof listSourceRuns>>, TError = ErrorType<void | ErrorEnvelope>>(name: string,
+    params?: ListSourceRunsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceRuns>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSourceRunsQueryKey(name,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSourceRuns>>> = ({ signal }) => listSourceRuns(name,params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(name), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSourceRuns>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListSourceRunsQueryResult = NonNullable<Awaited<ReturnType<typeof listSourceRuns>>>
+export type ListSourceRunsQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useListSourceRuns<TData = Awaited<ReturnType<typeof listSourceRuns>>, TError = ErrorType<void | ErrorEnvelope>>(
+ name: string,
+    params: undefined |  ListSourceRunsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceRuns>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSourceRuns>>,
+          TError,
+          Awaited<ReturnType<typeof listSourceRuns>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSourceRuns<TData = Awaited<ReturnType<typeof listSourceRuns>>, TError = ErrorType<void | ErrorEnvelope>>(
+ name: string,
+    params?: ListSourceRunsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceRuns>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSourceRuns>>,
+          TError,
+          Awaited<ReturnType<typeof listSourceRuns>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSourceRuns<TData = Awaited<ReturnType<typeof listSourceRuns>>, TError = ErrorType<void | ErrorEnvelope>>(
+ name: string,
+    params?: ListSourceRunsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceRuns>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A13: a source's run history (keyset cursor)
+ */
+
+export function useListSourceRuns<TData = Awaited<ReturnType<typeof listSourceRuns>>, TError = ErrorType<void | ErrorEnvelope>>(
+ name: string,
+    params?: ListSourceRunsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceRuns>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListSourceRunsQueryOptions(name,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

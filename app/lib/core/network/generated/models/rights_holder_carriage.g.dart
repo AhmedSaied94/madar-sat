@@ -24,7 +24,7 @@ Map<String, dynamic> _$RightsHolderCarriageToJson(
   _RightsHolderCarriage instance,
 ) => <String, dynamic>{
   'access': _$AccessEnumMap[instance.access]!,
-  'beam': _$BeamEnumMap[instance.beam],
+  'beam': ?_$BeamEnumMap[instance.beam],
   'frequencies': instance.frequencies,
   'id': instance.id,
   'satellites': instance.satellites,

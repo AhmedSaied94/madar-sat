@@ -15,7 +15,7 @@ _Score _$ScoreFromJson(Map<String, dynamic> json) => _Score(
 
 Map<String, dynamic> _$ScoreToJson(_Score instance) => <String, dynamic>{
   'away': instance.away,
-  'away_pen': instance.awayPen,
+  'away_pen': ?instance.awayPen,
   'home': instance.home,
-  'home_pen': instance.homePen,
+  'home_pen': ?instance.homePen,
 };

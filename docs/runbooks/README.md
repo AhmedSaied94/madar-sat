@@ -11,7 +11,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` | Peer, outbound only |
 | Public hostnames | `api.130.110.117.215.sslip.io`, `media.130.110.117.215.sslip.io`, `app.130.110.117.215.sslip.io` | None | None |
 | Admin | `https://10.8.0.1`, over WireGuard only | None | None |
-| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7 | `worker-imports`, `worker-scrape`, `worker-maintenance`, `beat`; Flower off until D3. Uptime Kuma and backups later. | `worker-scrape -Q scrape_home` and a 10-minute update timer |
+| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `beat`, Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home` and a 10-minute update timer |
 
 | Runbook | What it covers |
 | --- | --- |
@@ -20,10 +20,14 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, deploy keys, infra updates |
 | [break-glass.md](break-glass.md) | Getting back into a VM when WireGuard or SSH doesn't work, and an instance Oracle stopped |
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
-| [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore |
+| [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore, and push setup (the notification channel, the VAPID key, the service worker, the iPhone PWA test) |
+| [remote-config.md](remote-config.md) | The app's Remote Config keys and their bundled defaults, changing a host safely, raising `min_supported_build`, the live poll interval |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
 | [snapshot-load.md](snapshot-load.md) | Loading the Sat Air snapshot into VPS-1 and rehosting its media |
-| [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs` and `run.json`, pausing a source, switching the ysscores queue, the bridge's configuration |
+| [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs`, `log` and `run.json`, pausing a source, the breaker, LiveSoccerTV and its placeholders, switching a fetch queue, the bridge's configuration |
+| [source-alerts.md](source-alerts.md) | The Telegram bot and chat, what "⛔ المصدر متوقف" and "⚠️ لم يجد أي عناصر" mean, and what to do |
+| [backups.md](backups.md) | Nightly database and media backups, retention, running one by hand, restoring the database and one media file, the monthly restore drill |
+| [uptime-kuma.md](uptime-kuma.md) | Reaching Kuma over WireGuard, the first account, the exact four HTTP and six push monitors, the Telegram notification, what each alert means |
 | [home-box.md](home-box.md) | Joining the scrape box to `wg0`, its `.env`, the update timer, checking it, taking it offline |
 | [workers.md](workers.md) | VPS-2's services and `beat`, `worker-media` and logos, the VPS-2 deploy and rollback, raw-page retention |
 | [firewall-changes.md](firewall-changes.md) | Changing, testing and applying the iptables rules on either VM |
@@ -31,6 +35,8 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [tls-certificates.md](tls-certificates.md) | Let's Encrypt on sslip.io, failed issuance, a changed public IP |
 | [staff-accounts.md](staff-accounts.md) | Creating admin and editor accounts, password resets, deactivating an account, a suspected token leak |
 | [admin-access.md](admin-access.md) | Running the admin app on an editor's machine: `pnpm dev:wg` over WireGuard, Caddy's root CA, the Prism mock and its `?mock=` states |
+| [push-notifications.md](push-notifications.md) | FCM credentials, the reminder scheduler and dispatcher, reading and re-sending outbox rows, the audience query |
+| [response-cache-and-limits.md](response-cache-and-limits.md) | What `/v1` caches and for how long, turning it off, the device/IP/register limits and a CGNAT false positive |
 | [secrets.md](secrets.md) | Where every secret lives, rotating them, gitleaks failures and leaks |
 | [local-dev.md](local-dev.md) | PostgreSQL, Redis and HTTPS Caddy on your machine; the test settings |
 | [ci-workflows.md](ci-workflows.md) | What each workflow checks, common failures, re-runs, the T067 proofs |
@@ -87,10 +93,12 @@ The firewall rule and the `homebox` Redis user have to exist before anything sta
 8. **Secret-scan proof:** [ci-workflows.md "Prove the secret scan"](ci-workflows.md#prove-the-secret-scan) (T067, first half).
 9. **Once Lanes A and M have merged:** the PWA preview and its CORS origin ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)), then a green `master` run for every workflow (T067, second half).
 10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
-11. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
-12. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
-13. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
-14. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
+11. **Monitoring and backups:** create the Kuma monitors and the Telegram notification ([uptime-kuma.md](uptime-kuma.md) §1–§4) with the six `KUMA_PUSH_URL_*` values and the Telegram pair in `/srv/madar/.env`, then check the first night's backups ([backups.md](backups.md#check-last-nights-backup)). The directories and the timers come from `bootstrap-vps.sh` (run it on each host after pulling D3, then deploy); a deploy only verifies them (B2-R1-4). The first run creates the restic repository (B2-R1-5).
+12. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
+13. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
+14. **Reminders (D3):** the FCM service account on VPS-2 and `FCM_DRY_RUN=false`, one real reminder to the owner's phone ([push-notifications.md](push-notifications.md#the-fcm-service-account)), and the `/v1` limits left at their defaults ([response-cache-and-limits.md](response-cache-and-limits.md)).
+15. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
+16. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
 
 Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [owner-actions.md](../owner-actions.md).
 
@@ -101,6 +109,9 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | Releasing, or a deploy failed | [deploy-and-rollback.md](deploy-and-rollback.md) |
 | Releasing the Android app, or a Play upload was refused | [store-releases.md](store-releases.md) |
 | No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
+| A Telegram alert about a source, or one is still paused | [source-alerts.md](source-alerts.md) |
+| A backup monitor is red, or you need to restore something | [backups.md](backups.md) |
+| A monitor is red, or you need to add one | [uptime-kuma.md](uptime-kuma.md) |
 | A worker on VPS-2 or `worker-media` is unhealthy | [workers.md](workers.md) |
 | The home box is offline, or a logo did not arrive | [home-box.md](home-box.md) |
 | A bad release is serving | [deploy-and-rollback.md "Roll back"](deploy-and-rollback.md#roll-back) |
@@ -110,6 +121,8 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A migration failed, or you need the schema's state | [database-migrations.md](database-migrations.md) |
 | A deploy key leaked or needs replacing | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
+| A reminder didn't arrive, or FCM rejects the credentials | [push-notifications.md](push-notifications.md) |
+| A 429 appears in the API log, or public reads feel slow | [response-cache-and-limits.md](response-cache-and-limits.md) |
 | A new editor, a forgotten password, someone leaves, or an admin session may have leaked | [staff-accounts.md](staff-accounts.md) |
 | An editor needs the admin app on their machine, or the mock's states | [admin-access.md](admin-access.md) |
 | A device needs the private network, or one is lost | [private-network.md "Peers"](private-network.md#peers) |
@@ -129,13 +142,13 @@ Later days add these. Each arrives with the change that builds the part it cover
 
 | Runbook | Covers | From |
 | --- | --- | --- |
-| `push-notifications.md` | FCM, the outbox and its dispatcher, the admin composer | D3, D6 |
-| `backup-and-restore.md` | Nightly backups, the restore drill, the monthly routine | D3; drill and runbook v1 on D8 |
-| `monitoring.md` | Uptime Kuma, alert routing, the monitoring review | D3, D7, D12 |
+| `push-notifications.md` (grows) | The admin composer and the other six notification types | D6 |
+| `monitoring.md` | Alert routing and the monitoring review (Kuma itself is covered now) | D7, D12 |
 | `remote-config.md` | Maintenance mode, soft updates, moving hosts | D8 |
 | `store-releases.md` (grows) | Android production, then Codemagic, TestFlight and the App Store; the closed track is covered since D2 | D12; iOS D13–D20 |
 
-Existing runbooks grow too: `firebase-hosting.md` with the public PWA release and the VPS-1 mirror (D4) and the emergency install link (D10); `tls-certificates.md` with the domain move (O4); `secrets.md` with the Play service account (D27).
+The monthly restore drill already has its commands in `backups.md`; D8 adds the schedule, report and
+`monitoring.md`'s alert review. Existing runbooks grow too: `firebase-hosting.md` with the public PWA release and the VPS-1 mirror (D4) and the emergency install link (D10); `tls-certificates.md` with the domain move (O4); `secrets.md` with the Play service account (D27).
 
 **Keep these current.** A change that adds or changes an operated part (anything in `infra/` or `.github/`, a deploy step, a secret, a host setting, or a step the owner does by hand) adds or updates its runbook, and [owner-actions.md](../owner-actions.md), in the same change. A review flags a change that doesn't.
 

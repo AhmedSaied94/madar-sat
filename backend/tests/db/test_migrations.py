@@ -186,7 +186,7 @@ def test_0002_downgrades_cleanly_and_upgrades_again(empty_database):
 
 
 def test_session_database_is_at_head(sync_session):
-    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0004"
+    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0006"
 
 
 @pytest.mark.parametrize(
@@ -345,3 +345,103 @@ def test_audit_row_cannot_have_both_an_admin_and_a_source(sync_session):
 def test_audit_row_may_name_a_source_alone_or_be_a_system_action(sync_session):
     sync_session.execute(text("INSERT INTO audit_log (source, entity, action) VALUES ('legacy', 'matches', 'update')"))
     sync_session.execute(text("INSERT INTO audit_log (entity, action) VALUES ('admin_users', 'create')"))
+
+
+# --- Revision 0005: devices, outbox cursor, source health, run log, placeholders (D3) -------------
+
+COLUMNS_0005 = {
+    "devices.satellite_ids",
+    "notification_outbox.claimed_at",
+    "notification_outbox.cursor_device_id",
+    "sources.consecutive_failures",
+    "sources.breaker_opened_at",
+    "sources.last_success_at",
+    "sources.last_zero_alert_on",
+    "import_runs.log",
+    "channels.placeholder_source",
+}
+CONSTRAINTS_0005 = {"ck_devices_satellite_ids", "ck_sources_consecutive_failures"}
+INDEXES_0005 = {"notification_outbox_sending_idx", "channels_placeholder_idx"}
+
+
+def test_0005_adds_every_column_and_index(empty_database):
+    command.upgrade(_alembic(empty_database), "head")
+
+    schema = _schema(empty_database)
+    assert COLUMNS_0005 <= schema["columns"]
+    assert CONSTRAINTS_0005 <= schema["constraints"]
+    assert INDEXES_0005 <= schema["indexes"]
+    with psycopg.connect(empty_database) as conn:
+        references = conn.execute(
+            "SELECT conrelid::regclass::text, confrelid::regclass::text FROM pg_constraint WHERE contype = 'f' "
+            "AND conrelid = 'channels'::regclass AND confrelid = 'sources'::regclass"
+        ).fetchall()
+    assert ("channels", "sources") in {tuple(row) for row in references}
+
+
+def test_0005_refuses_a_33_element_satellite_list(sync_session):
+    with pytest.raises(IntegrityError) as exc_info, sync_session.begin_nested():
+        sync_session.execute(
+            text(
+                "INSERT INTO devices (install_id, token_hash, platform, satellite_ids) "
+                "VALUES (gen_random_uuid(), repeat('c', 64), 'android', "
+                "'{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33}'::bigint[])"
+            )
+        )
+    assert exc_info.value.orig.diag.constraint_name == "ck_devices_satellite_ids"
+
+
+def test_0005_downgrade_drops_them_and_leaves_every_row_unchanged(empty_database):
+    cfg = _alembic(empty_database)
+    command.upgrade(cfg, "head")
+    with psycopg.connect(empty_database, autocommit=True) as conn:
+        conn.execute(
+            "INSERT INTO channels (kind, name, show_in_match, placeholder_source) "
+            "VALUES ('platform', 'beIN SPORTS 1', false, 'livesoccertv')"
+        )
+        conn.execute(
+            "INSERT INTO matches (source, match_date, competition_name, home_team_name, away_team_name, time_tbd) "
+            "VALUES ('legacy', '2026-11-01', 'c', 'h', 'a', true)"
+        )
+        conn.execute(
+            "INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status) "
+            "VALUES ('kickoff_reminder', 'kickoff_reminder:1', '{}', '{}', now(), 'pending')"
+        )
+        before = conn.execute("SELECT kind, name, show_in_match FROM channels ORDER BY id").fetchall()
+
+    command.downgrade(cfg, "0004")
+
+    schema = _schema(empty_database)
+    assert not COLUMNS_0005 & schema["columns"]
+    assert not CONSTRAINTS_0005 & schema["constraints"]
+    assert not INDEXES_0005 & schema["indexes"]
+    with psycopg.connect(empty_database) as conn:
+        after = conn.execute("SELECT kind, name, show_in_match FROM channels ORDER BY id").fetchall()
+        outbox = conn.execute("SELECT status FROM notification_outbox").fetchall()
+    assert after == before
+    assert outbox == [("pending",)]
+
+    command.upgrade(cfg, "head")
+    assert COLUMNS_0005 <= _schema(empty_database)["columns"]
+
+
+# --- Revision 0006: the outbox attempt counter (B1-R1-4) ------------------------------------------
+
+
+def test_0006_adds_the_attempt_counter_and_defaults_it_to_zero(empty_database):
+    cfg = _alembic(empty_database)
+    command.upgrade(cfg, "0005")
+    with psycopg.connect(empty_database, autocommit=True) as conn:
+        conn.execute(
+            "INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status) "
+            "VALUES ('kickoff_reminder', 'kickoff_reminder:1', '{}', '{}', now(), 'pending')"
+        )
+
+    command.upgrade(cfg, "head")
+
+    assert "notification_outbox.attempts" in _schema(empty_database)["columns"]
+    with psycopg.connect(empty_database) as conn:
+        assert conn.execute("SELECT attempts FROM notification_outbox").fetchall() == [(0,)]
+
+    command.downgrade(cfg, "0005")
+    assert "notification_outbox.attempts" not in _schema(empty_database)["columns"]

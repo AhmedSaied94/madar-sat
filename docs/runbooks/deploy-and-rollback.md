@@ -68,6 +68,7 @@ curl -fsS http://127.0.0.1:8000/healthz               # what deploy.sh checks
 | --- | --- | --- | --- |
 | `wg-quick` errors in "Join WireGuard", `Host key verification failed`, or `Permission denied (publickey)` | CI can't reach VPS-1 | Unchanged | Check `WG_CI_CONFIG`, `DEPLOY_KNOWN_HOSTS` and `DEPLOY_SSH_KEY` against [provision-host.md §8](provision-host.md#8-deploy-peer-and-keys) |
 | `error: /srv/madar/.env is missing` | The host isn't bootstrapped | Unchanged | [provision-host.md §4](provision-host.md#4-fill-the-env-file-and-re-run) |
+| `error: this host is missing its D3 folders or backup timers, which only root can create` | The host was bootstrapped before D3: the folders and the backup timers come from `bootstrap-vps.sh` now (B2-R1-4) | Unchanged | Run `sudo ./madar-infra/scripts/bootstrap-vps.sh <vps1\|vps2>` on that host, then re-run the job ([provision-host.md §3](provision-host.md#3-run-the-bootstrap-script)) |
 | `error: another deploy is running` | A manual deploy holds the lock | Unchanged | On VPS-1: `pgrep -af deploy.sh`. Wait for it, then re-run the job. |
 | Compose or Caddy errors before `pulling` | Step 1: `caddy`, `postgres` or `redis` didn't come up healthy, or the Caddyfile didn't load | The APIs are unchanged. A failed `caddy reload` keeps the old config. | Read that container's log. Fix in a new commit. |
 | `denied` or `unauthorized` at login or pull | The repository can't read the package | Unchanged | "Images in GHCR" below |

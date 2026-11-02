@@ -6,8 +6,10 @@
 #   infra/scripts/bootstrap-vps.sh <vps1|vps2> [--serial-console-tested]
 #
 # It installs Docker and WireGuard, creates the deploy user (docker group, SSH key only) and the
-# /srv folders, and applies infra/firewall/<role>.rules. On VPS-1 it also sets up the WireGuard hub
-# and makes docker.service wait for wg0, so api-admin's 10.8.0.1 binding exists when Docker starts.
+# /srv folders, installs and enables the backup timers, and applies infra/firewall/<role>.rules.
+# The timer install is here, not in deploy.sh, because only root may write /etc/systemd/system
+# (B2-R1-4). On VPS-1 it also sets up the WireGuard hub and makes docker.service wait for wg0, so
+# api-admin's 10.8.0.1 binding exists when Docker starts.
 #
 # Public SSH stays open until the OCI serial console has been tested on this host (FR-023): pass
 # --serial-console-tested or answer the prompt. On VPS-1 it also stays open until a WireGuard peer
@@ -193,6 +195,64 @@ ensure_dirs() {
     # The raw pages. Docker would create the missing bind source as root:root, and the uid-10001
     # workers with cap_drop ALL could not write it (B2-R1-5).
     install -d -m 755 -o "$app_uid" -g "$app_uid" /srv/raw
+    # D3: the backup staging file, Uptime Kuma's SQLite, and the FCM service account. The secrets
+    # directory and the key belong to the image's user, because only worker-notify mounts it (R9).
+    # /srv/backup belongs to that user too: the backup container runs as uid 10001 and, without
+    # CAP_DAC_OVERRIDE, cannot write a directory owned by anyone else (B2-R1-2).
+    install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/backup
+    install -d -m 755 -o deploy -g deploy /srv/kuma
+    install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/secrets
+  fi
+}
+
+# The backup timers the role runs (R19). deploy.sh verifies them and never installs them: writing
+# /etc/systemd/system, `daemon-reload` and `enable` are root-only (B2-R1-4).
+timers_for_role() {
+  if [[ $role == vps2 ]]; then
+    printf '%s\n' backup-db.timer
+  else
+    printf '%s\n' backup-media.timer backup-media-weekly.timer
+  fi
+}
+
+# Every key a backup needs before a first run can succeed. With `Persistent=true` systemd starts a
+# missed run as soon as the timer is activated, so an empty repository variable would turn the
+# first night red instead of green.
+backup_keys_present() {
+  local keys=(RESTIC_REPOSITORY RESTIC_PASSWORD B2_ACCOUNT_ID B2_ACCOUNT_KEY) key
+  if [[ $role == vps1 ]]; then
+    keys+=(RCLONE_CONFIG_OCI_ACCESS_KEY_ID RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY)
+  else
+    keys+=(POSTGRES_PASSWORD)
+  fi
+  for key in "${keys[@]}"; do
+    [[ -n $(env_get "$key") ]] || return 1
+  done
+}
+
+# Install, enable and (once their keys exist and the infra is synced) start the host's backup
+# timers. Idempotent: a re-run rewrites the units, so the host always matches the repository.
+install_timers() {
+  log "installing the backup timers"
+  local timer unit compose_name=vps1.yml
+  if [[ $role == vps2 ]]; then compose_name=vps2.yml; fi
+  while IFS= read -r timer; do
+    unit=${timer%.timer}.service
+    install -m 644 "$infra/systemd/$unit" "$infra/systemd/$timer" /etc/systemd/system/
+  done < <(timers_for_role)
+  systemctl daemon-reload
+  while IFS= read -r timer; do
+    systemctl enable "$timer" >/dev/null
+  done < <(timers_for_role)
+  # `Persistent=true` makes an activated timer run a missed job at once, so it is only started when
+  # its first run can succeed: the keys are in `.env` and the Compose file is synced to /srv/madar.
+  if backup_keys_present && [[ -f /srv/madar/infra/compose/$compose_name ]]; then
+    while IFS= read -r timer; do
+      systemctl start "$timer"
+    done < <(timers_for_role)
+    log "backup timers started"
+  else
+    log "backup timers enabled but not started: fill the backup keys in $env_file and sync /srv/madar/infra, then 'systemctl start $(timers_for_role | tr '\n' ' ')'"
   fi
 }
 
@@ -300,6 +360,7 @@ main() {
   ensure_env_file
   [[ $role == vps1 ]] && ensure_redis_acl_group
   ensure_dirs
+  install_timers
   # check-firewall.sh reads this to know which expectations apply (B2-R1-6).
   install -d -m 755 "$state_dir"
   printf '%s\n' "$role" > "$state_dir/host-role"

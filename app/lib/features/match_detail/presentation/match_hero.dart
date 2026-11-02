@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/format/digits.dart';
@@ -10,9 +9,11 @@ import '../../../core/network/generated/models/sport.dart';
 import '../../../core/network/generated/models/status.dart';
 import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
+import '../../../design/components/display_scope.dart';
 import '../../../design/components/logo.dart';
 import '../../../design/components/status_block.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/config/media_image.dart';
 
 /// The top of S3: the competition and stage, both teams with the status between them (home
 /// on the right), and the kickoff date in words.
@@ -33,7 +34,7 @@ class MatchHero extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: _semantics(l),
+      label: _semantics(context, l),
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(
@@ -91,7 +92,7 @@ class MatchHero extends StatelessWidget {
                 const SizedBox(width: MadarSpace.s2),
                 Flexible(
                   child: Text(
-                    _dateAndTime(l),
+                    _dateAndTime(context, l),
                     style: MadarText.textCaption.copyWith(color: colors.textSecondary),
                   ),
                 ),
@@ -125,8 +126,14 @@ class MatchHero extends StatelessWidget {
     );
   }
 
-  /// The kickoff on the device's calendar. A match with no time still has its day.
-  DateTime get _localDay => (match.kickoffAt ?? match.matchDate).toLocal();
+  /// The kickoff's day on the chosen zone's calendar (S15), so the date reads with the time
+  /// beside it. A match with no time still has its day: `matchDate` is a calendar date, not
+  /// an instant, so no zone moves it.
+  DateTime _day(BuildContext context) {
+    final kickoff = match.kickoffAt;
+    if (kickoff == null) return match.matchDate;
+    return MadarDisplayScope.zoneOf(context).wallClock(kickoff);
+  }
 
   /// «تبدأ بعد 3 ساعات» while the kickoff is more than an hour away; null inside the hour
   /// (the status block counts it), once it has passed, or when there is no time to count.
@@ -143,14 +150,14 @@ class MatchHero extends StatelessWidget {
     return l.s3StartsInMinutes(minutes);
   }
 
-  String _dateAndTime(AppLocalizations l) {
+  String _dateAndTime(BuildContext context, AppLocalizations l) {
     final time = match.timeTbd
         ? null
-        : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker);
-    return l.s3DateTime(MadarDates.full(l, _localDay), time ?? l.timeTbd);
+        : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker, use24h: MadarDisplayScope.use24hOf(context), zone: MadarDisplayScope.zoneOf(context).fixed);
+    return l.s3DateTime(MadarDates.full(l, _day(context)), time ?? l.timeTbd);
   }
 
-  String _semantics(AppLocalizations l) {
+  String _semantics(BuildContext context, AppLocalizations l) {
     final parts = <String>[l.vs(match.away.name, match.home.name)];
     final score = match.score;
     String scoreWords() => l.scoreSemantics(
@@ -161,7 +168,7 @@ class MatchHero extends StatelessWidget {
       case Status.scheduled:
         final time = match.timeTbd
             ? null
-            : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker);
+            : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker, use24h: MadarDisplayScope.use24hOf(context), zone: MadarDisplayScope.zoneOf(context).fixed);
         parts.add(time ?? l.timeTbd);
       case Status.live:
         parts.add(l.live);
@@ -190,7 +197,7 @@ class MatchHero extends StatelessWidget {
     }
     parts.add(match.competition.name);
     if (match.competition.stage != null) parts.add(match.competition.stage!);
-    parts.add(MadarDates.full(l, _localDay));
+    parts.add(MadarDates.full(l, _day(context)));
     if (_countdown(l) case final countdown?) parts.add(countdown);
     return parts.join(l.listSeparator);
   }
@@ -213,7 +220,7 @@ class _CompetitionLine extends StatelessWidget {
       children: [
         LogoTile(
           kind: LogoTileKind.competition,
-          logo: competition.logo == null ? null : CachedNetworkImageProvider(competition.logo!),
+          logo: mediaImage(context, competition.logo),
           size: MadarSpace.s6,
         ),
         Text(
@@ -253,7 +260,7 @@ class _Team extends StatelessWidget {
         if (!individual) ...[
           TeamCrest(
             name: name,
-            logo: logo == null ? null : CachedNetworkImageProvider(logo!),
+            logo: mediaImage(context, logo),
             size: MadarSpace.s12 + MadarSpace.s6,
           ),
           const SizedBox(height: MadarSpace.s2),

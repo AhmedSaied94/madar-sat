@@ -23,11 +23,11 @@ _HeadlineEntry _$HeadlineEntryFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$HeadlineEntryToJson(_HeadlineEntry instance) =>
     <String, dynamic>{
-      'access': _$AccessEnumMap[instance.access],
+      'access': ?_$AccessEnumMap[instance.access],
       'channel_id': instance.channelId,
-      'frequency': instance.frequency,
+      'frequency': ?instance.frequency,
       'name': instance.name,
-      'satellite': instance.satellite,
+      'satellite': ?instance.satellite,
     };
 
 const _$AccessEnumMap = {

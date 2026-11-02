@@ -908,6 +908,259 @@
         "title": "CompetitionRef",
         "type": "object"
       },
+      "Device": {
+        "description": "What the server stores, without the token or its hash (contracts/public-devices.md).",
+        "examples": [
+          {
+            "app_version": "0.3.0+31",
+            "device_id": 812,
+            "has_push_token": true,
+            "locale": "ar-EG",
+            "platform": "android",
+            "prefs": {
+              "types": {}
+            },
+            "satellite_ids": [
+              3,
+              7
+            ],
+            "tz": "Africa/Cairo"
+          }
+        ],
+        "properties": {
+          "app_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version"
+          },
+          "device_id": {
+            "title": "Device Id",
+            "type": "integer"
+          },
+          "has_push_token": {
+            "title": "Has Push Token",
+            "type": "boolean"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "platform": {
+            "enum": [
+              "android",
+              "ios",
+              "web"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "prefs": {
+            "$ref": "#/components/schemas/NotificationPrefs"
+          },
+          "satellite_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Satellite Ids",
+            "type": "array"
+          },
+          "tz": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tz"
+          }
+        },
+        "required": [
+          "device_id",
+          "platform",
+          "app_version",
+          "tz",
+          "locale",
+          "satellite_ids",
+          "has_push_token",
+          "prefs"
+        ],
+        "title": "Device",
+        "type": "object"
+      },
+      "DeviceRegister": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "install_id": "6f1c0b8e-2d3a-4c8b-9f0e-1a2b3c4d5e6f",
+            "platform": "android"
+          }
+        ],
+        "properties": {
+          "install_id": {
+            "format": "uuid",
+            "title": "Install Id",
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "android",
+              "ios",
+              "web"
+            ],
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "install_id",
+          "platform"
+        ],
+        "title": "DeviceRegister",
+        "type": "object"
+      },
+      "DeviceRegistered": {
+        "examples": [
+          {
+            "device_id": 812,
+            "device_token": "Q2hhbmdlTWUtNDMtY2hhcnMtYmFzZTY0dXJsLXRva2Vu"
+          }
+        ],
+        "properties": {
+          "device_id": {
+            "title": "Device Id",
+            "type": "integer"
+          },
+          "device_token": {
+            "title": "Device Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "device_token"
+        ],
+        "title": "DeviceRegistered",
+        "type": "object"
+      },
+      "DeviceUpdate": {
+        "additionalProperties": false,
+        "description": "Every field optional: an omitted field is unchanged, ``null`` clears it.",
+        "examples": [
+          {
+            "app_version": "0.3.0+31",
+            "locale": "ar-EG",
+            "prefs": {
+              "types": {
+                "kickoff_reminder": {
+                  "lead_min": 15,
+                  "on": true
+                }
+              }
+            },
+            "push_token": "fcm-token-example",
+            "satellite_ids": [
+              3,
+              7
+            ],
+            "tz": "Africa/Cairo"
+          }
+        ],
+        "properties": {
+          "app_version": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "prefs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotificationPrefs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "push_token": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Push Token"
+          },
+          "satellite_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "maximum": 9.223372036854776e+18,
+                  "minimum": 1.0,
+                  "type": "integer"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Satellite Ids"
+          },
+          "tz": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tz"
+          }
+        },
+        "title": "DeviceUpdate",
+        "type": "object"
+      },
       "Envelope_ChannelDetail_": {
         "properties": {
           "data": {
@@ -1029,6 +1282,129 @@
           "meta"
         ],
         "title": "Envelope[CompetitionDetail]",
+        "type": "object"
+      },
+      "Envelope_DeviceRegistered_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceRegistered"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[DeviceRegistered]",
+        "type": "object"
+      },
+      "Envelope_Device_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Device"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[Device]",
+        "type": "object"
+      },
+      "Envelope_FollowSet_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowSet"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[FollowSet]",
         "type": "object"
       },
       "Envelope_HealthStatus_": {
@@ -1556,6 +1932,65 @@
           "meta"
         ],
         "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "FollowSet": {
+        "additionalProperties": false,
+        "description": "The whole follow set: \u2264 500 ids in total, duplicates collapsed (research R5).",
+        "examples": [
+          {
+            "channels": [],
+            "commentators": [],
+            "competitions": [
+              12
+            ],
+            "matches": [
+              48213
+            ],
+            "teams": [
+              101,
+              205
+            ]
+          }
+        ],
+        "properties": {
+          "channels": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "commentators": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Commentators",
+            "type": "array"
+          },
+          "competitions": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Competitions",
+            "type": "array"
+          },
+          "matches": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "teams": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "title": "FollowSet",
         "type": "object"
       },
       "Frequency": {
@@ -2100,6 +2535,66 @@
         ],
         "title": "NamedRef",
         "type": "object"
+      },
+      "NotificationPref": {
+        "additionalProperties": false,
+        "properties": {
+          "lead_min": {
+            "anyOf": [
+              {
+                "enum": [
+                  5,
+                  15,
+                  30,
+                  60
+                ],
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Min"
+          },
+          "on": {
+            "default": true,
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "title": "NotificationPref",
+        "type": "object"
+      },
+      "NotificationPrefs": {
+        "additionalProperties": false,
+        "properties": {
+          "types": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NotificationPref"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/NotificationType"
+            },
+            "title": "Types",
+            "type": "object"
+          }
+        },
+        "title": "NotificationPrefs",
+        "type": "object"
+      },
+      "NotificationType": {
+        "description": "The seven types of SD \u00a76.8; unknown types are refused (research R4).",
+        "enum": [
+          "kickoff_reminder",
+          "goal",
+          "final_score",
+          "match_started",
+          "channels_updated",
+          "frequency_changed",
+          "announcement"
+        ],
+        "title": "NotificationType",
+        "type": "string"
       },
       "Period": {
         "enum": [
@@ -2944,6 +3439,156 @@
         "summary": "Get Competition",
         "tags": [
           "competitions"
+        ]
+      }
+    },
+    "/v1/devices": {
+      "post": {
+        "operationId": "register_device_v1_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "device_registered": {
+                    "value": {
+                      "data": {
+                        "device_id": 812,
+                        "device_token": "Q2hhbmdlTWUtNDMtY2hhcnMtYmFzZTY0dXJsLXRva2Vu"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-11-01T08:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DeviceRegistered_"
+                }
+              }
+            },
+            "description": "Registered; the token is returned once"
+          },
+          "422": {
+            "description": "`422 validation_error`, `unknown_satellite` or `unknown_follow_target`"
+          },
+          "429": {
+            "description": "`429 rate_limited` with `Retry-After` and `meta.retry_after_s`"
+          }
+        },
+        "summary": "Register an install id, or rotate its token",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/v1/devices/me": {
+      "delete": {
+        "operationId": "delete_device_v1_devices_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`401 unauthenticated` (missing, malformed or unknown token)"
+          },
+          "429": {
+            "description": "`429 rate_limited` with `Retry-After` and `meta.retry_after_s`"
+          }
+        },
+        "summary": "Delete this device and its follows",
+        "tags": [
+          "devices"
+        ]
+      },
+      "put": {
+        "operationId": "update_device_v1_devices_me_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Device_"
+                }
+              }
+            },
+            "description": "The stored device"
+          },
+          "401": {
+            "description": "`401 unauthenticated` (missing, malformed or unknown token)"
+          },
+          "422": {
+            "description": "`422 validation_error`, `unknown_satellite` or `unknown_follow_target`"
+          },
+          "429": {
+            "description": "`429 rate_limited` with `Retry-After` and `meta.retry_after_s`"
+          }
+        },
+        "summary": "Update this device's push token, app version, locale, time zone, satellites or prefs",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/v1/devices/me/follows": {
+      "put": {
+        "operationId": "replace_follows_v1_devices_me_follows_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_FollowSet_"
+                }
+              }
+            },
+            "description": "The stored set"
+          },
+          "401": {
+            "description": "`401 unauthenticated` (missing, malformed or unknown token)"
+          },
+          "422": {
+            "description": "`422 validation_error`, `unknown_satellite` or `unknown_follow_target`"
+          },
+          "429": {
+            "description": "`429 rate_limited` with `Retry-After` and `meta.retry_after_s`"
+          }
+        },
+        "summary": "Replace this device's whole follow set (atomic; \u2264 500 ids)",
+        "tags": [
+          "devices"
         ]
       }
     },

@@ -6,20 +6,22 @@ Serves ``/v1`` and ``/healthz``. It never imports or mounts admin routers
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import errors, health, openapi
+from app.api import cache, errors, health, openapi
 from app.api.public import (
     channels,
     commentators,
     competitions,
+    devices,
     live,
     matches,
     rights_holders,
     satellites,
     teams,
 )
+from app.api.ratelimit import rate_limit
 from app.settings import get_settings
 
 
@@ -36,21 +38,24 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET"],
-        allow_headers=["If-None-Match"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["If-None-Match", "Authorization", "Content-Type"],
         expose_headers=["ETag"],
     )
+    app.add_middleware(cache.ResponseCacheMiddleware)
 
     errors.register_exception_handlers(app)
 
-    app.include_router(matches.router)
-    app.include_router(live.router)
-    app.include_router(satellites.router)
-    app.include_router(channels.router)
-    app.include_router(competitions.router)
-    app.include_router(teams.router)
-    app.include_router(rights_holders.router)
-    app.include_router(commentators.router)
+    limit = [Depends(rate_limit)]
+    app.include_router(matches.router, dependencies=limit)
+    app.include_router(live.router, dependencies=limit)
+    app.include_router(satellites.router, dependencies=limit)
+    app.include_router(channels.router, dependencies=limit)
+    app.include_router(competitions.router, dependencies=limit)
+    app.include_router(teams.router, dependencies=limit)
+    app.include_router(rights_holders.router, dependencies=limit)
+    app.include_router(commentators.router, dependencies=limit)
+    app.include_router(devices.router, dependencies=limit)
 
     app.add_api_route("/healthz", health.health_endpoint, methods=["GET"], tags=["health"])
     openapi.install(app)

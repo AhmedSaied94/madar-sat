@@ -37,10 +37,16 @@ def compute_etag(
     datasets: Mapping[str, int],
     bucket_s: int | None = None,
     now: float | None = None,
+    path: str = "",
 ) -> str:
-    """Compute the weak ETag for one endpoint invocation."""
+    """Compute the weak ETag for one endpoint invocation.
+
+    ``path`` is the request path: a detail route (``/v1/matches/{id}``) has the same route id and
+    query for every entity, so without it two matches would share a tag — and, since D3 keys the
+    response cache on the tag, one match's body could be served for another.
+    """
     settings = get_settings()
-    parts: list[str] = [route_id]
+    parts: list[str] = [route_id, path]
     parts.extend(f"{k}={v}" for k, v in canonical_query(query))
     parts.extend(f"{k}={datasets[k]}" for k in sorted(datasets))
     parts.append(settings.media_base_url)

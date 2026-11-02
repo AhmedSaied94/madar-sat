@@ -301,7 +301,21 @@ async def test_broadcast_presets_and_sources_are_read_only_lists(editor_client):
     assert presets.status_code == 200 and isinstance(presets.json()["data"], list)
     names = {s["name"] for s in sources.json()["data"]}
     assert {"manual", "ysscores"} <= names
-    assert set(sources.json()["data"][0]) == {"name", "kind", "is_enabled"}
+    # D3 replaced the item with its health (contracts/admin-api.md §Sources).
+    assert set(sources.json()["data"][0]) == {
+        "name",
+        "kind",
+        "is_enabled",
+        "breaker",
+        "breaker_opened_at",
+        "consecutive_failures",
+        "paused",
+        "last_success_at",
+        "last_run",
+        "items_24h",
+        "error_rate_24h",
+        "running",
+    }
     assert (await editor_client.post(f"{ADMIN}/sources", json={})).status_code == 405
 
 

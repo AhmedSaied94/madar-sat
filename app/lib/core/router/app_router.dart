@@ -2,13 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:go_router/go_router.dart';
 
+import '../../features/favorites/presentation/favorites_page.dart';
 import '../../features/frequencies/presentation/frequencies_page.dart';
 import '../../features/frequencies/presentation/satellite_channels_page.dart';
 import '../../features/gallery/presentation/gallery_page.dart';
 import '../../features/match_detail/presentation/match_detail_page.dart';
 import '../../features/matches/presentation/matches_page.dart';
+import '../../features/more/presentation/more_page.dart';
 import '../../features/my_satellites/presentation/my_satellites_page.dart';
+import '../../features/onboarding/domain/onboarding_step.dart';
+import '../../features/onboarding/presentation/install_page.dart';
+import '../../features/onboarding/presentation/onboarding_page.dart';
+import '../../features/settings/presentation/settings_page.dart';
 import '../../features/shell/presentation/stub_page.dart';
+import '../../features/system/presentation/system_views.dart';
 
 /// Ids are positive whole numbers of at most ten digits. `int.tryParse` alone would also
 /// take `-5`, `+5`, ` 5` and `0x10`.
@@ -21,16 +28,31 @@ String? _requireIntegerId(BuildContext context, GoRouterState state) =>
 
 int _idOf(GoRouterState state) => int.parse(state.pathParameters['id']!);
 
-/// Every PB §8.4 route. `/`, `/match/:id`, `/my-satellites`, `/satellites` and
-/// `/satellites/:id` are the D2 screens (S2–S5); the rest are stubs until their day.
+/// Every PB §8.4 route. S2–S5 are D2's; D3 adds onboarding, S9, S15, S16, S1.5, the forced
+/// update and pushes' `/match/:id`.
+///
+/// [guard] decides where a location must really go: a build below `min_supported_build`
+/// goes to the forced-update screen, and a first launch to the stored onboarding step. It is
+/// re-run on settings changes through the router's refresh listener.
 ///
 /// `/gallery` is registered only in debug builds (FR-045).
-GoRouter createAppRouter({bool? includeGallery}) {
+GoRouter createAppRouter({
+  bool? includeGallery,
+  String? Function(String location)? guard,
+  Listenable? refreshListenable,
+}) {
   final gallery = includeGallery ?? kDebugMode;
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refreshListenable,
+    redirect: (context, state) => guard?.call(state.matchedLocation),
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const MatchesPage()),
+      // The five root tabs carry S0's exit rule: a back press on any of them shows the
+      // snackbar, and a second press within the window leaves the app (US2 scenario 13).
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const ExitGuard(child: MatchesPage()),
+      ),
       GoRoute(path: '/live', builder: (context, state) => const StubPage(title: '/live')),
       GoRoute(
         path: '/day/:date',
@@ -41,8 +63,14 @@ GoRouter createAppRouter({bool? includeGallery}) {
         redirect: _requireIntegerId,
         builder: (context, state) => MatchDetailPage(matchId: _idOf(state)),
       ),
-      GoRoute(path: '/my-satellites', builder: (context, state) => const MySatellitesPage()),
-      GoRoute(path: '/satellites', builder: (context, state) => const FrequenciesPage()),
+      GoRoute(
+        path: '/my-satellites',
+        builder: (context, state) => const ExitGuard(child: MySatellitesPage()),
+      ),
+      GoRoute(
+        path: '/satellites',
+        builder: (context, state) => const ExitGuard(child: FrequenciesPage()),
+      ),
       GoRoute(
         path: '/satellites/:id',
         redirect: _requireIntegerId,
@@ -61,11 +89,14 @@ GoRouter createAppRouter({bool? includeGallery}) {
         builder: (context, state) =>
             StubPage(title: '/competition/${state.pathParameters['id']}'),
       ),
+      // S9 and S16 carry the same rule inside their pages; these three are wrapped here, so
+      // every root tab answers a back press the same way.
+      GoRoute(path: '/favorites', builder: (context, state) => const FavoritesPage()),
+      GoRoute(path: '/more', builder: (context, state) => const MorePage()),
       GoRoute(
-        path: '/favorites',
-        builder: (context, state) => const StubPage(title: '/favorites'),
+        path: '/rights',
+        builder: (context, state) => const StubPage(title: '/rights'),
       ),
-      GoRoute(path: '/rights', builder: (context, state) => const StubPage(title: '/rights')),
       GoRoute(
         path: '/rights/:id',
         builder: (context, state) => StubPage(title: '/rights/${state.pathParameters['id']}'),
@@ -76,13 +107,19 @@ GoRouter createAppRouter({bool? includeGallery}) {
         builder: (context, state) =>
             StubPage(title: '/search?q=${state.uri.queryParameters['q'] ?? ''}'),
       ),
-      GoRoute(path: '/settings', builder: (context, state) => const StubPage(title: '/settings')),
+      GoRoute(path: '/settings', builder: (context, state) => const SettingsPage()),
       GoRoute(
         path: '/settings/:section',
         builder: (context, state) =>
-            StubPage(title: '/settings/${state.pathParameters['section']}'),
+            SettingsPage(section: state.pathParameters['section']),
       ),
-      GoRoute(path: '/install', builder: (context, state) => const StubPage(title: '/install')),
+      GoRoute(
+        path: '/onboarding/:step',
+        builder: (context, state) =>
+            OnboardingPage(step: OnboardingStep.fromSlug(state.pathParameters['step'])),
+      ),
+      GoRoute(path: '/install', builder: (context, state) => const InstallPage()),
+      GoRoute(path: '/update-required', builder: (context, state) => const ForcedUpdatePage()),
       if (gallery)
         GoRoute(path: '/gallery', builder: (context, state) => const GalleryPage()),
     ],

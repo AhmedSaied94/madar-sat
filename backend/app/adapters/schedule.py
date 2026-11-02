@@ -1,12 +1,14 @@
-"""Beat entries for the ingestion tasks (T076, R16, R19, FR-026).
+"""Beat entries for the ingestion tasks (T066, R14, R16, R17, FR-026).
 
-All times are UTC. ``app.workers`` reads ``BEAT_SCHEDULE`` (``workers.load_beat_schedule``); exactly one ``beat``
-runs, on VPS-2. The bridge runs 90 minutes after ysscores, so it adds what ysscores does not have
-instead of racing it for the same fixture.
+All times are UTC. ``app.workers`` reads ``BEAT_SCHEDULE`` (``workers.load_beat_schedule``); exactly
+one ``beat`` runs, on VPS-2. Every source entry now calls ``adapters.schedule_fetch`` rather than
+``adapters.fetch``: the pause and the breaker live in the database, and only VPS-2 can read them
+(R17). ``schedule_fetch`` then sends the fetch to the source's own queue, so moving ysscores or
+LiveSoccerTV between the home box and VPS-2 stays a setting, not a schedule change (R21).
 
-The ysscores queue is read when the module is imported, from ``YSSCORES_FETCH_QUEUE``: the container
-has its environment before the process starts, so a changed value needs a restarted worker and
-``beat`` (the runbook says so).
+The bridge runs 90 minutes after ysscores, so it adds what ysscores does not have instead of racing
+it for the same fixture. The three ``heartbeat-*`` entries keep one Kuma push monitor per Celery
+queue alive, so a worker that dies goes quiet and Kuma alerts (R20).
 """
 
 from __future__ import annotations
@@ -15,34 +17,60 @@ from typing import Any
 
 from celery.schedules import crontab
 
-from app.adapters.config import get_adapter_settings
+SCHEDULE_QUEUE = "imports"
 
 
-def ysscores_queue() -> str:
-    """``scrape_home`` (the home box, the default) or ``scrape`` on VPS-2 (R21)."""
-    return get_adapter_settings().ysscores_fetch_queue
-
-
-def build_beat_schedule(ysscores: str | None = None) -> dict[str, dict[str, Any]]:
-    """The three entries; ``ysscores`` overrides the queue, which keeps the tests simple."""
+def build_beat_schedule() -> dict[str, dict[str, Any]]:
+    """Every D3 entry: sources through ``schedule_fetch``, prune, and the three heartbeats."""
     return {
         "ysscores-fixtures": {
-            "task": "adapters.fetch",
+            "task": "adapters.schedule_fetch",
             "schedule": crontab(minute=0, hour="*/3"),
             "args": ("ysscores",),
-            "options": {"queue": ysscores or ysscores_queue()},
+            "options": {"queue": SCHEDULE_QUEUE},
         },
         "satair-bridge": {
-            "task": "adapters.fetch",
+            "task": "adapters.schedule_fetch",
             "schedule": crontab(minute=30, hour="1-22/3"),
             "args": ("legacy",),
-            "options": {"queue": "scrape"},
+            "options": {"queue": SCHEDULE_QUEUE},
+        },
+        "livesoccertv-48h": {
+            "task": "adapters.schedule_fetch",
+            "schedule": crontab(minute=45, hour="*/2"),
+            "args": ("livesoccertv",),
+            "options": {"queue": SCHEDULE_QUEUE},
+        },
+        "livesoccertv-t60": {
+            "task": "adapters.schedule_fetch",
+            "schedule": crontab(minute="*/10"),
+            "args": ("livesoccertv",),
+            "kwargs": {"window": "t60"},
+            "options": {"queue": SCHEDULE_QUEUE},
         },
         "prune-raw-pages": {
             "task": "adapters.prune_raw_pages",
             "schedule": crontab(minute=15, hour=3),
             "args": (),
             "options": {"queue": "maintenance"},
+        },
+        "heartbeat-maintenance": {
+            "task": "ops.heartbeat",
+            "schedule": crontab(minute="*/5"),
+            "args": ("maintenance",),
+            "options": {"queue": "maintenance"},
+        },
+        "heartbeat-imports": {
+            "task": "ops.heartbeat",
+            "schedule": crontab(minute="*/5"),
+            "args": ("imports",),
+            "options": {"queue": "imports"},
+        },
+        "heartbeat-notifications": {
+            "task": "ops.heartbeat",
+            "schedule": crontab(minute="*/5"),
+            "args": ("notifications",),
+            "options": {"queue": "notifications"},
         },
     }
 

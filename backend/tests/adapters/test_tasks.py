@@ -34,6 +34,8 @@ def _clear(client: redis.Redis) -> None:
     for prefix in REDIS_PREFIXES:
         for key in client.scan_iter(match=f"{prefix}*"):
             client.delete(key)
+
+
 SAVED_PAGE = Path(__file__).resolve().parents[1] / "fixtures" / "ysscores" / "2026-10-30.html"
 NOW = datetime(2026, 10, 31, 3, 0, tzinfo=UTC)
 

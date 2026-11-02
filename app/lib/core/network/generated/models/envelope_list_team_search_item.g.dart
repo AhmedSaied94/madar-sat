@@ -22,8 +22,8 @@ _EnvelopeListTeamSearchItem _$EnvelopeListTeamSearchItemFromJson(
 Map<String, dynamic> _$EnvelopeListTeamSearchItemToJson(
   _EnvelopeListTeamSearchItem instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

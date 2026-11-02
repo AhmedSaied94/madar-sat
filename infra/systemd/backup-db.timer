@@ -1,0 +1,15 @@
+# 03:00 Africa/Cairo, every night (R19). `Persistent=true` runs a missed backup at boot instead of
+# skipping it, because the VPS may be off at 03:00 for a patch.
+[Unit]
+Description=Madar Sat: nightly PostgreSQL backup at 03:00 Africa/Cairo
+Documentation=file:/srv/madar/infra/../docs/runbooks/backups.md
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Africa/Cairo
+Persistent=true
+AccuracySec=1min
+RandomizedDelaySec=5min
+Unit=backup-db.service
+
+[Install]
+WantedBy=timers.target

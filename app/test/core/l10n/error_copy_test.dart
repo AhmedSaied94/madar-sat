@@ -46,4 +46,24 @@ void main() {
       expect(l.failureCopy(failure), 'لم نجد ما تبحث عنه');
     });
   });
+  group('D3\'s refusals (M-R1-8)', () {
+    test('each code reads as its own sentence, never the connection one', () {
+      expect(l.errorCopy('unknown_satellite'), isNot(l.errorNetwork));
+      expect(l.errorCopy('unknown_follow_target'), isNot(l.errorNetwork));
+      expect(l.errorCopy('too_many_follows', maxFollows: 500), contains('500'));
+      expect(l.errorCopy('rate_limited', retryAfterS: 12), contains('12'));
+    });
+
+    test('a rate-limited answer without meta still names a wait', () {
+      expect(l.errorCopy('rate_limited'), contains('60'));
+    });
+
+    test('the numbers come from the failure the screen holds', () {
+      const failure = ApiFailure(code: 'too_many_follows', maxFollows: 500);
+      expect(l.failureCopy(failure), contains('500'));
+      const limited = ApiFailure(code: 'rate_limited', retryAfterS: 5);
+      expect(l.failureCopy(limited), contains('5'));
+    });
+  });
+
 }

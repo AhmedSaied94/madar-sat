@@ -19,9 +19,9 @@ _CommentatorDetail _$CommentatorDetailFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CommentatorDetailToJson(_CommentatorDetail instance) =>
     <String, dynamic>{
-      'audio': instance.audio,
+      'audio': ?instance.audio,
       'id': instance.id,
-      'image': instance.image,
+      'image': ?instance.image,
       'name': instance.name,
       'upcoming': instance.upcoming,
     };

@@ -1,0 +1,13 @@
+# Generator configuration (never hand-edit the output; this file is the input).
+
+# The API's bodies take "omitted = unchanged, null = cleared" (public-api-v1,
+# public-devices). json_serializable includes null fields by default, which would turn every
+# request body into a set of `null`s and clear fields the app never meant to touch — the
+# device update is the first to hit it (M-R1-1). Omitting nulls at the generator keeps every
+# model in line with the contract, without hand-editing a generated file.
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          include_if_null: false

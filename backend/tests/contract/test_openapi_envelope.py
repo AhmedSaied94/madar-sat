@@ -83,3 +83,28 @@ def test_admin_examples_keep_their_nulls():
     locked = login["429"]["content"]["application/json"]["examples"]["account_locked"]["value"]
     assert ok["error"] is None
     assert locked["data"] is None
+
+
+async def test_the_device_routes_answer_the_envelope_and_no_store(public_client, device_client):
+    """contracts/public-devices.md: the envelope everywhere, ``no-store``, and no ``ETag`` ever."""
+    update = await device_client.put("/v1/devices/me", json={"app_version": "0.3.0"})
+    follows = await device_client.put("/v1/devices/me/follows", json={})
+    denied = await public_client.put("/v1/devices/me", json={}, headers={"Authorization": "Device not-a-real-token"})
+
+    for response in (update, follows):
+        assert response.status_code == 200, response.text
+        assert set(response.json()) == {"success", "data", "error", "meta"}
+        assert response.json()["success"] is True
+        assert response.headers["cache-control"] == "no-store"
+        assert "etag" not in response.headers
+
+    assert denied.status_code == 401
+    assert denied.json()["error"]["code"] == "unauthenticated"
+
+
+def test_the_device_paths_are_declared_with_their_error_codes():
+    paths = DOCS["public"]["paths"]
+    for path in ("/v1/devices", "/v1/devices/me", "/v1/devices/me/follows"):
+        assert path in paths
+    assert "429" in paths["/v1/devices"]["post"]["responses"]
+    assert "401" in paths["/v1/devices/me"]["put"]["responses"]

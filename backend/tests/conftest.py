@@ -160,7 +160,8 @@ async def _client(app, db_connection, frozen_now, *, headers=None, client_addr=(
 
 
 @pytest.fixture
-async def public_client(loaded_snapshot, db_connection, frozen_now):
+async def public_client(loaded_snapshot, db_connection, frozen_now, redis_client):
+    """The public app, with D3's Redis keys (``dv:``, ``rl:``, ``rc:``) cleared first."""
     from app.public import app
 
     async for client in _client(app, db_connection, frozen_now):
@@ -180,7 +181,7 @@ async def anon_admin_client(loaded_snapshot, db_connection, frozen_now):
 
 ADMIN_PASSWORD = "correct horse battery"  # ≥ 12 characters; the hash is computed once per session
 TEST_REDIS_URL = os.environ.get("TEST_REDIS_URL", "redis://localhost:6380/0")
-REDIS_TEST_PREFIXES = ("auth:", "lock:test:")
+REDIS_TEST_PREFIXES = ("auth:", "lock:test:", "dv:", "rl:", "rc:")
 
 
 @pytest.fixture(scope="session")
@@ -303,9 +304,7 @@ async def committed_editor(_prepare_database, admin_password_hash):
 
     email = f"race-{uuid4().hex[:10]}@example.com"
     with SyncSession() as session:
-        admin = AdminUser(
-            email=email, name="سباق", role="editor", password_hash=admin_password_hash, is_active=True
-        )
+        admin = AdminUser(email=email, name="سباق", role="editor", password_hash=admin_password_hash, is_active=True)
         session.add(admin)
         session.commit()
         admin_id = admin.id
@@ -317,6 +316,56 @@ async def committed_editor(_prepare_database, admin_password_hash):
         with SyncSession() as session:
             session.execute(delete(AdminUser).where(AdminUser.id == admin_id))
             session.commit()
+
+
+# --- D3: devices, matches and the fake push sender ----------------------------------------------
+
+
+@pytest.fixture
+def push_sender():
+    """A ``PushSender`` that records each page and answers per token (T005)."""
+    from tests.support import FakePushSender
+
+    return FakePushSender()
+
+
+@pytest.fixture
+async def device_client(public_client):
+    """The public app with a registered device, carrying its ``Authorization: Device`` header.
+
+    ``client.device_id`` and ``client.device_token`` are the registered device's.
+    """
+    from uuid import uuid4
+
+    response = await public_client.post("/v1/devices", json={"install_id": str(uuid4()), "platform": "android"})
+    assert response.status_code == 201, response.text
+    payload = response.json()["data"]
+    public_client.headers["Authorization"] = f"Device {payload['device_token']}"
+    public_client.device_id = payload["device_id"]
+    public_client.device_token = payload["device_token"]
+    yield public_client
+
+
+@pytest.fixture
+def make_match(session):
+    """``await make_match(kickoff_in=timedelta(minutes=20))``: a match with two teams and links."""
+    from tests import support
+
+    async def _make(now, **kwargs):
+        return await support.create_match(session, now, **kwargs)
+
+    return _make
+
+
+@pytest.fixture
+def make_match_sync(sync_session):
+    """The same factory over the sync session the scheduler and dispatcher take."""
+    from tests import support
+
+    def _make(now, **kwargs):
+        return support.create_match_sync(sync_session, now, **kwargs)
+
+    return _make
 
 
 @pytest.fixture

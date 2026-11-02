@@ -41,10 +41,16 @@ class DayGroups {
 
 /// Groups [rows] into the local [day]'s competition groups (FR-040, FR-041).
 ///
-/// A match belongs to the device-local date of its `kickoff_at`, never to `match_date`
-/// (`LocalDays.group`); rows of other days are left out.
-DayGroups groupDay(DateTime day, Iterable<MatchSummary> rows) {
-  final local = LocalDays.group(rows)[day];
+/// A match belongs to the date of its `kickoff_at` in the app's chosen zone, never to
+/// `match_date` (`LocalDays.group`); rows of other days are left out. [offsetAt] is the
+/// zone's offset for a UTC instant (M-R1-6): the caller passes the S15 choice, so a match at
+/// 23:30 in the chosen zone is listed under that zone's day.
+DayGroups groupDay(
+  DateTime day,
+  Iterable<MatchSummary> rows, {
+  Duration Function(DateTime utc)? offsetAt,
+}) {
+  final local = LocalDays.group(rows, offsetAt: offsetAt)[day];
   if (local == null) return const DayGroups(competitions: [], tbd: []);
 
   final byCompetition = <String, List<MatchSummary>>{};
@@ -108,7 +114,12 @@ abstract final class MatchesDays {
 /// One local day, ready to draw: the rows with the live states applied, and how fresh the
 /// copy under them is.
 class DayView {
-  const DayView({required this.day, required this.snapshot, required this.rows});
+  const DayView({
+    required this.day,
+    required this.snapshot,
+    required this.rows,
+    this.offsetAt,
+  });
 
   final DateTime day;
 
@@ -119,10 +130,17 @@ class DayView {
   /// The rows after `applyLiveStates`.
   final List<MatchSummary> rows;
 
+  /// The chosen zone's offset for a UTC instant: the day each kickoff is grouped under
+  /// (M-R1-6). Null keeps the device's own zone.
+  final Duration Function(DateTime utc)? offsetAt;
+
   int get liveCount => rows.where(isInPlay).length;
 
-  DayGroups groups(MatchesFilter filter) =>
-      groupDay(day, filter == MatchesFilter.live ? rows.where(isInPlay) : rows);
+  DayGroups groups(MatchesFilter filter) => groupDay(
+        day,
+        filter == MatchesFilter.live ? rows.where(isInPlay) : rows,
+        offsetAt: offsetAt,
+      );
 
   /// The age the hint shows, or null while the copy is inside its five minutes (FR-046).
   Duration? staleAge(DateTime now) => snapshot.staleAge(Freshness.matches, now: now);

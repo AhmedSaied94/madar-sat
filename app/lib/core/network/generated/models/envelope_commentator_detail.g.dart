@@ -22,8 +22,8 @@ _EnvelopeCommentatorDetail _$EnvelopeCommentatorDetailFromJson(
 Map<String, dynamic> _$EnvelopeCommentatorDetailToJson(
   _EnvelopeCommentatorDetail instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

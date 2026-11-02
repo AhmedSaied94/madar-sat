@@ -22,8 +22,8 @@ _EnvelopeListRightsHolder _$EnvelopeListRightsHolderFromJson(
 Map<String, dynamic> _$EnvelopeListRightsHolderToJson(
   _EnvelopeListRightsHolder instance,
 ) => <String, dynamic>{
-  'data': instance.data,
-  'error': instance.error,
-  'meta': instance.meta,
+  'data': ?instance.data,
+  'error': ?instance.error,
+  'meta': ?instance.meta,
   'success': instance.success,
 };

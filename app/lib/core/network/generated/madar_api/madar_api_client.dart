@@ -6,9 +6,14 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/category.dart';
+import '../models/device_register.dart';
+import '../models/device_update.dart';
 import '../models/envelope_channel_detail.dart';
 import '../models/envelope_commentator_detail.dart';
 import '../models/envelope_competition_detail.dart';
+import '../models/envelope_device.dart';
+import '../models/envelope_device_registered.dart';
+import '../models/envelope_follow_set.dart';
 import '../models/envelope_health_status.dart';
 import '../models/envelope_list_channel_carriage.dart';
 import '../models/envelope_list_competition.dart';
@@ -20,6 +25,7 @@ import '../models/envelope_list_team_search_item.dart';
 import '../models/envelope_match_detail.dart';
 import '../models/envelope_rights_holder_detail.dart';
 import '../models/envelope_team_detail.dart';
+import '../models/follow_set.dart';
 import '../models/sport.dart';
 import '../models/status.dart';
 
@@ -53,6 +59,28 @@ abstract class MadarApiClient {
   @GET('/v1/competitions/{competition_id}')
   Future<HttpResponse<EnvelopeCompetitionDetail>> getCompetitionV1CompetitionsCompetitionIdGet({
     @Path('competition_id') required int competitionId,
+  });
+
+  /// Register an install id, or rotate its token
+  @POST('/v1/devices')
+  Future<HttpResponse<EnvelopeDeviceRegistered>> registerDeviceV1DevicesPost({
+    @Body() required DeviceRegister body,
+  });
+
+  /// Delete this device and its follows
+  @DELETE('/v1/devices/me')
+  Future<HttpResponse<void>> deleteDeviceV1DevicesMeDelete();
+
+  /// Update this device's push token, app version, locale, time zone, satellites or prefs
+  @PUT('/v1/devices/me')
+  Future<HttpResponse<EnvelopeDevice>> updateDeviceV1DevicesMePut({
+    @Body() required DeviceUpdate body,
+  });
+
+  /// Replace this device's whole follow set (atomic; ≤ 500 ids)
+  @PUT('/v1/devices/me/follows')
+  Future<HttpResponse<EnvelopeFollowSet>> replaceFollowsV1DevicesMeFollowsPut({
+    @Body() required FollowSet body,
   });
 
   /// Get Live

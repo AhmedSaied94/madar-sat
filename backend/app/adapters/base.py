@@ -26,6 +26,8 @@ class LayoutChanged(Exception):
     One class for every adapter, so the fetch task records the failure the same way whichever
     source broke (B2-R1-9).
     """
+
+
 _DOUBLED_SLASH = re.compile(r"^(.+?)\s+/\s+\1$")
 _DOUBLED_SPACE = re.compile(r"^(.+?)\s+\1$")
 

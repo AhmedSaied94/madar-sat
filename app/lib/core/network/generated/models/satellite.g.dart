@@ -26,17 +26,17 @@ _Satellite _$SatelliteFromJson(Map<String, dynamic> json) => _Satellite(
 
 Map<String, dynamic> _$SatelliteToJson(_Satellite instance) =>
     <String, dynamic>{
-      'best_frequency': instance.bestFrequency,
+      'best_frequency': ?instance.bestFrequency,
       'channel_count': instance.channelCount,
       'id': instance.id,
       'kind': _$KindEnumMap[instance.kind]!,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name_ar': instance.nameAr,
       'name_en': instance.nameEn,
-      'orbital_position': instance.orbitalPosition,
-      'reception_url': instance.receptionUrl,
+      'orbital_position': ?instance.orbitalPosition,
+      'reception_url': ?instance.receptionUrl,
       'slug': instance.slug,
-      'worst_frequency': instance.worstFrequency,
+      'worst_frequency': ?instance.worstFrequency,
     };
 
 const _$KindEnumMap = {

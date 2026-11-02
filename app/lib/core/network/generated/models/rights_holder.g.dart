@@ -17,7 +17,7 @@ _RightsHolder _$RightsHolderFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$RightsHolderToJson(_RightsHolder instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'logo': instance.logo,
+      'logo': ?instance.logo,
       'name': instance.name,
-      'sort_order': instance.sortOrder,
+      'sort_order': ?instance.sortOrder,
     };

@@ -96,3 +96,31 @@ Play App Signing makes Google hold the key that signs what users install, and yo
 | The run is green but no artifact | `if-no-files-found: error` makes the job fail instead, so look at the `aab` job's log for the `flutter build appbundle` error. |
 | A tester sees "App not available" | The tester is not on the list for this track, is on a different Google account than the one listed, or has not accepted the opt-in link yet. Re-send the link and check the account. |
 | The app opens but shows no matches | VPS-1 is not serving `/v1`, or the phone is offline: open `https://api.130.110.117.215.sslip.io/healthz` in the phone's browser (it should answer with `"db": "ok"` and `"redis": "ok"`). The PWA preview has its own CORS step ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)); the Android app does not need it. |
+
+## Push setup
+
+The reminder reaches a phone through FCM; Android and the installed iPhone PWA take the same message by different roads (research R25, R26, [remote-config.md](remote-config.md) for the hosts). Do this once per Firebase project, and again whenever the web app id or the VAPID key changes.
+
+1. **The Android notification channel.** The reminder is sent with `android.notification.channel_id = madar_reminders`; Android 8+ shows it under that channel (the API names the channel and the reason). Nothing to configure on the phone — the channel is created by the first notification — but check it once: **Settings → Apps → Madar Sat → Notifications → Madar reminders** must be on. A tester who turned it off sees no reminder and no error.
+2. **The web VAPID key.** Firebase console → **Project settings → Cloud Messaging → Web Push certificates**. Copy the key pair's public half (88 characters, starts with `B`) into `FIREBASE_VAPID_KEY` in `app/env/<flavor>.json`. The private half never leaves the console.
+3. **The service worker.** The web build must ship `firebase-messaging-sw.js` and `firebase-config.js` at the origin root:
+
+   ```bash
+   cd app
+   ./tool/write_firebase_config.sh env/prod.json     # the public identifiers from the flavor file
+   flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+   ./tool/check_web_assets.sh                        # fails if either file is missing
+   ```
+
+   `firebase-messaging-sw.js` pins the Firebase compat SDK to the version the app's `firebase_core_web` loads (today 13.1.0). If you upgrade the Firebase packages, update that pin in the same change.
+4. **An iPhone test.** iOS grants Web Push only to an app on the home screen, with iOS ≥ 16.4:
+
+   1. Open the PWA in **Safari** (not Chrome, not a private tab).
+   2. S1.4 shows S1.5 instead of a prompt: follow «إضافة إلى الشاشة الرئيسية».
+   3. Open Madar from its icon, go through S1.4 again and tap «تفعيل التنبيهات».
+   4. Have the API send a reminder to the test match; the banner must arrive with the app closed, and tapping it opens S3.
+
+   A Safari tab that has never been installed cannot be granted push, which is why the step shows the guide rather than a prompt.
+5. **Android test.** Install from the closed track, allow notifications in S1.4, then have the API send a reminder: the notification arrives with the app closed and opens S3. Check «Madar reminders» is on in Settings if nothing arrives.
+
+The dispatcher itself, the FCM key on VPS-2 and the outbox are B1's and B2's runbooks ([push-notifications.md](push-notifications.md), [workers.md](workers.md)).

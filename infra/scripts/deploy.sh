@@ -8,26 +8,35 @@
 #   deploy.sh --infra-only                VPS-1 only: applies infra services and reloads Caddy
 #
 # VPS-1, steps for <image-tag>:
+#   0. verify the D3 folders and the backup timers bootstrap created (B2-R1-4);
 #   1. render the Redis ACL from infra/redis/users.acl.tmpl and /srv/madar/.env (the file mode 640
 #      and its directory 750, group 999, so the redis user in the container can read it), apply the
 #      synced infra (`compose up -d caddy postgres redis` and `caddy reload`), and restart Redis
 #      when the file changed, then prove both passwords work (B2-R2-1, B2-R2-11). Both the `up` and
 #      the reload put the previous ACL back when Redis refuses the new one (B2-R3-2);
 #   2. record the running tag in /srv/madar/previous_tag;
-#   3. log in to GHCR with the token from stdin, pull, log out (also on exit);
+#   3. log in to GHCR with the token from stdin, pull the APIs, the media worker and
+#      `madar-backup:stable`, log out (also on exit);
 #   4. run `alembic upgrade head` as a one-off container, and stop before touching any running
 #      container if it fails;
 #   5. start api-public, api-admin and worker-media on the new tag;
 #   6. poll both /healthz endpoints and worker-media's healthcheck for 60 s;
 #   7. on failure, start the previous tag again, re-check, and exit non-zero.
 #
+# Both hosts also verify the D3 folders (/srv/backup, /srv/kuma, /srv/secrets) and their backup
+# timers, which bootstrap-vps.sh creates as root: a deploy only checks them and names the command
+# to run when one is missing (B2-R1-4). Each deploy also pulls `madar-backup:stable`, the image the
+# timers run, while it is logged in to GHCR (B2-R1-1).
+#
 # VPS-2, steps for <image-tag>:
 #   1. record the running tag;
-#   2. pull with the token from stdin (nothing to migrate: migrations run on VPS-1);
-#   3. `compose --profile workers up -d worker-imports worker-scrape worker-maintenance beat`;
-#   4. wait up to 90 s for all four to report healthy (each worker answers `celery inspect ping`;
+#   2. verify the D3 folders and backup-db.timer;
+#   3. pull with the token from stdin (nothing to migrate: migrations run on VPS-1);
+#   4. `compose --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify
+#      uptime-kuma beat`;
+#   5. wait up to 90 s for all of them to report healthy (each worker answers `celery inspect ping`;
 #      beat is healthy when its pid file's process lives);
-#   5. on failure, restore the previous tag and exit non-zero.
+#   6. on failure, restore the previous tag and exit non-zero.
 #
 # HEALTHZ_FORCE_FAIL=true in the environment deploys the new tag with a failing /healthz, for the
 # rollback drill (backend.yml, break_healthcheck). It applies to VPS-1 only.
@@ -35,7 +44,9 @@ set -Eeuo pipefail
 
 infra_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 env_file=/srv/madar/.env
-state_dir=/srv/madar
+# MADAR_STATE_DIR, MADAR_SRV_ROOT and MADAR_UNITS_DIR exist for the CI checks, which drive the
+# read-only verifiers against a temporary tree; on a host they are never set.
+state_dir=${MADAR_STATE_DIR:-/srv/madar}
 acl_dir=$state_dir/redis
 acl_target=$acl_dir/users.acl
 acl_previous=$acl_dir/users.acl.prev
@@ -44,11 +55,15 @@ health_urls=(http://127.0.0.1:8000/healthz http://10.8.0.1:8001/admin/api/health
 health_timeout=60
 workers_timeout=90
 acl_gid=999  # the `redis` user's gid in redis:7.4.12, and the group bootstrap-vps.sh gives deploy
+app_uid=10001  # the `madar` user inside the backend image (backend/Dockerfile)
 redis_acl_changed=0
 api_services=(api-public api-admin)
 media_service=worker-media
 vps1_stateful=(postgres redis caddy)
-vps2_services=(worker-imports worker-scrape worker-maintenance beat)
+# `worker-notify` holds the outbox dispatcher and `uptime-kuma` watches every host (D3, R20).
+vps2_services=(worker-imports worker-scrape worker-maintenance worker-notify uptime-kuma beat)
+vps1_timers=(backup-media.timer backup-media-weekly.timer)
+vps2_timers=(backup-db.timer)
 
 compose=(docker compose --env-file "$env_file")
 vps1_compose=("${compose[@]}" -f "$infra_dir/compose/vps1.yml")
@@ -158,6 +173,77 @@ acl_answers() {
   return 1
 }
 
+# The D3 directories and the backup timers are created by bootstrap-vps.sh as root: `deploy` cannot
+# write /etc/systemd/system, reload systemd, or chown to another uid, and under `set -Eeuo pipefail`
+# a refused `install` aborted the deploy before the migrations and the pull (B2-R1-4). Deploy only
+# verifies what bootstrap did, and names the command to run when something is missing.
+srv_root=${MADAR_SRV_ROOT:-/srv}
+units_dir=${MADAR_UNITS_DIR:-/etc/systemd/system}
+
+# check_dir <path> <mode> <owner uid>: a directory bootstrap created, with its mode and owner.
+check_dir() {
+  local path=$1 mode=$2 owner=$3 actual_mode actual_owner
+  if [[ ! -d $path ]]; then
+    log "$path is missing"
+    return 1
+  fi
+  actual_mode=$(stat -c %a "$path")
+  actual_owner=$(stat -c %u "$path")
+  if [[ $actual_mode != "$mode" ]]; then
+    log "$path is mode $actual_mode, expected $mode"
+    return 1
+  fi
+  if [[ $actual_owner != "$owner" ]]; then
+    log "$path is owned by uid $actual_owner, expected $owner"
+    return 1
+  fi
+}
+
+# check_dirs <vps1|vps2>: the folders the D3 services mount. /srv/backup belongs to the backup
+# image's user (uid 10001), because that container runs as it and writes the dump there (B2-R1-2).
+check_dirs() {
+  local role=$1 ok=0
+  check_dir "$state_dir" 750 "$(id -u)" || ok=1
+  if [[ $role == vps2 ]]; then
+    check_dir "$srv_root/backup" 700 "$app_uid" || ok=1
+    check_dir "$srv_root/kuma" 755 "$(id -u)" || ok=1
+    check_dir "$srv_root/secrets" 700 "$app_uid" || ok=1
+  fi
+  return "$ok"
+}
+
+# role_timers <vps1|vps2>: the timers bootstrap installs on that host.
+role_timers() {
+  if [[ $1 == vps2 ]]; then printf '%s\n' "${vps2_timers[@]}"; else printf '%s\n' "${vps1_timers[@]}"; fi
+}
+
+# check_timers <vps1|vps2>: the units on the host are the repository's, and the timers are enabled.
+check_timers() {
+  local role=$1 ok=0 timer unit file
+  while IFS= read -r timer; do
+    unit=${timer%.timer}.service
+    for file in "$unit" "$timer"; do
+      if ! cmp -s "$infra_dir/systemd/$file" "$units_dir/$file"; then
+        log "$units_dir/$file is missing or differs from the repository"
+        ok=1
+      fi
+    done
+    if ! systemctl is-enabled --quiet "$timer" 2>/dev/null; then
+      log "$timer is not enabled"
+      ok=1
+    fi
+  done < <(role_timers "$role")
+  return "$ok"
+}
+
+require_host_setup() {
+  local role=$1
+  if check_dirs "$role" && check_timers "$role"; then
+    return 0
+  fi
+  die "this host is missing its D3 folders or backup timers, which only root can create: run 'sudo ./madar-infra/scripts/bootstrap-vps.sh $role' on it (docs/runbooks/provision-host.md §3), then deploy again"
+}
+
 # Put back the ACL the last render replaced, so Redis can start on it (B2-R2-11, B2-R3-2).
 restore_previous_acl() {
   [[ -f $acl_previous ]] || return 1
@@ -211,7 +297,9 @@ deploy_vps1() {
   # Step 1 doesn't touch the APIs; the tag is only needed to interpolate vps1.yml.
   export IMAGE_TAG=${current:-none} HEALTHZ_FORCE_FAIL=false
 
-  # 1. Render the ACL, apply the synced infra, and load a changed ACL before the APIs move.
+  # 1. Verify what bootstrap created, render the ACL, apply the synced infra, and load a changed ACL
+  # before the APIs move.
+  require_host_setup vps1
   render_redis_acl
   apply_stateful_infra
   reload_redis_acl
@@ -231,6 +319,12 @@ deploy_vps1() {
   unset token
   log "pulling $tag"
   IMAGE_TAG=$tag "${vps1_compose[@]}" pull "${api_services[@]}" "$media_service"
+  # The backup image is tagged by `infra.yml` (the run SHA and `stable`), not by this deploy's tag,
+  # and the timer needs it locally (B2-R1-1). Pull it here, while the GHCR credential is still open;
+  # a missing backup image must not fail a backend deploy, so it is a warning, not a `die`.
+  if ! IMAGE_TAG=$tag "${vps1_compose[@]}" --profile backup pull backup-media backup-media-weekly; then
+    log "could not pull the backup image; the backup timers stay red until 'infra.yml' builds it"
+  fi
   docker logout ghcr.io >/dev/null
 
   # 4. Migrate first. Expand/contract keeps the running API compatible with the new schema.
@@ -274,12 +368,19 @@ deploy_vps2() {
   fi
   previous=$(cat "$state_dir/previous_tag" 2>/dev/null || true)
 
+  require_host_setup vps2
+
   token=$GHCR_TOKEN
   owner=$(env_get GHCR_OWNER)
   printf '%s' "$token" | docker login ghcr.io --username "$owner" --password-stdin >/dev/null
   unset token
   log "pulling $tag on vps2"
   IMAGE_TAG=$tag "${vps2_compose[@]}" pull "${vps2_services[@]}"
+  # The backup image's own tag, pulled while the credential is open (B2-R1-1). Non-fatal: a backend
+  # deploy must not fail because a separate workflow has not built `madar-backup:stable` yet.
+  if ! IMAGE_TAG=$tag "${vps2_compose[@]}" --profile backup pull backup-db; then
+    log "could not pull the backup image; the backup timer stays red until 'infra.yml' builds it"
+  fi
   docker logout ghcr.io >/dev/null
 
   log "starting vps2 services on $tag"
@@ -341,6 +442,7 @@ exec </dev/null
 trap 'docker logout ghcr.io >/dev/null 2>&1 || true; unset GHCR_TOKEN' EXIT
 
 if [[ $mode == --infra-only ]]; then
+  require_host_setup vps1
   render_redis_acl
   export IMAGE_TAG=${IMAGE_TAG:-none} HEALTHZ_FORCE_FAIL=false
   apply_stateful_infra

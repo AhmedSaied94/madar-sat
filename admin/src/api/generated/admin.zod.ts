@@ -157,6 +157,8 @@ export const listChannelsQueryParams = zod.object({
   "kind": zod.union([zod.enum(['satellite', 'terrestrial', 'platform']),zod.null()]).optional(),
   "access": zod.union([zod.enum(['free', 'encrypted']),zod.null()]).optional(),
   "missing_logo": zod.union([zod.boolean(),zod.null()]).optional(),
+  "placeholder": zod.union([zod.boolean(),zod.null()]).optional(),
+  "show_in_match": zod.union([zod.boolean(),zod.null()]).optional(),
   "cursor": zod.union([zod.string().max(listChannelsQueryCursorMaxOne),zod.null()]).optional(),
   "limit": zod.number().min(1).max(listChannelsQueryLimitMax).default(listChannelsQueryLimitDefault)
 })
@@ -181,6 +183,7 @@ export const listChannelsResponse = zod.object({
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
   "name": zod.string(),
   "package": zod.union([zod.string(),zod.null()]),
+  "placeholder_source": zod.union([zod.string(),zod.null()]),
   "provider": zod.union([zod.string(),zod.null()]),
   "satellite_id": zod.union([zod.number(),zod.null()]),
   "show_in_match": zod.boolean(),
@@ -300,6 +303,7 @@ export const getChannelResponse = zod.object({
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
   "name": zod.string(),
   "package": zod.union([zod.string(),zod.null()]),
+  "placeholder_source": zod.union([zod.string(),zod.null()]),
   "provider": zod.union([zod.string(),zod.null()]),
   "satellite_id": zod.union([zod.number(),zod.null()]),
   "show_in_match": zod.boolean(),
@@ -362,6 +366,7 @@ export const patchChannelBody = zod.object({
   "sr": zod.number()
 }),zod.null()]).optional(),
   "frequency_note": zod.union([zod.string().min(1).max(patchChannelBodyFrequencyNoteMaxOne),zod.null()]).optional(),
+  "kind": zod.union([zod.enum(['satellite', 'terrestrial', 'platform']),zod.null()]).optional(),
   "logo_asset_id": zod.union([zod.number().min(1).max(patchChannelBodyLogoAssetIdMaxOne),zod.null()]).optional(),
   "name": zod.union([zod.string().min(1).max(patchChannelBodyNameMaxOne),zod.null()]).optional(),
   "package": zod.union([zod.string().min(1).max(patchChannelBodyPackageMaxOne),zod.null()]).optional(),
@@ -392,6 +397,7 @@ export const patchChannelResponse = zod.object({
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
   "name": zod.string(),
   "package": zod.union([zod.string(),zod.null()]),
+  "placeholder_source": zod.union([zod.string(),zod.null()]),
   "provider": zod.union([zod.string(),zod.null()]),
   "satellite_id": zod.union([zod.number(),zod.null()]),
   "show_in_match": zod.boolean(),
@@ -579,8 +585,14 @@ export const patchCommentatorResponse = zod.object({
 /**
  * @summary Every competition, by priority (nulls last), then name
  */
+export const listCompetitionsResponseDataItemEtagMin = 3;
+export const listCompetitionsResponseDataItemEtagMax = 80;
+
+
+
 export const listCompetitionsResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
+  "etag": zod.string().min(listCompetitionsResponseDataItemEtagMin).max(listCompetitionsResponseDataItemEtagMax),
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
@@ -614,6 +626,41 @@ export const createCompetitionBody = zod.object({
   "name": zod.string().min(1).max(createCompetitionBodyNameMax),
   "priority": zod.union([zod.number().min(createCompetitionBodyPriorityMinOne).max(createCompetitionBodyPriorityMaxOne),zod.null()]).optional(),
   "sport": zod.enum(['football', 'basketball', 'handball', 'volleyball', 'tennis']).optional()
+})
+
+
+/**
+ * @summary A6: set the competition order (each row carries its version)
+ */
+export const orderCompetitionsBodyItemsItemIdMax = 9223372036854776000;
+
+export const orderCompetitionsBodyItemsItemIfMatchMinOne = 3;
+export const orderCompetitionsBodyItemsItemIfMatchMaxOne = 80;
+
+export const orderCompetitionsBodyItemsMax = 200;
+
+
+
+export const orderCompetitionsBody = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().min(1).max(orderCompetitionsBodyItemsItemIdMax),
+  "if_match": zod.union([zod.string().min(orderCompetitionsBodyItemsItemIfMatchMinOne).max(orderCompetitionsBodyItemsItemIfMatchMaxOne),zod.null()]).optional().describe('The row\'s current ETag. Required.')
+})).min(1).max(orderCompetitionsBodyItemsMax)
+}).describe('The full new order of the rows being moved, top first; each carries its version.')
+
+export const orderCompetitionsResponse = zod.object({
+  "data": zod.union([zod.object({
+  "updated": zod.array(zod.object({
+  "etag": zod.string(),
+  "id": zod.number()
+}))
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
 })
 
 
@@ -654,8 +701,14 @@ export const getCompetitionParams = zod.object({
   "competition_id": zod.number().min(1).max(getCompetitionPathCompetitionIdMax)
 })
 
+export const getCompetitionResponseDataEtagMin = 3;
+export const getCompetitionResponseDataEtagMax = 80;
+
+
+
 export const getCompetitionResponse = zod.object({
   "data": zod.union([zod.object({
+  "etag": zod.string().min(getCompetitionResponseDataEtagMin).max(getCompetitionResponseDataEtagMax),
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
@@ -702,14 +755,116 @@ export const patchCompetitionBody = zod.object({
   "priority": zod.union([zod.number().min(patchCompetitionBodyPriorityMinOne).max(patchCompetitionBodyPriorityMaxOne),zod.null()]).optional()
 })
 
+export const patchCompetitionResponseDataEtagMin = 3;
+export const patchCompetitionResponseDataEtagMax = 80;
+
+
+
 export const patchCompetitionResponse = zod.object({
   "data": zod.union([zod.object({
+  "etag": zod.string().min(patchCompetitionResponseDataEtagMin).max(patchCompetitionResponseDataEtagMax),
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
   "name": zod.string(),
   "priority": zod.union([zod.number(),zod.null()]),
   "sport": zod.enum(['football', 'basketball', 'handball', 'volleyball', 'tennis'])
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A2: today's matches without a channel, placeholders, sources and recent changes
+ */
+export const getDashboardQueryParams = zod.object({
+  "from": zod.string().datetime({}).describe('UTC; `to - from` is at most 2 days'),
+  "to": zod.string().datetime({})
+})
+
+export const getDashboardResponseDataMissingChannelsItemCompetitionIdMaxOne = 9223372036854776000;
+
+export const getDashboardResponseDataMissingChannelsItemMatchesItemIdMax = 9223372036854776000;
+
+export const getDashboardResponseDataRecentChangesItemEntityIdMaxOne = 9223372036854776000;
+
+export const getDashboardResponseDataSourcesItemConsecutiveFailuresMin = 0;
+export const getDashboardResponseDataSourcesItemConsecutiveFailuresMax = 2147483647;
+
+export const getDashboardResponseDataSourcesItemErrorRate24hMinOne = 0;
+export const getDashboardResponseDataSourcesItemErrorRate24hMaxOne = 1;
+
+export const getDashboardResponseDataSourcesItemItems24hItemMin = 0;
+export const getDashboardResponseDataSourcesItemItems24hItemMax = 2147483647;
+
+export const getDashboardResponseDataSourcesItemLastRunHttpErrorsMin = 0;
+export const getDashboardResponseDataSourcesItemLastRunHttpErrorsMax = 2147483647;
+
+export const getDashboardResponseDataSourcesItemLastRunIdMax = 9223372036854776000;
+
+export const getDashboardResponseDataSourcesItemLastRunItemsFoundMin = 0;
+export const getDashboardResponseDataSourcesItemLastRunItemsFoundMax = 2147483647;
+
+export const getDashboardResponseDataSourcesItemLastRunItemsUpsertedMin = 0;
+export const getDashboardResponseDataSourcesItemLastRunItemsUpsertedMax = 2147483647;
+
+
+
+export const getDashboardResponse = zod.object({
+  "data": zod.union([zod.object({
+  "missing_channels": zod.array(zod.object({
+  "competition": zod.object({
+  "id": zod.union([zod.number().min(1).max(getDashboardResponseDataMissingChannelsItemCompetitionIdMaxOne),zod.null()]),
+  "name": zod.string(),
+  "priority": zod.union([zod.number(),zod.null()])
+}),
+  "matches": zod.array(zod.object({
+  "away": zod.string(),
+  "home": zod.string(),
+  "id": zod.number().min(1).max(getDashboardResponseDataMissingChannelsItemMatchesItemIdMax),
+  "kickoff_at": zod.union([zod.string().datetime({}),zod.null()])
+}))
+})),
+  "missing_channels_count": zod.number(),
+  "placeholders_to_complete": zod.number(),
+  "recent_changes": zod.array(zod.object({
+  "action": zod.string(),
+  "at": zod.string().datetime({}),
+  "by": zod.object({
+  "kind": zod.enum(['admin', 'source']),
+  "name": zod.string()
+}).describe('Who last changed an entity: an admin (by name) or an importer (by source name).'),
+  "entity": zod.string(),
+  "entity_id": zod.union([zod.number().min(1).max(getDashboardResponseDataRecentChangesItemEntityIdMaxOne),zod.null()])
+})),
+  "sources": zod.array(zod.object({
+  "breaker": zod.enum(['closed', 'open']),
+  "breaker_opened_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "consecutive_failures": zod.number().min(getDashboardResponseDataSourcesItemConsecutiveFailuresMin).max(getDashboardResponseDataSourcesItemConsecutiveFailuresMax),
+  "error_rate_24h": zod.union([zod.number().min(getDashboardResponseDataSourcesItemErrorRate24hMinOne).max(getDashboardResponseDataSourcesItemErrorRate24hMaxOne),zod.null()]),
+  "is_enabled": zod.boolean(),
+  "items_24h": zod.array(zod.number().min(getDashboardResponseDataSourcesItemItems24hItemMin).max(getDashboardResponseDataSourcesItemItems24hItemMax)),
+  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "last_run": zod.union([zod.object({
+  "error": zod.union([zod.string(),zod.null()]),
+  "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "http_errors": zod.number().min(getDashboardResponseDataSourcesItemLastRunHttpErrorsMin).max(getDashboardResponseDataSourcesItemLastRunHttpErrorsMax),
+  "id": zod.number().min(1).max(getDashboardResponseDataSourcesItemLastRunIdMax),
+  "items_found": zod.number().min(getDashboardResponseDataSourcesItemLastRunItemsFoundMin).max(getDashboardResponseDataSourcesItemLastRunItemsFoundMax),
+  "items_upserted": zod.number().min(getDashboardResponseDataSourcesItemLastRunItemsUpsertedMin).max(getDashboardResponseDataSourcesItemLastRunItemsUpsertedMax),
+  "started_at": zod.string().datetime({}),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+}),zod.null()]),
+  "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "name": zod.string(),
+  "paused": zod.boolean(),
+  "running": zod.boolean()
+}).describe('D2\'s ``SourceItem`` with the health fields added (A13).'))
 }),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
@@ -792,6 +947,53 @@ export const removeHiddenChannelNameParams = zod.object({
 
 export const removeHiddenChannelNameResponse = zod.object({
   "data": zod.null(),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A13: one run with the log written by ingest
+ */
+export const getImportRunPathRunIdMax = 9223372036854776000;
+
+
+
+export const getImportRunParams = zod.object({
+  "run_id": zod.number().min(1).max(getImportRunPathRunIdMax)
+})
+
+export const getImportRunResponseDataHttpErrorsMin = 0;
+export const getImportRunResponseDataHttpErrorsMax = 2147483647;
+
+export const getImportRunResponseDataIdMax = 9223372036854776000;
+
+export const getImportRunResponseDataItemsFoundMin = 0;
+export const getImportRunResponseDataItemsFoundMax = 2147483647;
+
+export const getImportRunResponseDataItemsUpsertedMin = 0;
+export const getImportRunResponseDataItemsUpsertedMax = 2147483647;
+
+
+
+export const getImportRunResponse = zod.object({
+  "data": zod.union([zod.object({
+  "error": zod.union([zod.string(),zod.null()]),
+  "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "http_errors": zod.number().min(getImportRunResponseDataHttpErrorsMin).max(getImportRunResponseDataHttpErrorsMax),
+  "id": zod.number().min(1).max(getImportRunResponseDataIdMax),
+  "items_found": zod.number().min(getImportRunResponseDataItemsFoundMin).max(getImportRunResponseDataItemsFoundMax),
+  "items_upserted": zod.number().min(getImportRunResponseDataItemsUpsertedMin).max(getImportRunResponseDataItemsUpsertedMax),
+  "log": zod.union([zod.record(zod.string(), zod.unknown()),zod.null()]),
+  "log_available": zod.boolean(),
+  "raw_path": zod.union([zod.string(),zod.null()]),
+  "started_at": zod.string().datetime({}),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+}),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
   "message": zod.string()
@@ -1348,6 +1550,11 @@ export const uploadMediaResponse = zod.object({
 /**
  * @summary Every satellite, by priority
  */
+export const listSatellitesResponseDataItemEtagMin = 3;
+export const listSatellitesResponseDataItemEtagMax = 80;
+
+
+
 export const listSatellitesResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
   "best_frequency": zod.union([zod.object({
@@ -1355,6 +1562,7 @@ export const listSatellitesResponse = zod.object({
   "pol": zod.enum(['H', 'V', 'L', 'R']),
   "sr": zod.number()
 }),zod.null()]),
+  "etag": zod.string().min(listSatellitesResponseDataItemEtagMin).max(listSatellitesResponseDataItemEtagMax),
   "id": zod.number(),
   "kind": zod.enum(['satellite', 'terrestrial']),
   "logo": zod.union([zod.string(),zod.null()]),
@@ -1428,6 +1636,41 @@ export const createSatelliteBody = zod.object({
 
 
 /**
+ * @summary A7: set the satellite order (each row carries its version)
+ */
+export const orderSatellitesBodyItemsItemIdMax = 9223372036854776000;
+
+export const orderSatellitesBodyItemsItemIfMatchMinOne = 3;
+export const orderSatellitesBodyItemsItemIfMatchMaxOne = 80;
+
+export const orderSatellitesBodyItemsMax = 200;
+
+
+
+export const orderSatellitesBody = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().min(1).max(orderSatellitesBodyItemsItemIdMax),
+  "if_match": zod.union([zod.string().min(orderSatellitesBodyItemsItemIfMatchMinOne).max(orderSatellitesBodyItemsItemIfMatchMaxOne),zod.null()]).optional().describe('The row\'s current ETag. Required.')
+})).min(1).max(orderSatellitesBodyItemsMax)
+}).describe('The full new order of the rows being moved, top first; each carries its version.')
+
+export const orderSatellitesResponse = zod.object({
+  "data": zod.union([zod.object({
+  "updated": zod.array(zod.object({
+  "etag": zod.string(),
+  "id": zod.number()
+}))
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary Delete a satellite that no channel references
  */
 export const deleteSatellitePathSatelliteIdMax = 9223372036854776000;
@@ -1464,6 +1707,11 @@ export const getSatelliteParams = zod.object({
   "satellite_id": zod.number().min(1).max(getSatellitePathSatelliteIdMax)
 })
 
+export const getSatelliteResponseDataEtagMin = 3;
+export const getSatelliteResponseDataEtagMax = 80;
+
+
+
 export const getSatelliteResponse = zod.object({
   "data": zod.union([zod.object({
   "best_frequency": zod.union([zod.object({
@@ -1471,6 +1719,7 @@ export const getSatelliteResponse = zod.object({
   "pol": zod.enum(['H', 'V', 'L', 'R']),
   "sr": zod.number()
 }),zod.null()]),
+  "etag": zod.string().min(getSatelliteResponseDataEtagMin).max(getSatelliteResponseDataEtagMax),
   "id": zod.number(),
   "kind": zod.enum(['satellite', 'terrestrial']),
   "logo": zod.union([zod.string(),zod.null()]),
@@ -1553,6 +1802,11 @@ export const patchSatelliteBody = zod.object({
 }),zod.null()]).optional()
 })
 
+export const patchSatelliteResponseDataEtagMin = 3;
+export const patchSatelliteResponseDataEtagMax = 80;
+
+
+
 export const patchSatelliteResponse = zod.object({
   "data": zod.union([zod.object({
   "best_frequency": zod.union([zod.object({
@@ -1560,6 +1814,7 @@ export const patchSatelliteResponse = zod.object({
   "pol": zod.enum(['H', 'V', 'L', 'R']),
   "sr": zod.number()
 }),zod.null()]),
+  "etag": zod.string().min(patchSatelliteResponseDataEtagMin).max(patchSatelliteResponseDataEtagMax),
   "id": zod.number(),
   "kind": zod.enum(['satellite', 'terrestrial']),
   "logo": zod.union([zod.string(),zod.null()]),
@@ -1586,13 +1841,261 @@ export const patchSatelliteResponse = zod.object({
 
 
 /**
- * @summary List Sources
+ * @summary A13: every source's health (breaker, pause, running, 24 h counts)
  */
+export const listSourcesResponseDataItemConsecutiveFailuresMin = 0;
+export const listSourcesResponseDataItemConsecutiveFailuresMax = 2147483647;
+
+export const listSourcesResponseDataItemErrorRate24hMinOne = 0;
+export const listSourcesResponseDataItemErrorRate24hMaxOne = 1;
+
+export const listSourcesResponseDataItemItems24hItemMin = 0;
+export const listSourcesResponseDataItemItems24hItemMax = 2147483647;
+
+export const listSourcesResponseDataItemLastRunHttpErrorsMin = 0;
+export const listSourcesResponseDataItemLastRunHttpErrorsMax = 2147483647;
+
+export const listSourcesResponseDataItemLastRunIdMax = 9223372036854776000;
+
+export const listSourcesResponseDataItemLastRunItemsFoundMin = 0;
+export const listSourcesResponseDataItemLastRunItemsFoundMax = 2147483647;
+
+export const listSourcesResponseDataItemLastRunItemsUpsertedMin = 0;
+export const listSourcesResponseDataItemLastRunItemsUpsertedMax = 2147483647;
+
+
+
 export const listSourcesResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
+  "breaker": zod.enum(['closed', 'open']),
+  "breaker_opened_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "consecutive_failures": zod.number().min(listSourcesResponseDataItemConsecutiveFailuresMin).max(listSourcesResponseDataItemConsecutiveFailuresMax),
+  "error_rate_24h": zod.union([zod.number().min(listSourcesResponseDataItemErrorRate24hMinOne).max(listSourcesResponseDataItemErrorRate24hMaxOne),zod.null()]),
   "is_enabled": zod.boolean(),
+  "items_24h": zod.array(zod.number().min(listSourcesResponseDataItemItems24hItemMin).max(listSourcesResponseDataItemItems24hItemMax)),
   "kind": zod.enum(['scraper', 'api', 'internal']),
-  "name": zod.string()
+  "last_run": zod.union([zod.object({
+  "error": zod.union([zod.string(),zod.null()]),
+  "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "http_errors": zod.number().min(listSourcesResponseDataItemLastRunHttpErrorsMin).max(listSourcesResponseDataItemLastRunHttpErrorsMax),
+  "id": zod.number().min(1).max(listSourcesResponseDataItemLastRunIdMax),
+  "items_found": zod.number().min(listSourcesResponseDataItemLastRunItemsFoundMin).max(listSourcesResponseDataItemLastRunItemsFoundMax),
+  "items_upserted": zod.number().min(listSourcesResponseDataItemLastRunItemsUpsertedMin).max(listSourcesResponseDataItemLastRunItemsUpsertedMax),
+  "started_at": zod.string().datetime({}),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+}),zod.null()]),
+  "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "name": zod.string(),
+  "paused": zod.boolean(),
+  "running": zod.boolean()
+}).describe('D2\'s ``SourceItem`` with the health fields added (A13).')),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A13: pause a source (audited; bumps `sources`)
+ */
+export const pauseSourcePathNameMax = 64;
+
+
+export const pauseSourcePathNameRegExp = new RegExp('^[a-z][a-z0-9_]{0,63}$');
+
+
+export const pauseSourceParams = zod.object({
+  "name": zod.string().min(1).max(pauseSourcePathNameMax).regex(pauseSourcePathNameRegExp)
+})
+
+export const pauseSourceResponseDataConsecutiveFailuresMin = 0;
+export const pauseSourceResponseDataConsecutiveFailuresMax = 2147483647;
+
+export const pauseSourceResponseDataErrorRate24hMinOne = 0;
+export const pauseSourceResponseDataErrorRate24hMaxOne = 1;
+
+export const pauseSourceResponseDataItems24hItemMin = 0;
+export const pauseSourceResponseDataItems24hItemMax = 2147483647;
+
+export const pauseSourceResponseDataLastRunHttpErrorsMin = 0;
+export const pauseSourceResponseDataLastRunHttpErrorsMax = 2147483647;
+
+export const pauseSourceResponseDataLastRunIdMax = 9223372036854776000;
+
+export const pauseSourceResponseDataLastRunItemsFoundMin = 0;
+export const pauseSourceResponseDataLastRunItemsFoundMax = 2147483647;
+
+export const pauseSourceResponseDataLastRunItemsUpsertedMin = 0;
+export const pauseSourceResponseDataLastRunItemsUpsertedMax = 2147483647;
+
+
+
+export const pauseSourceResponse = zod.object({
+  "data": zod.union([zod.object({
+  "breaker": zod.enum(['closed', 'open']),
+  "breaker_opened_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "consecutive_failures": zod.number().min(pauseSourceResponseDataConsecutiveFailuresMin).max(pauseSourceResponseDataConsecutiveFailuresMax),
+  "error_rate_24h": zod.union([zod.number().min(pauseSourceResponseDataErrorRate24hMinOne).max(pauseSourceResponseDataErrorRate24hMaxOne),zod.null()]),
+  "is_enabled": zod.boolean(),
+  "items_24h": zod.array(zod.number().min(pauseSourceResponseDataItems24hItemMin).max(pauseSourceResponseDataItems24hItemMax)),
+  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "last_run": zod.union([zod.object({
+  "error": zod.union([zod.string(),zod.null()]),
+  "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "http_errors": zod.number().min(pauseSourceResponseDataLastRunHttpErrorsMin).max(pauseSourceResponseDataLastRunHttpErrorsMax),
+  "id": zod.number().min(1).max(pauseSourceResponseDataLastRunIdMax),
+  "items_found": zod.number().min(pauseSourceResponseDataLastRunItemsFoundMin).max(pauseSourceResponseDataLastRunItemsFoundMax),
+  "items_upserted": zod.number().min(pauseSourceResponseDataLastRunItemsUpsertedMin).max(pauseSourceResponseDataLastRunItemsUpsertedMax),
+  "started_at": zod.string().datetime({}),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+}),zod.null()]),
+  "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "name": zod.string(),
+  "paused": zod.boolean(),
+  "running": zod.boolean()
+}).describe('D2\'s ``SourceItem`` with the health fields added (A13).'),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A13: resume a source, reset the breaker and queue one manual run
+ */
+export const resumeSourcePathNameMax = 64;
+
+
+export const resumeSourcePathNameRegExp = new RegExp('^[a-z][a-z0-9_]{0,63}$');
+
+
+export const resumeSourceParams = zod.object({
+  "name": zod.string().min(1).max(resumeSourcePathNameMax).regex(resumeSourcePathNameRegExp)
+})
+
+export const resumeSourceResponseDataConsecutiveFailuresMin = 0;
+export const resumeSourceResponseDataConsecutiveFailuresMax = 2147483647;
+
+export const resumeSourceResponseDataErrorRate24hMinOne = 0;
+export const resumeSourceResponseDataErrorRate24hMaxOne = 1;
+
+export const resumeSourceResponseDataItems24hItemMin = 0;
+export const resumeSourceResponseDataItems24hItemMax = 2147483647;
+
+export const resumeSourceResponseDataLastRunHttpErrorsMin = 0;
+export const resumeSourceResponseDataLastRunHttpErrorsMax = 2147483647;
+
+export const resumeSourceResponseDataLastRunIdMax = 9223372036854776000;
+
+export const resumeSourceResponseDataLastRunItemsFoundMin = 0;
+export const resumeSourceResponseDataLastRunItemsFoundMax = 2147483647;
+
+export const resumeSourceResponseDataLastRunItemsUpsertedMin = 0;
+export const resumeSourceResponseDataLastRunItemsUpsertedMax = 2147483647;
+
+
+
+export const resumeSourceResponse = zod.object({
+  "data": zod.union([zod.object({
+  "breaker": zod.enum(['closed', 'open']),
+  "breaker_opened_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "consecutive_failures": zod.number().min(resumeSourceResponseDataConsecutiveFailuresMin).max(resumeSourceResponseDataConsecutiveFailuresMax),
+  "error_rate_24h": zod.union([zod.number().min(resumeSourceResponseDataErrorRate24hMinOne).max(resumeSourceResponseDataErrorRate24hMaxOne),zod.null()]),
+  "is_enabled": zod.boolean(),
+  "items_24h": zod.array(zod.number().min(resumeSourceResponseDataItems24hItemMin).max(resumeSourceResponseDataItems24hItemMax)),
+  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "last_run": zod.union([zod.object({
+  "error": zod.union([zod.string(),zod.null()]),
+  "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "http_errors": zod.number().min(resumeSourceResponseDataLastRunHttpErrorsMin).max(resumeSourceResponseDataLastRunHttpErrorsMax),
+  "id": zod.number().min(1).max(resumeSourceResponseDataLastRunIdMax),
+  "items_found": zod.number().min(resumeSourceResponseDataLastRunItemsFoundMin).max(resumeSourceResponseDataLastRunItemsFoundMax),
+  "items_upserted": zod.number().min(resumeSourceResponseDataLastRunItemsUpsertedMin).max(resumeSourceResponseDataLastRunItemsUpsertedMax),
+  "started_at": zod.string().datetime({}),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+}),zod.null()]),
+  "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "name": zod.string(),
+  "paused": zod.boolean(),
+  "running": zod.boolean()
+}).describe('D2\'s ``SourceItem`` with the health fields added (A13).'),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A13: «تشغيل الآن» — queue one manual run through `adapters.schedule_fetch`
+ */
+export const runSourcePathNameMax = 64;
+
+
+export const runSourcePathNameRegExp = new RegExp('^[a-z][a-z0-9_]{0,63}$');
+
+
+export const runSourceParams = zod.object({
+  "name": zod.string().min(1).max(runSourcePathNameMax).regex(runSourcePathNameRegExp)
+})
+
+
+/**
+ * @summary A13: a source's run history (keyset cursor)
+ */
+export const listSourceRunsPathNameMax = 64;
+
+
+export const listSourceRunsPathNameRegExp = new RegExp('^[a-z][a-z0-9_]{0,63}$');
+
+
+export const listSourceRunsParams = zod.object({
+  "name": zod.string().min(1).max(listSourceRunsPathNameMax).regex(listSourceRunsPathNameRegExp)
+})
+
+export const listSourceRunsQueryCursorMaxOne = 200;
+
+export const listSourceRunsQueryLimitDefault = 20;
+export const listSourceRunsQueryLimitMax = 50;
+
+
+
+export const listSourceRunsQueryParams = zod.object({
+  "cursor": zod.union([zod.string().max(listSourceRunsQueryCursorMaxOne),zod.null()]).optional(),
+  "limit": zod.number().min(1).max(listSourceRunsQueryLimitMax).default(listSourceRunsQueryLimitDefault)
+})
+
+export const listSourceRunsResponseDataItemHttpErrorsMin = 0;
+export const listSourceRunsResponseDataItemHttpErrorsMax = 2147483647;
+
+export const listSourceRunsResponseDataItemIdMax = 9223372036854776000;
+
+export const listSourceRunsResponseDataItemItemsFoundMin = 0;
+export const listSourceRunsResponseDataItemItemsFoundMax = 2147483647;
+
+export const listSourceRunsResponseDataItemItemsUpsertedMin = 0;
+export const listSourceRunsResponseDataItemItemsUpsertedMax = 2147483647;
+
+
+
+export const listSourceRunsResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "error": zod.union([zod.string(),zod.null()]),
+  "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "http_errors": zod.number().min(listSourceRunsResponseDataItemHttpErrorsMin).max(listSourceRunsResponseDataItemHttpErrorsMax),
+  "id": zod.number().min(1).max(listSourceRunsResponseDataItemIdMax),
+  "items_found": zod.number().min(listSourceRunsResponseDataItemItemsFoundMin).max(listSourceRunsResponseDataItemItemsFoundMax),
+  "items_upserted": zod.number().min(listSourceRunsResponseDataItemItemsUpsertedMin).max(listSourceRunsResponseDataItemItemsUpsertedMax),
+  "started_at": zod.string().datetime({}),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
 })),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),

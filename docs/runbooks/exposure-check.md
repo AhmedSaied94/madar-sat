@@ -13,7 +13,7 @@ Checks what the internet can reach on both VMs, and that the public sites carry 
 ```bash
 nmap -Pn -p 22,80,443,5432,6379,8000,8001 130.110.117.215     # 80 and 443 open; everything else filtered
 sudo nmap -Pn -sU -p 51820 130.110.117.215                       # open|filtered
-nmap -Pn -p 22,80,443,5432,6379,5555,8000 130.110.97.25       # everything filtered
+nmap -Pn -p 22,80,443,3001,5432,6379,5555,8000 130.110.97.25   # everything filtered, Kuma's 3001 included
 ```
 
 - `filtered` is right for a closed port: the security list drops it, or iptables rejects it.
@@ -36,7 +36,15 @@ Each response must carry:
 | `referrer-policy` | `strict-origin-when-cross-origin` |
 | `server` | Absent |
 
-`media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable`.
+`media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable`, and it answers CORS only to the PWA's origins (constitution V), preview channels included; the native apps send no `Origin` and need none. A browser that cached a media file from before the wildcard was removed keeps the old answer until you clear its site data.
+
+```bash
+media=https://media.130.110.117.215.sslip.io/
+curl -sI -H 'Origin: https://<project>.web.app' "$media" | grep -i access-control-allow-origin                  # echoes that origin
+curl -sI -H 'Origin: https://<project>--master-abc1234.web.app' "$media" | grep -i access-control-allow-origin   # a preview channel: echoes
+curl -sI -H 'Origin: https://example.org' "$media" | grep -i access-control-allow-origin                        # nothing
+curl -sI "$media" | grep -i '^vary'                                                                             # Vary: Origin
+```
 
 ```bash
 curl -s https://api.130.110.117.215.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}
@@ -72,6 +80,14 @@ curl -s --cacert madar-admin-root.crt https://10.8.0.1/admin/api/healthz | jq .d
 ```
 
 `api-admin` itself (`10.8.0.1:8001`) is reachable only from `wg0`: `8001` must show `filtered` in step 1.
+
+Uptime Kuma (D3) is the same shape: `3001` on VPS-2 is published on the VCN address and the firewall
+accepts it from VPS-1 alone, so the probe above leaves it `filtered`. Off WireGuard, Kuma's wg0 site
+answers nothing:
+
+```sh
+curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' https://kuma.10-8-0-1.sslip.io/   # 000: no route
+```
 
 Redis over `wg0` (`10.8.0.1:6379`) is open to the home box only. From a **second** WireGuard peer
 (your laptop, not the home box):

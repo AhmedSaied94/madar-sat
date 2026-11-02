@@ -500,6 +500,7 @@ class AdminCompetition(BaseModel):
     logo_asset_id: int | None
     logo: str | None
     priority: int | None
+    etag: Etag  # the version `PUT /competitions/order` checks as an item's If-Match (A-R1-1)
 
 
 class CompetitionCreate(_Body):
@@ -530,6 +531,7 @@ class AdminSatellite(BaseModel):
     worst_frequency: Frequency | None
     reception_url: str | None
     priority: int | None
+    etag: Etag  # the version `PUT /satellites/order` checks as an item's If-Match (A-R1-1)
 
 
 class SatelliteCreate(_Body):
@@ -586,6 +588,8 @@ class ChannelItem(BaseModel):
     show_in_match: bool
     sort_order: int | None
     hidden_by_name: bool
+    # D3: the importer that created this placeholder; NULL for a normal channel (research R18).
+    placeholder_source: str | None
 
 
 class AdminChannel(ChannelItem):
@@ -615,6 +619,9 @@ class ChannelCreate(_Body):
 
 
 class ChannelPatch(_Body):
+    # A platform placeholder an importer made becomes a satellite channel here (A-R1-5); the new kind
+    # has to satisfy the same field rules as a created one, in the same request.
+    kind: Kind | None = Field(default=None)
     name: Name120 | None = Field(default=None)
     display_name: Name120 | None = None
     logo_asset_id: Id | None = None
@@ -688,6 +695,113 @@ class SourceItem(BaseModel):
     name: str
     kind: Literal["scraper", "api", "internal"]
     is_enabled: bool
+
+
+# --- D3: sources, runs, dashboard and ordering (contracts/admin-api.md) ----------------------------
+
+
+class ImportRunRow(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.IMPORT_RUN_ROW]})
+
+    id: Id
+    status: Literal["running", "succeeded", "partial", "failed"]
+    started_at: datetime
+    finished_at: datetime | None
+    items_found: Int32
+    items_upserted: Int32
+    http_errors: Int32
+    error: str | None
+
+
+class ImportRunDetail(ImportRunRow):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.IMPORT_RUN_DETAIL]})
+
+    raw_path: str | None
+    log: dict[str, Any] | None
+    log_available: bool
+
+
+class SourceHealth(SourceItem):
+    """D2's ``SourceItem`` with the health fields added (A13)."""
+
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.SOURCE_HEALTH]})
+
+    breaker: Literal["closed", "open"]
+    breaker_opened_at: datetime | None
+    consecutive_failures: Int32
+    paused: bool
+    last_success_at: datetime | None
+    last_run: ImportRunRow | None
+    items_24h: list[Int32]
+    error_rate_24h: Annotated[float, Field(ge=0, le=1)] | None
+    running: bool
+
+
+class SourceRunQueued(BaseModel):
+    queued: bool
+
+
+class DashboardCompetition(BaseModel):
+    id: Id | None
+    name: str
+    priority: int | None
+
+
+class DashboardMatch(BaseModel):
+    id: Id
+    kickoff_at: datetime | None
+    home: str
+    away: str
+
+
+class DashboardGroup(BaseModel):
+    competition: DashboardCompetition
+    matches: list[DashboardMatch]
+
+
+class RecentChange(BaseModel):
+    at: datetime
+    by: ChangedBy
+    entity: str
+    entity_id: Id | None
+    action: str
+
+
+class Dashboard(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.DASHBOARD]})
+
+    missing_channels: list[DashboardGroup]
+    missing_channels_count: int
+    placeholders_to_complete: int
+    sources: list[SourceHealth]
+    recent_changes: list[RecentChange]
+
+
+class OrderItem(_Body):
+    id: Id
+    # Optional in the schema on purpose: a missing value must reach the service and get
+    # `428 precondition_required` like a missing `If-Match`.
+    if_match: Etag | None = Field(default=None, description="The row's current ETag. Required.")
+
+
+class OrderRequest(_Body):
+    """The full new order of the rows being moved, top first; each carries its version."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [{"items": [{"id": 12, "if_match": '"3f9a…"'}, {"id": 4, "if_match": '"7c2b…"'}]}]
+        },
+    )
+
+    items: Annotated[list[OrderItem], Field(min_length=1, max_length=MAX_BULK_ITEMS)]
+
+    @model_validator(mode="after")
+    def _ids_are_unique(self) -> OrderRequest:
+        ids = [item.id for item in self.items]
+        if len(ids) != len(set(ids)):
+            raise ValueError("repeated ids")
+        return self
 
 
 class MediaAsset(BaseModel):

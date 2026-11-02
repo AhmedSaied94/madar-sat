@@ -19,7 +19,12 @@ The rules:
 | `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY` | VPS-2's `.env` only; never in the repo, a log line or a test (D15, FR-052) | The Firestore bridge | [Below](#rotate-the-sat-air-bridge-credentials) |
 | `GHCR_READ_TOKEN` | The home box's `.env` | `home-box-update.sh` (read-only `read:packages`) | [Below](#rotate-the-home-boxs-ghcr-token) |
 | `SCRAPE_USER_AGENT` | VPS-2's and the home box's `.env` | The fetcher's `User-Agent`; not a secret, but keep it a real contact | Edit it and recreate the workers |
+| FCM service account JSON | VPS-2 only: `/srv/secrets/fcm.json`, mode 600, owned by uid 10001 (the image's user), in a directory 700 owned by the same uid; mounted read-only into `worker-notify` and no other service. `FCM_CREDENTIALS_FILE` in `/srv/madar/.env` points at it. Installed as root, once: [push-notifications.md](push-notifications.md#the-fcm-service-account) | `firebase_admin` in the notifications worker | [Below](#rotate-the-fcm-service-account) |
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | VPS-2's `.env` only | The importer alerts ([source-alerts.md](source-alerts.md)) and Uptime Kuma's notifications | [Below](#rotate-the-telegram-bot) |
+| `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` | Both VMs' `.env` (the database backup runs on VPS-2, the weekly media snapshot on VPS-1) | `backup-db.sh`, `backup-media.sh` ([backups.md](backups.md)) | [Below](#rotate-the-backup-keys) |
+| `RCLONE_CONFIG_OCI_*` (`_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
+| `KUMA_PUSH_URL_*` (six) | VPS-2's `.env` (`_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`) and VPS-1's (`_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) | `ops.heartbeat` and the backup scripts ([uptime-kuma.md](uptime-kuma.md)) | Recreate the monitor in Kuma and replace the value; they are not secrets, but they are bearer URLs |
 | `DEPLOY_SSH_KEY` | GitHub secret. The public half is in VPS-1's `.env` and in `/home/deploy/.ssh/authorized_keys`. | `backend.yml` deploy, `infra.yml` sync | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | `WG_CI_CONFIG` | GitHub secret; the peer `ci` in VPS-1's `wg0.conf` | The same jobs | [private-network.md "Rotate the CI peer"](private-network.md#rotate-the-ci-peer) |
 | WireGuard device keys | Each device; its peer in `wg0.conf` | You | [private-network.md "Remove a peer"](private-network.md#remove-a-peer), then add it again |
@@ -29,6 +34,8 @@ The rules:
 | `ubuntu` console passwords | Your password manager, one per VM | The serial console | `sudo passwd ubuntu`, then test the console again ([provision-host.md §2](provision-host.md#2-console-password-then-test-the-serial-console)) |
 | Caddy's internal CA key | VPS-1's `madar_caddy_data` volume | The admin site's certificates | Only by letting Caddy make a new CA, which means a new root on every admin device |
 | `GITHUB_TOKEN` | Created per job, expires when the job ends | GHCR push and pull | Nothing to rotate. `deploy.sh` logs out of GHCR on exit. |
+
+Also set on the hosts, and **not** secrets: `FCM_CREDENTIALS_FILE` (the path `/srv/secrets/fcm.json`, not the file), `FCM_DRY_RUN` (VPS-2), `PWA_ORIGIN` (VPS-2), `RESPONSE_CACHE_ENABLED`, `RESPONSE_CACHE_MAX_BYTES`, `RATE_LIMIT_DEVICE_PER_MIN`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_REGISTER_PER_10MIN` (VPS-1). They live in the same `.env` and are documented in [push-notifications.md](push-notifications.md) and [response-cache-and-limits.md](response-cache-and-limits.md).
 
 Not secrets: the public and private IPs, the hostnames, the Firebase project ID, the WireGuard hub's public key, and `DEPLOY_KNOWN_HOSTS` (VPS-1's public host key, kept as a secret only for convenience).
 
@@ -191,6 +198,51 @@ To replace it:
 4. Prove it: push a throwaway tag such as `app-v0.0.1` and check that `app-release.yml` is green. Its "Check the AAB is signed with the upload key" step prints the key's SHA-256, which must match the new certificate. Delete the tag afterwards (`git push --delete origin app-v0.0.1`).
 
 To build a signed AAB on your machine, write `app/android/key.properties` (git-ignored) with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`, then run the `flutter build appbundle` command from `app-release.yml`. Without that file, `release` falls back to the debug key.
+
+## Rotate the Telegram bot
+
+1. In @BotFather, `/revoke` the token (or `/newbot` for a new bot and a new chat membership).
+2. Put the new token and chat id in VPS-2's `/srv/madar/.env`, then restart the two workers that read them: `worker-imports` (alerts) and
+   `worker-notify` (alerts and the sender).
+3. Update the Telegram notification in Kuma ([uptime-kuma.md](uptime-kuma.md#2-the-telegram-notification)) and press **Test**.
+4. Prove both paths: the `send_alert` command in [source-alerts.md](source-alerts.md#the-two-settings), and one Kuma test.
+
+## Rotate the FCM service account
+
+1. In the Firebase console, **Project settings → Service accounts → Generate new private key** for the
+   same project. The old key stays valid until you delete it.
+2. Install the new JSON on VPS-2 **as root**, with the worker's uid and mode 600 (the same commands
+   as [push-notifications.md](push-notifications.md#the-fcm-service-account)):
+   `sudo install -d -m 700 -o 10001 -g 10001 /srv/secrets`, then
+   `sudo install -m 600 -o 10001 -g 10001 <new>.json /srv/secrets/fcm.json`, then `sudo shred -u <new>.json`.
+   The same install run as `deploy` fails with EPERM: `deploy` is not root, and only root can give
+   the file uid 10001. Prove the worker can read it:
+   `docker compose exec worker-notify test -r /srv/secrets/fcm.json && echo readable`.
+3. Restart `worker-notify` only: `docker compose -p madar restart worker-notify`, and check
+   `docker compose logs worker-notify | grep 'fcm: initialized'`.
+4. With `FCM_DRY_RUN=true`, queue one dispatch and read the log; then set it back to `false`
+   (Lane B1's `push-notifications.md`).
+5. Delete the old key in the Firebase console once the new one has sent one real message.
+
+## Rotate the backup keys
+
+**restic (both hosts).** The repository password cannot be changed in place; leave the old repository
+as it is and start a new one:
+
+1. Create a new Backblaze B2 bucket and application key.
+2. On VPS-2 and VPS-1, put the new `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID` and
+   `B2_ACCOUNT_KEY` in `/srv/madar/.env`.
+3. Run both backups by hand ([backups.md](backups.md#run-one-by-hand)) and confirm a snapshot exists.
+4. Keep the old bucket for one retention window (a month), then delete it and revoke its key.
+
+**OCI (VPS-1).** Create a new customer secret key in the OCI console, replace
+`RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY` in VPS-1's `.env`, run the mirror by hand, then delete the old
+key in the console. `rclone` reads the value per run, so no restart is needed; the next 03:30 timer
+uses it.
+
+**Kuma push URLs.** Recreate only the affected monitor in Kuma (**Edit → Push URL**), put the new
+token into the host's `.env` value (the form is in [uptime-kuma.md](uptime-kuma.md#the-push-url-on-each-host);
+never paste the URL Kuma shows), and restart the service that reads it (or wait for the next backup run).
 
 ## When gitleaks fails
 

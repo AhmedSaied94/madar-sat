@@ -617,4 +617,342 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get s5NoResultsBody => 'جرّب اسم قناة أو أرقاماً من التردد.';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String get delete => 'حذف';
+
+  @override
+  String get skip => 'تخطي';
+
+  @override
+  String get next => 'التالي';
+
+  @override
+  String nextCount(int count) {
+    return 'التالي ($count)';
+  }
+
+  @override
+  String get gotIt => 'فهمت';
+
+  @override
+  String get later => 'لاحقاً';
+
+  @override
+  String get notNow => 'ليس الآن';
+
+  @override
+  String get add => 'أضف';
+
+  @override
+  String onbProgress(int step, int count) {
+    return 'الخطوة $step من $count';
+  }
+
+  @override
+  String get onbWelcomeTitle => 'مرحباً بك في مدار';
+
+  @override
+  String get onbWelcomeBody =>
+      'مباراتك، القناة الناقلة، وترددها على طبقك — في مكان واحد.';
+
+  @override
+  String get onbChooseTheme => 'اختر المظهر';
+
+  @override
+  String get themeAuto => 'تلقائي';
+
+  @override
+  String get themeChangeLater => 'تقدر تغيّره في أي وقت من الإعدادات';
+
+  @override
+  String get onbTeamsTitle => 'اختر فرقك المفضلة';
+
+  @override
+  String get onbTeamsBody => 'سنعرض مبارياتها أولاً ونذكّرك قبل انطلاقها.';
+
+  @override
+  String get onbSearchTeam => 'ابحث عن فريق...';
+
+  @override
+  String get onbTeamsEmpty => 'لم نجد فريقاً بهذا الاسم';
+
+  @override
+  String get onbTeamsEmptyBody => 'جرّب اسماً آخر أو تخطَّ هذه الخطوة.';
+
+  @override
+  String get onbSatellitesTitle => 'اختر الأقمار التي يستقبلها طبقك';
+
+  @override
+  String get onbSatellitesBody =>
+      'سنعرض القنوات على أقمارك أولاً، والمجانية قبل المشفرة.';
+
+  @override
+  String get mostUsed => 'الأكثر استخداماً';
+
+  @override
+  String channelCount(int count) {
+    return '$count قناة';
+  }
+
+  @override
+  String get onbSatellitesNote =>
+      'إذا تخطيت هذه الخطوة سنعرض نايل سات وبدر افتراضياً.';
+
+  @override
+  String get onbNotificationsTitle => 'لا تفوّت أي مباراة';
+
+  @override
+  String get onbNotificationsBody =>
+      'فعّل التنبيهات لتصلك فقط عن الفرق والقنوات التي تتابعها.';
+
+  @override
+  String get onbBenefitReminders => 'تذكير قبل البداية مع القناة والتردد';
+
+  @override
+  String get onbBenefitGoals => 'الأهداف والنتيجة النهائية';
+
+  @override
+  String get onbBenefitFrequency => 'تغيّر تردد قناة تتابعها';
+
+  @override
+  String get enableNotifications => 'تفعيل التنبيهات';
+
+  @override
+  String get onbInstallTitle => 'ثبّت مدار على iPhone';
+
+  @override
+  String get onbInstallBody =>
+      'على iPhone لا تصل التنبيهات إلا بعد إضافة مدار إلى الشاشة الرئيسية وفتحه من أيقونته. يتطلب iOS 16.4 أو أحدث.';
+
+  @override
+  String get onbInstallStep1 => 'اضغط زر المشاركة في Safari';
+
+  @override
+  String get onbInstallStep2 => 'اختر «إضافة إلى الشاشة الرئيسية»';
+
+  @override
+  String get onbInstallStep3 => 'افتح مدار من أيقونته';
+
+  @override
+  String get s9Upcoming => 'مبارياتي القادمة';
+
+  @override
+  String get s9ShowAll => 'عرض الكل';
+
+  @override
+  String get s9TeamsSection => 'الفرق';
+
+  @override
+  String get s9EmptyTitle => 'لم تتابع شيئاً بعد';
+
+  @override
+  String get s9EmptyBody => 'تابع فرقك لتصلك مبارياتها وتنبيهاتها.';
+
+  @override
+  String get addTeams => 'أضف فرقاً';
+
+  @override
+  String get s9NoUpcoming => 'لا مباريات قادمة لفرقك الآن';
+
+  @override
+  String s9RemoveTeam(String name) {
+    return 'إزالة $name من المفضلة';
+  }
+
+  @override
+  String todayAt(String time) {
+    return 'اليوم · $time';
+  }
+
+  @override
+  String dayAt(String weekday, String time) {
+    return '$weekday · $time';
+  }
+
+  @override
+  String get s15SectionTime => 'التوقيت';
+
+  @override
+  String get s15TimeZone => 'المنطقة الزمنية';
+
+  @override
+  String s15AutomaticWithOffset(String offset) {
+    return 'تلقائي ($offset)';
+  }
+
+  @override
+  String get s15TimeFormat => 'صيغة الوقت';
+
+  @override
+  String s15H12(String time) {
+    return '12 ساعة · $time';
+  }
+
+  @override
+  String s15H24(String time) {
+    return '24 ساعة · $time';
+  }
+
+  @override
+  String get s15SectionAppearance => 'المظهر';
+
+  @override
+  String get s15Mode => 'الوضع';
+
+  @override
+  String get s15FontSize => 'حجم الخط';
+
+  @override
+  String get s15FontNote => 'يُضاف إلى حجم خط الجهاز';
+
+  @override
+  String get s15FontNormal => 'عادي';
+
+  @override
+  String get s15FontLarge => 'كبير';
+
+  @override
+  String get s15FontXLarge => 'كبير جداً';
+
+  @override
+  String get s15SectionSatellites => 'أقماري';
+
+  @override
+  String get s15ChooseSatellites => 'اختر أقماري';
+
+  @override
+  String get s15NoSatellites => 'لم تختر أقماراً';
+
+  @override
+  String get s15SectionOnboarding => 'خطوات البداية';
+
+  @override
+  String get s15RestartOnboarding => 'إعادة خطوات البداية';
+
+  @override
+  String get s15SectionAbout => 'عن التطبيق';
+
+  @override
+  String get s15Version => 'الإصدار';
+
+  @override
+  String get s15Privacy => 'سياسة الخصوصية';
+
+  @override
+  String get s15DeleteDevice => 'حذف بيانات جهازي';
+
+  @override
+  String get s15DeleteDeviceBody => 'المتابعات ورمز الإشعارات من الخادم';
+
+  @override
+  String get s15DeleteTitle => 'حذف بيانات جهازي؟';
+
+  @override
+  String get s15DeleteConsequence =>
+      'سنحذف متابعاتك ورمز الإشعارات من الخادم، وسيبدأ التطبيق من جديد.';
+
+  @override
+  String get s15Deleted => 'حُذفت بيانات جهازك';
+
+  @override
+  String get s16InstallBody => 'لتصلك تنبيهات المباريات وتغيّر الترددات';
+
+  @override
+  String get s16Share => 'شارك التطبيق';
+
+  @override
+  String get s16ShareBody => 'ساعد في انتشار التطبيق';
+
+  @override
+  String get s16SettingsBody => 'التوقيت، المظهر، أقماري';
+
+  @override
+  String get s16Tagline => 'مواعيد المباريات والقنوات الناقلة والترددات';
+
+  @override
+  String s16Version(String version) {
+    return 'الإصدار $version';
+  }
+
+  @override
+  String s16ShareText(String tagline, String link) {
+    return 'مدار سات — $tagline $link';
+  }
+
+  @override
+  String get s0UpdateTitle => 'تحديث مطلوب';
+
+  @override
+  String get s0UpdateBody =>
+      'يوجد إصدار جديد من التطبيق. يرجى التحديث للاستمرار.';
+
+  @override
+  String s0YourVersion(String version) {
+    return 'إصدارك $version';
+  }
+
+  @override
+  String get s0UpdateNow => 'تحديث الآن';
+
+  @override
+  String get s0UpdateOpensStore => 'يفتح صفحة التطبيق على Google Play';
+
+  @override
+  String s0OfflineBanner(String age) {
+    return 'أنت غير متصل — آخر تحديث $age';
+  }
+
+  @override
+  String get s0ExitToClose => 'اضغط رجوع مرة أخرى للخروج';
+
+  @override
+  String get s0LoadFailedBody =>
+      'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى بعد قليل.';
+
+  @override
+  String get s0Retrying => 'جارٍ المحاولة...';
+
+  @override
+  String get followMatch => 'تابع المباراة';
+
+  @override
+  String get followingMatch => 'تتابع المباراة';
+
+  @override
+  String get unfollow => 'إلغاء المتابعة';
+
+  @override
+  String get s3ChooseSatellitesChip => 'حدد أقمارك';
+
+  @override
+  String get remindersOn => 'التنبيهات مفعّلة';
+
+  @override
+  String get remindersOff => 'تفعيل التنبيهات';
+
+  @override
+  String get pushPermissionDenied =>
+      'الإشعارات غير مسموحة لهذا التطبيق — افتح إعدادات الجهاز لتفعيلها';
+
+  @override
+  String errorRateLimited(int seconds) {
+    return 'طلبات كثيرة، حاول بعد $seconds ثانية';
+  }
+
+  @override
+  String get errorUnknownFollowTarget =>
+      'بعض العناصر لم تعد متاحة، أزلناها من متابعاتك';
+
+  @override
+  String errorTooManyFollows(int max) {
+    return 'وصلت للحد الأقصى ($max) من المتابعات';
+  }
+
+  @override
+  String get errorUnknownSatellite =>
+      'أحد الأقمار لم يعد متاحاً، أعد اختيار أقماري';
 }

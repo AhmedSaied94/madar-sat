@@ -1,0 +1,141 @@
+# Uptime Kuma
+
+The monitoring service on VPS-2: how to reach it, the exact monitors to create, and what each one
+means (Lane B2's T086, T084, research R20).
+
+Kuma runs as `uptime-kuma` in `infra/compose/vps2.yml`, image `louislam/uptime-kuma:1`, data in
+`/srv/kuma`. It is published on **VPS-2's VCN address only** (`:3001`), the firewall accepts that port
+from VPS-1 alone, and VPS-1's Caddy serves it over WireGuard at:
+
+**`https://kuma.10-8-0-1.sslip.io`** (connected to `wg0`; Caddy's internal CA, which your device
+already trusts for `https://10.8.0.1` — [private-network.md](private-network.md#install-the-admin-ca-root)).
+
+Kuma has no config file, so the monitors below are created once in its UI. They live in `/srv/kuma`,
+which is not backed up by the nightly jobs; recreating them from this page takes ten minutes.
+
+## 1. The first account
+
+1. Connect to WireGuard, open the URL above.
+2. Create the admin user. Use the password manager: this account can see every monitor and its
+   notification settings.
+3. **Settings → General**: set the timezone to `Africa/Cairo`, and the primary base URL to the
+   address above.
+
+## 2. The Telegram notification
+
+**Settings → Notifications → Setup Notification → Telegram**:
+
+- **Bot Token**: `TELEGRAM_BOT_TOKEN` from VPS-2's `.env`.
+- **Chat ID**: `TELEGRAM_CHAT_ID` from the same file.
+- **Default**: on; **Apply on all existing monitors**: on.
+
+Press **Test**. The same chat receives the importer alerts ([source-alerts.md](source-alerts.md)), so
+one chat is the whole incident feed.
+
+## 3. HTTP monitors (four)
+
+| Name | URL | Interval | What it proves |
+| --- | --- | --- | --- |
+| `api-public` | `https://api.<VPS1_IP>.sslip.io/healthz` | 60 s | Caddy, the public app and the database connection |
+| `media` | `https://media.<VPS1_IP>.sslip.io/logos/<a known file>` | 5 min | Caddy's media root and the disk |
+| `pwa` | `https://<FIREBASE_PROJECT_ID>.web.app/` | 5 min | Firebase Hosting serves the PWA |
+| `pwa-mirror` | `https://app.<VPS1_IP>.sslip.io/` | 5 min | Caddy's PWA mirror |
+
+Use a real, existing file for `media` (the newest file in `/srv/media/logos/`); a 404 is red
+forever otherwise. **Accepted status codes**: `200-299`.
+
+## 4. Push monitors (six)
+
+Each `heartbeat-*` beat entry pings a monitor every 5 minutes, so a dead worker queue, a paused
+`beat` or a stopped backup turns the monitor red after its heartbeat interval. Create each as
+**Push**, then copy its **token** (not its URL) into VPS-2's (or VPS-1's) `/srv/madar/.env`, in the
+form below.
+
+| Monitor | Heartbeat interval | Env variable | Host | Means |
+| --- | --- | --- | --- | --- |
+| `celery-maintenance` | 300 s | `KUMA_PUSH_URL_MAINTENANCE` | VPS-2 | `worker-maintenance` and `beat` are alive |
+| `celery-imports` | 300 s | `KUMA_PUSH_URL_IMPORTS` | VPS-2 | `worker-imports` is alive (ingest, schedule_fetch) |
+| `celery-notifications` | 300 s | `KUMA_PUSH_URL_NOTIFICATIONS` | VPS-2 | `worker-notify` is alive (dispatcher, scheduler) |
+| `backup-db` | every 25 h | `KUMA_PUSH_URL_BACKUP_DB` | VPS-2 | last night's database backup succeeded |
+| `backup-media` | every 25 h | `KUMA_PUSH_URL_BACKUP_MEDIA` | VPS-1 | last night's media mirror succeeded |
+| `backup-media-weekly` | every 8 days | `KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY` | VPS-1 | Sunday's restic snapshot succeeded |
+
+Set each heartbeat interval a little longer than the job's own period (5 min → 300 s; nightly →
+25 h), so one delayed run does not alert. The interval is what makes a silent job detectable: the
+push says "I ran", so no push at all is the alarm.
+
+### The push URL on each host
+
+Kuma shows a push monitor's URL as
+`https://kuma.10-8-0-1.sslip.io/api/push/<token>?status=up&msg=OK&ping=`. Do not paste it: that
+address exists on `wg0` only, VPS-2 is not a WireGuard peer, and the backup image does not trust
+Caddy's internal CA. The token is the last path segment, between `/api/push/` and the `?`. Write
+the host-reachable URL with that token and **no query**; the workers and the backup scripts add
+`status` and `msg` themselves (`up`, or `down` with the error).
+
+| Host | Variables | Value in `/srv/madar/.env` |
+| --- | --- | --- |
+| VPS-2 | `KUMA_PUSH_URL_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB` | `http://uptime-kuma:3001/api/push/<token>` (Kuma's name in VPS-2's Compose network, which the workers and the backup container share) |
+| VPS-1 | `KUMA_PUSH_URL_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY` | `http://<VPS2_VCN_IP>:3001/api/push/<token>` (over the VCN; VPS-2's firewall accepts port 3001 from VPS-1 only) |
+
+The backup scripts cut anything after a `?` before they append `status`, so a pasted Kuma URL would
+still report `down` correctly; the form above is the one that is also reachable.
+
+After writing the six values into `/srv/madar/.env` on each host, restart the services that read them:
+`worker-maintenance`, `worker-imports` and `worker-notify` on VPS-2, and `worker-media` on VPS-1 for
+the media ones (the backup scripts read them from `/srv/madar/.env` at run time, so the timers need
+nothing). The runbook step is
+[imports-and-sources.md](imports-and-sources.md#switch-where-a-source-fetches), with
+`worker-media` added for VPS-1:
+
+```sh
+sudo -iu deploy env IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env \
+  -f /srv/madar/infra/compose/vps1.yml up -d worker-media
+```
+
+## 5. Check
+
+1. Every monitor is green within one heartbeat interval.
+2. `systemctl list-timers 'backup-*' --no-pager` on both hosts shows the next run. To prove the
+   backup URLs without waiting for 03:00, run one by hand
+   ([backups.md](backups.md#run-one-by-hand)); its monitor turns green within seconds.
+3. Prove one: stop a worker for 10 minutes and watch the matching push monitor go red, then start
+   it again (T084).
+
+```sh
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose -p madar stop worker-notify'
+# ... wait ten minutes; celery-notifications goes red and Telegram fires ...
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy docker compose -p madar start worker-notify'
+```
+
+## What each alert means, and what to do
+
+| Alert | First check | Then |
+| --- | --- | --- |
+| `api-public` down | `docker compose ps api-public` on VPS-1, then `curl -fsS http://127.0.0.1:8000/healthz` | [deploy-and-rollback.md](deploy-and-rollback.md#roll-back) if the last deploy is the cause |
+| `media` down | `ls /srv/media/logos/` and Caddy's log | the disk is full: `df -h /srv` |
+| `pwa` / `pwa-mirror` down | the Firebase console, and `ls /srv/app-mirror` | [firebase-hosting.md](firebase-hosting.md) |
+| `celery-*` down | `docker compose ps` on VPS-2 and `journalctl -u docker` | `docker compose up -d <service>`; if `beat` is the dead one, run it by hand before the next slot |
+| `backup-db` down | `systemctl status backup-db.service` and its journal | [backups.md](backups.md#run-one-by-hand) |
+| `backup-media*` down | `systemctl status backup-media.service` on VPS-1 | [backups.md](backups.md#run-one-by-hand) |
+
+## Reach it without WireGuard
+
+You cannot: that is deliberate (constitution V). Use the jump host instead:
+
+```sh
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'curl -fsS http://127.0.0.1:3001/api/status-page/heartbeat/1 | head -c 200'
+```
+
+## Backups of Kuma itself
+
+`/srv/kuma` is not in the nightly jobs. Once the monitors above are created, copy it once and keep
+the copy in the password manager or on the owner's machine:
+
+```sh
+ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
+  'sudo -iu deploy tar -czf /srv/backup/kuma-config-$(date -u +%Y%m%d).tgz -C /srv kuma'
+scp -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP":/srv/backup/kuma-config-*.tgz ~/
+```

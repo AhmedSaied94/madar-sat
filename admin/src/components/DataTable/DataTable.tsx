@@ -43,6 +43,8 @@ interface DataTableProps<Row> {
   rowKey: (row: Row) => string;
   /** Names the row in its checkbox label. */
   rowLabel?: (row: Row) => string;
+  /** A stable test id per row, for a screen's own assertions. */
+  rowTestId?: (row: Row) => string;
   /** Group label, e.g. the competition. Groups keep the order in which they first appear. */
   groupBy?: (row: Row) => string;
   selectable?: boolean;
@@ -53,6 +55,11 @@ interface DataTableProps<Row> {
   onEdit?: (row: Row) => void;
   loading?: boolean;
   emptyMessage?: string;
+  /**
+   * Bumped by the screen after a bulk action succeeds: the shared table's selection belongs to the
+   * table, so the screen asks it to clear instead of reaching into its state.
+   */
+  selectionResetKey?: number;
 }
 
 type SortDirection = 'ascending' | 'descending';
@@ -143,6 +150,7 @@ export function DataTable<Row>({
   rows,
   rowKey,
   rowLabel,
+  rowTestId,
   groupBy,
   selectable = false,
   bulkActions,
@@ -152,6 +160,7 @@ export function DataTable<Row>({
   onEdit,
   loading = false,
   emptyMessage,
+  selectionResetKey = 0,
 }: DataTableProps<Row>): ReactElement {
   const [sort, setSort] = useState<SortState | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
@@ -164,6 +173,11 @@ export function DataTable<Row>({
     [rows, groupBy, sortColumn, sort?.direction],
   );
   const ordered = useMemo(() => groups.flatMap((group) => group.rows), [groups]);
+
+  // A successful bulk action ends the selection; the screen only says when.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [selectionResetKey]);
   const orderedKeys = useMemo(() => ordered.map(rowKey), [ordered, rowKey]);
   const focusableKey = activeKey !== null && orderedKeys.includes(activeKey) ? activeKey : (orderedKeys[0] ?? null);
   const columnCount = columns.length + (selectable ? 1 : 0) + 1;
@@ -318,7 +332,7 @@ export function DataTable<Row>({
                 {group.label !== null ? (
                   <tr>
                     <th
-                      scope="rowgroup"
+                      scope="colgroup"
                       colSpan={columnCount}
                       className="text-caption border-b border-divider bg-bg px-3 py-2 text-start font-semibold text-text-secondary"
                     >
@@ -345,6 +359,7 @@ export function DataTable<Row>({
                         else rowRefs.current.delete(key);
                       }}
                       data-row-key={key}
+                      data-testid={rowTestId?.(row)}
                       data-selected={isSelected || undefined}
                       data-warning={state.warning ? true : undefined}
                       tabIndex={key === focusableKey ? 0 : -1}
