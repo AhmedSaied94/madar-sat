@@ -57,6 +57,11 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
       - run: flutter pub get
+      # The flavor file is not in the repo: the hosts and Firebase identifiers come from a secret.
+      - name: Write env/prod.json from APP_ENV_PROD
+        env:
+          APP_ENV_JSON: ${{ secrets.APP_ENV_PROD }}
+        run: ./tool/write_env.sh env/prod.json
       - name: Build the signed prod AAB (versionCode = run number)
         env:
           BUILD_NAME: ${{ steps.version.outputs.name }}

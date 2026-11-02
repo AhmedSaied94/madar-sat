@@ -61,6 +61,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends ripgrep
       - run: flutter pub get
+      # The flavor file is not in the repo. A run without secrets (a Dependabot or fork PR) builds
+      # from env/example.json instead, so its APK has no host and no Firebase.
+      - name: Write env/prod.json from APP_ENV_PROD
+        env:
+          APP_ENV_JSON: ${{ secrets.APP_ENV_PROD }}
+        run: ./tool/write_env.sh env/prod.json --or-example
       # M-R3-2: backend.yml's `clients` job only compares the network client, so a provider
       # *.g.dart left stale (or never committed) by a source change would pass. Fail on any diff.
       - name: Check no generated *.g.dart is stale

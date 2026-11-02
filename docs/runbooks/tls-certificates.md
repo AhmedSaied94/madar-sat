@@ -49,7 +49,7 @@ A reserved IP survives a rebuild, so this happens only if the reservation itself
 | GitHub variable | `VPS1_IP` | You |
 | Every WireGuard client config | `Endpoint = 130.110.117.215:51820`: edit it on each device, and in `WG_CI_CONFIG` | You |
 | Firebase Remote Config | `api_base_url`, `media_base_url` (SD §5.1), once the app reads them | You, then Lane M |
-| `app/env/prod.json` | The bundled API and media defaults (research R16) | Lane M, with a new release |
+| `app/env/prod.json` (local, not in the repo) and the `APP_ENV_PROD` secret | The bundled API and media defaults (research R16); [secrets.md](secrets.md#update-the-apps-flavor-values) | You, with a new release |
 | The PWA's mirror address | `app.130.110.117.215.sslip.io` (from D4) | Lane M |
 | The hosts tables | [README.md](README.md), [provision-host.md](provision-host.md#the-two-vms) | You |
 

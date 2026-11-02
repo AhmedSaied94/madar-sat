@@ -5,7 +5,9 @@ means (Lane B2's T086, T084, research R20).
 
 Kuma runs as `uptime-kuma` in `infra/compose/vps2.yml`, image `louislam/uptime-kuma:1`, data in
 `/srv/kuma`. It is published on **VPS-2's VCN address only** (`:3001`), the firewall accepts that port
-from VPS-1 alone, and VPS-1's Caddy serves it over WireGuard at:
+from VPS-1 alone (VPS-2's `DOCKER-USER` rule, and the subnet's security list: `10.1.0.97/32` TCP 3001,
+[provision-host.md step 1.7](provision-host.md#1-reserve-the-ip-and-create-the-vm); without it `https://kuma.…` answers 502),
+and VPS-1's Caddy serves it over WireGuard at:
 
 **`https://kuma.10-8-0-1.sslip.io`** (connected to `wg0`; Caddy's internal CA, which your device
 already trusts for `https://10.8.0.1` — [private-network.md](private-network.md#install-the-admin-ca-root)).
@@ -89,9 +91,14 @@ nothing). The runbook step is
 `worker-media` added for VPS-1:
 
 ```sh
-sudo -iu deploy env IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml up -d worker-media
+sudo -u deploy sh -c 'cd /srv/madar/infra && IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f compose/vps1.yml up -d worker-media'
 ```
+
+Keep it on one line, with single quotes, the `cd` and without `-i`: `deploy` cannot read `ubuntu`'s
+home, where the command would otherwise start (`stat .: permission denied`); `current_tag` is
+readable by `deploy` only, so the `$(cat …)` must run in `deploy`'s shell (expanded in `ubuntu`'s, it reads nothing and
+Compose asks GHCR for the tag `none`, which fails as `unauthorized`), and `sudo -i` re-escapes the
+command, so a `\` line break reaches Docker as part of the argument (`unknown docker command`).
 
 ## 5. Check
 

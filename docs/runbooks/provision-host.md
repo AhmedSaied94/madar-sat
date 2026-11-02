@@ -63,6 +63,7 @@ The console labels below are the ones in use when this was written. If a label h
    | `<your public ip>/32` | TCP 22 | Your first SSH sessions | Until step 7 |
    | `10.1.0.97/32` | TCP 22 | VPS-1 → VPS-2, the SSH jump | Always |
    | `10.1.0.118/32` | TCP 5432, TCP 6379 | VPS-2's workers → PostgreSQL and Redis on VPS-1 | Always |
+   | `10.1.0.97/32` | TCP 3001 | VPS-1's Caddy → Uptime Kuma on VPS-2 ([uptime-kuma.md](uptime-kuma.md)), and VPS-1's media backup heartbeats (D3) | Always |
 
    The wizard's default list allows TCP 22 from anywhere. Narrow that rule to `<your public ip>/32`. Leave the default ICMP rules and the egress rule as they are.
 

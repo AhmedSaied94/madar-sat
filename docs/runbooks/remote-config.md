@@ -33,7 +33,7 @@ The hosts are baked into every cached ETag and drift key, so a change applies on
 3. Publish, then close and reopen the app on a phone. The old host stops being used on the next start.
 4. Keep the old host answering for at least one release cycle: a phone that has not opened the app since the change still asks the old one.
 
-If the value fails validation the app keeps the bundled host, which is the address that host had when the build was made; that is why the flavors' files must stay current.
+If the value fails validation the app keeps the bundled host, which is the address that host had when the build was made; that is why the flavors' files, and the `APP_ENV_PROD` secret CI builds from, must stay current ([secrets.md](secrets.md#update-the-apps-flavor-values)).
 
 ## Raise the floor (forced update)
 

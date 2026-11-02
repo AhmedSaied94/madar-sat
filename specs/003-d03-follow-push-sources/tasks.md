@@ -264,7 +264,7 @@ These tasks come from `reviews/b1-round-2.md`. Each id is the finding id; the ro
 
 ### Validation (B2)
 
-- [ ] T081 [US3] Deploy: merge; the backend and backup images deploy; `ssh madar-vps2 docker compose ps` shows `uptime-kuma` and `worker-notify` healthy and one `beat`; the timers are listed by `systemctl list-timers` on both hosts.
+- [x] T081 [US3] Deploy: merge; the backend and backup images deploy; `ssh madar-vps2 docker compose ps` shows `uptime-kuma` and `worker-notify` healthy and one `beat`; the timers are listed by `systemctl list-timers` on both hosts.
 - [ ] T082 [US3] Run [quickstart Lane B2](quickstart.md#lane-b2-livesoccertv-health-backups-monitoring) steps 2–5: a LiveSoccerTV run adds links and placeholders, a second adds none, an editor-removed link stays hidden, the breaker opens and alerts, the zero-items alert fires once.
 - [ ] T083 [US3] Next morning, step 6: restic lists last night's snapshot in B2; `rclone lsd` shows the media copy; Kuma shows both backup heartbeats green (SC-004). Record the snapshot id in the PR.
 - [ ] T084 [US3] Stop `worker-notify` for 10 min and confirm Kuma alerts on Telegram; start it again.

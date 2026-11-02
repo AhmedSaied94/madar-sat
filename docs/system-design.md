@@ -229,7 +229,7 @@ app/lib/
 | `features` | `{"live_center":true,"lineups":false,"reports":false,"satellite_finder":false}` | Feature flags and percentage rollouts |
 | `live_poll_interval_s` | `30` | Client live polling |
 
-**Build flavors:** dev, staging and prod, set with `--dart-define-from-file=env/<flavor>.json`. These files hold only public values: Firebase options are identifiers, not secrets. No API keys or credentials go in Dart source.
+**Build flavors:** dev, staging and prod, set with `--dart-define-from-file=env/<flavor>.json`. These files hold only public values: Firebase options are identifiers, not secrets. They are kept out of the repo all the same (only `env/example.json`, the list of keys, is committed): each building machine keeps its own copy, and CI writes `env/prod.json` from the `APP_ENV_PROD` GitHub secret. No API keys or credentials go in Dart source.
 
 **Localization:** ARB files, Arabic only in v1, layout forced RTL. Always render **Western digits (0–9)**. Don't rely on the `ar` locale default, because some `intl` locales emit Arabic-Indic digits. Times use `ص`/`م` in 12-hour mode.
 
@@ -569,7 +569,7 @@ B2's free tier is 10 GB, so watch the size. Test a restore every month on a scra
 
 | Check | How it's met |
 |---|---|
-| No secrets in clients or the repo | Server secrets live in `.env` files (mode 600) on the hosts and in GitHub Actions secrets. Flutter `env/*.json` holds public values only. R2-style keys are never sent to a browser. The old Firebase web config in `old_app/` stays out of the repo |
+| No secrets in clients or the repo | Server secrets live in `.env` files (mode 600) on the hosts and in GitHub Actions secrets. Flutter `env/*.json` holds public values only, and is git-ignored (CI writes it from the `APP_ENV_PROD` secret). R2-style keys are never sent to a browser. The old Firebase web config in `old_app/` stays out of the repo |
 | Admin surface not public | Separate ASGI app bound to `wg0`. The public app has no admin routers. Caddy has no public site for the admin |
 | AuthN/AuthZ | argon2id, short-lived JWT, rotating refresh tokens, roles checked in a dependency on every admin route, audit log |
 | Input validation | Pydantic models on every request. Length caps on free text (reports ≤ 280 characters). Enum checks |

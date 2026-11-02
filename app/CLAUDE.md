@@ -8,13 +8,18 @@ Read `../AGENTS.md`, `../CLAUDE.md` and the constitution before changing anythin
 
 ```bash
 flutter pub get
+cp env/example.json env/dev.json   # once per flavor and checkout, then fill in the values
 flutter run -t lib/main_dev.dart --dart-define-from-file=env/dev.json --flavor dev
 flutter run -t lib/main_staging.dart --dart-define-from-file=env/staging.json --flavor staging
 flutter run -t lib/main_prod.dart --dart-define-from-file=env/prod.json --flavor prod
 ```
 
 - Flavors: `dev`, `staging`, `prod` (`com.madarsat.app`, `.dev`, `.staging`).
-- `env/*.json` holds public values only. There is no cleartext HTTP.
+- `env/*.json` holds public values only (hosts, links, Firebase identifiers), and is not in
+  the repo: only `env/example.json`, which lists the keys, is committed. CI writes
+  `env/prod.json` from the `APP_ENV_PROD` secret with `tool/write_env.sh`; a new key goes into
+  `example.json`, your local files and that secret together
+  (`../docs/runbooks/secrets.md`, "Update the app's flavor values"). There is no cleartext HTTP.
 - `dev` points at `infra/compose/dev.yml`'s Caddy (`https://localhost:8443`); from a
   device use `adb reverse tcp:8443 tcp:8443`. Debug builds trust user CAs for its root
   CA; release builds trust the system CAs only

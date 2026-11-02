@@ -9,6 +9,7 @@ How an app release reaches testers: tagging `app-v<x.y.z>`, the signed AAB that 
 - A Google Play Console developer account, with the app created for the package `com.madarsat.app` (the `prod` flavor; `.dev` and `.staging` are never uploaded).
 - The upload keystore and its four secrets on the repository: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`) and `ANDROID_KEY_PASSWORD` ([secrets.md](secrets.md#rotate-the-android-upload-key) has how they were made).
 - `gh` logged in with access to `AhmedSaied94/madar-sat`.
+- The `APP_ENV_PROD` secret: the prod flavor file, which the build reads ([secrets.md](secrets.md#update-the-apps-flavor-values)). Without it the release job stops at "Write env/prod.json".
 - `master` is green for `app` and `pwa`, and it contains the app code you mean to release. Tags are built from the commit they point at, not from `master`'s tip.
 
 ## 1. Back up the upload keystore
@@ -102,7 +103,7 @@ Play App Signing makes Google hold the key that signs what users install, and yo
 The reminder reaches a phone through FCM; Android and the installed iPhone PWA take the same message by different roads (research R25, R26, [remote-config.md](remote-config.md) for the hosts). Do this once per Firebase project, and again whenever the web app id or the VAPID key changes.
 
 1. **The Android notification channel.** The reminder is sent with `android.notification.channel_id = madar_reminders`; Android 8+ shows it under that channel (the API names the channel and the reason). Nothing to configure on the phone — the channel is created by the first notification — but check it once: **Settings → Apps → Madar Sat → Notifications → Madar reminders** must be on. A tester who turned it off sees no reminder and no error.
-2. **The web VAPID key.** Firebase console → **Project settings → Cloud Messaging → Web Push certificates**. Copy the key pair's public half (88 characters, starts with `B`) into `FIREBASE_VAPID_KEY` in `app/env/<flavor>.json`. The private half never leaves the console.
+2. **The web VAPID key.** Firebase console → **Project settings → Cloud Messaging → Web Push certificates**. Copy the key pair's public half (88 characters, starts with `B`) into `FIREBASE_VAPID_KEY` in your local `app/env/<flavor>.json`, and update the `APP_ENV_PROD` secret for prod ([secrets.md](secrets.md#update-the-apps-flavor-values)). The private half never leaves the console.
 3. **The service worker.** The web build must ship `firebase-messaging-sw.js` and `firebase-config.js` at the origin root:
 
    ```bash

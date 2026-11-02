@@ -5,6 +5,7 @@ goldens and the UI rules, and `../AGENTS.md` for the repository workflow.
 
 ```bash
 flutter pub get
+cp env/example.json env/dev.json   # the flavor files are not in the repo; fill in the values
 flutter run -t lib/main_dev.dart --dart-define-from-file=env/dev.json --flavor dev
 flutter analyze && flutter test
 ```
