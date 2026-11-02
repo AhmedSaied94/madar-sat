@@ -318,3 +318,97 @@ def test_a_live_or_finished_match_is_cancelled(sync_session, frozen_now):
 
     assert report.cancelled == 2
     assert sender.pages == []
+
+
+# --- B1-R2-1: a transient per-message failure is retried, never recorded as ``sent`` --------------
+
+
+def test_a_page_of_transient_failures_does_not_end_sent_and_the_next_dispatch_delivers_it(sync_session, frozen_now):
+    """FCM is down at reminder time: nobody got it, so the row stays open and the next beat sends it."""
+    bag, device = _bag_with_follower(sync_session, frozen_now)
+    outbox = _row(sync_session, bag.match, due_at=frozen_now)
+    outage = FakePushSender({str(device.push_token): "retryable"})
+
+    report = dispatch_due(sync_session, outage, frozen_now)
+
+    assert report.retry_row_id == outbox.id
+    assert report.sent == 0
+    sync_session.refresh(outbox)
+    assert (outbox.status, outbox.sent, outbox.failed, outbox.attempts) == ("pending", 0, 0, 1)
+
+    recovered = FakePushSender()
+    report = dispatch_due(sync_session, recovered, frozen_now)
+
+    assert report.sent == 1
+    assert recovered.tokens_sent == [device.push_token]
+    sync_session.refresh(outbox)
+    assert (outbox.status, outbox.sent, outbox.failed) == ("sent", 1, 0)
+
+
+def test_a_page_that_stays_unreachable_ends_failed_after_the_attempt_budget(sync_session, frozen_now):
+    bag, device = _bag_with_follower(sync_session, frozen_now)
+    outbox = _row(sync_session, bag.match, due_at=frozen_now)
+    outage = FakePushSender({str(device.push_token): "retryable"})
+
+    for _ in range(MAX_ATTEMPTS):
+        dispatch_due(sync_session, outage, frozen_now)
+
+    sync_session.refresh(outbox)
+    assert (outbox.status, outbox.attempts, outbox.sent) == ("failed", MAX_ATTEMPTS, 0)
+    assert dispatch_due(sync_session, outage, frozen_now).claimed == []
+
+
+def test_a_transient_failure_on_page_two_resumes_there_and_never_resends_page_one(sync_session, frozen_now):
+    bag = support.create_match_sync(sync_session, frozen_now)
+    sync_session.execute(
+        text(
+            "INSERT INTO devices (install_id, token_hash, platform, push_token, prefs) "
+            "SELECT gen_random_uuid(), md5(g::text), 'ios', 'push-' || g, '{}'::jsonb "
+            "FROM generate_series(1, 600) AS g"
+        )
+    )
+    sync_session.execute(
+        text(
+            "INSERT INTO device_follows (device_id, team_id) "
+            "SELECT id, :team FROM devices WHERE push_token LIKE 'push-%'"
+        ),
+        {"team": bag.home.id},
+    )
+    outbox = _row(sync_session, bag.match, due_at=frozen_now)
+    second_page = {f"push-{n}": "retryable" for n in range(501, 601)}
+    outage = FakePushSender(second_page)
+
+    report = dispatch_due(sync_session, outage, frozen_now)
+
+    assert report.retry_row_id == outbox.id
+    sync_session.refresh(outbox)
+    assert (outbox.status, outbox.sent, outbox.failed) == ("pending", 500, 0)
+    first_page = {message.token for message in outage.pages[0]}
+
+    resume = FakePushSender()
+    dispatch_due(sync_session, resume, frozen_now)
+
+    resent = {message.token for page in resume.pages for message in page}
+    assert first_page.isdisjoint(resent)
+    assert resent == set(second_page)
+    sync_session.refresh(outbox)
+    assert (outbox.status, outbox.sent, outbox.failed) == ("sent", 600, 0)
+
+
+def test_a_device_that_got_the_message_is_never_sent_it_again_when_another_stays_unreachable(sync_session, frozen_now):
+    """A page that delivered to some cannot be retried whole; the unreachable remainder is counted failed."""
+    bag = support.create_match_sync(sync_session, frozen_now)
+    reached = support.new_device(sync_session, token="tok-reached", push_token="push-reached")
+    cut_off = support.new_device(sync_session, token="tok-cut-off", push_token="push-cut-off")
+    support.follow(sync_session, reached, team=bag.home.id)
+    support.follow(sync_session, cut_off, team=bag.home.id)
+    outbox = _row(sync_session, bag.match, due_at=frozen_now)
+    sender = FakePushSender({"push-cut-off": "retryable"})
+
+    report = dispatch_due(sync_session, sender, frozen_now)
+
+    assert report.retry_row_id is None
+    sync_session.refresh(outbox)
+    assert (outbox.status, outbox.sent, outbox.failed) == ("sent", 1, 1)
+    assert sorted(sender.tokens_sent) == ["push-cut-off", "push-reached"]
+    assert dispatch_due(sync_session, sender, frozen_now).claimed == []

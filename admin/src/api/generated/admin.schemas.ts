@@ -104,6 +104,11 @@ export type AdminCompetitionLogoAssetId = number | null;
 export type AdminCompetitionPriority = number | null;
 
 export interface AdminCompetition {
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
   id: number;
   logo: AdminCompetitionLogo;
   logo_asset_id: AdminCompetitionLogoAssetId;
@@ -296,6 +301,11 @@ export type AdminSatelliteWorstFrequency = Frequency | null;
 
 export interface AdminSatellite {
   best_frequency: AdminSatelliteBestFrequency;
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
   id: number;
   kind: AdminSatelliteKind;
   logo: AdminSatelliteLogo;
@@ -614,6 +624,8 @@ export type ChannelPatchFrequency = Frequency | null;
 
 export type ChannelPatchFrequencyNote = string | null;
 
+export type ChannelPatchKind = Kind | null;
+
 export type ChannelPatchLogoAssetId = number | null;
 
 export type ChannelPatchName = string | null;
@@ -636,6 +648,7 @@ export interface ChannelPatch {
   display_name?: ChannelPatchDisplayName;
   frequency?: ChannelPatchFrequency;
   frequency_note?: ChannelPatchFrequencyNote;
+  kind?: ChannelPatchKind;
   logo_asset_id?: ChannelPatchLogoAssetId;
   name?: ChannelPatchName;
   package?: ChannelPatchPackage;

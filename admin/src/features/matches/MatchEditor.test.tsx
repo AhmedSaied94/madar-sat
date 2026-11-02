@@ -203,7 +203,9 @@ function serveMatchData(overrides: Record<string, unknown> = {}): void {
     ),
     mswHttp.get('*/admin/api/competitions', () =>
       HttpResponse.json(
-        envelope([{ id: 12, sport: 'football', name: 'الدوري الإيطالي', logo: null, logo_asset_id: null, priority: 1 }]),
+        envelope([
+          { id: 12, sport: 'football', name: 'الدوري الإيطالي', logo: null, logo_asset_id: null, priority: 1, etag: '"c-12"' },
+        ]),
       ),
     ),
     mswHttp.get('*/admin/api/commentators', () =>
@@ -233,6 +235,7 @@ function serveMatchData(overrides: Record<string, unknown> = {}): void {
             logo: null,
             logo_asset_id: null,
             priority: 1,
+            etag: '"sat-2"',
             best_frequency: null,
             worst_frequency: null,
             reception_url: null,

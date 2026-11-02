@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/network/generated/models/match_detail.dart';
 import 'package:madar_sat/core/network/generated/models/status.dart';
+import 'package:madar_sat/core/settings/app_settings.dart';
+import 'package:madar_sat/design/components/display_scope.dart';
 import 'package:madar_sat/features/match_detail/presentation/match_hero.dart';
 
 import '../../fixtures/sample_match_detail.dart';
@@ -63,5 +65,58 @@ void main() {
     );
 
     expect(find.textContaining('تبدأ بعد'), findsNothing);
+  });
+
+  group('the date follows the chosen zone (M-R2-3)', () {
+    // 00:30 on Thursday 12 November by the device's own clock, whatever zone the host runs
+    // in. The chosen zone sits 14 hours behind the device (GMT−12 on a UTC+2 phone), so
+    // there it is still 10:30 on Wednesday 11 November.
+    final deviceMidnight = DateTime(2026, 11, 12, 0, 30);
+    final chosen = MadarZone.fixed(
+      deviceMidnight.timeZoneOffset - const Duration(hours: 14),
+    );
+
+    Future<void> pumpIn(WidgetTester tester, MatchDetail match, MadarZone zone) =>
+        tester.pumpWidget(
+          testApp(
+            MadarDisplayScope(zone: zone, use24h: false, child: MatchHero(match: match)),
+          ),
+        );
+
+    testWidgets('the date beside the time is the chosen zone\'s day, not the device\'s',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpIn(tester, sampleMatchDetail(kickoff: deviceMidnight), chosen);
+
+      expect(find.text('الأربعاء 11 نوفمبر · 10:30 ص'), findsOneWidget);
+      expect(find.text('الخميس 12 نوفمبر · 10:30 ص'), findsNothing);
+      // The spoken label carries the same day.
+      expect(
+        tester.getSemantics(find.byType(MatchHero)).label,
+        contains('الأربعاء 11 نوفمبر'),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('with the automatic zone the date is the device\'s day', (tester) async {
+      await pumpIn(
+        tester,
+        sampleMatchDetail(kickoff: deviceMidnight),
+        const MadarZone.auto(),
+      );
+
+      expect(find.text('الخميس 12 نوفمبر · 12:30 ص'), findsOneWidget);
+    });
+
+    testWidgets('a match with no time shows its own date in any zone', (tester) async {
+      // `matchDate` is a calendar date, not an instant: no zone moves it.
+      await pumpIn(
+        tester,
+        sampleMatchDetail(timeTbd: true).copyWith(matchDate: DateTime.utc(2026, 10, 28)),
+        chosen,
+      );
+
+      expect(find.text('الأربعاء 28 أكتوبر · لم يُحدد'), findsOneWidget);
+    });
   });
 }

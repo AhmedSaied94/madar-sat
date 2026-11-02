@@ -126,8 +126,14 @@ class MatchHero extends StatelessWidget {
     );
   }
 
-  /// The kickoff on the device's calendar. A match with no time still has its day.
-  DateTime get _localDay => (match.kickoffAt ?? match.matchDate).toLocal();
+  /// The kickoff's day on the chosen zone's calendar (S15), so the date reads with the time
+  /// beside it. A match with no time still has its day: `matchDate` is a calendar date, not
+  /// an instant, so no zone moves it.
+  DateTime _day(BuildContext context) {
+    final kickoff = match.kickoffAt;
+    if (kickoff == null) return match.matchDate;
+    return MadarDisplayScope.zoneOf(context).wallClock(kickoff);
+  }
 
   /// «تبدأ بعد 3 ساعات» while the kickoff is more than an hour away; null inside the hour
   /// (the status block counts it), once it has passed, or when there is no time to count.
@@ -148,7 +154,7 @@ class MatchHero extends StatelessWidget {
     final time = match.timeTbd
         ? null
         : MadarTime.kickoff(match.kickoffAt, am: l.amMarker, pm: l.pmMarker, use24h: MadarDisplayScope.use24hOf(context), zone: MadarDisplayScope.zoneOf(context).fixed);
-    return l.s3DateTime(MadarDates.full(l, _localDay), time ?? l.timeTbd);
+    return l.s3DateTime(MadarDates.full(l, _day(context)), time ?? l.timeTbd);
   }
 
   String _semantics(BuildContext context, AppLocalizations l) {
@@ -191,7 +197,7 @@ class MatchHero extends StatelessWidget {
     }
     parts.add(match.competition.name);
     if (match.competition.stage != null) parts.add(match.competition.stage!);
-    parts.add(MadarDates.full(l, _localDay));
+    parts.add(MadarDates.full(l, _day(context)));
     if (_countdown(l) case final countdown?) parts.add(countdown);
     return parts.join(l.listSeparator);
   }

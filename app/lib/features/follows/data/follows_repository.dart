@@ -41,6 +41,29 @@ class FollowsRepository {
     _reload();
   }
 
+  /// Drops the follows a `422 unknown_follow_target` named (`meta.unknown`, keyed by the
+  /// wire's plural kind): the server no longer has them and never will, so they leave the
+  /// local set too, in one transaction. Says how many this device held.
+  ///
+  /// It does not flag the set: the send that was refused is still pending and goes again.
+  Future<int> dropUnknown(Map<String, List<int>> unknown) async {
+    final byKind = <String, Set<int>>{
+      for (final kind in FollowKind.values)
+        if (unknown[_wireName(kind)] case final ids? when ids.isNotEmpty) kind.name: ids.toSet(),
+    };
+    final removed = await _db.removeFollows(byKind);
+    if (removed > 0) _reload();
+    return removed;
+  }
+
+  static String _wireName(FollowKind kind) => switch (kind) {
+        FollowKind.team => 'teams',
+        FollowKind.competition => 'competitions',
+        FollowKind.channel => 'channels',
+        FollowKind.commentator => 'commentators',
+        FollowKind.match => 'matches',
+      };
+
   /// «حذف بيانات جهازي»: the server answered, so both sides start clean.
   Future<void> clear() async {
     await _db.clearDeviceData();

@@ -33,8 +33,13 @@ Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
   `app/notifications/dispatcher.py`, reviewed by the owner), and sends through FCM in pages of 500.
   **Only `app/notifications/` imports `firebase_admin`** (`sender.py`); nothing else talks to FCM.
   A token is cleared only when FCM says the registration token is dead (`UnregisteredError`, or
-  `INVALID_ARGUMENT` naming the token); any other per-message error is `failed` and logged, and one
-  unusable message never fails the page. `notification_outbox.attempts` bounds whole-call retries
+  `INVALID_ARGUMENT` naming the token). A transient per-message error (503, 500, 429, timeout) is sent
+  again for that device alone after `RETRY_DELAYS` in `sender.py`; a device still unreachable is
+  `retryable` in `SendOutcome`. A page that delivered to nobody while some device is `retryable` raises
+  `Retryable` unrecorded (the cursor/`attempts` path retries it, never `sent`); on a page that did deliver
+  to some, the unreachable remainder is counted `failed`, so no device is sent the message twice. Any other
+  per-message error is `failed` and logged, and one unusable message never fails the page.
+  `notification_outbox.attempts` bounds whole-call retries
   (5 → `failed`), and a row whose kickoff has passed or whose match is `live`/`finished` is
   `cancelled` at dispatch and by the scheduler, never sent late.
 - **Devices and follows** (`app/devices/`): `POST /v1/devices` upserts on `install_id` and rotates

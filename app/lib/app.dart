@@ -36,18 +36,35 @@ class _MadarAppState extends ConsumerState<MadarApp> {
   late final GoRouter _router =
       widget.router ?? createAppRouter(guard: _guard, refreshListenable: _refresher);
 
+  /// A resume is when unsent device and follow changes are retried (US2 scenario 6): the
+  /// attempt made while the phone was offline has no other trigger.
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
-    // The launch attempt: anything the last session left dirty is sent now (US2 scenario 6).
-    unawaited(ref.read(deviceSyncProvider.notifier).sync());
+    // Created now, not on first use: a lazy listener would first exist in `dispose`, and no
+    // resume would ever reach it.
+    _lifecycle = AppLifecycleListener(
+      onResume: () => unawaited(ref.read(deviceSyncProvider.notifier).sync()),
+    );
+    unawaited(_launchSync());
   }
 
-  /// A resume is when unsent device and follow changes are retried (US2 scenario 6): the
-  /// attempt made while the phone was offline has no other trigger.
-  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
-    onResume: () => ref.read(deviceSyncProvider.notifier).sync(),
-  );
+  /// The launch attempt: whatever flag the last session left set is sent now (US2 scenario
+  /// 6). It waits for the settings, because the sync does nothing before it knows the
+  /// onboarding is done.
+  Future<void> _launchSync() async {
+    try {
+      await ref.read(appSettingsProvider.future);
+    } on Object {
+      // Unreadable settings: the sync below would find none either, and a later trigger
+      // (a change, a resume, a reconnect) tries again.
+      return;
+    }
+    if (!mounted) return;
+    await ref.read(deviceSyncProvider.notifier).sync();
+  }
 
   /// Where the current location must really go, or null to stay.
   String? _guard(String location) {

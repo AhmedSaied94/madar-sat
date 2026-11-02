@@ -16,6 +16,10 @@ part of 'device_sync.dart';
 /// nothing locally: the dirty flag stays and the next launch, resume, reconnect or change
 /// tries again. A `401` drops the token, so the next attempt registers the same install id
 /// again.
+///
+/// A send clears its flag only for what it carried: it reads the key's revision first, and
+/// the flag clears only if no change was flagged since (`markSyncCleanIfUnchanged`);
+/// otherwise the loop in [sync] sends again.
 
 @ProviderFor(DeviceSync)
 final deviceSyncProvider = DeviceSyncProvider._();
@@ -28,6 +32,10 @@ final deviceSyncProvider = DeviceSyncProvider._();
 /// nothing locally: the dirty flag stays and the next launch, resume, reconnect or change
 /// tries again. A `401` drops the token, so the next attempt registers the same install id
 /// again.
+///
+/// A send clears its flag only for what it carried: it reads the key's revision first, and
+/// the flag clears only if no change was flagged since (`markSyncCleanIfUnchanged`);
+/// otherwise the loop in [sync] sends again.
 final class DeviceSyncProvider
     extends $AsyncNotifierProvider<DeviceSync, void> {
   /// Brings the server's copy of this device up to date (US2 scenarios 4, 6, 7; FR-041).
@@ -38,6 +46,10 @@ final class DeviceSyncProvider
   /// nothing locally: the dirty flag stays and the next launch, resume, reconnect or change
   /// tries again. A `401` drops the token, so the next attempt registers the same install id
   /// again.
+  ///
+  /// A send clears its flag only for what it carried: it reads the key's revision first, and
+  /// the flag clears only if no change was flagged since (`markSyncCleanIfUnchanged`);
+  /// otherwise the loop in [sync] sends again.
   DeviceSyncProvider._()
     : super(
         from: null,
@@ -57,7 +69,7 @@ final class DeviceSyncProvider
   DeviceSync create() => DeviceSync();
 }
 
-String _$deviceSyncHash() => r'129f4f0de48b54f9a69c0041c04bc66470af16c1';
+String _$deviceSyncHash() => r'dc52ba6b5d81017c4c9ed5014de1402970f077cb';
 
 /// Brings the server's copy of this device up to date (US2 scenarios 4, 6, 7; FR-041).
 ///
@@ -67,6 +79,10 @@ String _$deviceSyncHash() => r'129f4f0de48b54f9a69c0041c04bc66470af16c1';
 /// nothing locally: the dirty flag stays and the next launch, resume, reconnect or change
 /// tries again. A `401` drops the token, so the next attempt registers the same install id
 /// again.
+///
+/// A send clears its flag only for what it carried: it reads the key's revision first, and
+/// the flag clears only if no change was flagged since (`markSyncCleanIfUnchanged`);
+/// otherwise the loop in [sync] sends again.
 
 abstract class _$DeviceSync extends $AsyncNotifier<void> {
   FutureOr<void> build();
@@ -85,94 +101,3 @@ abstract class _$DeviceSync extends $AsyncNotifier<void> {
     return element.handleCreate(ref, build);
   }
 }
-
-/// The `device` row of `sync_state`, watched: its `dirty` flag is what makes
-/// [DeviceSync] send `PUT /v1/devices/me`.
-
-@ProviderFor(deviceSyncState)
-final deviceSyncStateProvider = DeviceSyncStateProvider._();
-
-/// The `device` row of `sync_state`, watched: its `dirty` flag is what makes
-/// [DeviceSync] send `PUT /v1/devices/me`.
-
-final class DeviceSyncStateProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<SyncRecord?>,
-          SyncRecord?,
-          Stream<SyncRecord?>
-        >
-    with $FutureModifier<SyncRecord?>, $StreamProvider<SyncRecord?> {
-  /// The `device` row of `sync_state`, watched: its `dirty` flag is what makes
-  /// [DeviceSync] send `PUT /v1/devices/me`.
-  DeviceSyncStateProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'deviceSyncStateProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$deviceSyncStateHash();
-
-  @$internal
-  @override
-  $StreamProviderElement<SyncRecord?> $createElement(
-    $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
-
-  @override
-  Stream<SyncRecord?> create(Ref ref) {
-    return deviceSyncState(ref);
-  }
-}
-
-String _$deviceSyncStateHash() => r'6d3f2e0424182c6ae02419dd78d74bb0ada58ae1';
-
-/// The `follows` row of `sync_state`, watched: `PUT /v1/devices/me/follows`.
-
-@ProviderFor(followsSyncState)
-final followsSyncStateProvider = FollowsSyncStateProvider._();
-
-/// The `follows` row of `sync_state`, watched: `PUT /v1/devices/me/follows`.
-
-final class FollowsSyncStateProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<SyncRecord?>,
-          SyncRecord?,
-          Stream<SyncRecord?>
-        >
-    with $FutureModifier<SyncRecord?>, $StreamProvider<SyncRecord?> {
-  /// The `follows` row of `sync_state`, watched: `PUT /v1/devices/me/follows`.
-  FollowsSyncStateProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'followsSyncStateProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$followsSyncStateHash();
-
-  @$internal
-  @override
-  $StreamProviderElement<SyncRecord?> $createElement(
-    $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
-
-  @override
-  Stream<SyncRecord?> create(Ref ref) {
-    return followsSyncState(ref);
-  }
-}
-
-String _$followsSyncStateHash() => r'16c4a3ba52914d5fa952f989b02968a19f2a0e78';

@@ -70,12 +70,14 @@ Pause, resume and run are audited (`entity = source`, D2's writer). Resume also 
 { "items": [ {"id": 12, "if_match": "W/\"…\""}, {"id": 4, "if_match": "W/\"…\""}, … ] }
 ```
 
+`GET /competitions` and `GET /satellites` return each row with `etag`: the row's version, the same value as the `ETag` header of `GET /competitions/{id}` (`/satellites/{id}`), and the value `OrderRequest` items send as `if_match`. A page holding an older list therefore gets `409 edit_conflict` when it saves an order (`AdminMatchRow.etag` does the same for A3's bulk actions). The one-row responses carry `etag` too.
+
 The server sets `priority` 1…n in the given order for those rows (rows not listed keep theirs, after the listed ones), in one transaction: one stale item rejects all. It writes an audit entry per changed row (no `locked_fields`: no importer writes `priority`) and bumps `competitions` (and `matches`, whose group order uses it) or `satellites`.
 
 ## Channels (A8)
 
 - `GET /channels` gains `placeholder=true|false` and `show_in_match=true|false` (A8's "shown on match pages" filter; D2's list has `satellite_id`, `category`, `kind` (platform-only is `kind=platform`), `access` and `missing_logo`), and returns `placeholder_source` on each row.
-- `PATCH /channels/{id}` on a placeholder: setting `show_in_match: true` also clears `placeholder_source` (same audit entry). The D2 validation applies, so a placeholder moved to `kind: "satellite"` needs a satellite and access.
+- `PATCH /channels/{id}` on a placeholder: setting `show_in_match: true` also clears `placeholder_source` (same audit entry). `PATCH /channels/{id}` accepts `kind` (`satellite`, `terrestrial` or `platform`; `null` is `422 null_not_allowed`) so an importer's `platform` placeholder can become a satellite channel. D2's field rules (`kind_errors`, the base schema's `ck_channels_kind_fields`) are checked against the channel as it will be stored: `satellite` and `terrestrial` need `satellite_id` and `access`; `platform` refuses `satellite_id`, a frequency, a frequency note and a beam, so a channel moved back to `platform` must clear them in the same request. A channel moved *onto* `satellite` also needs a `frequency` or a `frequency_note` (`422`, `loc: ["body", "frequency"]`, `type: "required"`), so it never reaches the app with nothing to tune. `kind` is not a lockable field; the change is in the audit entry's diff.
 - «إضافة على قمر آخر» uses D2's `POST /channels` with the fields copied by the client; the D2 carriage unique rule answers `409 already_exists` for a duplicate carriage.
 
 ## Teams, competitions, satellites, commentators (A5, A6, A7, A10)

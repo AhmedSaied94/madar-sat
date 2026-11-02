@@ -13,6 +13,8 @@ class ApiFailure implements Exception {
     this.statusCode,
     this.retryAfterS,
     this.maxFollows,
+    this.unknownTargets = const {},
+    this.unknownSatellites = const [],
   });
 
   /// `error.code` from the envelope, or null for a transport or parse failure.
@@ -29,6 +31,14 @@ class ApiFailure implements Exception {
 
   /// `meta.max` of a `too_many_follows` answer: the follow limit the server enforces.
   final int? maxFollows;
+
+  /// `meta.unknown` of an `unknown_follow_target` answer: the ids the server does not
+  /// know, keyed by the wire's kind (`teams`, `competitions`, …); only kinds with some.
+  final Map<String, List<int>> unknownTargets;
+
+  /// `meta.unknown` of an `unknown_satellite` answer: the satellite ids the server does
+  /// not know.
+  final List<int> unknownSatellites;
 
   @override
   String toString() => 'ApiFailure(code: $code, isOffline: $isOffline, '

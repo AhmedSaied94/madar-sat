@@ -130,8 +130,19 @@ def kind_errors(kind: str, state: Mapping[str, Any]) -> list[dict[str, Any]]:
     return errors
 
 
-async def _check(session: AsyncSession, kind: str, state: Mapping[str, Any], touched: Mapping[str, Any]) -> None:
+async def _check(
+    session: AsyncSession,
+    kind: str,
+    state: Mapping[str, Any],
+    touched: Mapping[str, Any],
+    needs_tuning: bool = False,
+) -> None:
     errors = kind_errors(kind, state)
+    # A channel moved onto a satellite (an importer's platform placeholder, A-R1-5) has to say where
+    # to tune: a frequency, or the note the base schema allows in its place. Without either it would
+    # reach the app as a satellite channel with nothing to dial.
+    if needs_tuning and state.get("frequency_mhz") is None and state.get("frequency_note") is None:
+        errors.append(refs.field_error(["frequency"], "required"))
     if "frequency" in touched:
         errors += tuning_errors(touched["frequency"], ["frequency"])
     errors += await refs.missing_refs(session, [(Satellite, [touched.get("satellite_id")], ["satellite_id"])])
@@ -175,10 +186,14 @@ async def update(
     changes = sent(body)
     if changes.get("name", "") is None:
         refs.raise_if_any([refs.field_error(["name"], "null_not_allowed")])
-    if "show_in_match" in changes and changes["show_in_match"] is None:
-        refs.raise_if_any([refs.field_error(["show_in_match"], "null_not_allowed")])
+    for column in ("kind", "show_in_match"):
+        if column in changes and changes[column] is None:
+            refs.raise_if_any([refs.field_error([column], "null_not_allowed")])
 
     before = versions.row_state(channel)
+    became_satellite = "kind" in changes and changes["kind"].value == "satellite" and channel.kind != "satellite"
+    if "kind" in changes:
+        channel.kind = _value(changes["kind"])
     for column in PLAIN_COLUMNS:
         if column in changes:
             setattr(channel, column, _value(changes[column]))
@@ -190,7 +205,7 @@ async def update(
         channel.placeholder_source = None
 
     state = {key: getattr(channel, key) for key in (*PLAIN_COLUMNS, "frequency_mhz")}
-    await _check(session, channel.kind, state, changes)
+    await _check(session, channel.kind, state, changes, needs_tuning=became_satellite)
     await writer.save_update(
         session,
         admin,

@@ -298,10 +298,10 @@ export const getPatchCommentatorAdminApiCommentatorsCommentatorIdPatchResponseMo
 
 export const getPatchCommentatorAdminApiCommentatorsCommentatorIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getListCompetitionsAdminApiCompetitionsGetResponseMock = (): EnvelopeListAdminCompetition => ({"data":[{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListCompetitionsAdminApiCompetitionsGetResponseMock = (): EnvelopeListAdminCompetition => ({"data":[{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListCompetitionsAdminApiCompetitionsGetResponseMock200 = (): EnvelopeListAdminCompetition => ({"data":[{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListCompetitionsAdminApiCompetitionsGetResponseMock200 = (): EnvelopeListAdminCompetition => ({"data":[{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -310,10 +310,10 @@ export const getListCompetitionsAdminApiCompetitionsGetResponseMock401 = (): Err
 
 export const getListCompetitionsAdminApiCompetitionsGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
 
-export const getCreateCompetitionAdminApiCompetitionsPostResponseMock = (): EnvelopeAdminCompetition => ({"data":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateCompetitionAdminApiCompetitionsPostResponseMock = (): EnvelopeAdminCompetition => ({"data":{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getCreateCompetitionAdminApiCompetitionsPostResponseMock201 = (): EnvelopeAdminCompetition => ({"data":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateCompetitionAdminApiCompetitionsPostResponseMock201 = (): EnvelopeAdminCompetition => ({"data":{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getCreateCompetitionAdminApiCompetitionsPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -370,10 +370,10 @@ export const getDeleteCompetitionAdminApiCompetitionsCompetitionIdDeleteResponse
 
 export const getDeleteCompetitionAdminApiCompetitionsCompetitionIdDeleteResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock = (): EnvelopeAdminCompetition => ({"data":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock = (): EnvelopeAdminCompetition => ({"data":{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock200 = (): EnvelopeAdminCompetition => ({"data":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock200 = (): EnvelopeAdminCompetition => ({"data":{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -387,10 +387,10 @@ export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock40
 
 export const getGetCompetitionAdminApiCompetitionsCompetitionIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock = (): EnvelopeAdminCompetition => ({"data":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock = (): EnvelopeAdminCompetition => ({"data":{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock200 = (): EnvelopeAdminCompetition => ({"data":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock200 = (): EnvelopeAdminCompetition => ({"data":{"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":3,"name":"الدوري المصري الممتاز","priority":3,"sport":"football"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -603,10 +603,10 @@ export const getUploadMediaAdminApiMediaPostResponseMock415 = (): ErrorEnvelope 
 
 export const getUploadMediaAdminApiMediaPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"media_invalid","message":"media invalid"},"meta":{},"success":false})
 
-export const getListSatellitesAdminApiSatellitesGetResponseMock = (): EnvelopeListAdminSatellite => ({"data":[{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListSatellitesAdminApiSatellitesGetResponseMock = (): EnvelopeListAdminSatellite => ({"data":[{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListSatellitesAdminApiSatellitesGetResponseMock200 = (): EnvelopeListAdminSatellite => ({"data":[{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListSatellitesAdminApiSatellitesGetResponseMock200 = (): EnvelopeListAdminSatellite => ({"data":[{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -615,10 +615,10 @@ export const getListSatellitesAdminApiSatellitesGetResponseMock401 = (): ErrorEn
 
 export const getListSatellitesAdminApiSatellitesGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
 
-export const getCreateSatelliteAdminApiSatellitesPostResponseMock = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateSatelliteAdminApiSatellitesPostResponseMock = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getCreateSatelliteAdminApiSatellitesPostResponseMock201 = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateSatelliteAdminApiSatellitesPostResponseMock201 = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getCreateSatelliteAdminApiSatellitesPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -675,10 +675,10 @@ export const getDeleteSatelliteAdminApiSatellitesSatelliteIdDeleteResponseMock42
 
 export const getDeleteSatelliteAdminApiSatellitesSatelliteIdDeleteResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock200 = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock200 = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -692,10 +692,10 @@ export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock404 = ()
 
 export const getGetSatelliteAdminApiSatellitesSatelliteIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock200 = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock200 = (): EnvelopeAdminSatellite => ({"data":{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})

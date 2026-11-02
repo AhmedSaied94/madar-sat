@@ -150,6 +150,7 @@ export const validation = {
   position: 'أدخل موقعاً بين 0 و 180 درجة',
   satelliteRequired: 'اختر قمراً، أو اجعل القناة منصة بلا قمر',
   frequencyRequired: 'أدخل التردد ومعدل الترميز، أو أزل «إظهار في صفحات المباريات»',
+  frequencyRequiredOnSatellite: 'أدخل التردد ومعدل الترميز لتحويل القناة إلى قناة على قمر',
 } as const;
 
 export const dialogs = {
@@ -534,7 +535,6 @@ export const channels = {
     category: 'الفئة',
     country: 'الدولة',
     satellite: 'القمر',
-    kindLocked: 'هذه القناة أُنشئت كمنصة، وتحويلها إلى قناة على قمر غير متاح بعد.',
     showInMatch: 'إظهار في صفحات المباريات',
     logo: 'الشعار',
     logoUpload: 'رفع شعار',

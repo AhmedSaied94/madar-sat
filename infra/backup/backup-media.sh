@@ -42,11 +42,14 @@ keep_weekly=${BACKUP_KEEP_WEEKLY:-4}
 
 log() { printf '[backup-media] %s\n' "$*"; }
 
+# One push, logged and never fatal. Kuma shows a push URL as `…/api/push/<token>?status=up&msg=OK&ping=`;
+# only the path is kept, or a `down` push would land inside `ping` and Kuma would record `up`
+# (B2-R2-1).
 heartbeat() {
   local status=$1 message=$2
   [[ -n $heartbeat_url ]] || return 0
   curl -fsS -m 10 --retry 2 -o /dev/null \
-    "${heartbeat_url}?status=${status}&msg=$(printf '%s' "$message" | tr ' ' '+')" \
+    "${heartbeat_url%%\?*}?status=${status}&msg=$(printf '%s' "$message" | tr ' ' '+')" \
     || log "heartbeat push failed (status=${status})"
 }
 

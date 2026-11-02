@@ -240,8 +240,9 @@ as it is and start a new one:
 key in the console. `rclone` reads the value per run, so no restart is needed; the next 03:30 timer
 uses it.
 
-**Kuma push URLs.** Recreate only the affected monitor in Kuma (**Edit → Push URL**), replace the
-value in the host's `.env`, and restart the service that reads it (or wait for the next backup run).
+**Kuma push URLs.** Recreate only the affected monitor in Kuma (**Edit → Push URL**), put the new
+token into the host's `.env` value (the form is in [uptime-kuma.md](uptime-kuma.md#the-push-url-on-each-host);
+never paste the URL Kuma shows), and restart the service that reads it (or wait for the next backup run).
 
 ## When gitleaks fails
 

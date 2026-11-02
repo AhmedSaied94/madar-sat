@@ -20,8 +20,9 @@ class FakePushSender:
     """Records each page and answers per token, the way ``send_each`` does (B1-R1-6).
 
     A token's behaviour is ``ok`` (default), ``UNREGISTERED`` (a dead token, which the dispatcher
-    clears) or ``failed`` (any other per-message error: an outage, a bad message field). The real
-    sender returns those as ``SendOutcome`` counts and never raises for one device, so the fake does
+    clears), ``retryable`` (a transient error that outlasted the real sender's own re-sends: an
+    outage, a limit) or ``failed`` (any other per-message error: a bad message field). The real
+    sender returns those as ``SendOutcome`` fields and never raises for one device, so the fake does
     the same. A *whole call* failure, the one case ``send_each`` raises, is ``fail_page`` (that call
     only) or ``fail_every_page``.
     """
@@ -48,15 +49,18 @@ class FakePushSender:
             raise Retryable("UNAVAILABLE")
         sent = failed = 0
         unregistered: list[str] = []
+        retryable: list[str] = []
         for message in messages:
             answer = self.behaviour.get(message.token, "ok")
             if answer == "ok":
                 sent += 1
             elif answer == "UNREGISTERED":
                 unregistered.append(message.token)
+            elif answer == "retryable":
+                retryable.append(message.token)
             else:
                 failed += 1
-        return SendOutcome(sent=sent, failed=failed, unregistered=tuple(unregistered))
+        return SendOutcome(sent=sent, failed=failed, unregistered=tuple(unregistered), retryable=tuple(retryable))
 
     @property
     def tokens_sent(self) -> list[str]:

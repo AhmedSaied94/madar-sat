@@ -51,6 +51,31 @@ def test_it_getS_its_kuma_url(monkeypatch: pytest.MonkeyPatch) -> None:
     assert params == {"status": "up", "msg": "ok"}
 
 
+def test_a_kuma_style_url_is_pushed_as_one_status_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Kuma shows ``…?status=up&msg=OK&ping=``; the push must carry that one ``status``, no ``ping``.
+
+    The backup scripts had to cut the query themselves (B2-R2-1). ``httpx`` replaces the query when
+    ``params`` is given, so this runs the real client over a mock transport and pins that.
+    """
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"ok": True})
+
+    monkeypatch.setenv("KUMA_PUSH_URL_IMPORTS", "http://uptime-kuma:3001/api/push/token?status=up&msg=OK&ping=")
+    get_adapter_settings.cache_clear()
+    real_client = httpx.Client
+    monkeypatch.setattr(
+        tasks.httpx, "Client", lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs)
+    )
+
+    assert heartbeat.apply(args=("imports",)).get() == {"queue": "imports", "sent": True}
+    assert len(seen) == 1
+    assert seen[0].url.path == "/api/push/token"
+    assert seen[0].url.params.multi_items() == [("status", "up"), ("msg", "ok")]
+
+
 def test_without_a_url_it_is_a_no_op(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("KUMA_PUSH_URL_MAINTENANCE", raising=False)
     get_adapter_settings.cache_clear()

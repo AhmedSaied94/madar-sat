@@ -47,8 +47,11 @@ On VPS-2 (the database):
 ```sh
 ssh madar-vps2 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
   -f /srv/madar/infra/compose/vps2.yml --profile backup run --rm -T backup-db \
-  restic snapshots --tag db --last 3'
+  restic snapshots --tag db --latest 3'
 ```
+
+The image's restic is 0.14, where `--last 3` reads `3` as a snapshot id and lists nothing: use
+`--latest 3`.
 
 On VPS-1 (the media):
 
@@ -127,27 +130,38 @@ Restoring an **older** snapshot is the same with `--tag db` plus the snapshot id
 
 ## Restore the media
 
-The mirror is a plain copy, so one file comes back with:
-
-```sh
-ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
-  -f /srv/madar/infra/compose/vps1.yml --profile backup run --rm -T --entrypoint rclone backup-media \
-  copy oci:madar-media/logos/<file>.webp /srv/media/logos/'
-```
-
-A file deleted from the disk by mistake comes back from the weekly snapshot. `/srv/media` is
-mounted read-only in the backup container, so restore into a scratch directory and copy across:
+The `backup-media` service mounts `/srv/media` **read-only** (`infra/compose/vps1.yml`), so a
+restore cannot go through it. Both restores below are one-off containers of the same image, with
+the same user as the backup (uid 10001, the owner of the media files) and a writable mount; a
+restore as root would leave files `deploy` can neither read nor copy.
 
 ```sh
 # the image deploy.sh pulls, so the tag is never guessed
 image=$(ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
   -f /srv/madar/infra/compose/vps1.yml --profile backup config --images' | grep madar-backup)
-ssh madar-vps1 'sudo install -d -m 700 -o deploy -g deploy /srv/media-restore'
-ssh madar-vps1 "sudo -iu deploy docker run --rm --env-file /srv/madar/.env \
-  -v /srv/media-restore:/restore $image \
-  restic restore latest --tag media --target /restore --include /srv/media/logos"
-ssh madar-vps1 'sudo -iu deploy cp /srv/media-restore/srv/media/logos/<file>.webp /srv/media/logos/'
 ```
+
+The mirror is a plain copy, so one file comes back with:
+
+```sh
+ssh madar-vps1 "sudo -iu deploy docker run --rm --user 10001:10001 --cap-drop ALL \
+  --env-file /srv/madar/.env -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/cache \
+  -v /srv/media:/srv/media $image \
+  rclone copy oci:madar-media/logos/<file>.webp /srv/media/logos/"
+```
+
+A file deleted from the disk by mistake also comes back from the weekly snapshot: it is restored
+into the container's own `/tmp` and copied across, so nothing is left on the host:
+
+```sh
+ssh madar-vps1 "sudo -iu deploy docker run --rm --user 10001:10001 --cap-drop ALL \
+  --env-file /srv/madar/.env -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/cache \
+  -v /srv/media:/srv/media $image \
+  sh -c 'restic restore latest --tag media --target /tmp/restore --include /srv/media/logos/<file>.webp && cp /tmp/restore/srv/media/logos/<file>.webp /srv/media/logos/'"
+```
+
+Both leave the file owned by uid 10001, like the rest of `/srv/media`; the snapshot restore also
+keeps its mode 0600.
 
 ## The monthly restore drill
 

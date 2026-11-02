@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -185,6 +186,16 @@ class AppDatabase extends _$AppDatabase {
   /// The device's local wall clock.
   final DateTime Function() now;
   final Duration Function(DateTime local)? _offsetAt;
+
+  /// How many changes each `sync_state` key has had in this process ([syncRevision]).
+  final Map<String, int> _syncRevisions = {};
+  final StreamController<String> _syncChanges = StreamController<String>.broadcast();
+
+  @override
+  Future<void> close() async {
+    await _syncChanges.close();
+    await super.close();
+  }
 
   /// A document nobody has revalidated for this long is dropped on start, so match-detail
   /// copies of long-gone matches do not pile up.
@@ -461,6 +472,18 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Removes follows in one transaction, [idsByKind] keyed by the stored kind name, and
+  /// says how many rows went.
+  Future<int> removeFollows(Map<String, Set<int>> idsByKind) => transaction(() async {
+        var removed = 0;
+        for (final entry in idsByKind.entries) {
+          removed += await (delete(follows)
+                ..where((t) => t.kind.equals(entry.key) & t.targetId.isIn(entry.value)))
+              .go();
+        }
+        return removed;
+      });
+
   /// Replaces one kind's whole set, so a picker's result is written in one step.
   Future<void> replaceFollowsOfKind(String kind, Set<int> targetIds) => transaction(() async {
         await (delete(follows)..where((t) => t.kind.equals(kind))).go();
@@ -511,16 +534,48 @@ class AppDatabase extends _$AppDatabase {
               ),
       );
 
-  /// Flags a sync that still has to reach the server, with the reason the last try failed.
-  Future<void> markSyncDirty(String key, {String? error}) =>
-      into(syncState).insertOnConflictUpdate(
-        SyncStateCompanion.insert(
-          key: key,
-          dirty: true,
-          lastError: Value(error),
-          attemptedAt: Value(now().toUtc()),
-        ),
-      );
+  /// The `sync_state` keys that were flagged by a change, each as it is stored. A failed
+  /// attempt is no change and never appears here.
+  Stream<String> get syncChanges => _syncChanges.stream;
+
+  /// How many changes [key] has had in this process. A send reads it before it reads what to
+  /// send, and [markSyncCleanIfUnchanged] clears the flag only if it has not moved since.
+  ///
+  /// It lives in memory on purpose: this database is the only writer, and the durable part
+  /// is the `dirty` flag itself, which only ever clears on a matching compare, so a flag
+  /// left set by a killed process is still there to be sent at the next launch.
+  int syncRevision(String key) => _syncRevisions[key] ?? 0;
+
+  /// Flags a sync that still has to reach the server.
+  ///
+  /// Without an [error] this is a *change* (a follow toggled, a push id, a settings
+  /// choice): it moves [syncRevision] at once, before the write, and is announced on
+  /// [syncChanges] once stored. With an [error] it only records why the last attempt failed,
+  /// which is neither: counting it would make a server that keeps refusing retry in a loop.
+  Future<void> markSyncDirty(String key, {String? error}) async {
+    final isChange = error == null;
+    if (isChange) _syncRevisions[key] = syncRevision(key) + 1;
+    await into(syncState).insertOnConflictUpdate(
+      SyncStateCompanion.insert(
+        key: key,
+        dirty: true,
+        lastError: Value(error),
+        attemptedAt: Value(now().toUtc()),
+      ),
+    );
+    if (isChange && !_syncChanges.isClosed) _syncChanges.add(key);
+  }
+
+  /// Flags a sync the server accepted — but only for what was sent: false, and the flag
+  /// stays set, when [key] was flagged again after [revision] was read.
+  ///
+  /// The check and the write share one transaction. A change flagged after the check has
+  /// its write queued behind it, so it lands after the clear and leaves the flag set.
+  Future<bool> markSyncCleanIfUnchanged(String key, int revision) => transaction(() async {
+        if (syncRevision(key) != revision) return false;
+        await markSyncClean(key);
+        return true;
+      });
 
   /// Flags a sync the server accepted.
   Future<void> markSyncClean(String key) => into(syncState).insertOnConflictUpdate(

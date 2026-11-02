@@ -500,6 +500,7 @@ class AdminCompetition(BaseModel):
     logo_asset_id: int | None
     logo: str | None
     priority: int | None
+    etag: Etag  # the version `PUT /competitions/order` checks as an item's If-Match (A-R1-1)
 
 
 class CompetitionCreate(_Body):
@@ -530,6 +531,7 @@ class AdminSatellite(BaseModel):
     worst_frequency: Frequency | None
     reception_url: str | None
     priority: int | None
+    etag: Etag  # the version `PUT /satellites/order` checks as an item's If-Match (A-R1-1)
 
 
 class SatelliteCreate(_Body):
@@ -617,6 +619,9 @@ class ChannelCreate(_Body):
 
 
 class ChannelPatch(_Body):
+    # A platform placeholder an importer made becomes a satellite channel here (A-R1-5); the new kind
+    # has to satisfy the same field rules as a created one, in the same request.
+    kind: Kind | None = Field(default=None)
     name: Name120 | None = Field(default=None)
     display_name: Name120 | None = None
     logo_asset_id: Id | None = None

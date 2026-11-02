@@ -217,8 +217,9 @@ def _cancelled(match: Match | None, now: datetime) -> bool:
 def dispatch_row(session: Session, outbox_id: int, sender: PushSender, now: datetime, pwa_origin: str | None) -> str:
     """Send one claimed row to its whole audience, page by page. Returns ``sent`` or ``cancelled``.
 
-    Raises :class:`Retryable` from a page's whole-call failure after committing the pages already
-    recorded, so the retry resumes at ``cursor_device_id``.
+    Raises :class:`Retryable` from a page's whole-call failure, or from a page that delivered to
+    nobody while a device was still ``retryable`` after the sender's own re-sends, after committing
+    the pages already recorded, so the retry resumes at ``cursor_device_id``.
     """
     row = session.get(NotificationOutbox, outbox_id)
     if row is None:
@@ -262,13 +263,21 @@ def dispatch_row(session: Session, outbox_id: int, sender: PushSender, now: date
         outcome = sender.send_page(messages)
         if outcome.unregistered:
             session.execute(text(_CLEAR_TOKENS), {"tokens": list(outcome.unregistered)})
-        if outcome.failed:
+        if outcome.retryable and not outcome.sent:
+            # FCM took nobody on this page, so sending the page again repeats nothing: it is not
+            # recorded, and the cursor/``attempts`` path retries it (B1-R2-1).
+            raise Retryable(f"FCM could not take {len(outcome.retryable)} messages; the page is retried")
+        # Some devices on the page already have the message and the cursor cannot say which, so the
+        # page is not sent again whole: a device the sender's own re-sends could not reach is a
+        # failed one (it was retried with backoff first), and the page is recorded.
+        failed = outcome.failed + len(outcome.retryable)
+        if failed:
             # A device that did not get the reminder is worth an alert: it is usually a bad message
             # field or an outage, not a dead token (B1-R1-2).
-            log.error("push_page_failed", extra={"row": outbox_id, "failed": outcome.failed})
+            log.error("push_page_failed", extra={"row": outbox_id, "failed": failed})
         session.execute(
             text(_RECORD_PAGE),
-            {"id": outbox_id, "sent": outcome.sent, "failed": outcome.failed, "cursor": devices[-1].id},
+            {"id": outbox_id, "sent": outcome.sent, "failed": failed, "cursor": devices[-1].id},
         )
         session.commit()
         cursor = devices[-1].id

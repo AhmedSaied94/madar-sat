@@ -11,6 +11,7 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from time import sleep
 from typing import Any, Protocol
 
 from app.notifications.messages import CHANNEL_ID, ICON, PushMessage
@@ -20,15 +21,20 @@ log = logging.getLogger("madar.notifications")
 
 ICON_PATH = "/icons/Icon-192.png"
 BADGE_PATH = "/icons/Icon-maskable-192.png"
+# A device FCM could not take for a moment (503, 500, 429, a timeout) is sent the message again, for
+# that device alone, after each of these waits (seconds) (B1-R2-1).
+RETRY_DELAYS = (1.0, 2.0, 4.0)
 
 
 @dataclass(frozen=True)
 class SendOutcome:
-    """One page's result: delivered, failed, and the tokens FCM says no longer exist."""
+    """One page's result: delivered, failed, the tokens FCM says no longer exist, and the tokens it
+    still could not take after the re-sends (``retryable``: neither delivered nor final)."""
 
     sent: int = 0
     failed: int = 0
     unregistered: tuple[str, ...] = ()
+    retryable: tuple[str, ...] = ()
 
 
 class PushSender(Protocol):
@@ -105,33 +111,68 @@ class FcmSender:
             except Exception as exc:  # noqa: BLE001 - one bad message is one failed device
                 failed += 1
                 log.error("fcm_message_unencodable", extra={"why": repr(exc)})
-        if not encoded:
-            return SendOutcome(failed=failed)
-        try:
-            response = messaging.send_each([message for _, message in encoded], dry_run=self.dry_run)
-        except Exception as exc:  # noqa: BLE001 - a whole-call failure is transient
-            log.warning("fcm_call_failed", extra={"messages": len(encoded), "why": repr(exc)})
-            raise Retryable(f"send_each failed: {exc!r}") from exc
-
         sent = 0
         unregistered: list[str] = []
-        for (message, _), result in zip(encoded, response.responses, strict=True):
-            if result.success:
-                sent += 1
-                continue
-            problem = result.exception
-            if _is_unregistered(messaging, problem):
-                unregistered.append(message.token)
-            else:
-                failed += 1
-                log.error("fcm_message_failed", extra={"why": repr(problem)})
-        return SendOutcome(sent=sent, failed=failed, unregistered=tuple(unregistered))
+        pending = encoded
+        for attempt in range(len(RETRY_DELAYS) + 1):
+            if not pending:
+                break
+            if attempt:
+                sleep(RETRY_DELAYS[attempt - 1])
+            try:
+                response = messaging.send_each([wire for _, wire in pending], dry_run=self.dry_run)
+            except Exception as exc:  # noqa: BLE001 - a whole-call failure is transient
+                log.warning("fcm_call_failed", extra={"messages": len(pending), "why": repr(exc)})
+                if attempt == 0:
+                    raise Retryable(f"send_each failed: {exc!r}") from exc
+                # A re-send cannot fail the page: raising now would re-send it whole to the devices
+                # the earlier calls already reached. What is still pending is reported ``retryable``.
+                break
+            unsent: list[tuple[PushMessage, Any]] = []
+            for (message, wire), result in zip(pending, response.responses, strict=True):
+                if result.success:
+                    sent += 1
+                    continue
+                problem = result.exception
+                if _is_unregistered(messaging, problem):
+                    unregistered.append(message.token)
+                elif _is_transient(problem):
+                    unsent.append((message, wire))
+                else:
+                    failed += 1
+                    log.error("fcm_message_failed", extra={"why": repr(problem)})
+            pending = unsent
+        if pending:
+            log.warning("fcm_messages_unreachable", extra={"devices": len(pending)})
+        return SendOutcome(
+            sent=sent,
+            failed=failed,
+            unregistered=tuple(unregistered),
+            retryable=tuple(message.token for message, _ in pending),
+        )
 
 
 def _is_usable(message: PushMessage) -> bool:
     """A token FCM can address: no empty string, no blank, no NUL (B1-R1-1)."""
     token = message.token
     return bool(token and token.strip() and "\x00" not in token)
+
+
+def _is_transient(exc: BaseException | None) -> bool:
+    """FCM could not take the message just now: 503, 500, 429 (``QuotaExceededError`` is one), a
+    timeout, or a transport error with no reply. Not "this message is wrong" (B1-R2-1)."""
+    from firebase_admin import exceptions
+
+    return isinstance(
+        exc,
+        (
+            exceptions.UnavailableError,
+            exceptions.InternalError,
+            exceptions.ResourceExhaustedError,
+            exceptions.DeadlineExceededError,
+            exceptions.UnknownError,
+        ),
+    )
 
 
 def _token_field(messaging: Any) -> str:

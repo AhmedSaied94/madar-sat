@@ -48,7 +48,8 @@ forever otherwise. **Accepted status codes**: `200-299`.
 
 Each `heartbeat-*` beat entry pings a monitor every 5 minutes, so a dead worker queue, a paused
 `beat` or a stopped backup turns the monitor red after its heartbeat interval. Create each as
-**Push**, then copy its push URL into VPS-2's (or VPS-1's) `/srv/madar/.env`.
+**Push**, then copy its **token** (not its URL) into VPS-2's (or VPS-1's) `/srv/madar/.env`, in the
+form below.
 
 | Monitor | Heartbeat interval | Env variable | Host | Means |
 | --- | --- | --- | --- | --- |
@@ -63,7 +64,24 @@ Set each heartbeat interval a little longer than the job's own period (5 min →
 25 h), so one delayed run does not alert. The interval is what makes a silent job detectable: the
 push says "I ran", so no push at all is the alarm.
 
-After writing the six URLs into `/srv/madar/.env` on each host, restart the services that read them:
+### The push URL on each host
+
+Kuma shows a push monitor's URL as
+`https://kuma.10-8-0-1.sslip.io/api/push/<token>?status=up&msg=OK&ping=`. Do not paste it: that
+address exists on `wg0` only, VPS-2 is not a WireGuard peer, and the backup image does not trust
+Caddy's internal CA. The token is the last path segment, between `/api/push/` and the `?`. Write
+the host-reachable URL with that token and **no query**; the workers and the backup scripts add
+`status` and `msg` themselves (`up`, or `down` with the error).
+
+| Host | Variables | Value in `/srv/madar/.env` |
+| --- | --- | --- |
+| VPS-2 | `KUMA_PUSH_URL_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB` | `http://uptime-kuma:3001/api/push/<token>` (Kuma's name in VPS-2's Compose network, which the workers and the backup container share) |
+| VPS-1 | `KUMA_PUSH_URL_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY` | `http://<VPS2_VCN_IP>:3001/api/push/<token>` (over the VCN; VPS-2's firewall accepts port 3001 from VPS-1 only) |
+
+The backup scripts cut anything after a `?` before they append `status`, so a pasted Kuma URL would
+still report `down` correctly; the form above is the one that is also reachable.
+
+After writing the six values into `/srv/madar/.env` on each host, restart the services that read them:
 `worker-maintenance`, `worker-imports` and `worker-notify` on VPS-2, and `worker-media` on VPS-1 for
 the media ones (the backup scripts read them from `/srv/madar/.env` at run time, so the timers need
 nothing). The runbook step is
@@ -78,7 +96,9 @@ sudo -iu deploy env IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env
 ## 5. Check
 
 1. Every monitor is green within one heartbeat interval.
-2. `systemctl list-timers 'backup-*' --no-pager` on both hosts shows the next run.
+2. `systemctl list-timers 'backup-*' --no-pager` on both hosts shows the next run. To prove the
+   backup URLs without waiting for 03:00, run one by hand
+   ([backups.md](backups.md#run-one-by-hand)); its monitor turns green within seconds.
 3. Prove one: stop a worker for 10 minutes and watch the matching push monitor go red, then start
    it again (T084).
 

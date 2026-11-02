@@ -100,8 +100,8 @@ function serveMatches(role: 'admin' | 'editor' = 'editor', list: readonly unknow
     mswHttp.get('*/admin/api/competitions', () =>
       HttpResponse.json(
         envelope([
-          { id: 12, sport: 'football', name: 'الدوري المصري الممتاز', logo: null, logo_asset_id: null, priority: 3 },
-          { id: 40, sport: 'football', name: 'دوري أبطال آسيا 2', logo: null, logo_asset_id: null, priority: 5 },
+          { id: 12, sport: 'football', name: 'الدوري المصري الممتاز', logo: null, logo_asset_id: null, priority: 3, etag: '"c-12"' },
+          { id: 40, sport: 'football', name: 'دوري أبطال آسيا 2', logo: null, logo_asset_id: null, priority: 5, etag: '"c-40"' },
         ]),
       ),
     ),

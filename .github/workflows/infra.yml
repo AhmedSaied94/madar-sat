@@ -125,8 +125,22 @@ jobs:
           sudo apt-get install -y -qq restic
           infra/scripts/check-backup-retention.sh
 
-      # B2-R1-7: one root install command for the FCM key, in all three documents that carry it.
-      - name: The FCM key install steps are one command
+      # B2-R2-1: Kuma shows a push URL as `…/api/push/<token>?status=up&msg=OK&ping=`, and the scripts
+      # appended `?status=down` after it, so Kuma recorded `up` for a backup that failed. The real
+      # scripts run against a local HTTP stub, with that URL and with the bare one the runbook gives,
+      # and the stub must have seen `status=down`.
+      - name: A failed backup pushes status=down to Kuma
+        run: infra/scripts/check-backup-heartbeat.sh
+
+      # B2-R2-2: the runbook's morning check and both media restores, run in the real backup image
+      # (restic 0.14, uid 10001, no capabilities) over a local repository: `snapshots --last 3` listed
+      # nothing, the read-only mount refused the restore, and a root restore left unreadable files.
+      - name: The backups runbook's snapshot list and media restores work
+        run: infra/scripts/check-backup-restore-commands.sh
+
+      # B2-R1-7 / B2-R2-1 / B2-R2-2: the FCM key install, the `--latest 3` morning check, the media
+      # restore wrappers and the per-host Kuma push URL, as literals in the documents that carry them.
+      - name: The runbook commands are the ones that work
         run: infra/scripts/check-doc-commands.sh
 
       # The D3 timers must exist, name a real service, and use the Cairo calendar (R19).

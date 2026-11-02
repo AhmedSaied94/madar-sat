@@ -37,12 +37,14 @@ heartbeat_url=${KUMA_PUSH_URL_BACKUP_DB:-}
 
 log() { printf '[backup-db] %s\n' "$*"; }
 
-# One push, logged and never fatal: the backup's own exit code is what systemd reports.
+# One push, logged and never fatal: the backup's own exit code is what systemd reports. Kuma shows a
+# push URL as `…/api/push/<token>?status=up&msg=OK&ping=`; only the path is kept, or a `down` push
+# would land inside `ping` and Kuma would record `up` (B2-R2-1).
 heartbeat() {
   local status=$1 message=$2
   [[ -n $heartbeat_url ]] || return 0
   curl -fsS -m 10 --retry 2 -o /dev/null \
-    "${heartbeat_url}?status=${status}&msg=$(printf '%s' "$message" | tr ' ' '+')" \
+    "${heartbeat_url%%\?*}?status=${status}&msg=$(printf '%s' "$message" | tr ' ' '+')" \
     || log "heartbeat push failed (status=${status})"
 }
 

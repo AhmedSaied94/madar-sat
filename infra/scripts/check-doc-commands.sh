@@ -7,6 +7,11 @@
 # install … -o 10001` fails with EPERM and a `deploy`-owned key is unreadable to the worker. This
 # check fails when a document drifts back to a command that cannot work, or when one of the three
 # files stops carrying the correct one.
+#
+# It also pins the literals of two more runbook commands that used to be wrong (B2-R2-1, B2-R2-2):
+# the morning check `restic snapshots --latest 3`, the media restores run as the backup uid, and the
+# per-host Kuma push URL. check-backup-restore-commands.sh runs the first two in the real image and
+# check-backup-heartbeat.sh runs the scripts' heartbeat; this only keeps the documents on them.
 set -Eeuo pipefail
 
 infra=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -59,5 +64,44 @@ grep -qF 'install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/secrets' "$infra/sc
 grep -q 'app_uid=10001' "$infra/scripts/bootstrap-vps.sh" \
   || problem "bootstrap-vps.sh's app_uid is no longer 10001, which the documents hard-code"
 
+# --- B2-R2-2: the backups runbook ----------------------------------------------------------------
+# The image's restic is 0.14, which reads `snapshots --last 3` as a deprecated boolean plus the
+# snapshot id `3`: it lists nothing and exits 0, so the SC-004 morning check looked empty.
+for doc in "$repo/docs/runbooks/backups.md" "$repo/docs/owner-actions.md" \
+  "$repo/specs/003-d03-follow-push-sources/quickstart.md"; do
+  name=${doc#"$repo/"}
+  [[ -f $doc ]] || { problem "$name is missing"; continue; }
+  grep -qE 'restic snapshots( --tag db)? --latest 3' "$doc" \
+    || problem "$name does not carry the morning check 'restic snapshots … --latest 3'"
+  if grep -nE 'restic snapshots[^`]*--last( |$)' "$doc"; then
+    problem "$name uses 'snapshots --last 3'; restic 0.14 reads the 3 as a snapshot id and lists nothing"
+  fi
+done
+
+# `backup-media` mounts /srv/media read-only, and a restic restore as root leaves files `deploy`
+# cannot read, so both media restores are one-off containers as the media's owner with a writable
+# mount.
+backups_md="$repo/docs/runbooks/backups.md"
+restores=$(grep -cF 'docker run --rm --user 10001:10001 --cap-drop ALL' "$backups_md" || true)
+((restores >= 2)) \
+  || problem "backups.md runs $restores media restores as 'docker run --user 10001:10001'; it needs the mirror and the snapshot one"
+writable=$(grep -cE -- '-v /srv/media:/srv/media [$]image' "$backups_md" || true)
+((writable >= 2)) || problem "backups.md does not give both media restores a writable /srv/media mount"
+if grep -n 'media-restore' "$backups_md"; then
+  problem "backups.md restores media into /srv/media-restore as root again; the files end up unreadable to deploy"
+fi
+
+# --- B2-R2-1: the Kuma push URL each host writes into .env ---------------------------------------
+# Kuma shows `https://kuma.10-8-0-1.sslip.io/api/push/<token>?status=up&msg=OK&ping=`, which VPS-2
+# cannot reach (it is not a WireGuard peer) and the backup image would not trust. Each host gets the
+# bare URL of the address it can reach, and only the token is copied (contracts/pipelines-and-ops.md).
+kuma_md="$repo/docs/runbooks/uptime-kuma.md"
+for url in 'http://uptime-kuma:3001/api/push/<token>' 'http://<VPS2_VCN_IP>:3001/api/push/<token>'; do
+  grep -qF "$url" "$kuma_md" || problem "uptime-kuma.md does not give the push URL form '$url'"
+done
+if grep -nE 'copy (its|the|each) push URL' "$kuma_md"; then
+  problem "uptime-kuma.md tells the reader to copy Kuma's push URL, which no host can reach; copy the token"
+fi
+
 ((fail == 0)) || exit 1
-printf 'check-doc-commands: ok (one root install command in all three documents)\n'
+printf 'check-doc-commands: ok (one root install command, the backup restore and Kuma push literals)\n'

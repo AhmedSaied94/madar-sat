@@ -31,9 +31,11 @@ import { useSatelliteOptions } from './queries';
 // A8's editor drawer: every field of PB A8 — matching and display name, carriage (frequency or a
 // platform without a satellite), access, category, country, "shown on match pages" and the logo.
 // Completing a placeholder (one the importer created) is this same form: set the carriage and turn
-// "shown on match pages" on, and the save clears `placeholder_source` server-side. The form validates
-// through the created body's Zod schema (constitution VIII), and a stale save opens the conflict
-// dialog instead of overwriting the other editor's change (A-R1-2).
+// "shown on match pages" on, and the save clears `placeholder_source` server-side. A placeholder is a
+// `platform` channel: choosing a satellite and a frequency sends `kind: 'satellite'` with them, in one
+// PATCH, and the API turns it into a satellite channel (A-R1-5). The form validates through the created
+// body's Zod schema (constitution VIII), and a stale save opens the conflict dialog instead of
+// overwriting the other editor's change (A-R1-2).
 
 const carriage = z.object({
   mhz: z.string(),
@@ -46,6 +48,8 @@ const formSchema = z
     name: createChannelBody.shape.name.trim().min(1, validation.required),
     displayName: z.string(),
     kind: z.enum(['satellite', 'terrestrial', 'platform']),
+    /** The channel was a `platform` when it was loaded: moving it onto a satellite has to say where to tune. */
+    fromPlatform: z.boolean(),
     satelliteId: z.string(),
     hasFrequency: z.boolean(),
     frequency: carriage,
@@ -60,12 +64,16 @@ const formSchema = z
   })
   .superRefine((draft, ctx) => {
     // What the API refuses anyway (``ck_channels_kind_fields``): say it on the field, once. A platform
-    // carries no satellite and needs no frequency to be shown on match pages (that is A-R1-5's half).
+    // carries no satellite and needs no frequency to be shown on match pages.
     if (draft.kind === 'platform') return;
     if (draft.satelliteId === '') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['satelliteId'], message: validation.satelliteRequired });
     }
-    if (draft.showInMatch && !(draft.hasFrequency && carriageFilled(draft.frequency))) {
+    if (draft.hasFrequency && carriageFilled(draft.frequency)) return;
+    // A platform moved onto a satellite is refused without a frequency (`422 required`), shown or not.
+    if (draft.fromPlatform) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['frequency', 'mhz'], message: validation.frequencyRequiredOnSatellite });
+    } else if (draft.showInMatch) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['frequency', 'mhz'], message: validation.frequencyRequired });
     }
   });
@@ -76,6 +84,7 @@ export const emptyChannelDraft = (): ChannelDraft => ({
   name: '',
   displayName: '',
   kind: 'satellite',
+  fromPlatform: false,
   satelliteId: '',
   hasFrequency: false,
   frequency: { mhz: '', pol: 'H', sr: '' },
@@ -103,6 +112,7 @@ function draftOf(channel: AdminChannel | ChannelItem): ChannelDraft {
     name: channel.name,
     displayName: channel.display_name ?? '',
     kind: channel.kind,
+    fromPlatform: channel.kind === 'platform',
     satelliteId: channel.satellite_id === null ? '' : String(channel.satellite_id),
     hasFrequency: channel.frequency !== null,
     frequency: frequencyValue(channel.frequency),
@@ -119,7 +129,14 @@ function draftOf(channel: AdminChannel | ChannelItem): ChannelDraft {
 
 /** «إضافة على قمر آخر»: the same channel's fields, with the carriage left for the new satellite. */
 export function draftOnAnotherSatellite(row: ChannelItem): ChannelDraft {
-  return { ...draftOf(row), kind: 'satellite', satelliteId: '', hasFrequency: false, frequency: { mhz: '', pol: 'H', sr: '' } };
+  return {
+    ...draftOf(row),
+    kind: 'satellite',
+    fromPlatform: false,
+    satelliteId: '',
+    hasFrequency: false,
+    frequency: { mhz: '', pol: 'H', sr: '' },
+  };
 }
 
 const orNull = (value: string): string | null => (value.trim() === '' ? null : value.trim());
@@ -148,10 +165,16 @@ export function buildChannelPatch(draft: ChannelDraft, original: ChannelDraft): 
   if (draft.showInMatch !== original.showInMatch) patch.show_in_match = draft.showInMatch;
   if (draft.logoAssetId !== original.logoAssetId) patch.logo_asset_id = draft.logoAssetId;
 
+  // A platform placeholder completed as a satellite channel: the kind goes with the satellite and the
+  // frequency below, and so does the access, which an importer leaves null (the draft shows "free", so
+  // the diff above cannot see it, and the API refuses a satellite channel with no access).
+  if (original.kind === 'platform' && draft.kind !== 'platform') {
+    patch.kind = draft.kind;
+    patch.access = draft.access;
+  }
+
   const nextCarriage = carriageBody(draft);
   const beforeCarriage = carriageBody(original);
-  // `ChannelPatch` carries no `kind` (recorded contract gap: B1 adds it), so the carriage a save can
-  // change is the satellite and the frequency; the kind only travels on a create.
   if ((nextCarriage.satellite_id ?? null) !== (beforeCarriage.satellite_id ?? null)) {
     patch.satellite_id = nextCarriage.satellite_id ?? null;
   }
@@ -195,11 +218,6 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
 
   const draft = watch();
   const server = detail.data?.data;
-
-  // The importers create placeholders as `kind='platform'`, and `ChannelPatch` cannot change the kind
-  // yet (recorded contract gap: B1 adds it), so the carriage choice stays locked on those rows rather
-  // than offering a save the API answers with 422 (A-R1-5).
-  const kindLocked = channelId !== null && baseline.kind === 'platform';
 
   const adopt = useCallback(
     (next: ChannelDraft, etag: string | null) => {
@@ -355,7 +373,6 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
           <span className="text-caption font-semibold text-text-secondary">{copy.editor.satellite}</span>
           <select
             aria-label={copy.editor.satellite}
-            disabled={kindLocked}
             value={draft.kind === 'platform' ? '' : draft.satelliteId}
             onChange={(event) => {
               const value = event.target.value;
@@ -369,7 +386,7 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
                 setValue('hasFrequency', true, { shouldDirty: true });
               }
             }}
-            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-body h-12 rounded-md bg-bg px-3 text-text-primary ring-1 ring-inset ring-divider-strong"
           >
             <option value="">{copy.noSatellite}</option>
             {satellites.map((satellite) => (
@@ -378,9 +395,6 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
               </option>
             ))}
           </select>
-          {kindLocked ? (
-            <span className="text-caption text-text-tertiary">{copy.editor.kindLocked}</span>
-          ) : null}
           {formState.errors.satelliteId ? (
             <span className="text-caption text-error">{formState.errors.satelliteId.message}</span>
           ) : null}

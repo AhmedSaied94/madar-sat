@@ -25,6 +25,7 @@ const satellites = [
     worst_frequency: { mhz: 11373, pol: 'H', sr: 27500 },
     reception_url: 'https://youtu.be/nilesat',
     priority: 1,
+    etag: '"sat-2"',
   },
   {
     id: 9,
@@ -39,19 +40,59 @@ const satellites = [
     worst_frequency: null,
     reception_url: null,
     priority: 2,
+    etag: '"sat-9"',
   },
 ];
 
-const etagOfRow = (id: number): string => `"sat-${String(id)}"`;
+/** The server's current version of each row: a list row's `etag`, the detail `ETag` and the order check. */
+let live: Record<number, string> = {};
+/** Every `GET /satellites/{id}` the page made. */
+let detailReads: string[] = [];
 
 function serve(): void {
+  live = Object.fromEntries(satellites.map((satellite) => [satellite.id, satellite.etag]));
+  detailReads = [];
   server.use(
-    mswHttp.get('*/admin/api/satellites', () => HttpResponse.json(envelope(satellites))),
+    mswHttp.get('*/admin/api/satellites', () =>
+      HttpResponse.json(envelope(satellites.map((satellite) => ({ ...satellite, etag: live[satellite.id] })))),
+    ),
     mswHttp.get('*/admin/api/satellites/:id', ({ params }) => {
-      const row = satellites.find((satellite) => satellite.id === Number(params['id']));
-      return HttpResponse.json(envelope(row), { headers: { ETag: etagOfRow(Number(params['id'])) } });
+      const id = Number(params['id']);
+      detailReads.push(String(id));
+      const row = satellites.find((satellite) => satellite.id === id);
+      return HttpResponse.json(envelope({ ...row, etag: live[id] }), { headers: { ETag: live[id] ?? '"x"' } });
     }),
   );
+}
+
+interface OrderBody {
+  items: { id: number; if_match: string }[];
+}
+
+/** `PUT /satellites/order` as the API does it: one stale `if_match` rejects the whole order (409). */
+function serveOrder(): { puts: OrderBody[]; applied: number[][] } {
+  const seen = { puts: [] as OrderBody[], applied: [] as number[][] };
+  server.use(
+    mswHttp.put('*/admin/api/satellites/order', async ({ request }) => {
+      const body = (await request.json()) as OrderBody;
+      seen.puts.push(body);
+      const stale = body.items.filter((item) => live[item.id] !== item.if_match).map((item) => item.id);
+      if (stale.length > 0) {
+        return HttpResponse.json(
+          {
+            success: false,
+            data: null,
+            error: { code: 'edit_conflict', message: 'x' },
+            meta: { stale_ids: stale, changed_by: { kind: 'admin', name: 'سارة' }, changed_at: '2026-11-01T09:30:00Z' },
+          },
+          { status: 409 },
+        );
+      }
+      seen.applied.push(body.items.map((item) => item.id));
+      return HttpResponse.json(envelope({ updated: [] }));
+    }),
+  );
+  return seen;
 }
 
 function Providers({ children }: { children: ReactNode }): ReactElement {
@@ -146,27 +187,44 @@ describe('SatellitesPage (A7)', () => {
     expect(ifMatch).toBe('"sat-2"');
   });
 
-  it('saves the new order with each row version when the keyboard moves a row', async () => {
-    let sent: Record<string, unknown> | null = null;
+  it('saves the new order under the versions the list was rendered with, reading no row at save time', async () => {
     renderPage();
     await screen.findByText('نايل سات');
-
-    server.use(
-      mswHttp.put('*/admin/api/satellites/order', async ({ request }) => {
-        sent = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(envelope({ updated: [] }));
-      }),
-    );
+    const seen = serveOrder();
+    expect(detailReads).toHaveLength(0);
 
     await keyboardReorder();
 
-    await waitFor(() => expect(sent).not.toBeNull());
-    expect(sent).toMatchObject({
+    await waitFor(() => expect(seen.puts).toHaveLength(1));
+    expect(seen.puts[0]).toEqual({
       items: [
         { id: 9, if_match: '"sat-9"' },
         { id: 2, if_match: '"sat-2"' },
       ],
     });
+    expect(seen.applied).toEqual([[9, 2]]);
+    // A-R1-1: the `etag` of each list row is the version; no `GET /satellites/{id}` per row.
+    expect(detailReads).toHaveLength(0);
+  });
+
+  it('opens the conflict dialog and overwrites nothing when the list is older than the server', async () => {
+    renderPage();
+    await screen.findByText('نايل سات');
+    const seen = serveOrder();
+
+    // Another editor saved satellite 2 after this page rendered its list (version 1 -> 2).
+    live[2] = '"sat-2-v2"';
+
+    await keyboardReorder();
+
+    await waitFor(() => expect(seen.puts).toHaveLength(1));
+    // The PUT carried the version the row was rendered with, so the server refuses it and keeps its order.
+    expect(seen.puts[0]?.items[1]).toEqual({ id: 2, if_match: '"sat-2"' });
+    expect(seen.applied).toEqual([]);
+
+    const dialog = await screen.findByRole('alertdialog', { name: /عدّل سارة هذا العنصر/ });
+    expect(dialog).toBeInTheDocument();
+    expect(detailReads).toHaveLength(0);
   });
 
   it('opens the conflict dialog when the order it saw is stale, and reloads', async () => {

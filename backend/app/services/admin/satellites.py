@@ -54,6 +54,7 @@ def to_view(satellite: Satellite, logo: str | None) -> a.AdminSatellite:
         ),
         reception_url=satellite.reception_url,
         priority=satellite.priority,
+        etag=versions.row_version(satellite),
     )
 
 

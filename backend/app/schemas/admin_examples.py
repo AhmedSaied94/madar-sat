@@ -123,6 +123,7 @@ COMPETITION: dict[str, Any] = {
     "logo_asset_id": 3,
     "logo": LOGO,
     "priority": 3,
+    "etag": '"7c1e5a09d3b84f26a0e9c5d71b3f8a42"',
 }
 
 SATELLITE: dict[str, Any] = {
@@ -138,6 +139,7 @@ SATELLITE: dict[str, Any] = {
     "worst_frequency": FREQUENCY,
     "reception_url": "https://www.youtube.com/watch?v=example",
     "priority": 1,
+    "etag": '"b25d8e41f07a39c6d1e4a8b03c97f512"',
 }
 
 CHANNEL_ITEM: dict[str, Any] = {

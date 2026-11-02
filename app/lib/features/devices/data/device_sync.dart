@@ -25,6 +25,10 @@ part 'device_sync.g.dart';
 /// nothing locally: the dirty flag stays and the next launch, resume, reconnect or change
 /// tries again. A `401` drops the token, so the next attempt registers the same install id
 /// again.
+///
+/// A send clears its flag only for what it carried: it reads the key's revision first, and
+/// the flag clears only if no change was flagged since (`markSyncCleanIfUnchanged`);
+/// otherwise the loop in [sync] sends again.
 @Riverpod(keepAlive: true)
 class DeviceSync extends _$DeviceSync {
   bool _running = false;
@@ -32,20 +36,17 @@ class DeviceSync extends _$DeviceSync {
 
   @override
   Future<void> build() async {
+    final database = ref.watch(appDatabaseProvider);
     // A reconnect is a natural retry point (R29): the last attempt failed offline.
     ref.listen(connectivityStatusProvider, (previous, next) {
       if (next && previous != true) unawaited(sync());
     });
     // Whatever flags the device or the follows — the push id, the satellite choice, the
-    // zone, a follow toggle — is sent as soon as it is flagged, from one place. Only the
-    // false → true edge: a failed attempt writes the flag again, and syncing on every write
-    // would retry in a loop.
-    ref.listen(deviceSyncStateProvider, (previous, next) {
-      if (next.value?.dirty == true && previous?.value?.dirty != true) unawaited(sync());
-    });
-    ref.listen(followsSyncStateProvider, (previous, next) {
-      if (next.value?.dirty == true && previous?.value?.dirty != true) unawaited(sync());
-    });
+    // zone, a follow toggle — is sent as soon as it is stored, from one place, flag already
+    // set or not. A failed attempt writes the flag again but is no change, so it does not
+    // come back through here and cannot retry in a loop.
+    final changes = database.syncChanges.listen((_) => unawaited(sync()));
+    ref.onDispose(changes.cancel);
     // The first settings read lands here too, so a first launch sends its choice without
     // waiting for a follow. Only a field `PUT /v1/devices/me` carries flags the device.
     ref.listen(appSettingsProvider, (previous, next) {
@@ -128,6 +129,12 @@ class DeviceSync extends _$DeviceSync {
         await _record(key, 'unauthenticated');
         return;
       }
+      if (await _dropUnknown(key, failure)) {
+        // What the server refused is gone from this device too: send again without it.
+        // Every round removes at least one id, so this ends.
+        _again = true;
+        return;
+      }
       await _record(key, failure.code ?? (failure.isOffline ? 'network' : 'failed'));
     } on DioException catch (error) {
       await _record(key, error.response?.statusCode == 401 ? 'unauthenticated' : 'network');
@@ -138,9 +145,42 @@ class DeviceSync extends _$DeviceSync {
     }
   }
 
+  /// Takes out of this device what a `422` named as unknown (T115, constitution II), and says
+  /// whether anything went. Nothing to take out means the refusal is something else: it is
+  /// recorded as the failure and not retried until the next trigger.
+  ///
+  /// `unknown_follow_target` answers `PUT …/follows` with the follow ids the server lacks
+  /// (a match merged away by an importer); `unknown_satellite` answers `PUT /devices/me`
+  /// with the satellite ids it lacks, which leave «أقماري».
+  Future<bool> _dropUnknown(String key, ApiFailure failure) async {
+    if (key == 'follows' && failure.code == 'unknown_follow_target') {
+      final removed = await ref.read(followsRepositoryProvider).dropUnknown(failure.unknownTargets);
+      return removed > 0;
+    }
+    if (key == 'device' && failure.code == 'unknown_satellite') {
+      // Read from drift, not from the provider: the provider may still hold the old value.
+      final mine =
+          AppSettingsValue.fromMap(await ref.read(appDatabaseProvider).readSettings()).satelliteIds;
+      final kept = mine.difference(failure.unknownSatellites.toSet());
+      if (kept.length == mine.length) return false;
+      await ref.read(appSettingsProvider.notifier).setSatellites(kept);
+      await ref.read(appSettingsProvider.future);
+      return true;
+    }
+    return false;
+  }
+
+  /// Clears [key]'s flag for what was just sent. A change flagged while the request was in
+  /// flight leaves it set and the loop in [sync] goes round once more, so it is never lost.
+  Future<void> _clear(AppDatabase database, String key, int revision) async {
+    if (!await database.markSyncCleanIfUnchanged(key, revision)) _again = true;
+  }
+
   /// `PUT /v1/devices/me`, only when something changed. The push id is the body's
   /// `push_token` — never an auth header (M-R1-2) — and a null field is not serialized.
   Future<void> _sendDevice(DeviceRepository repository, AppDatabase database) async {
+    // Before the data: a change that lands from here on is seen at the clear.
+    final revision = database.syncRevision('device');
     if (!await _isDirty(database, 'device')) return;
     final identity = await repository.identity();
     final settings = ref.read(appSettingsProvider).value ?? const AppSettingsValue();
@@ -154,12 +194,13 @@ class DeviceSync extends _$DeviceSync {
         tz: ianaTimeZoneName(),
       ),
     );
-    await database.markSyncClean('device');
+    await _clear(database, 'device', revision);
   }
 
   /// `PUT /v1/devices/me/follows`: the whole set, every kind, so the server's copy is
   /// exactly this device's. An empty set clears the server's follows.
   Future<void> _sendFollows(DeviceRepository repository, AppDatabase database) async {
+    final revision = database.syncRevision('follows');
     if (!await _isDirty(database, 'follows')) return;
     final follows = await ref.read(followsRepositoryProvider).read();
     await repository.replaceFollows(
@@ -171,7 +212,7 @@ class DeviceSync extends _$DeviceSync {
         matches: _sorted(follows.matches),
       ),
     );
-    await database.markSyncClean('follows');
+    await _clear(database, 'follows', revision);
   }
 
   static Future<bool> _isDirty(AppDatabase database, String key) async =>
@@ -179,14 +220,3 @@ class DeviceSync extends _$DeviceSync {
 
   static List<int> _sorted(Set<int> ids) => ids.toList()..sort();
 }
-
-/// The `device` row of `sync_state`, watched: its `dirty` flag is what makes
-/// [DeviceSync] send `PUT /v1/devices/me`.
-@riverpod
-Stream<SyncRecord?> deviceSyncState(Ref ref) =>
-    ref.watch(appDatabaseProvider).watchSyncState('device');
-
-/// The `follows` row of `sync_state`, watched: `PUT /v1/devices/me/follows`.
-@riverpod
-Stream<SyncRecord?> followsSyncState(Ref ref) =>
-    ref.watch(appDatabaseProvider).watchSyncState('follows');

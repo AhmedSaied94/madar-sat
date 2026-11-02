@@ -86,11 +86,78 @@ function serve(): void {
             worst_frequency: null,
             reception_url: null,
             priority: 1,
+            etag: '"sat-2"',
           },
         ]),
       ),
     ),
   );
+}
+
+type Row = Record<string, unknown>;
+
+interface SeenPatch {
+  id: number;
+  ifMatch: string | null;
+  body: Row;
+}
+
+const absent = (row: Row, field: string): boolean => row[field] === null || row[field] === undefined;
+
+/** `kind_errors` (backend/app/services/admin/channels.py): what a channel of this kind must and must not have. */
+function kindErrors(before: Row, after: Row): string[] {
+  const errors: string[] = [];
+  if (after['kind'] === 'platform') {
+    for (const field of ['satellite_id', 'frequency', 'frequency_note', 'beam']) {
+      if (!absent(after, field)) errors.push(`${field}:not_allowed`);
+    }
+  } else {
+    for (const field of ['satellite_id', 'access']) {
+      if (absent(after, field)) errors.push(`${field}:required`);
+    }
+  }
+  // A channel moved onto `satellite` also has to say where to tune.
+  if (after['kind'] === 'satellite' && before['kind'] !== 'satellite' && absent(after, 'frequency') && absent(after, 'frequency_note')) {
+    errors.push('frequency:required');
+  }
+  return errors;
+}
+
+/** An in-memory channels API: a PATCH is applied only when the kind rules above hold, else 422. */
+function serveStore(): { patches: SeenPatch[]; stored: Map<number, Row> } {
+  const stored = new Map<number, Row>([
+    [501, { ...bein }],
+    [777, { ...placeholder }],
+  ]);
+  const patches: SeenPatch[] = [];
+  server.use(
+    mswHttp.get('*/admin/api/channels', () => HttpResponse.json(envelope([...stored.values()]))),
+    mswHttp.get('*/admin/api/channels/:id', ({ params }) => {
+      const id = Number(params['id']);
+      return HttpResponse.json(envelope({ ...stored.get(id), locked_fields: [] }), {
+        headers: { ETag: `"ch-${String(id)}"` },
+      });
+    }),
+    mswHttp.patch('*/admin/api/channels/:id', async ({ params, request }) => {
+      const id = Number(params['id']);
+      const body = (await request.json()) as Row;
+      patches.push({ id, ifMatch: request.headers.get('If-Match'), body });
+      const before = stored.get(id) ?? {};
+      const after: Row = { ...before, ...body };
+      // Putting a placeholder on match pages completes it (research R13, R18).
+      if (body['show_in_match'] === true) after['placeholder_source'] = null;
+      const errors = kindErrors(before, after);
+      if (errors.length > 0) {
+        return HttpResponse.json(
+          { success: false, data: null, error: { code: 'validation_error', message: 'x' }, meta: { errors } },
+          { status: 422 },
+        );
+      }
+      stored.set(id, after);
+      return HttpResponse.json(envelope({ ...after, locked_fields: [] }), { headers: { ETag: `"ch-${String(id)}-b"` } });
+    }),
+  );
+  return { patches, stored };
 }
 
 function Providers({ children }: { children: ReactNode }): ReactElement {
@@ -150,34 +217,79 @@ describe('ChannelsPage (A8)', () => {
     expect(incomplete).toHaveTextContent('بلا تردد');
   });
 
-  it('keeps the carriage of a placeholder locked while the contract cannot change its kind', async () => {
-    let sent: Record<string, unknown> | null = null;
+  it('completes a platform placeholder as a satellite channel in one save', async () => {
     renderPage();
     await waitForRows();
-
-    server.use(
-      mswHttp.patch('*/admin/api/channels/:id', async ({ request }) => {
-        sent = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(envelope(channelDetail()), { headers: { ETag: '"ch-778"' } });
-      }),
-    );
+    const api = serveStore();
 
     await userEvent.click(screen.getByRole('button', { name: 'تعديل Al Kass Two HD' }));
     const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
 
-    // The importers' placeholder is a platform, and `ChannelPatch` has no `kind` yet (A-R1-5).
-    expect(within(drawer).getByLabelText('القمر')).toBeDisabled();
-    expect(
-      within(drawer).getByText('هذه القناة أُنشئت كمنصة، وتحويلها إلى قناة على قمر غير متاح بعد.'),
-    ).toBeInTheDocument();
+    // The importers' placeholder is a `platform`; `ChannelPatch.kind` now lets the editor change that (A-R1-5).
+    expect(within(drawer).getByLabelText('القمر')).toBeEnabled();
+    expect(within(drawer).queryByText(/غير متاح بعد/)).not.toBeInTheDocument();
 
+    await userEvent.selectOptions(within(drawer).getByLabelText('القمر'), '2');
+    await userEvent.type(within(drawer).getByLabelText('التردد · MHz'), '12188');
+    await userEvent.type(within(drawer).getByLabelText('التردد · symbol rate'), '27500');
     await userEvent.click(within(drawer).getByRole('checkbox', { name: 'إظهار في صفحات المباريات' }));
     await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
 
-    await waitFor(() => expect(sent).not.toBeNull());
-    expect(sent).toMatchObject({ show_in_match: true });
-    expect(sent).not.toHaveProperty('satellite_id');
-    expect(sent).not.toHaveProperty('frequency');
+    await waitFor(() => expect(api.patches).toHaveLength(1));
+    // The kind travels with the satellite, the frequency and an explicit access (an importer leaves it null).
+    expect(api.patches[0]).toEqual({
+      id: 777,
+      ifMatch: '"ch-777"',
+      body: {
+        kind: 'satellite',
+        satellite_id: 2,
+        access: 'free',
+        frequency: { mhz: 12188, pol: 'H', sr: 27500 },
+        show_in_match: true,
+      },
+    });
+    // The API accepted it: the channel is a satellite channel now, in the list with its readout.
+    expect(api.stored.get(777)).toMatchObject({ kind: 'satellite', satellite_id: 2, placeholder_source: null });
+    await waitFor(() => {
+      const row = within(screen.getByRole('table')).getByText('Al Kass Two HD').closest('tr');
+      if (!row) throw new Error('expected the channel row');
+      expect(within(row).getByTestId('frequency-readout')).toHaveTextContent('12188');
+      expect(row).not.toHaveTextContent('يحتاج استكمال');
+    });
+  });
+
+  it('refuses to make a placeholder a satellite channel without a frequency, and sends nothing', async () => {
+    renderPage();
+    await waitForRows();
+    const api = serveStore();
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل Al Kass Two HD' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
+    await userEvent.selectOptions(within(drawer).getByLabelText('القمر'), '2');
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    // The API would answer 422 `frequency required` (it also refuses it with "show on match pages" off),
+    // so the form says it on the field, in Arabic, before anything is sent.
+    expect(
+      await within(drawer).findByText('أدخل التردد ومعدل الترميز لتحويل القناة إلى قناة على قمر'),
+    ).toBeInTheDocument();
+    expect(api.patches).toHaveLength(0);
+  });
+
+  it('keeps a placeholder a platform when no satellite is chosen, sending only what changed', async () => {
+    renderPage();
+    await waitForRows();
+    const api = serveStore();
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل Al Kass Two HD' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
+    await userEvent.click(within(drawer).getByRole('checkbox', { name: 'إظهار في صفحات المباريات' }));
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+    await waitFor(() => expect(api.patches).toHaveLength(1));
+    // No satellite, no frequency and no `kind`: the channel stays the platform it was.
+    expect(api.patches[0]?.body).toEqual({ show_in_match: true });
+    expect(api.stored.get(777)).toMatchObject({ kind: 'platform', satellite_id: null, placeholder_source: null });
   });
 
   it('refuses a channel with no name, with the field error and without sending', async () => {

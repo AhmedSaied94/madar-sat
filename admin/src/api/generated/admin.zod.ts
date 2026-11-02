@@ -366,6 +366,7 @@ export const patchChannelBody = zod.object({
   "sr": zod.number()
 }),zod.null()]).optional(),
   "frequency_note": zod.union([zod.string().min(1).max(patchChannelBodyFrequencyNoteMaxOne),zod.null()]).optional(),
+  "kind": zod.union([zod.enum(['satellite', 'terrestrial', 'platform']),zod.null()]).optional(),
   "logo_asset_id": zod.union([zod.number().min(1).max(patchChannelBodyLogoAssetIdMaxOne),zod.null()]).optional(),
   "name": zod.union([zod.string().min(1).max(patchChannelBodyNameMaxOne),zod.null()]).optional(),
   "package": zod.union([zod.string().min(1).max(patchChannelBodyPackageMaxOne),zod.null()]).optional(),
@@ -584,8 +585,14 @@ export const patchCommentatorResponse = zod.object({
 /**
  * @summary Every competition, by priority (nulls last), then name
  */
+export const listCompetitionsResponseDataItemEtagMin = 3;
+export const listCompetitionsResponseDataItemEtagMax = 80;
+
+
+
 export const listCompetitionsResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
+  "etag": zod.string().min(listCompetitionsResponseDataItemEtagMin).max(listCompetitionsResponseDataItemEtagMax),
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
@@ -694,8 +701,14 @@ export const getCompetitionParams = zod.object({
   "competition_id": zod.number().min(1).max(getCompetitionPathCompetitionIdMax)
 })
 
+export const getCompetitionResponseDataEtagMin = 3;
+export const getCompetitionResponseDataEtagMax = 80;
+
+
+
 export const getCompetitionResponse = zod.object({
   "data": zod.union([zod.object({
+  "etag": zod.string().min(getCompetitionResponseDataEtagMin).max(getCompetitionResponseDataEtagMax),
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
@@ -742,8 +755,14 @@ export const patchCompetitionBody = zod.object({
   "priority": zod.union([zod.number().min(patchCompetitionBodyPriorityMinOne).max(patchCompetitionBodyPriorityMaxOne),zod.null()]).optional()
 })
 
+export const patchCompetitionResponseDataEtagMin = 3;
+export const patchCompetitionResponseDataEtagMax = 80;
+
+
+
 export const patchCompetitionResponse = zod.object({
   "data": zod.union([zod.object({
+  "etag": zod.string().min(patchCompetitionResponseDataEtagMin).max(patchCompetitionResponseDataEtagMax),
   "id": zod.number(),
   "logo": zod.union([zod.string(),zod.null()]),
   "logo_asset_id": zod.union([zod.number(),zod.null()]),
@@ -1531,6 +1550,11 @@ export const uploadMediaResponse = zod.object({
 /**
  * @summary Every satellite, by priority
  */
+export const listSatellitesResponseDataItemEtagMin = 3;
+export const listSatellitesResponseDataItemEtagMax = 80;
+
+
+
 export const listSatellitesResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
   "best_frequency": zod.union([zod.object({
@@ -1538,6 +1562,7 @@ export const listSatellitesResponse = zod.object({
   "pol": zod.enum(['H', 'V', 'L', 'R']),
   "sr": zod.number()
 }),zod.null()]),
+  "etag": zod.string().min(listSatellitesResponseDataItemEtagMin).max(listSatellitesResponseDataItemEtagMax),
   "id": zod.number(),
   "kind": zod.enum(['satellite', 'terrestrial']),
   "logo": zod.union([zod.string(),zod.null()]),
@@ -1682,6 +1707,11 @@ export const getSatelliteParams = zod.object({
   "satellite_id": zod.number().min(1).max(getSatellitePathSatelliteIdMax)
 })
 
+export const getSatelliteResponseDataEtagMin = 3;
+export const getSatelliteResponseDataEtagMax = 80;
+
+
+
 export const getSatelliteResponse = zod.object({
   "data": zod.union([zod.object({
   "best_frequency": zod.union([zod.object({
@@ -1689,6 +1719,7 @@ export const getSatelliteResponse = zod.object({
   "pol": zod.enum(['H', 'V', 'L', 'R']),
   "sr": zod.number()
 }),zod.null()]),
+  "etag": zod.string().min(getSatelliteResponseDataEtagMin).max(getSatelliteResponseDataEtagMax),
   "id": zod.number(),
   "kind": zod.enum(['satellite', 'terrestrial']),
   "logo": zod.union([zod.string(),zod.null()]),
@@ -1771,6 +1802,11 @@ export const patchSatelliteBody = zod.object({
 }),zod.null()]).optional()
 })
 
+export const patchSatelliteResponseDataEtagMin = 3;
+export const patchSatelliteResponseDataEtagMax = 80;
+
+
+
 export const patchSatelliteResponse = zod.object({
   "data": zod.union([zod.object({
   "best_frequency": zod.union([zod.object({
@@ -1778,6 +1814,7 @@ export const patchSatelliteResponse = zod.object({
   "pol": zod.enum(['H', 'V', 'L', 'R']),
   "sr": zod.number()
 }),zod.null()]),
+  "etag": zod.string().min(patchSatelliteResponseDataEtagMin).max(patchSatelliteResponseDataEtagMax),
   "id": zod.number(),
   "kind": zod.enum(['satellite', 'terrestrial']),
   "logo": zod.union([zod.string(),zod.null()]),

@@ -1,9 +1,9 @@
 import { clsx } from 'clsx';
 import { useState, type ReactElement } from 'react';
 
-import { getSatellite, orderSatellites } from '../../api/generated/admin';
+import { orderSatellites } from '../../api/generated/admin';
 import type { AdminSatellite } from '../../api/generated/admin.schemas';
-import { ApiError, etagOf } from '../../api/http';
+import { ApiError } from '../../api/http';
 import { ConflictDialog, type ConflictChange } from '../../components/ConfirmDialog/ConflictDialog';
 import { FrequencyReadout } from '../../components/FrequencyReadout/FrequencyReadout';
 import { Icon } from '../../components/Icon/Icon';
@@ -34,18 +34,19 @@ export function SatellitesPage(): ReactElement {
   async function saveOrder(keys: readonly string[]): Promise<void> {
     setSaving(true);
     try {
-      // The rows carry no version yet (the same recorded gap as A6), so each moved row's version comes
-      // from its detail; the server refuses a stale item and one stale item rejects the whole order.
-      const items = await Promise.all(
-        keys.map(async (key) => {
-          const id = Number(key);
-          const detail = await getSatellite(id);
-          return { id, if_match: etagOf(detail) };
-        }),
-      );
+      // Each row goes under the `etag` it was rendered with, not one read now: a list older than the
+      // server gets 409 and the conflict dialog instead of overwriting the other editor's order (A-R1-1).
+      const etags = new Map(rows.map((row) => [row.id, row.etag]));
+      const items = keys.flatMap((key) => {
+        const id = Number(key);
+        const etag = etags.get(id);
+        return etag === undefined ? [] : [{ id, if_match: etag }];
+      });
       await orderSatellites({ items });
       toast.show({ kind: 'success', title: ordering.saved });
-      void refetch();
+      // Wait for the new versions: the list stays locked until its rows carry them, so a quick second
+      // drag never goes out under the versions this save has just replaced.
+      await refetch();
     } catch (error) {
       const failure = error instanceof ApiError ? error : new ApiError('network_error', null);
       if (failure.code === 'edit_conflict') {
