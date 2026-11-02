@@ -26,11 +26,11 @@ Only `app/notifications/sender.py` talks to FCM. Producers only insert outbox ro
 ## The FCM service account
 
 1. **Create the key.** In the Firebase console for the project, *Project settings → Service accounts → Generate new private key*. A JSON file downloads once. Never commit it, paste it, or send it in chat (`gitleaks.yml` scans history).
-2. **Install it on VPS-2** (the only host that sends). Copy it over the WireGuard jump:
+2. **Install it on VPS-2** (the only host that sends). With WireGuard up, copy it with the `madar-vps2` SSH alias ([private-network.md](private-network.md)); `scp` keeps the file's mode 600:
 
    ```bash
-   scp -J ubuntu@10.8.0.1 ./fcm.json ubuntu@10.1.0.118:/tmp/fcm.json
-   ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118
+   scp ./fcm.json madar-vps2:/tmp/fcm.json
+   ssh -t madar-vps2
    sudo install -d -m 700 -o 10001 -g 10001 /srv/secrets
    sudo install -m 600 -o 10001 -g 10001 /tmp/fcm.json /srv/secrets/fcm.json
    sudo shred -u /tmp/fcm.json
@@ -49,10 +49,10 @@ Only `app/notifications/sender.py` talks to FCM. Producers only insert outbox ro
    ```text
    FCM_CREDENTIALS_FILE=/srv/secrets/fcm.json
    FCM_DRY_RUN=false
-   PWA_ORIGIN=https://app.<ip1>.sslip.io
+   PWA_ORIGIN=https://madar-sat--master-p2bbuj53.web.app
    ```
 
-   `infra/compose/vps2.yml` mounts that one file read-only into `worker-notify` and no other service. `PWA_ORIGIN` is the web push link's origin (`<PWA_ORIGIN>/match/<id>`); a value with a wrong origin sends users to a dead link, and a plain `http://` value is refused at startup (FCM rejects every web message whose `fcm_options.link` is not https).
+   `infra/compose/vps2.yml` mounts that one file read-only into `worker-notify` and no other service. `PWA_ORIGIN` is the web push link's origin (`<PWA_ORIGIN>/match/<id>`): the origin the installed PWA is served from. Until D4 that is the Firebase Hosting preview channel `master` above ([firebase-hosting.md](firebase-hosting.md)); when the first `web-v*` release reaches the live channel, set it to `https://madar-sat.web.app` and recreate `worker-notify` (the `app.130.110.117.215.sslip.io` mirror also arrives on D4). A value with a wrong origin sends users to a dead link, and a plain `http://` value is refused at startup (FCM rejects every web message whose `fcm_options.link` is not https).
 
 4. **Restart and check.** On VPS-2:
 
