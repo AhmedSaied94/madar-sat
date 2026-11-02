@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# The flavor files hold the hosts and the Firebase identifiers, so they stay on each machine;
+# CI writes env/prod.json from the APP_ENV_PROD secret (tool/write_env.sh). env/example.json
+# lists the keys.
+/env/*.json
+!/env/example.json

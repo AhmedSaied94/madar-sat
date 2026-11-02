@@ -2,3 +2,5 @@
 *.v4-migration.lock
 AGENTS.md.bak
 .claude/settings.json
+# The real IPs and hosts behind the placeholders in the runbooks (docs/runbooks/hosts.env.example)
+docs/runbooks/hosts.env

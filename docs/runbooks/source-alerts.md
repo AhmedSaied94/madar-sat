@@ -16,9 +16,7 @@ quiet. After setting them, restart `worker-imports` (that is the worker that ing
 alerts):
 
 ```sh
-ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
-  'sudo -iu deploy env IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env \
-   -f /srv/madar/infra/compose/vps2.yml --profile workers up -d worker-imports'
+ssh madar-vps2 "sudo -u deploy sh -c 'cd /srv/madar/infra && IMAGE_TAG=\$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f compose/vps2.yml --profile workers up -d worker-imports'"
 ```
 
 Test it from inside the worker, which proves the token, the chat id and the network in one step:

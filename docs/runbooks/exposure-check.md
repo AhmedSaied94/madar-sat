@@ -11,9 +11,9 @@ Checks what the internet can reach on both VMs, and that the public sites carry 
 ## 1. Ports
 
 ```bash
-nmap -Pn -p 22,80,443,5432,6379,8000,8001 130.110.117.215     # 80 and 443 open; everything else filtered
-sudo nmap -Pn -sU -p 51820 130.110.117.215                       # open|filtered
-nmap -Pn -p 22,80,443,3001,5432,6379,5555,8000 130.110.97.25   # everything filtered, Kuma's 3001 included
+nmap -Pn -p 22,80,443,5432,6379,8000,8001 <VPS1_IP>     # 80 and 443 open; everything else filtered
+sudo nmap -Pn -sU -p 51820 <VPS1_IP>                       # open|filtered
+nmap -Pn -p 22,80,443,3001,5432,6379,5555,8000 <VPS2_IP>   # everything filtered, Kuma's 3001 included
 ```
 
 - `filtered` is right for a closed port: the security list drops it, or iptables rejects it.
@@ -22,9 +22,9 @@ nmap -Pn -p 22,80,443,3001,5432,6379,5555,8000 130.110.97.25   # everything filt
 ## 2. Certificates and headers
 
 ```bash
-curl -sSI https://api.130.110.117.215.sslip.io/healthz
-curl -sSI https://media.130.110.117.215.sslip.io/
-curl -sSI https://app.130.110.117.215.sslip.io/
+curl -sSI https://api.<VPS1_IP>.sslip.io/healthz
+curl -sSI https://media.<VPS1_IP>.sslip.io/
+curl -sSI https://app.<VPS1_IP>.sslip.io/
 ```
 
 Each response must carry:
@@ -39,7 +39,7 @@ Each response must carry:
 `media.` and `app.` may answer `404` at `/` (nothing is published there yet). The headers still apply. `media.` also sends `cache-control: public, max-age=31536000, immutable`, and it answers CORS only to the PWA's origins (constitution V), preview channels included; the native apps send no `Origin` and need none. A browser that cached a media file from before the wildcard was removed keeps the old answer until you clear its site data.
 
 ```bash
-media=https://media.130.110.117.215.sslip.io/
+media=https://media.<VPS1_IP>.sslip.io/
 curl -sI -H 'Origin: https://<project>.web.app' "$media" | grep -i access-control-allow-origin                  # echoes that origin
 curl -sI -H 'Origin: https://<project>--master-abc1234.web.app' "$media" | grep -i access-control-allow-origin   # a preview channel: echoes
 curl -sI -H 'Origin: https://example.org' "$media" | grep -i access-control-allow-origin                        # nothing
@@ -47,10 +47,10 @@ curl -sI "$media" | grep -i '^vary'                                             
 ```
 
 ```bash
-curl -s https://api.130.110.117.215.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}
-curl -sI http://api.130.110.117.215.sslip.io/healthz | head -1          # a 308 redirect to https
+curl -s https://api.<VPS1_IP>.sslip.io/healthz | jq .data       # {"db": "ok", "redis": "ok"}
+curl -sI http://api.<VPS1_IP>.sslip.io/healthz | head -1          # a 308 redirect to https
 for h in api media app; do
-  echo | openssl s_client -connect "$h.130.110.117.215.sslip.io:443" -servername "$h.130.110.117.215.sslip.io" 2>/dev/null \
+  echo | openssl s_client -connect "$h.<VPS1_IP>.sslip.io:443" -servername "$h.<VPS1_IP>.sslip.io" 2>/dev/null \
     | openssl x509 -noout -subject -issuer -enddate
 done
 ```
@@ -60,8 +60,8 @@ The issuer is Let's Encrypt (or ZeroSSL, Caddy's fallback), and the end date is 
 The PWA mirror allows only the two PWA origins:
 
 ```bash
-curl -sI -H 'Origin: https://<project>.web.app' https://app.130.110.117.215.sslip.io/ | grep -i access-control-allow-origin   # echoes the origin
-curl -sI -H 'Origin: https://example.org' https://app.130.110.117.215.sslip.io/ | grep -i access-control-allow-origin        # nothing
+curl -sI -H 'Origin: https://<project>.web.app' https://app.<VPS1_IP>.sslip.io/ | grep -i access-control-allow-origin   # echoes the origin
+curl -sI -H 'Origin: https://example.org' https://app.<VPS1_IP>.sslip.io/ | grep -i access-control-allow-origin        # nothing
 ```
 
 ## 3. The admin isn't public
@@ -70,7 +70,7 @@ Off WireGuard:
 
 ```bash
 curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' https://10.8.0.1/                      # 000: no route
-curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' -H 'Host: 10.8.0.1' https://130.110.117.215/     # 000: the public listener has no site for it
+curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' -H 'Host: 10.8.0.1' https://<VPS1_IP>/     # 000: the public listener has no site for it
 ```
 
 Then connect the tunnel and check that it does answer:
@@ -86,7 +86,7 @@ accepts it from VPS-1 alone, so the probe above leaves it `filtered`. Off WireGu
 answers nothing:
 
 ```sh
-curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' https://kuma.10-8-0-1.sslip.io/   # 000: no route
+curl -sk --max-time 5 -o /dev/null -w '%{http_code}\n' https://<KUMA_HOST>/   # 000: no route
 ```
 
 Redis over `wg0` (`10.8.0.1:6379`) is open to the home box only. From a **second** WireGuard peer

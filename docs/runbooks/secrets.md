@@ -30,6 +30,7 @@ The rules:
 | WireGuard device keys | Each device; its peer in `wg0.conf` | You | [private-network.md "Remove a peer"](private-network.md#remove-a-peer), then add it again |
 | WireGuard hub key | `/etc/wireguard/wg0.key` on VPS-1 | `wg0` | [break-glass.md "Re-key the hub"](break-glass.md#re-key-the-hub-key-lost-or-exposed) |
 | `FIREBASE_SERVICE_ACCOUNT` | GitHub secret | `pwa.yml` | [Below](#rotate-the-firebase-service-account-key) |
+| `APP_ENV_PROD` | GitHub secret: the whole `app/env/prod.json` (the API and media hosts, the privacy and share links, the Firebase identifiers and the VAPID public key). Public values, kept out of the repo by choice; the flavor files are git-ignored and live on the machines that build. | `app.yml`, `pwa.yml`, `app-release.yml`, through `app/tool/write_env.sh` | [Below](#update-the-apps-flavor-values) |
 | Android upload keystore | `~/.config/madar-sat/upload-keystore.jks` and `keystore-password` on the owner's machine (mode 600), **backed up in the owner's password manager**. GitHub secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`), `ANDROID_KEY_PASSWORD`. | `app-release.yml` (tag `app-v*`) | [Below](#rotate-the-android-upload-key) |
 | `ubuntu` console passwords | Your password manager, one per VM | The serial console | `sudo passwd ubuntu`, then test the console again ([provision-host.md §2](provision-host.md#2-console-password-then-test-the-serial-console)) |
 | Caddy's internal CA key | VPS-1's `madar_caddy_data` volume | The admin site's certificates | Only by letting Caddy make a new CA, which means a new root on every admin device |
@@ -198,6 +199,25 @@ To replace it:
 4. Prove it: push a throwaway tag such as `app-v0.0.1` and check that `app-release.yml` is green. Its "Check the AAB is signed with the upload key" step prints the key's SHA-256, which must match the new certificate. Delete the tag afterwards (`git push --delete origin app-v0.0.1`).
 
 To build a signed AAB on your machine, write `app/android/key.properties` (git-ignored) with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`, then run the `flutter build appbundle` command from `app-release.yml`. Without that file, `release` falls back to the debug key.
+
+## Update the app's flavor values
+
+`app/env/{dev,staging,prod}.json` are not in the repo. Each machine that builds keeps its own copy, made from `app/env/example.json`, and CI writes `env/prod.json` from `APP_ENV_PROD`. A new checkout or worktree has none: copy them from a checkout that has them (they are git-ignored, so `git` never moves them).
+
+**Before you merge the change that untracked them into another checkout** (for example `../madar-m`), copy that checkout's `app/env/*.json` aside. The merge deletes tracked files that the change removed, and the copies come back only from your backup.
+
+To change a value (a host, a link, a Firebase identifier, the VAPID key) or add a key:
+
+1. Edit your local `app/env/prod.json` (and `staging`, `dev` if they change). A new key also goes into `app/env/example.json` with an empty value, in the same change as the code that reads it: `write_env.sh` fails when the secret's keys differ from the template's.
+2. Update the secret from the file:
+
+   ```bash
+   gh secret set APP_ENV_PROD -R AhmedSaied94/madar-sat < app/env/prod.json
+   ```
+
+3. Prove it: re-run `pwa.yml` by hand (`gh workflow run pwa.yml -R AhmedSaied94/madar-sat --ref master`) and check its "Write env/prod.json from APP_ENV_PROD" step prints `wrote env/prod.json from the flavor secret`.
+
+A value that changes for phones already installed (the hosts) belongs in Remote Config too ([remote-config.md](remote-config.md)); the flavor file is only the bundled default.
 
 ## Rotate the Telegram bot
 

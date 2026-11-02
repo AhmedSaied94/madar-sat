@@ -51,6 +51,14 @@ jobs:
           flutter-version: ${{ needs.flutter-version.outputs.version }}
           cache: true
       - run: flutter pub get
+      # The flavor file is not in the repo: the hosts and Firebase identifiers come from a secret.
+      - name: Write env/prod.json from APP_ENV_PROD
+        env:
+          APP_ENV_JSON: ${{ secrets.APP_ENV_PROD }}
+        run: ./tool/write_env.sh env/prod.json
+      # The push service worker reads its public Firebase web config from web/firebase-config.js;
+      # the committed file is empty so a local `flutter run -d chrome` needs no project (R26).
+      - run: ./tool/write_firebase_config.sh env/prod.json
       # --no-web-resources-cdn bundles CanvasKit instead of loading it from www.gstatic.com (FR-042).
       - run: flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

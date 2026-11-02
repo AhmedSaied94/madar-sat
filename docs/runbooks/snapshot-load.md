@@ -59,7 +59,7 @@ Compare the counts with SD §1.2 (the snapshot of 2026-10-28): 32 satellites, 2,
 dc run --rm cli rehost-media --snapshot-dir /srv/snapshot --report-dir /srv/reports
 ```
 
-It downloads each media URL from an allowed host, re-encodes it, and stores it under `/srv/media`, served at `https://media.130.110.117.215.sslip.io` with `immutable` caching. The summary line reads:
+It downloads each media URL from an allowed host, re-encodes it, and stores it under `/srv/media`, served at `https://media.<VPS1_IP>.sslip.io` with `immutable` caching. The summary line reads:
 
 ```text
   media: urls=… already_hosted=… rehosted=… deduplicated=… failed=… {reasons}
@@ -75,7 +75,7 @@ It downloads each media URL from an allowed host, re-encodes it, and stores it u
 
 ```bash
 ls /srv/reports                                    # one report and one details file per run
-curl -s https://api.130.110.117.215.sslip.io/healthz | jq .data
+curl -s https://api.<VPS1_IP>.sslip.io/healthz | jq .data
 ```
 
 Open a media URL from an API response and check that it loads with `Cache-Control: public, max-age=31536000, immutable`.
