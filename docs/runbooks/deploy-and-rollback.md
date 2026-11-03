@@ -33,7 +33,7 @@ records the running tag, pulls, runs `compose --profile workers up -d` for `work
 `worker-scrape`, `worker-maintenance` and `beat`, waits up to 90 s for all four healthchecks, and — like
 VPS-1 — rolls back to the previous tag when the start or the check fails ([workers.md](workers.md)).
 
-Deploys never overlap. `backend.yml`'s `deploy` and `infra.yml`'s `sync` share the concurrency group `deploy-vps1`, `deploy-vps2` has its own group, and `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
+Deploys never overlap. Every job that joins the CI WireGuard peer through `.github/actions/vps1-sync` — `backend.yml`'s `deploy`, `infra.yml`'s `sync`, `admin.yml`'s `deploy` and `pwa.yml`'s `release` — shares the concurrency group `deploy-vps1` (`infra.yml` checks this). `deploy-vps2` has its own group and starts only after `deploy` has left `deploy-vps1`. Only `backend.yml` and `infra.yml`, which run on `master`, rsync `infra/` to `/srv/madar/infra/`; the admin deploy and the PWA release pass `sync-infra: "false"`, and a `web-v*` tag that isn't on `master` is refused. `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
 
 The `build` job, under QEMU, is the slow part. SC-005 asks for a change to be live within 15 minutes.
 
@@ -68,7 +68,7 @@ curl -fsS http://127.0.0.1:8000/healthz               # what deploy.sh checks
 | --- | --- | --- | --- |
 | `wg-quick` errors in "Join WireGuard", `Host key verification failed`, or `Permission denied (publickey)` | CI can't reach VPS-1 | Unchanged | Check `WG_CI_CONFIG`, `DEPLOY_KNOWN_HOSTS` and `DEPLOY_SSH_KEY` against [provision-host.md §8](provision-host.md#8-deploy-peer-and-keys) |
 | `error: /srv/madar/.env is missing` | The host isn't bootstrapped | Unchanged | [provision-host.md §4](provision-host.md#4-fill-the-env-file-and-re-run) |
-| `error: this host is missing its D3 folders or backup timers, which only root can create` | The host was bootstrapped before D3: the folders and the backup timers come from `bootstrap-vps.sh` now (B2-R1-4) | Unchanged | Run `sudo ./madar-infra/scripts/bootstrap-vps.sh <vps1\|vps2>` on that host, then re-run the job ([provision-host.md §3](provision-host.md#3-run-the-bootstrap-script)) |
+| `error: this host is missing its D3/D4 folders (the admin's /srv/admin/current on VPS-1) or backup timers, which only root can create` | The host was bootstrapped before D3 or D4: the folders, the backup timers and the admin's `/srv/admin/current` symlink come from `bootstrap-vps.sh` now (B2-R1-4, D4 B2-R1-2) | Unchanged | Run `sudo ./madar-infra/scripts/bootstrap-vps.sh <vps1\|vps2>` on that host, then re-run the job ([provision-host.md §3](provision-host.md#3-run-the-bootstrap-script)) |
 | `error: another deploy is running` | A manual deploy holds the lock | Unchanged | On VPS-1: `pgrep -af deploy.sh`. Wait for it, then re-run the job. |
 | Compose or Caddy errors before `pulling` | Step 1: `caddy`, `postgres` or `redis` didn't come up healthy, or the Caddyfile didn't load | The APIs are unchanged. A failed `caddy reload` keeps the old config. | Read that container's log. Fix in a new commit. |
 | `denied` or `unauthorized` at login or pull | The repository can't read the package | Unchanged | "Images in GHCR" below |
@@ -97,6 +97,19 @@ job (D4 T040, research R10) that runs on `master` after `check`.
    bundle just built). **On a mismatch it repoints `current` at the release it read before the swap
    and fails the job** (constitution IX).
 4. Only after the check passes does it prune: the newest 5 releases plus `placeholder`.
+
+`/srv/admin/current` and `/srv/admin/releases/placeholder/` come only from `bootstrap-vps.sh vps1`
+(it runs as root). On a host bootstrapped before D4, run it once before the D4 merge, or Caddy's
+admin root has nothing to serve (404):
+
+```bash
+# copy this commit's infra/ to ~/madar-infra on VPS-1 first (provision-host.md §3)
+ssh madar-vps1 'sudo ./madar-infra/scripts/bootstrap-vps.sh vps1'
+ssh madar-vps1 'readlink /srv/admin/current'      # releases/placeholder (or releases/<sha> later)
+```
+
+Without it, `deploy.sh` stops with the "missing its D3/D4 folders" error below, and this job fails at
+its first step with `::error::/srv/admin/current is missing on VPS-1`, naming the same command.
 
 Read it on the host:
 

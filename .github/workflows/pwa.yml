@@ -150,14 +150,27 @@ jobs:
 
   # D4 T045 (contracts/web-release.md): copy the release folder to the VPS-1 mirror, prove it is
   # served with the immutable and CORS headers, and only then move the live channel onto it.
+  # It joins the same WireGuard peer as backend.yml's deploy and infra.yml's sync, so it shares
+  # their `deploy-vps1` group and never overlaps them (deploy-and-rollback.md). It does not rsync
+  # infra/: only master's jobs write /srv/madar/infra/.
   release:
     needs: [build]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: deploy-vps1
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+      # A tag on a commit master never had would ship an app that was never reviewed on master.
+      - name: The tag is on master
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master \
+            || { echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) is not an ancestor of origin/master; tag a master commit"; exit 1; }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: pwa-web
@@ -168,6 +181,7 @@ jobs:
           wg-config: ${{ secrets.WG_CI_CONFIG }}
           ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
           known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          sync-infra: "false"
       - name: Copy the release folder to the mirror
         env:
           SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
@@ -184,15 +198,21 @@ jobs:
           HASH: ${{ needs.build.outputs.hash }}
         run: |
           set -euo pipefail
-          mirror=$(jq -r '.MIRROR_BASE_URL' app/env/prod.json | sed 's:/*$::')
-          [[ $mirror == https://* ]] || { echo "::error::MIRROR_BASE_URL is not set in APP_ENV_PROD"; exit 1; }
+          # The build job's env/prod.json is not in this job; the artifact's release.json carries the
+          # mirror the shell was stamped with (app/tool/stage_web_release.sh).
+          mirror=$(jq -r '.mirror // ""' web_release/release.json | sed 's:/*$::')
+          [[ $mirror == https://* ]] || { echo "::error::web_release/release.json has mirror '$mirror', not an https URL"; exit 1; }
+          # The live site's origin, as Caddy's CORS matcher builds it from FIREBASE_PROJECT_ID.
+          project=$(jq -r '.projects.default // ""' infra/firebase/.firebaserc)
+          [[ $project =~ ^[a-z0-9-]+$ ]] || { echo "::error::infra/firebase/.firebaserc names no default project"; exit 1; }
+          origin="https://$project.web.app"
           # `Accept-Encoding: br` proves the precompressed file is served, not re-encoded per request.
-          headers=$(curl -sSI -H 'Origin: https://madar-sat.web.app' -H 'Accept-Encoding: br' \
+          headers=$(curl -sSI -H "Origin: $origin" -H 'Accept-Encoding: br' \
             "$mirror/r/$HASH/main.dart.js")
           for expected in \
             'HTTP/2 200' \
             'cache-control: public, max-age=31536000, immutable' \
-            'access-control-allow-origin: https://madar-sat.web.app' \
+            "access-control-allow-origin: $origin" \
             'content-encoding: br' \
             'x-content-type-options: nosniff'; do
             grep -qi "$expected" <<<"$headers" \

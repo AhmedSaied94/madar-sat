@@ -67,8 +67,9 @@ jobs:
     needs: [check]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-24.04
+    # The same WireGuard peer as backend.yml's deploy and infra.yml's sync: one group, no overlap.
     concurrency:
-      group: deploy-vps1-admin
+      group: deploy-vps1
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,6 +85,7 @@ jobs:
           wg-config: ${{ secrets.WG_CI_CONFIG }}
           ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
           known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          sync-infra: "false"
       - name: Copy the bundle and swap the symlink
         env:
           SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
@@ -92,7 +94,9 @@ jobs:
           set -euo pipefail
           read -ra ssh <<<"$SSH_COMMAND"
           # The release Caddy's wg0 site serves is `/srv/admin/current`; remember it before the swap.
-          previous=$("${ssh[@]}" vps1 'readlink /srv/admin/current') < /dev/null
+          # Only bootstrap-vps.sh creates the symlink and its placeholder release (D4).
+          previous=$("${ssh[@]}" vps1 'readlink /srv/admin/current' < /dev/null) \
+            || { echo "::error::/srv/admin/current is missing on VPS-1; copy this commit's infra/ to ~/madar-infra there and run 'sudo ./madar-infra/scripts/bootstrap-vps.sh vps1' (docs/runbooks/deploy-and-rollback.md#the-admin-deploy), then re-run this job"; exit 1; }
           echo "PREVIOUS_RELEASE=$previous" >> "$GITHUB_ENV"
           "${ssh[@]}" vps1 "install -d -m 755 /srv/admin/releases/$SHA" < /dev/null
           rsync -a --delete -e "$SSH_COMMAND" admin/dist/ "vps1:/srv/admin/releases/$SHA/"

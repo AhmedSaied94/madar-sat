@@ -552,6 +552,63 @@ jobs:
             exit 1
           fi
 
+      # B2-R1-2 (D4): Caddy's admin root is /srv/admin/current, which only bootstrap creates. A VPS-1
+      # deploy must stop and name the bootstrap when it is missing or points at nothing.
+      - name: the deploy's folder check rejects VPS-1 without the admin release symlink
+        run: |
+          set -euo pipefail
+          for fn in check_dir check_admin_current check_dirs; do
+            awk "/^$fn\\(\\)/,/^}/" infra/scripts/deploy.sh > "$RUNNER_TEMP/$fn.sh"
+            # shellcheck disable=SC1090 # extracted at run time
+            source "$RUNNER_TEMP/$fn.sh"
+          done
+          log() { :; }
+          state_dir=$RUNNER_TEMP/state-admin
+          srv_root=$RUNNER_TEMP/srv-admin
+          install -d -m 750 "$state_dir"
+          install -d "$srv_root/admin/releases/placeholder"
+          if check_dirs vps1; then
+            echo "::error::the folder check passed with /srv/admin/current missing"
+            exit 1
+          fi
+          ln -s releases/placeholder "$srv_root/admin/current"
+          if check_dirs vps1; then
+            echo "::error::the folder check passed with /srv/admin/current pointing at an empty release"
+            exit 1
+          fi
+          echo '<!doctype html>' > "$srv_root/admin/releases/placeholder/index.html"
+          check_dirs vps1 || { echo "::error::the folder check rejected the admin tree bootstrap creates"; exit 1; }
+          grep -A1 'readlink /srv/admin/current' .github/workflows/admin.yml | grep -q '::error::.*bootstrap-vps.sh vps1' \
+            || { echo "::error::admin.yml's readlink does not name the bootstrap when the symlink is missing"; exit 1; }
+
+      # B2-R1-3 (D4): every job that joins the CI WireGuard peer through vps1-sync shares one
+      # concurrency group, so two runners never bring up the same peer. backend.yml's deploy-vps2
+      # is the one exception: it `needs` deploy, so it starts after that job leaves the group.
+      - name: every vps1-sync job is in deploy-vps1
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, sys, yaml
+          bad = []
+          for path in sorted(pathlib.Path('.github/workflows').glob('*.yml')):
+              jobs = (yaml.safe_load(path.read_text()) or {}).get('jobs', {})
+              for name, job in jobs.items():
+                  uses = [s.get('uses', '') for s in job.get('steps', [])]
+                  if './.github/actions/vps1-sync' not in uses:
+                      continue
+                  if (path.name, name) == ('backend.yml', 'deploy-vps2'):
+                      needs = job.get('needs', [])
+                      if 'deploy' not in (needs if isinstance(needs, list) else [needs]):
+                          bad.append(f'{path}:{name} must need deploy')
+                      continue
+                  group = (job.get('concurrency') or {}).get('group')
+                  if group != 'deploy-vps1':
+                      bad.append(f'{path}:{name} uses vps1-sync in group {group!r}, not deploy-vps1')
+          for line in bad:
+              print(f'::error::{line}')
+          sys.exit(1 if bad else 0)
+          PY
+
       - name: shellcheck
         run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources infra/scripts/*.sh infra/backup/*.sh
       - name: actionlint

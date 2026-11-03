@@ -104,6 +104,7 @@ The firewall rule and the `homebox` Redis user have to exist before anything sta
 14. **Reminders (D3):** the FCM service account on VPS-2 and `FCM_DRY_RUN=false`, one real reminder to the owner's phone ([push-notifications.md](push-notifications.md#the-fcm-service-account)), and the `/v1` limits left at their defaults ([response-cache-and-limits.md](response-cache-and-limits.md)).
 15. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
 16. **The first Android release** (after Lane M has merged): back up the upload keystore, tag `app-v0.2.0`, enrol in Play App Signing, upload the AAB to the closed track and add the testers ([store-releases.md](store-releases.md)).
+17. **Before merging D4 (the admin deploy):** re-run `sudo ./madar-infra/scripts/bootstrap-vps.sh vps1` from a fresh copy of `infra/`, so `/srv/admin/current` and its placeholder release exist before Caddy's admin root moves to them ([deploy-and-rollback.md "The admin deploy"](deploy-and-rollback.md#the-admin-deploy)). A fresh host gets them from its first bootstrap in stage 2.
 
 Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [owner-actions.md](../owner-actions.md).
 

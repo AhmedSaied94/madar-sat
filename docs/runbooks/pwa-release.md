@@ -44,7 +44,10 @@ git tag -a web-v0.1.0 -m "PWA 0.1.0" && git push origin web-v0.1.0
 gh run watch -R "$R" "$(gh run list -R "$R" --workflow pwa.yml -L 1 --json databaseId -q '.[0].databaseId')"
 ```
 
-The tag format is checked in the build job: `web-v<major>.<minor>.<patch>`, nothing else.
+The tag format is checked in the build job: `web-v<major>.<minor>.<patch>`, nothing else. The
+release job then refuses a tag whose commit is not an ancestor of `origin/master`, before it touches
+VPS-1. It runs in the `deploy-vps1` concurrency group, so it waits for a running backend, infra or
+admin deploy, and it never rsyncs `infra/` to the host ([deploy-and-rollback](deploy-and-rollback.md#how-a-release-reaches-vps-1)).
 
 ## 2. What the job does
 
@@ -52,7 +55,7 @@ The tag format is checked in the build job: `web-v<major>.<minor>.<patch>`, noth
 | --- | --- |
 | Build | `flutter build web --release --no-web-resources-cdn --pwa-strategy=none` with `APP_ENV_PROD`, then the stage script with `env/prod.json` |
 | Mirror copy | `rsync` of `build/web_release/r/<hash>/` to `vps1:/srv/app-mirror/r/<hash>/`, and `/srv/app-mirror/release-check.txt` gets the hash. `--delete` stays inside that hash; the parent `r/` is never deleted from |
-| Mirror check | `curl` of `main.dart.js` and its `.br` with `Origin: https://<FIREBASE_PROJECT_ID>.web.app`: `200`, `cache-control: …immutable`, the CORS header, `content-encoding: br`, `nosniff`. **A failure here stops before the live deploy** |
+| Mirror check | The mirror comes from the artifact's `release.json` (`.mirror`), the origin from `infra/firebase/.firebaserc`'s default project. `curl` of `main.dart.js` and its `.br` with `Origin: https://<FIREBASE_PROJECT_ID>.web.app`: `200`, `cache-control: …immutable`, the CORS header, `content-encoding: br`, `nosniff`. **A failure here stops before the live deploy** |
 | Live deploy | `action-hosting-deploy` with `channelId: live`, deploying the shell and the full copy |
 | Prune | Releases older than 30 days are removed from the mirror, always keeping the newest 3 |
 
