@@ -17,6 +17,7 @@ is not ours and is not used (R14).
 from __future__ import annotations
 
 import logging
+import re
 import unicodedata
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
@@ -57,6 +58,8 @@ MAX_CHANNEL_LENGTH = 80
 MAX_COUNTRY_LENGTH = 60
 TEAM_PAGE_MARKER = "Fixtures, Results"
 MATCH_PAGE_MARKER = "dynamic-international-tv"
+# A time cell that prints a clock (``6:00am``); a status (``Postp.``, ``TBA``) has no kickoff to read.
+CLOCK_TEXT = re.compile(r"\d{1,2}:\d{2}")
 
 
 # Club-name noise that the two sides spell differently: the mapping table's slug drops it
@@ -123,6 +126,10 @@ class LivesoccertvTarget:
     home_slug: str
     away_slug: str
     country: str
+    # The mapping's ``en_name``: what the team page prints, when the club's team-page slug is not the
+    # one in its match links (``shanghai-tellace`` vs ``/match/…-vs-shanghai-port/``).
+    home_name: str = ""
+    away_name: str = ""
 
     def as_task_arg(self) -> dict[str, Any]:
         return {
@@ -131,6 +138,8 @@ class LivesoccertvTarget:
             "home_slug": self.home_slug,
             "away_slug": self.away_slug,
             "country": self.country,
+            "home_name": self.home_name,
+            "away_name": self.away_name,
         }
 
     @classmethod
@@ -141,6 +150,8 @@ class LivesoccertvTarget:
             home_slug=str(data["home_slug"]),
             away_slug=str(data["away_slug"]),
             country=str(data["country"]),
+            home_name=str(data.get("home_name") or ""),  # a fetch queued before the names existed
+            away_name=str(data.get("away_name") or ""),
         )
 
 
@@ -238,10 +249,15 @@ def _epoch_of(row: HtmlElement) -> datetime | None:
         raw = (span.get("dv") or "").strip()
         if raw.isdigit():
             return datetime.fromtimestamp(int(raw) / 1000, UTC)
+    if not (row.get("data-ko") or "").strip():
+        return None
+    # A postponed or unscheduled match prints a status in its time cell and has no epoch span: skip
+    # the row, not the page (one ``Postp.`` row once failed a whole run).
+    timecell = _first(row.xpath(".//span[contains(@class, 'timecell')]"))
+    if timecell is not None and not CLOCK_TEXT.search(_text(timecell)):
+        return None
     # ``data-ko`` is the site's default zone (America/New_York), never Madar's clock: refuse it.
-    if (row.get("data-ko") or "").strip():
-        raise LayoutChanged("the kickoff carries no epoch span; the page's clock is not UTC")
-    return None
+    raise LayoutChanged("the kickoff carries no epoch span; the page's clock is not UTC")
 
 
 def _absolute(href: str) -> str:
@@ -429,19 +445,26 @@ def pick_match(rows: Sequence[ParsedFixture], target: LivesoccertvTarget) -> Par
 
     The mapping table holds LiveSoccerTV's URL slug while the team page prints the display name
     (``atletico-madrid`` vs ``Atlético Madrid``), so the match link's own slug pair is compared
-    first, and the folded, noise-free names second (B2-R1-8).
+    first, and the folded, noise-free names second (B2-R1-8). A side's name is its slug or the
+    mapping's ``en_name``: a club's team-page slug can differ from its match-link slug.
     """
     wanted_slugs = frozenset(
         slug for slug in (target.home_slug.strip("/").lower(), target.away_slug.strip("/").lower()) if slug
     )
-    wanted_keys = {key for key in (team_key(target.home_slug), team_key(target.away_slug)) if key}
+    home_keys = {key for key in (team_key(target.home_slug), team_key(target.home_name)) if key}
+    away_keys = {key for key in (team_key(target.away_slug), team_key(target.away_name)) if key}
     day = cairo_day(target.kickoff_at)
     for row in rows:
         if row.match_date != day:
             continue
         if wanted_slugs and match_url_slugs(row.url) == wanted_slugs:
             return row
-        if wanted_keys and {team_key(row.home), team_key(row.away)} == wanted_keys:
+        first, second = team_key(row.home), team_key(row.away)
+        if (
+            home_keys
+            and away_keys
+            and ((first in home_keys and second in away_keys) or (first in away_keys and second in home_keys))
+        ):
             return row
     return None
 
@@ -540,6 +563,8 @@ def plan_targets(
                 home_slug=home.slug,
                 away_slug=away.slug,
                 country=home.country,
+                home_name=home.en_name,
+                away_name=away.en_name,
             )
         )
         store.mark(match.id)

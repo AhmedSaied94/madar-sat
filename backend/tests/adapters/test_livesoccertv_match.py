@@ -211,3 +211,50 @@ def test_a_folded_name_does_not_pick_another_club_of_the_same_day() -> None:
         )
     ]
     assert pick_match(rows, _target(home_slug="atletico-madrid", away_slug="valencia", country="spain")) is None
+
+
+def test_a_club_whose_team_page_slug_differs_from_its_match_links_is_picked_by_its_en_name() -> None:
+    """Shanghai Port's team page is ``/teams/china/shanghai-tellace/``; its links say ``shanghai-port``.
+
+    Run #32 on 2026-11-03 left Newcastle Jets × Shanghai Port unmatched and alerted «لم يجد أي عناصر».
+    """
+    rows = [
+        _row(
+            "Newcastle Jets",
+            "Shanghai Port",
+            "https://www.livesoccertv.com/match/newcastle-jets-vs-shanghai-port/jb7mb",
+        )
+    ]
+    by_slug_only = _target(home_slug="newcastle-jets", away_slug="shanghai-tellace", country="australia")
+    assert pick_match(rows, by_slug_only) is None
+
+    with_names = _target(
+        home_slug="newcastle-jets",
+        away_slug="shanghai-tellace",
+        country="australia",
+        home_name="Newcastle Jets",
+        away_name="Shanghai Port",
+    )
+    row = pick_match(rows, with_names)
+    assert row is not None and row.away == "Shanghai Port"
+
+
+def test_an_en_name_does_not_pick_another_opponent_of_the_same_day() -> None:
+    rows = [_row("Newcastle Jets", "Perth Glory", "https://www.livesoccertv.com/match/newcastle-jets-vs-perth-glory/x")]
+    target = _target(
+        home_slug="newcastle-jets",
+        away_slug="shanghai-tellace",
+        country="australia",
+        home_name="Newcastle Jets",
+        away_name="Shanghai Port",
+    )
+    assert pick_match(rows, target) is None
+
+
+def test_a_target_round_trips_through_the_task_arg_and_reads_one_queued_without_names() -> None:
+    target = _target(home_name="Al Ahly", away_name="Al Sekka")
+    assert LivesoccertvTarget.from_task_arg(target.as_task_arg()) == target
+
+    queued_before = {key: value for key, value in target.as_task_arg().items() if not key.endswith("_name")}
+    old = LivesoccertvTarget.from_task_arg(queued_before)
+    assert (old.home_name, old.away_name) == ("", "")
