@@ -325,13 +325,13 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
 ### Carry-over from 003 (M, first)
 
-- [ ] T060 [P] [US2] M-T045-1 (research R14): add a debug-only `SecurityContext` for the app's Dio that trusts the dev Caddy root from the file named by `--dart-define=DEV_CA_PATH`, guarded by `kReleaseMode` and `kIsWeb` (`app/lib/core/network/`). Write the test first: a release configuration ignores `DEV_CA_PATH`. Correct `docs/runbooks/local-dev.md:74-80`.
-- [ ] T061 [P] [US2] M-T045-2: route `ApiFailure` from `_conditional` (`app/lib/core/network/swr_repository.dart` around `:285-302`) and from the 304-with-no-cache path (around `:85`) into the stream as an error instead of throwing. Write the test first: a failing adapter with no cache gives one stream error and no uncaught error.
-- [ ] T062 [P] [US2] M-T045-3: in `app/lib/features/onboarding/presentation/steps/teams_step.dart:85-86`, check `hasError` before the skeleton branch and show the copy for the `ApiFailure.code` (`error_copy.dart`) with «إعادة المحاولة», which invalidates `team_search_provider`. Write the widget test first: a failing search shows the error state, and retry calls the provider again. Then tick M-T045-1/2/3 in `specs/003-d03-follow-push-sources/tasks.md`.
+- [x] T060 [P] [US2] M-T045-1 (research R14): add a debug-only `SecurityContext` for the app's Dio that trusts the dev Caddy root from the file named by `--dart-define=DEV_CA_PATH`, guarded by `kReleaseMode` and `kIsWeb` (`app/lib/core/network/`). Write the test first: a release configuration ignores `DEV_CA_PATH`. Correct `docs/runbooks/local-dev.md:74-80`.
+- [x] T061 [P] [US2] M-T045-2: route `ApiFailure` from `_conditional` (`app/lib/core/network/swr_repository.dart` around `:285-302`) and from the 304-with-no-cache path (around `:85`) into the stream as an error instead of throwing. Write the test first: a failing adapter with no cache gives one stream error and no uncaught error.
+- [x] T062 [P] [US2] M-T045-3: in `app/lib/features/onboarding/presentation/steps/teams_step.dart:85-86`, check `hasError` before the skeleton branch and show the copy for the `ApiFailure.code` (`error_copy.dart`) with «إعادة المحاولة», which invalidates `team_search_provider`. Write the widget test first: a failing search shows the error state, and retry calls the provider again. Then tick M-T045-1/2/3 in `specs/003-d03-follow-push-sources/tasks.md`.
 
 ### Tests first (M): write them and see them fail
 
-- [ ] T063 [P] [US2] Write `app/test_web/sw_core.test.mjs` (`node:test`, no npm install) for `app/web/sw_core.mjs` (research R12). Cases:
+- [x] T063 [P] [US2] Write `app/test_web/sw_core.test.mjs` (`node:test`, no npm install) for `app/web/sw_core.mjs` (research R12). Cases:
   - a cached release request returns without a fetch;
   - a cache miss fetches the mirror URL first;
   - a mirror slower than the timeout (3 s, injectable) or failing falls back to the same path on the own origin;
@@ -339,7 +339,7 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   - non-release requests are not intercepted by the release path;
   - navigations are network-first with the cached `index.html` as fallback;
   - activation deletes release caches other than the current and previous hash.
-- [ ] T064 [P] [US2] Write `app/test/core/web/release_layout_test.dart`, a Dart test over a fixture directory, for `app/tool/stage_web_release.sh` (research R11, `contracts/web-release.md`). Cases:
+- [x] T064 [P] [US2] Write `app/test/core/web/release_layout_test.dart`, a Dart test over a fixture directory, for `app/tool/stage_web_release.sh` (research R11, `contracts/web-release.md`). Cases:
   - only shell files at the root;
   - every other file under `r/<hash>/`;
   - `release.json` holds the hash and the mirror;
@@ -349,7 +349,7 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
 ### Implementation (M)
 
-- [ ] T065 [US2] Write `app/tool/stage_web_release.sh <env-file> <out-dir>` per research R11 and `contracts/web-release.md`:
+- [x] T065 [US2] Write `app/tool/stage_web_release.sh <env-file> <out-dir>` per research R11 and `contracts/web-release.md`:
   1. read `MIRROR_BASE_URL` (`https`, no path, empty allowed);
   2. remove any `flutter_service_worker.js`;
   3. compute the hash: the first 16 hex characters of the SHA-256 over sorted (path, SHA-256) pairs of the non-shell files;
@@ -361,20 +361,20 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   9. print `RELEASE_HASH=<hash>` last.
 
   T064 passes. Add `MIRROR_BASE_URL` to `app/env/example.json` (the owner adds it to `APP_ENV_PROD`).
-- [ ] T066 [US2] Write `app/web/sw_core.mjs` (pure logic) and `app/web/sw.js` (event wiring) per research R12:
+- [x] T066 [US2] Write `app/web/sw_core.mjs` (pure logic) and `app/web/sw.js` (event wiring) per research R12:
   - **`install`:** fetch `release.json` with `no-store`.
   - **`fetch`:** release paths go cache → mirror (3 s `AbortController`) → own origin; shell files and navigations are network-first with a cache fallback.
   - **`activate`:** `clients.claim()` and cache pruning.
 
   Leave `app/web/firebase-messaging-sw.js` unchanged on its own scope. T063 passes. Add `sw.js` and `release.json` to the list in `tool/check_web_assets.sh`.
-- [ ] T067 [US2] Write the custom `app/web/flutter_bootstrap.js` template (`{{flutter_js}}`, `{{flutter_build_config}}`):
+- [x] T067 [US2] Write the custom `app/web/flutter_bootstrap.js` template (`{{flutter_js}}`, `{{flutter_build_config}}`):
   1. register `/sw.js`;
   2. never wait for it: if a worker already controls the page, load through it; on a first visit load straight from the mirror while the worker registers in the background, and if the entrypoint fails to load from the mirror, retry once with the own-origin base (research R11);
   3. set `window.MADAR_RELEASE = {base, hash}`, and make drift open `sqlite3.wasm` from `<base>/r/<hash>/sqlite3.wasm` read from it in `app/lib/core/db/app_database.dart:179` (web only, through the existing conditional import), falling back to `sqlite3.wasm` when absent. Write the test first (a Dart test of the URL helper with and without the value);
   4. call `_flutter.loader.load` with `config.entrypointBaseUrl`, `config.assetBase` and `config.canvasKitBaseUrl` set to `<mirror or ''>/r/<hash>/`, with the values stamped by T065.
 
   Keep `index.html`'s splash and the `flutter-first-frame` hook. Add `--pwa-strategy=none` to the canonical web build in `app/CLAUDE.md` if the flag exists on 3.47.7; otherwise note that the build emits no default worker. Add a debug-only `?perf=1` timing log (research R13) that the release build ignores without the query.
-- [ ] T068 [US2] Check the install row on S16 (`app/lib/features/more/presentation/more_page.dart:58-96`): it shows only on iOS Safari when not standalone, its label reads «تثبيت التطبيق» (fix the ARB key if it resolves to other copy), and it opens S1.5. Add a widget test if none covers the label (FR-036).
+- [x] T068 [US2] Check the install row on S16 (`app/lib/features/more/presentation/more_page.dart:58-96`): it shows only on iOS Safari when not standalone, its label reads «تثبيت التطبيق» (fix the ARB key if it resolves to other copy), and it opens S1.5. Add a widget test if none covers the label (FR-036).
 
 ### Validation (M)
 
@@ -393,7 +393,16 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   - first data < 5 s on Fast 4G and < 1.5 s on a repeat open;
   - ≥ 90 % of first-load bytes from `app.<ip1>.sslip.io`;
   - with the mirror blocked and site data cleared, the PWA still loads.
-- [ ] T073 [US2] Update `docs/runbooks/firebase-hosting.md` / `pwa-release.md` (with B2) for the app side: the stage script, `MIRROR_BASE_URL`, the service worker, and how to check a release in DevTools. Add Lane M's D4 items to `docs/owner-actions.md`: `MIRROR_BASE_URL`, the tags, the device walks and announcing the public link.
+- [x] T073 [US2] Update `docs/runbooks/firebase-hosting.md` / `pwa-release.md` (with B2) for the app side: the stage script, `MIRROR_BASE_URL`, the service worker, and how to check a release in DevTools. Add Lane M's D4 items to `docs/owner-actions.md`: `MIRROR_BASE_URL`, the tags, the device walks and announcing the public link.
+
+### Status after implement (2026-11-03, opencode)
+
+Lane M's code is in on `d04-m` in `../madar-m`, rebased on this branch.
+
+- **Done locally:** T060–T062 (the dev CA behind `DEV_CA_PATH` for debug native builds, the SWR failure reaching the stream as its error, S1.2's error state with «إعادة المحاولة», and the three M-T045 ticks in `specs/003-d03-follow-push-sources/tasks.md`), T063–T068 (the hashed release layout and its stage script, the module-tested service worker, the custom bootstrap, drift's wasm URL from `window.MADAR_RELEASE`, and S16's «تثبيت التطبيق» row), T073 (the hosting runbook's layout and DevTools sections, and the D4 owner items).
+- **Checked:** `flutter analyze` clean; the app suite **657 tests green** on the test box with **90.6 % line coverage excluding generated code**; `node --test app/test_web/` 12/12; a real `flutter build web` staged end to end (hash `5db26a4bd373e254`, 46.2 MB raw → 12.0 MB in brotli, one release hash referenced by the shell, `.br` and `.gz` beside every release file).
+- **Not run here (a host, a console or a device is needed):** T069 (the preview channel), T070 (the `app-v0.3.0` tag), T071 (the bug bash — `bug-bash-results.md` is a template with "not run" per platform), T072 (the live timings).
+- **For the other lanes:** `pwa.yml` must `apt-get install -y brotli` before staging (the script refuses to run without it), and `app.yml` still needs B2's T046 step for `node --test app/test_web/`. The spec's `data-model.md` layout does not list `sw_core.mjs` at the root (or that 3.47.7 emits `flutter_service_worker.js`/`flutter.js`, which the stage script deletes).
 
 ---
 

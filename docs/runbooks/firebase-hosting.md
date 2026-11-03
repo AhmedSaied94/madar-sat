@@ -106,7 +106,51 @@ curl -sI <url>/flutter_bootstrap.js | grep -i cache-control   # no-cache
 Files whose names carry a content hash (`.<8+ hex>.`) get `public, max-age=31536000, immutable`, and
 so does everything under `/r/<hash>/`.
 
-## 5. The public release
+## 5. The hashed release layout (Lane M)
+
+`app/tool/stage_web_release.sh <env-file> <out-dir>` turns the Flutter build into what the
+PWA actually ships (contract: `specs/004-d04-mvp-launch/contracts/web-release.md`):
+
+```text
+build/web_release/
+├── index.html, flutter_bootstrap.js, manifest.json, favicon.png, icons/
+├── sw.js, sw_core.mjs               # the app's own worker, stamped with the hash
+├── firebase-messaging-sw.js, firebase-config.js
+├── drift_worker.js                  # same-origin shim → <mirror>/r/<hash>/drift_worker.js
+├── release.json                     # {"hash", "mirror", "built_at"}
+└── r/<hash>/                        # main.dart.js, canvaskit/, assets/, version.json,
+                                     # sqlite3.wasm, the real drift worker — each with .br/.gz
+```
+
+- `MIRROR_BASE_URL` (in `APP_ENV_PROD`, and in your local `app/env/prod.json`) is the release
+  host, `https://app.<VPS1_IP>.sslip.io`. Empty means the release is served from the page's own
+  origin, which is what the `master` preview channel does. **It must be in the secret before the
+  next release build**: `pwa.yml` writes the flavor file strictly, so it fails until the key is
+  there ([secrets.md](secrets.md#update-the-apps-flavor-values)), while `app.yml`'s check job only
+  warns and writes it empty. The stage script also needs `brotli` (`apt-get install -y brotli`).
+- The stage script prints `RELEASE_HASH=<hash>` as its last line. B2's release job copies
+  `r/<hash>/` to the mirror and only then deploys the live channel, so the live shell never
+  points at a folder the mirror lacks.
+- Staging needs `brotli` and `gzip` (`apt-get install brotli`). The same build always gives the
+  same hash; a different file gives a different one.
+
+### Check a release in DevTools
+
+1. **Application → Service workers:** `sw.js` is `activated and is running` and controls the page.
+2. **Application → Cache storage:** one `madar-r-<hash>` (the current release) and `madar-shell-v1`.
+   A worker that deletes the previous release after one open is wrong: offline opens still need it.
+3. **Network, reload:** `main.dart.js`, `canvaskit.wasm` and `sqlite3.wasm` come from
+   `app.<VPS1_IP>.sslip.io/r/<hash>/` with `Cache-Control: public, max-age=31536000, immutable`
+   (in a preview build, from the page's own origin).
+4. **Console:** `fetch('/release.json').then(r => r.json())` names the hash the app runs.
+   `window.MADAR_RELEASE` holds the same `{base, hash}`, and drift opens
+   `<base>/r/<hash>/sqlite3.wasm`.
+5. **With `?perf=1`:** the console logs `[madar-perf] bootstrap +N ms` and
+   `[madar-perf] flutter-first-frame +N ms` (research R13, the T072 timings).
+6. **Offline:** DevTools → Network → Offline, reload: the shell opens from the cache with the
+   app's offline banner.
+
+## 6. The public release
 
 Cutting a `web-v*` tag, checking the mirror and rolling the live channel back are in
 [pwa-release.md](pwa-release.md).

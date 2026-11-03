@@ -86,7 +86,7 @@ class MorePage extends ConsumerWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          l.onbInstallTitle,
+                                          l.s16InstallRow,
                                           style: MadarText.textBody.copyWith(
                                             color: colors.textPrimary,
                                             fontWeight: FontWeight.w600,

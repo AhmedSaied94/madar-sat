@@ -209,6 +209,8 @@ To build a signed AAB on your machine, write `app/android/key.properties` (git-i
 To change a value (a host, a link, a Firebase identifier, the VAPID key) or add a key:
 
 1. Edit your local `app/env/prod.json` (and `staging`, `dev` if they change). A new key also goes into `app/env/example.json` with an empty value, in the same change as the code that reads it: `write_env.sh` fails when the secret's keys differ from the template's.
+   - The release workflows (`pwa.yml`, `app-release.yml`) call it without `--or-example`, so they fail until the secret has the new key. Update the secret in the same sitting.
+   - `app.yml`'s check job calls it with `--or-example`: a key the template has and the secret lacks is written empty there, with a `::warning::` naming it, so a pull request that introduces a key still runs its checks. That warning on `master` means the secret is behind.
 2. Update the secret from the file:
 
    ```bash
