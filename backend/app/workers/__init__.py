@@ -82,10 +82,22 @@ def route(name: str, args: Any = None, kwargs: Any = None, options: Any = None, 
     return router.route_for_task(name, args=args, kwargs=kwargs)
 
 
+BROKER_TRANSPORT_OPTIONS: dict[str, Any] = {
+    "global_keyprefix": "celery:",  # the home box's ACL allows ~celery:*
+    # A broker reply lost on the way (the home box's tunnel inside a smaller VPN, 2026-11-02) left the
+    # worker blocked in a read for 20 hours. kombu's BRPOP returns every second, so a 30 s read
+    # timeout only fires on a dead connection, which kombu then drops and reconnects.
+    "socket_timeout": 30,
+    "socket_connect_timeout": 10,
+    "socket_keepalive": True,
+    "health_check_interval": 25,  # redis-py pings a connection idle this long before using it
+}
+
+
 def create_app() -> Celery:
     celery = Celery("madar", broker=get_worker_settings().broker_url, task_cls=BaseTask)
     celery.conf.update(
-        broker_transport_options={"global_keyprefix": "celery:"},  # the home box's ACL allows ~celery:*
+        broker_transport_options=BROKER_TRANSPORT_OPTIONS,
         broker_connection_retry_on_startup=True,
         result_backend=None,
         task_ignore_result=True,

@@ -97,6 +97,7 @@ class IngestionRouter:
             "adapters.ingest": INGEST_QUEUE,
             "adapters.prune_raw_pages": PRUNE_QUEUE,
             "adapters.rehost_logo": LOGO_QUEUE,
+            "ops.scrape_home_backlog": IMPORT_SCHEDULE_QUEUE,
         }
         queue = routes.get(name)
         return {"queue": queue} if queue else None
@@ -671,13 +672,52 @@ def heartbeat(self: Any, queue: str) -> dict[str, Any]:
     if not url:
         log.info("heartbeat_skipped", extra={"queue": queue, "why": "no_url"})
         return {"queue": queue, "sent": False}
+    return {"queue": queue, "sent": _push_kuma(url, queue, status="up", msg="ok")}
+
+
+# ``global_keyprefix`` (``app.workers``) plus the queue name: the list ``schedule_fetch`` pushes to.
+SCRAPE_HOME_QUEUE_KEY = "celery:scrape_home"
+
+
+@task(name="ops.scrape_home_backlog")
+def scrape_home_backlog(self: Any) -> dict[str, Any]:
+    """Report the home box's queue to Uptime Kuma from VPS-2; the box itself cannot reach Kuma.
+
+    A worker can hang with its container up and connected (2026-11-02: a dropped Redis reply left it
+    blocked for 20 hours). Its queue then grows, so the monitor goes ``down`` once more than
+    ``SCRAPE_HOME_BACKLOG_MAX`` fetches wait, and quiet if this check stops running.
+    """
+    settings = get_adapter_settings()
+    depth = int(_broker_redis().llen(SCRAPE_HOME_QUEUE_KEY))
+    backed_up = depth > settings.scrape_home_backlog_max
+    if backed_up:
+        log.warning("scrape_home_backlog", extra={"depth": depth, "max": settings.scrape_home_backlog_max})
+    url = settings.kuma_push_url_scrape_home
+    if not url:
+        log.info("heartbeat_skipped", extra={"queue": "scrape_home", "why": "no_url"})
+        return {"queue": "scrape_home", "depth": depth, "sent": False}
+    status, msg = ("down", f"{depth} fetches waiting") if backed_up else ("up", f"{depth} waiting")
+    return {"queue": "scrape_home", "depth": depth, "sent": _push_kuma(url, "scrape_home", status=status, msg=msg)}
+
+
+def _broker_redis() -> Any:
+    """The broker's Redis, unprefixed: the key above already names the prefix (imported lazily)."""
+    import redis
+
+    from app.workers.config import get_worker_settings
+
+    return redis.Redis.from_url(get_worker_settings().broker_url)
+
+
+def _push_kuma(url: str, queue: str, *, status: str, msg: str) -> bool:
+    """One push; a rejected or failed push is logged and never raised."""
     try:
         with httpx.Client(timeout=httpx.Timeout(5.0), follow_redirects=False) as client:
-            response = client.get(url, params={"status": "up", "msg": "ok"})
+            response = client.get(url, params={"status": status, "msg": msg})
         ok = response.status_code < 400
         if not ok:
             log.warning("heartbeat_rejected", extra={"queue": queue, "status": response.status_code})
-        return {"queue": queue, "sent": ok}
+        return ok
     except httpx.HTTPError as exc:
         log.warning("heartbeat_failed", extra={"queue": queue, "why": repr(exc)})
-        return {"queue": queue, "sent": False}
+        return False

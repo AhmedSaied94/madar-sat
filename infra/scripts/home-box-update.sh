@@ -51,3 +51,14 @@ if [[ -n $before && $before == "$after" ]]; then
 else
   log "updated ($(docker inspect --format '{{.Config.Image}}' "$after" 2>/dev/null || echo unknown))"
 fi
+
+# A worker can hang with its container up (2026-11-02: blocked 20 hours on a lost broker reply), and
+# Docker never restarts an unhealthy container. This tick does, at most once per run; a container
+# that was just recreated is still `starting` and is left alone.
+container=$("${compose[@]}" ps -q worker-scrape)
+health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$container" 2>/dev/null || true)
+if [[ $health == unhealthy ]]; then
+  streak=$(docker inspect --format '{{.State.Health.FailingStreak}}' "$container" 2>/dev/null || echo '?')
+  log "worker unhealthy ($streak failed checks in a row): restarting it"
+  docker restart "$container" >/dev/null
+fi

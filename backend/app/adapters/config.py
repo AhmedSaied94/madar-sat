@@ -104,6 +104,10 @@ class AdapterSettings(BaseSettings):
     kuma_push_url_maintenance: str | None = Field(default=None, alias="KUMA_PUSH_URL_MAINTENANCE")
     kuma_push_url_imports: str | None = Field(default=None, alias="KUMA_PUSH_URL_IMPORTS")
     kuma_push_url_notifications: str | None = Field(default=None, alias="KUMA_PUSH_URL_NOTIFICATIONS")
+    # The home box reaches only Redis, so VPS-2 reports its queue instead: ``down`` once more than
+    # ``SCRAPE_HOME_BACKLOG_MAX`` fetches wait (six T−60 slots, an hour of a stuck worker).
+    kuma_push_url_scrape_home: str | None = Field(default=None, alias="KUMA_PUSH_URL_SCRAPE_HOME")
+    scrape_home_backlog_max: int = Field(default=6, ge=1, alias="SCRAPE_HOME_BACKLOG_MAX")
 
     def countries(self) -> tuple[str, ...]:
         """The configured countries, normalized and de-duplicated, order kept (R16)."""

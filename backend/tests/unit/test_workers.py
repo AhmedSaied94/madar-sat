@@ -19,7 +19,22 @@ QUEUES = {"scrape", "scrape_home", "imports", "maintenance", "media", "live", "n
 def test_broker_keys_share_the_celery_prefix():
     from app.workers import app
 
-    assert app.conf.broker_transport_options == {"global_keyprefix": "celery:"}
+    assert app.conf.broker_transport_options["global_keyprefix"] == "celery:"
+
+
+def test_a_dead_broker_connection_times_out_instead_of_blocking_forever():
+    """2026-11-02: a lost reply left the home box's worker in one read for 20 hours."""
+    import kombu.transport.redis as kombu_redis
+
+    from app.workers import app
+
+    options = app.conf.broker_transport_options
+    # Longer than kombu's 1 s BRPOP, so an idle poll never trips it; short enough to notice in a minute.
+    assert kombu_redis.Transport.brpop_timeout < options["socket_timeout"] <= 60
+    assert options["socket_keepalive"] is True
+    assert options["health_check_interval"] < options["socket_timeout"]
+    # Every key is one kombu passes to redis-py; a misspelled one would be ignored silently.
+    assert set(options) - {"global_keyprefix"} <= set(kombu_redis.Channel.from_transport_options)
 
 
 def test_declares_exactly_the_queues_of_the_plan():
