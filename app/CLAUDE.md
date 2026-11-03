@@ -54,8 +54,17 @@ node --test test_web/                                          # the service wor
   way — the flag changes nothing here. The stage script deletes both: `web/sw.js` is the app's
   worker, and the bootstrap carries Flutter's loader inline. Keep the flag in the command so it
   matches `pwa.yml`.
-- Test the worker with `node --test test_web/` (Node 22, no install). It never caches API
-  data: only the shell and the release files.
+- Test the worker with `node --test test_web/` (Node 22 and `python3`, no install). It never
+  caches API data: only the shell and the release files.
+- `web/sw.js` imports `sw_core.mjs` so the core can be tested as a module, but the bootstrap
+  registers `/sw.js` as a **classic** worker (Firefox has no module service workers), so the
+  stage script inlines the core with `tool/classic_sw.py`. An unstaged build (`flutter run`)
+  registers no worker. `test_web/sw_classic.test.mjs` loads the staged form the way it is
+  registered.
+- `flutter_bootstrap.js` probes the mirror (a HEAD of `main.dart.js`, 3 s) and catches a
+  failed entrypoint script, then loads once from the own origin: Flutter's `load()` never
+  rejects on a failed script. Only the first entrypoint starts the app
+  (`test_web/bootstrap.test.mjs`).
 
 ## Code generation (never hand-edit the output)
 

@@ -136,6 +136,12 @@ cat > "$out/release.json" <<JSON
 }
 JSON
 
+# 5b. The bootstrap registers `sw.js` as a classic service worker, which cannot `import` its
+#     core: inline `sw_core.mjs` into it (M-R1-1). `sw_core.mjs` stays at the root for tests.
+python3 ./tool/classic_sw.py "$out/sw.js" "$out/sw_core.mjs" > "$out/sw.js.classic" \
+  || die "sw.js could not be made a classic script"
+mv "$out/sw.js.classic" "$out/sw.js"
+
 # 6. Stamp the hash and the mirror into the files that need them at runtime.
 stamp() {
   python3 - "$1" "$hash" "$mirror" <<'PY'
