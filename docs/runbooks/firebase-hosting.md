@@ -124,7 +124,10 @@ build/web_release/
 
 - `MIRROR_BASE_URL` (in `APP_ENV_PROD`, and in your local `app/env/prod.json`) is the release
   host, `https://app.<VPS1_IP>.sslip.io`. Empty means the release is served from the page's own
-  origin, which is what the `master` preview channel does.
+  origin, which is what the `master` preview channel does. **It must be in the secret before the
+  next release build**: `pwa.yml` writes the flavor file strictly, so it fails until the key is
+  there ([secrets.md](secrets.md#update-the-apps-flavor-values)), while `app.yml`'s check job only
+  warns and writes it empty. The stage script also needs `brotli` (`apt-get install -y brotli`).
 - The stage script prints `RELEASE_HASH=<hash>` as its last line. B2's release job copies
   `r/<hash>/` to the mirror and only then deploys the live channel, so the live shell never
   points at a folder the mirror lacks.
