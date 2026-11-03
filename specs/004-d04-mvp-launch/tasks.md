@@ -121,19 +121,24 @@ Tests first (seen failing) → code → host or device validation → runbook an
 
 ### Validation (B1)
 
-- [ ] T008 [US1] After B2's T034 and T003–T005 are deployed, run quickstart B1 step 1: two phones on different networks give two `rl:ip:*` keys with their public IPs. Record the output in the PR and mark `SR-1` fixed.
+- [x] T008 [US1] After B2's T034 and T003–T005 are deployed, run quickstart B1 step 1: two phones on different networks give two `rl:ip:*` keys with their public IPs. Record the output in the PR and mark `SR-1` fixed.
+  **Done 2026-11-03:** two clients on different networks gave `rl:ip:104.28.228.70` and `rl:ip:130.110.97.25`; SR-1 is fixed.
 - [ ] T009 [US1] Run the load test by T007 (before the public tag, or at a quiet hour) and write `docs/load-tests/2026-11-04-mvp.md` in the format of [data-model.md](data-model.md#load-report-docsload-testsdate-mvpmd-b1).
   - **If a target fails:** raise `api-public` to `-w 3` (ask B2 for the Compose `command`), re-run, and record both runs.
   - **If it still fails:** stop and tell the owner before the Caddy cache-handler contingency (plan.md Complexity Tracking).
-- [ ] T010 [US1] Run the code security review with the `security-reviewer` agent over the whole repository against SD §8 and constitution V, row by row (research R5). Record every finding in `specs/004-d04-mvp-launch/security-review.md` in the data-model format (ID `SR-n`, severity, file, owner lane, status).
-- [ ] T011 [US1] By 12:00, append each other-lane finding of CRITICAL or HIGH severity as a task `SR-n` under a `### Security review findings` heading at the end of that lane's section in this file, with file, line, the fix expected and a test to add. MEDIUM and LOW go in the report with a target day.
-- [ ] T012 [US1] Run the host review (research R5):
+  **Ran 2026-11-03, FAILED** ([report](../../docs/load-tests/2026-11-03-mvp.md)): 0 errors and 0 `429`s, but p95 ≈ 5 s on both scenarios at about 124 req/s; VPS-1's one core is saturated. Waits on the owner's fix (more OCPU or the Caddy `/v1/live` cache) and a second run.
+- [x] T010 [US1] Run the code security review with the `security-reviewer` agent over the whole repository against SD §8 and constitution V, row by row (research R5). Record every finding in `specs/004-d04-mvp-launch/security-review.md` in the data-model format (ID `SR-n`, severity, file, owner lane, status).
+  **Done 2026-11-03:** [security-review.md](security-review.md), SR-1 to SR-23. Gate PASS; SR-2 needs the owner's accept-or-fix.
+- [x] T011 [US1] By 12:00, append each other-lane finding of CRITICAL or HIGH severity as a task `SR-n` under a `### Security review findings` heading at the end of that lane's section in this file, with file, line, the fix expected and a test to add. MEDIUM and LOW go in the report with a target day.
+  **Done 2026-11-03:** no CRITICAL or HIGH finding, so no `SR-n` task is appended. The MEDIUM and LOW findings are in [security-review.md](security-review.md) for the owner to schedule.
+- [x] T012 [US1] Run the host review (research R5):
   - `docs/runbooks/exposure-check.md` from the internet;
   - headers and CORS on `api.`, `media.` and `app.` against SD §8;
   - `https://10.8.0.1` from the internet (no answer);
   - Postgres and Redis ports from the internet (closed);
   - `RATE_LIMIT_EXEMPT_IPS` empty on VPS-1;
   - gitleaks over the full history.
+  **Done 2026-11-03** ([security-review.md](security-review.md#host-review-t012-2026-11-03)): only 80/443 on VPS-1, nothing on VPS-2; TLS, headers, CORS and the admin's absence from the public listener as expected. Left for the owner: the off-WireGuard check of `https://10.8.0.1`.
 
   Fix B1's CRITICAL and HIGH with a regression test each. When every CRITICAL is fixed and every HIGH is fixed or `accepted (owner, reason)`, write "Gate: no open CRITICAL" at the top of the report.
 - [X] T013 [US1] Add B1's D4 items to `docs/owner-actions.md` (the allowlist window, accepting any HIGH, reading the load report) with the runbook links.
