@@ -23,7 +23,7 @@ The rules:
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | VPS-2's `.env` only | The importer alerts ([source-alerts.md](source-alerts.md)) and Uptime Kuma's notifications | [Below](#rotate-the-telegram-bot) |
 | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` | Both VMs' `.env` (the database backup runs on VPS-2, the weekly media snapshot on VPS-1) | `backup-db.sh`, `backup-media.sh` ([backups.md](backups.md)) | [Below](#rotate-the-backup-keys) |
-| `RCLONE_CONFIG_OCI_*` (`_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
+| `RCLONE_CONFIG_OCI_*` (`_TYPE=s3`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
 | `KUMA_PUSH_URL_*` (six) | VPS-2's `.env` (`_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`) and VPS-1's (`_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) | `ops.heartbeat` and the backup scripts ([uptime-kuma.md](uptime-kuma.md)) | Recreate the monitor in Kuma and replace the value; they are not secrets, but they are bearer URLs |
 | `DEPLOY_SSH_KEY` | GitHub secret. The public half is in VPS-1's `.env` and in `/home/deploy/.ssh/authorized_keys`. | `backend.yml` deploy, `infra.yml` sync | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | `WG_CI_CONFIG` | GitHub secret; the peer `ci` in VPS-1's `wg0.conf` | The same jobs | [private-network.md "Rotate the CI peer"](private-network.md#rotate-the-ci-peer) |
