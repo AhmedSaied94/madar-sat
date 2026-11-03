@@ -36,9 +36,15 @@ Against a local API instead of Prism, point the Vite proxy (`vite.config.ts`) at
 pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh
 ```
 
+`pnpm e2e` runs the Playwright smoke test (`e2e/smoke.spec.ts`, `playwright.config.ts`): mock mode
+starts Prism and Vite itself and runs in CI (B2's T042 adds the step); live mode runs from a
+WireGuard peer against the deployed admin and edits only the marked test match
+([admin-access.md](../docs/runbooks/admin-access.md#the-live-smoke-test-d4)). e2e moves between
+screens through the router, never `page.goto`: the session is in memory only.
+
 - `pnpm test`: Vitest + Testing Library + MSW (jsdom). `pnpm test:watch` while working. Render with `renderRtl` from `src/test/render.tsx`, which wraps the RTL root, a query client and a memory router; MSW runs from `src/test/setup.ts` and fails on unhandled requests.
 - Tests come first and are seen failing before the code they cover (constitution, Test-first). Every state in a component's README has a test.
-- Playwright smoke tests arrive on D4 (delivery-plan §7); until then screens are checked by screenshots against the PNG boards.
+- The Playwright smoke test (D4) lives in `e2e/`, beside the app, and is not part of `pnpm test`.
 
 ## Generated code: never edit by hand
 

@@ -50,6 +50,32 @@ curl -s --cacert ~/.config/madar/caddy-root.crt https://10.8.0.1/admin/api/healt
 # {"db": "ok", "redis": "ok"}
 ```
 
+## The live smoke test (D4)
+
+`pnpm e2e` is the D4 admin smoke test (spec 004 T052, `admin/e2e/smoke.spec.ts`): it signs in, opens A4
+for the one test match, saves a new `stadium`, and — live only — waits until `/v1` serves it, which is
+the ≤ 60 s of SC-004. Mock mode starts Prism and Vite itself and needs none of this.
+
+```bash
+cd admin
+E2E_TARGET=live E2E_BASE_URL=https://10.8.0.1 E2E_PUBLIC_API=https://api.<ip1>.sslip.io \
+  E2E_EMAIL=… E2E_PASSWORD=… E2E_MATCH_MARKER=MADAR-E2E \
+  NODE_EXTRA_CA_CERTS=~/.config/madar/caddy-root.crt pnpm e2e
+```
+
+- **The test account** is an `editor` from [staff-accounts.md](staff-accounts.md). Both values arrive
+  through the environment; they are never written to the repo or to a `.env` file that is committed.
+- **The test match** is created once by the owner in A4: date `2000-01-01`, two existing teams, stadium
+  `MADAR-E2E`. Nobody follows it, so it queues no reminder.
+- **It edits only that match.** Every row on `E2E_MATCH_DATE` is opened read-only first; the run aborts
+  before any save unless exactly one of them carries the marker. Clearing the stadium in A4 and running
+  again must abort — that is quickstart Lane A step 3, and it proves the guard. Never point the marker
+  at another match, and never run it with `E2E_MATCH_DATE` on a day that has real fixtures.
+- `NODE_EXTRA_CA_CERTS` carries Caddy's root; the test never sets `ignoreHTTPSErrors`.
+- The session lives in memory only (FR-034), so the test moves between screens through the router
+  (sidebar, `Enter` on a row) — a hard `page.goto` would drop it and bounce back to `/login`.
+- CI runs mock mode only (`admin.yml`, B2's T042): no WireGuard, no account, no test match.
+
 ## Run it against the mock
 
 No WireGuard, no account: Prism serves the committed contract and answers with the spec's named
