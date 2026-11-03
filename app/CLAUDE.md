@@ -37,7 +37,8 @@ flutter analyze
 flutter test                    # goldens included; needs the Flutter in .flutter-version
 ./tool/test_all_zones.sh        # the whole suite under TZ=UTC, then TZ=Africa/Cairo
 flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
-flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+flutter build web --release --no-web-resources-cdn --pwa-strategy=none \
+  -t lib/main_prod.dart --dart-define-from-file=env/prod.json
 ./tool/stage_web_release.sh env/prod.json build/web_release   # the PWA's release layout
 node --test test_web/                                          # the service worker's logic
 ```
@@ -48,10 +49,11 @@ node --test test_web/                                          # the service wor
   writes `.br`/`.gz` beside every release file (contract in
   `../specs/004-d04-mvp-launch/contracts/web-release.md`). Staging needs `brotli` and
   `gzip`; the same build always gives the same hash.
-- The pinned Flutter 3.47.7 has no `--pwa-strategy` flag: a plain build emits its own
-  `flutter_service_worker.js` (and a standalone `flutter.js`), and the stage script deletes
-  both. `web/sw.js` is the app's worker, imported from `web/sw_core.mjs`; the bootstrap
-  carries Flutter's loader inline.
+- The pinned Flutter 3.47.7 accepts `--pwa-strategy=none` even though `flutter build web --help`
+  hides it, and it still emits `flutter_service_worker.js` (and a standalone `flutter.js`) either
+  way — the flag changes nothing here. The stage script deletes both: `web/sw.js` is the app's
+  worker, and the bootstrap carries Flutter's loader inline. Keep the flag in the command so it
+  matches `pwa.yml`.
 - Test the worker with `node --test test_web/` (Node 22, no install). It never caches API
   data: only the shell and the release files.
 

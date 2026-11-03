@@ -70,11 +70,11 @@ is_shell_output() {
   return 1
 }
 
-# 2. A clean copy of the build, without Flutter's own worker (the pinned Flutter may still
-#    emit one when --pwa-strategy is passed; ours replaces it) and without the standalone
-#    loader, which the customisable bootstrap already carries inline. Staging into a
-#    directory that already holds a release would mix two layouts, so it must be absent or
-#    empty.
+# 2. A clean copy of the build. Flutter's own worker is deleted whether or not
+#    `--pwa-strategy=none` was passed (3.47.7 accepts the flag but still emits it), and so is
+#    the standalone `flutter.js`, which the customisable bootstrap already carries inline.
+#    Staging into a directory that already holds a release would mix two layouts, so it must
+#    be absent or empty.
 [[ -e "$out" && ! -d "$out" ]] && die "$out is a file, not a directory"
 if [[ -d "$out" && -n $(ls -A "$out" 2>/dev/null) ]]; then
   die "$out already holds files; stage into a fresh directory (release folders are immutable)"
