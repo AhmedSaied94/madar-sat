@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -473,6 +474,82 @@ void main() {
 
       expect(events.single.data!.map((m) => m.id), [1]);
       expect(events.single.failure, isNull);
+    });
+  });
+
+  group('a failure with no cache reaches the stream (M-T045-2)', () {
+    /// Opens [open], collects its values and its errors, and also records anything that
+    /// escaped the listener's zone: the failure must be the stream's own error, not an
+    /// uncaught exception (app/CLAUDE.md, "Data: stale-while-revalidate").
+    Future<({List<T> events, List<Object> errors, List<Object> uncaught})> drain<T>(
+      Stream<T> open(),
+    ) async {
+      final events = <T>[];
+      final errors = <Object>[];
+      final uncaught = <Object>[];
+      final done = Completer<void>();
+      await runZonedGuarded(
+        () async {
+          open().listen(
+            events.add,
+            onError: (Object error, StackTrace stackTrace) {
+              errors.add(error);
+              if (!done.isCompleted) done.complete();
+            },
+            onDone: () {
+              if (!done.isCompleted) done.complete();
+            },
+          );
+          await done.future;
+        },
+        (error, stackTrace) => uncaught.add(error),
+      );
+      return (events: events, errors: errors, uncaught: uncaught);
+    }
+
+    test('a day that fails with nothing cached is one stream error', () async {
+      http.enqueueOffline();
+
+      final result = await drain(() => repository.watchDay(day));
+
+      expect(result.events, isEmpty, reason: 'there is no cached copy to fall back on');
+      expect(result.errors, hasLength(1));
+      expect(result.errors.single, isA<ApiFailure>());
+      expect(result.uncaught, isEmpty);
+    });
+
+    test('a 304 for a day with nothing cached is one stream error', () async {
+      http.enqueueNotModified(etag: '"v1"');
+
+      final result = await drain(() => repository.watchDay(day));
+
+      expect(result.events, isEmpty);
+      expect(result.errors.single, isA<ApiFailure>());
+      expect(result.uncaught, isEmpty);
+    });
+
+    test('a document that fails with nothing cached is one stream error', () async {
+      http.enqueueOffline();
+
+      final result = await drain(repository.watchSatellites);
+
+      expect(result.events, isEmpty);
+      expect(result.errors.single, isA<ApiFailure>());
+      expect(result.uncaught, isEmpty);
+    });
+
+    test('a cached copy turns the same failure into a snapshot, not an error', () async {
+      await seedDay([first]);
+      http.enqueueOffline();
+
+      final result = await drain(() => repository.watchDay(day));
+
+      expect(result.errors, isEmpty);
+      expect(result.uncaught, isEmpty);
+      expect(result.events, hasLength(2));
+      final last = result.events.last as SwrSnapshot<List<MatchSummary>>;
+      expect(last.data!.map((m) => m.id), [1]);
+      expect(last.failure, isNotNull);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/media_image.dart';
+import '../../../../core/network/api_failure.dart';
 import '../../../../core/theme/madar_tokens.dart';
 import '../../../../design/components/logo.dart';
 import '../../../../design/components/search_field.dart';
@@ -11,6 +12,7 @@ import '../../../../design/components/skeleton.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../follows/data/follows_repository.dart';
 import '../../../follows/domain/follow_set.dart';
+import '../../../system/presentation/system_views.dart';
 import '../../../teams/data/team_search_provider.dart';
 import '../../../teams/domain/team_groups.dart';
 
@@ -82,8 +84,17 @@ class _TeamsStepState extends ConsumerState<TeamsStep> {
         Expanded(
           child: switch (results) {
             null => _Prompt(text: l.onbSearchTeam),
+            // A failed search says so at once, with «إعادة المحاولة» asking again; the
+            // check comes before the skeleton, so a retry never looks like a hang
+            // (M-T045-3).
+            final async when async.hasError => SystemFailureView(
+                failure: async.error is ApiFailure
+                    ? async.error! as ApiFailure
+                    : const ApiFailure(),
+                retrying: async.isLoading,
+                onRetry: () => ref.invalidate(teamSearchProvider(_query)),
+              ),
             final async when async.isLoading && async.value == null => const Skeleton(),
-            final async when async.hasError => _Prompt(text: l.loadFailedTitle),
             final async => _Results(
                 groups: groupTeams(async.value ?? const []),
                 chosen: follows.teams,
