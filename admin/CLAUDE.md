@@ -37,7 +37,8 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-litera
 ```
 
 `pnpm e2e` runs the Playwright smoke test (`e2e/smoke.spec.ts`, `playwright.config.ts`): mock mode
-starts Prism and Vite itself and runs in CI (B2's T042 adds the step); live mode runs from a
+starts Prism and its own Vite on :5179 (never reusing a running server), signs in only with the Prism
+fixture account, and runs in CI (B2's T042 adds the step); live mode runs from a
 WireGuard peer against the deployed admin and edits only the marked test match
 ([admin-access.md](../docs/runbooks/admin-access.md#the-live-smoke-test-d4)). e2e moves between
 screens through the router, never `page.goto`: the session is in memory only.
