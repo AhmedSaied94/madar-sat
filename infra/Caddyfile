@@ -103,7 +103,9 @@ https://10.8.0.1 {
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
-		Content-Security-Policy "default-src 'self'"
+		# Crests, logos, photos and commentator audio come from the media host (SD §8, A-R1-8); nothing
+		# else may load from another origin.
+		Content-Security-Policy "default-src 'self'; img-src 'self' https://media.{$VPS1_IP}.sslip.io; media-src 'self' https://media.{$VPS1_IP}.sslip.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	}
 	# Separate, as in public_headers: a deletion would defer the whole block past error responses.
 	header -Server

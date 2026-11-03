@@ -574,7 +574,7 @@ B2's free tier is 10 GB, so watch the size. Test a restore every month on a scra
 | AuthN/AuthZ | argon2id, short-lived JWT, rotating refresh tokens, roles checked in a dependency on every admin route, audit log |
 | Input validation | Pydantic models on every request. Length caps on free text (reports ≤ 280 characters). Enum checks |
 | SQL injection | SQLAlchemy ORM / Core with bound parameters only. No string-built SQL |
-| XSS | Flutter renders text, not HTML. Admin uses React escaping. No `dangerouslySetInnerHTML` without DOMPurify. Admin CSP: `default-src 'self'` |
+| XSS | Flutter renders text, not HTML. Admin uses React escaping. No `dangerouslySetInnerHTML` without DOMPurify. Admin CSP: `default-src 'self'`, plus the media host in `img-src` and `media-src` only (set in the Caddy header; the build's `<meta>` allows `https:` there and the header narrows it) |
 | CSRF | Admin refresh cookie is `SameSite=Strict` + CSRF header. Public API is token-based, with no cookies |
 | Rate limiting | Redis sliding windows, keyed by device token when present, otherwise by client IP (from `X-Forwarded-For`, trusting Caddy only). Per-IP limits must be generous, because Egyptian mobile carriers put many users behind one CGNAT IP |
 | CORS | Public API allows `https://<project>.web.app` and `https://<project>.firebaseapp.com`. The mirror allows the same origins for `GET` |

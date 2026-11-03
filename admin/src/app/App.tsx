@@ -21,9 +21,18 @@ import { shell } from '../i18n/ar';
 
 /** The A0 shell for a signed-in editor; anyone else goes to /login and comes back afterwards. */
 function SignedInShell(): ReactElement {
-  const { session, signOut } = useSession();
+  const { session, restoring, signOut } = useSession();
   const location = useLocation();
 
+  // On a reload the access token is gone (it lives in memory only); wait for the refresh cookie to
+  // restore it before deciding the editor is signed out.
+  if (!session && restoring) {
+    return (
+      <p role="status" aria-live="polite" className="p-8 text-center text-text-secondary">
+        {shell.restoring}
+      </p>
+    );
+  }
   if (!session) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
