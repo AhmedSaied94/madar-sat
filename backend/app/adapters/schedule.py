@@ -8,7 +8,8 @@ LiveSoccerTV between the home box and VPS-2 stays a setting, not a schedule chan
 
 The bridge runs 90 minutes after ysscores, so it adds what ysscores does not have instead of racing
 it for the same fixture. The three ``heartbeat-*`` entries keep one Kuma push monitor per Celery
-queue alive, so a worker that dies goes quiet and Kuma alerts (R20).
+queue alive, so a worker that dies goes quiet and Kuma alerts (R20). ``scrape-home-backlog`` does
+the same for the home box from VPS-2, by the depth of its queue.
 """
 
 from __future__ import annotations
@@ -71,6 +72,13 @@ def build_beat_schedule() -> dict[str, dict[str, Any]]:
             "schedule": crontab(minute="*/5"),
             "args": ("notifications",),
             "options": {"queue": "notifications"},
+        },
+        # The home box cannot reach Kuma; VPS-2 reports how many fetches wait for it.
+        "scrape-home-backlog": {
+            "task": "ops.scrape_home_backlog",
+            "schedule": crontab(minute="*/5"),
+            "args": (),
+            "options": {"queue": "imports"},
         },
     }
 

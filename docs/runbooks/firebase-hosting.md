@@ -1,6 +1,10 @@
 # Firebase Hosting (PWA preview)
 
-`pwa.yml` builds the Flutter web app and deploys it to the Firebase Hosting preview channel `master`, which expires 30 days after each deploy. This runbook sets up the project, the deploy key and the origins the API allows. It touches no server, except for one `.env` change on VPS-1. The public release (`web-v*` tags, and the VPS-1 mirror at `app.<VPS1_IP>.sslip.io`) arrives on D4. Background: SD §5.2, research R14, and `infra/firebase/`.
+`pwa.yml` builds the Flutter web app. It deploys the `master` **preview** channel (30-day expiry) on
+every eligible push, and the **live** channel plus the VPS-1 mirror on a `web-v*` tag
+([pwa-release.md](pwa-release.md)). This runbook sets up the project, the deploy key and the origins
+the API allows. It touches no server, except for one `.env` change on VPS-1. Background: SD §5.2,
+research R14, and `infra/firebase/`.
 
 The rest of the Firebase project (the Android and web apps, the FCM web-push key, Remote Config defaults) is Day 0 work in delivery-plan §6 ([../owner-actions.md](../owner-actions.md)).
 
@@ -63,7 +67,10 @@ gh workflow run pwa.yml -R "$R" --ref master
 gh run watch -R "$R" "$(gh run list -R "$R" --workflow pwa.yml -L 1 --json databaseId -q '.[0].databaseId')"
 ```
 
-The `build` job uploads `app/build/web` as the artifact `pwa-web`, and `deploy` downloads it into `infra/firebase/public/` (git-ignored), because `firebase.json`'s `public` must sit inside the project folder.
+The `build` job uploads the staged release (or `app/build/web` while the stage script is not on the
+commit) as the artifact `pwa-web`, and `deploy` downloads it into `infra/firebase/public/`
+(git-ignored), because `firebase.json`'s `public` must sit inside the project folder. The preview
+stages with an **empty** mirror base, so its release folder is served by Firebase itself.
 
 The run's summary prints `PWA preview: <url> (expires …)`. The address has the form `https://<project>--master-<suffix>.web.app`, and it stays the same for the channel's life.
 
@@ -74,7 +81,7 @@ The run's summary prints `PWA preview: <url> (expires …)`. The address has the
 | Address | What it is | State on 2026-10-30 |
 | --- | --- | --- |
 | `https://<PWA_PREVIEW_HOST>` | The `master` preview channel that `pwa.yml` deploys. The suffix stays while the channel lives and changes if it expires and is created again. | Serves the app. The API blocks it (CORS preflight returns 400) until it is in `CORS_ORIGINS`. |
-| `https://<PWA_HOST>`, `https://<FIREBASE_AUTH_DOMAIN>` | The site's live channel. `pwa.yml` never deploys here; the first live deploy arrives with the `web-v*` release on D4. | "Site Not Found" (404). Both are already allowed by the API's CORS. |
+| `https://<PWA_HOST>`, `https://<FIREBASE_AUTH_DOMAIN>` | The site's live channel. `pwa.yml` deploys it from a `web-v*` tag ([pwa-release.md](pwa-release.md)). | Serves the last release; "Site Not Found" until the first tag |
 
 The `CORS_ORIGINS` line on VPS-1 should hold all three:
 
@@ -96,7 +103,57 @@ curl -sI <url>/ | grep -i cache-control                       # no-cache
 curl -sI <url>/flutter_bootstrap.js | grep -i cache-control   # no-cache
 ```
 
-Files whose names carry a content hash (`.<8+ hex>.`) get `public, max-age=31536000, immutable`. Flutter's default web build doesn't hash its file names, so until Lane M adds that (SD §5.2), most files get `no-cache`.
+Files whose names carry a content hash (`.<8+ hex>.`) get `public, max-age=31536000, immutable`, and
+so does everything under `/r/<hash>/`.
+
+## 5. The hashed release layout (Lane M)
+
+`app/tool/stage_web_release.sh <env-file> <out-dir>` turns the Flutter build into what the
+PWA actually ships (contract: `specs/004-d04-mvp-launch/contracts/web-release.md`):
+
+```text
+build/web_release/
+├── index.html, flutter_bootstrap.js, manifest.json, favicon.png, icons/
+├── sw.js, sw_core.mjs               # the app's own worker, stamped with the hash
+├── firebase-messaging-sw.js, firebase-config.js
+├── drift_worker.js                  # same-origin shim → <mirror>/r/<hash>/drift_worker.js
+├── release.json                     # {"hash", "mirror", "built_at"}
+└── r/<hash>/                        # main.dart.js, canvaskit/, assets/, version.json,
+                                     # sqlite3.wasm, the real drift worker — each with .br/.gz
+```
+
+- `MIRROR_BASE_URL` (in `APP_ENV_PROD`, and in your local `app/env/prod.json`) is the release
+  host, `https://app.<VPS1_IP>.sslip.io`. Empty means the release is served from the page's own
+  origin, which is what the `master` preview channel does. **It must be in the secret before the
+  next release build**: `pwa.yml` writes the flavor file strictly, so it fails until the key is
+  there ([secrets.md](secrets.md#update-the-apps-flavor-values)), while `app.yml`'s check job only
+  warns and writes it empty. The stage script also needs `brotli` (`apt-get install -y brotli`).
+- The stage script prints `RELEASE_HASH=<hash>` as its last line. B2's release job copies
+  `r/<hash>/` to the mirror and only then deploys the live channel, so the live shell never
+  points at a folder the mirror lacks.
+- Staging needs `brotli` and `gzip` (`apt-get install brotli`). The same build always gives the
+  same hash; a different file gives a different one.
+
+### Check a release in DevTools
+
+1. **Application → Service workers:** `sw.js` is `activated and is running` and controls the page.
+2. **Application → Cache storage:** one `madar-r-<hash>` (the current release) and `madar-shell-v1`.
+   A worker that deletes the previous release after one open is wrong: offline opens still need it.
+3. **Network, reload:** `main.dart.js`, `canvaskit.wasm` and `sqlite3.wasm` come from
+   `app.<VPS1_IP>.sslip.io/r/<hash>/` with `Cache-Control: public, max-age=31536000, immutable`
+   (in a preview build, from the page's own origin).
+4. **Console:** `fetch('/release.json').then(r => r.json())` names the hash the app runs.
+   `window.MADAR_RELEASE` holds the same `{base, hash}`, and drift opens
+   `<base>/r/<hash>/sqlite3.wasm`.
+5. **With `?perf=1`:** the console logs `[madar-perf] bootstrap +N ms` and
+   `[madar-perf] flutter-first-frame +N ms` (research R13, the T072 timings).
+6. **Offline:** DevTools → Network → Offline, reload: the shell opens from the cache with the
+   app's offline banner.
+
+## 6. The public release
+
+Cutting a `web-v*` tag, checking the mirror and rolling the live channel back are in
+[pwa-release.md](pwa-release.md).
 
 ## If it fails
 
@@ -108,7 +165,7 @@ Files whose names carry a content hash (`.<8+ hex>.`) get `public, max-age=31536
 | `… is outside of project directory` | `firebase.json`'s `public` points outside `infra/firebase/`. It must be `public`, which `deploy` fills from the artifact. |
 | `Failed to get Firebase project` | The ID in `.firebaserc` is wrong, or the account has no access to that project |
 | The preview loads but every API call fails with a CORS error. The app shows «تعذّر تحميل البيانات», and the preflight returns `400 Disallowed CORS origin`. | The channel's origin isn't in `CORS_ORIGINS` (§4) |
-| `<PWA_HOST>` shows "Site Not Found" | Nothing is deployed to the live channel yet. `pwa.yml` only deploys the preview channel; use the preview address in §4 until the D4 release. |
+| `<PWA_HOST>` shows "Site Not Found" | Nothing is deployed to the live channel yet, or the release job's deploy step failed: [pwa-release.md](pwa-release.md#2-what-the-job-does) |
 | Chrome's Network tab shows a request to `fonts.gstatic.com` or `www.gstatic.com` | A build without the Roboto alias in `app/pubspec.yaml` or without `--no-web-resources-cdn` (FR-042). Both are in the current `pwa.yml` build. |
 | The channel expired | Run `pwa.yml` again |
 

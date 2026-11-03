@@ -16,6 +16,7 @@ import '../network/generated/models/score.dart';
 import '../network/generated/models/sport.dart';
 import '../network/generated/models/status.dart';
 import '../network/generated/models/team_ref.dart';
+import 'release_assets.dart';
 
 part 'app_database.g.dart';
 
@@ -170,13 +171,18 @@ class AppDatabase extends _$AppDatabase {
   }) : now = now ?? DateTime.now;
 
   /// Opens the app's database. The web needs both assets shipped in `web/` (no CDN): the
-  /// SQLite WebAssembly module and drift's worker (see `app/CLAUDE.md`).
+  /// SQLite WebAssembly module and drift's worker (see `app/CLAUDE.md`). In a staged
+  /// release the module lives in `<mirror>/r/<hash>/` and the page says where
+  /// ([madarRelease]); the worker is the same-origin shim the stage script writes.
   AppDatabase.open({Duration Function(DateTime local)? offsetAt})
       : this(
           driftDatabase(
             name: 'madar',
             web: DriftWebOptions(
-              sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+              sqlite3Wasm: sqlite3WasmUri(
+                base: madarRelease()?.base,
+                hash: madarRelease()?.hash,
+              ),
               driftWorker: Uri.parse('drift_worker.js'),
             ),
           ),

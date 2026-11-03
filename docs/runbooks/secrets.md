@@ -23,7 +23,7 @@ The rules:
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | VPS-2's `.env` only | The importer alerts ([source-alerts.md](source-alerts.md)) and Uptime Kuma's notifications | [Below](#rotate-the-telegram-bot) |
 | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` | Both VMs' `.env` (the database backup runs on VPS-2, the weekly media snapshot on VPS-1) | `backup-db.sh`, `backup-media.sh` ([backups.md](backups.md)) | [Below](#rotate-the-backup-keys) |
-| `RCLONE_CONFIG_OCI_*` (`_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
+| `RCLONE_CONFIG_OCI_*` (`_TYPE=s3`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
 | `KUMA_PUSH_URL_*` (six) | VPS-2's `.env` (`_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`) and VPS-1's (`_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) | `ops.heartbeat` and the backup scripts ([uptime-kuma.md](uptime-kuma.md)) | Recreate the monitor in Kuma and replace the value; they are not secrets, but they are bearer URLs |
 | `DEPLOY_SSH_KEY` | GitHub secret. The public half is in VPS-1's `.env` and in `/home/deploy/.ssh/authorized_keys`. | `backend.yml` deploy, `infra.yml` sync | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | `WG_CI_CONFIG` | GitHub secret; the peer `ci` in VPS-1's `wg0.conf` | The same jobs | [private-network.md "Rotate the CI peer"](private-network.md#rotate-the-ci-peer) |
@@ -209,6 +209,8 @@ To build a signed AAB on your machine, write `app/android/key.properties` (git-i
 To change a value (a host, a link, a Firebase identifier, the VAPID key) or add a key:
 
 1. Edit your local `app/env/prod.json` (and `staging`, `dev` if they change). A new key also goes into `app/env/example.json` with an empty value, in the same change as the code that reads it: `write_env.sh` fails when the secret's keys differ from the template's.
+   - The release workflows (`pwa.yml`, `app-release.yml`) call it without `--or-example`, so they fail until the secret has the new key. Update the secret in the same sitting.
+   - `app.yml`'s check job calls it with `--or-example`: a key the template has and the secret lacks is written empty there, with a `::warning::` naming it, so a pull request that introduces a key still runs its checks. That warning on `master` means the secret is behind.
 2. Update the secret from the file:
 
    ```bash

@@ -160,6 +160,7 @@ def test_the_beat_schedule_has_every_entry_and_calls_no_fetch_directly() -> None
         "heartbeat-maintenance",
         "heartbeat-imports",
         "heartbeat-notifications",
+        "scrape-home-backlog",
     }
 
     source_entries = {name: entry for name, entry in BEAT_SCHEDULE.items() if "fetch" in entry["task"]}
@@ -209,3 +210,11 @@ def test_the_heartbeats_cover_their_own_queues() -> None:
         assert entry["task"] == "ops.heartbeat"
         assert entry["args"] == (queue,)
         assert entry["options"]["queue"] == queue
+
+
+def test_the_home_box_backlog_is_checked_on_vps2() -> None:
+    """The home box cannot reach Kuma, so its queue is read from VPS-2's ``imports`` worker."""
+    entry = BEAT_SCHEDULE["scrape-home-backlog"]
+    assert entry["task"] == "ops.scrape_home_backlog"
+    assert entry["options"]["queue"] == "imports"
+    assert str(entry["schedule"]) == "<crontab: */5 * * * * (m/h/dM/MY/d)>"

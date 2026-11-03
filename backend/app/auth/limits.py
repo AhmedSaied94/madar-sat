@@ -28,8 +28,6 @@ from app.settings import get_settings
 MAX_FAILURES = 5
 WINDOW_S = 15 * 60
 LOCK_S = 15 * 60
-# Caddy on wg0 (infra): the only peer whose X-Forwarded-For we believe.
-TRUSTED_PROXY = "10.8.0.1"
 
 # One attempt, counted and locked atomically: five failures in the window lock the email + IP.
 _RESERVE = """
@@ -65,24 +63,28 @@ def email_hash(email: str) -> str:
 
 
 def client_ip(request: Request) -> str:
-    """The caller's address: ``X-Forwarded-For`` counts only when the request comes from the proxy.
+    """The caller's address: ``X-Forwarded-For`` counts only when the peer is a trusted proxy.
 
-    Uvicorn runs with ``--proxy-headers --forwarded-allow-ips=10.8.0.1`` and so already rewrites
-    ``request.client`` in production; this keeps the same rule where it doesn't (and in tests).
-    The right-most hop that isn't the proxy is the one Caddy appended; anything left of it is
-    client-controlled.
+    The list is the ``TRUSTED_PROXIES`` setting: Caddy on wg0 (``10.8.0.1``) for the admin app, and,
+    for the public app, Caddy's Docker bridge gateway (``172.30.0.1``) plus loopback (research R1).
+    Uvicorn also runs with ``--proxy-headers --forwarded-allow-ips=<the same list>`` and so already
+    rewrites ``request.client`` in production; this keeps the same rule where it doesn't (and in
+    tests). The right-most hop that isn't trusted is the one Caddy appended; anything left of it is
+    client-controlled, so a forged left-most hop is ignored.
     """
     peer = request.client.host if request.client else "unknown"
-    if peer != TRUSTED_PROXY:
+    trusted = set(get_settings().trusted_proxies)
+    if peer not in trusted:
         return peer
     hops = [hop.strip() for hop in request.headers.get("x-forwarded-for", "").split(",") if hop.strip()]
     for hop in reversed(hops):
-        if hop == TRUSTED_PROXY:
-            continue
         try:
-            return str(ipaddress.ip_address(hop))
+            address = str(ipaddress.ip_address(hop))
         except ValueError:
             return peer
+        if address in trusted:
+            continue
+        return address
     return peer
 
 

@@ -128,7 +128,7 @@ Web: satair-6983b.web.app shows a "get it on Google Play" page; ?app=1 opens a p
 | O3 | Whether to drop the card-sharing labels and BISS keys (risk R3) | Channel `access` field, Feeds screen |
 | O4 | A domain (about $10/year) for the API and media hosts | Not urgent: hosts come from Remote Config, and the PWA lives on `web.app`. It removes the dependence on sslip.io (R6) |
 | O5 | Apple enrollment as an individual (fast; personal name shown as seller) or an organization (needs a D-U-N-S number, takes weeks) | iOS native timeline |
-| O6 | Stay on Spark with the mirror design, or move to Blaze with a budget alert (costs cents, no cap) | §5.2 complexity |
+| O6 | **Decided 2026-11-03: stay on Spark with the mirror design** (spec 004 Clarifications). Blaze was the alternative (costs cents, no cap) | §5.2: the mirror and service worker ship on D4 |
 | O7 | Which source supplies live minute, events and lineups within free limits | Live match center (§6.7) |
 
 ---
@@ -662,7 +662,7 @@ Each day is exactly one Spec Kit spec, and its scope is the day's brief in deliv
 | R1 | Sources block us or change layout. Their terms likely forbid commercial reuse | Fixtures or channels stop | Adapters + circuit breaker + zero-items alarm. Home-box worker. Curated channel and frequency data is our own asset. Budget for a licensed fixtures API once revenue allows |
 | R2 | VPS-1 outage | App shows cached or offline data | Backups, restore drills, Kuma alerts, the PWA mirror failover design |
 | R3 | **Card-sharing labels** (`Mega Share`, `Apollo`, `VIP`, `ليست مكسورة` = "not cracked") and BISS keys in feeds | Store removal under IP-infringement policies; rights-holder action | O3: don't migrate these labels; expose only `access` (free/encrypted) + official provider/package; no BISS keys |
-| R4 | The Firebase Spark quota | New PWA installs fail | Mirror design (§5.2), or Blaze with a budget alert (O6) |
+| R4 | The Firebase Spark quota | New PWA installs fail | Mirror design (§5.2), shipped on D4 (O6 decided: Spark) |
 | R5 | Oracle reclaims an idle instance | Outage | Keep the instances busy; consider a pay-as-you-go upgrade (still $0) |
 | R6 | sslip.io, a third-party DNS service, goes down | API unreachable | Buy a domain (O4); hosts come from Remote Config |
 | R7 | Logo and voice-clip rights | Takedown requests | Act on takedowns promptly; keep source attribution in `media_assets.original_url` |

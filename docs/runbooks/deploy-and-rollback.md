@@ -33,7 +33,7 @@ records the running tag, pulls, runs `compose --profile workers up -d` for `work
 `worker-scrape`, `worker-maintenance` and `beat`, waits up to 90 s for all four healthchecks, and — like
 VPS-1 — rolls back to the previous tag when the start or the check fails ([workers.md](workers.md)).
 
-Deploys never overlap. `backend.yml`'s `deploy` and `infra.yml`'s `sync` share the concurrency group `deploy-vps1`, `deploy-vps2` has its own group, and `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
+Deploys never overlap. Every job that joins the CI WireGuard peer through `.github/actions/vps1-sync` — `backend.yml`'s `deploy`, `infra.yml`'s `sync`, `admin.yml`'s `deploy` and `pwa.yml`'s `release` — shares the concurrency group `deploy-vps1` (`infra.yml` checks this). `deploy-vps2` has its own group and starts only after `deploy` has left `deploy-vps1`. Only `backend.yml` and `infra.yml`, which run on `master`, rsync `infra/` to `/srv/madar/infra/`; the admin deploy and the PWA release pass `sync-infra: "false"`, and a `web-v*` tag that isn't on `master` is refused. `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
 
 The `build` job, under QEMU, is the slow part. SC-005 asks for a change to be live within 15 minutes.
 
@@ -68,7 +68,7 @@ curl -fsS http://127.0.0.1:8000/healthz               # what deploy.sh checks
 | --- | --- | --- | --- |
 | `wg-quick` errors in "Join WireGuard", `Host key verification failed`, or `Permission denied (publickey)` | CI can't reach VPS-1 | Unchanged | Check `WG_CI_CONFIG`, `DEPLOY_KNOWN_HOSTS` and `DEPLOY_SSH_KEY` against [provision-host.md §8](provision-host.md#8-deploy-peer-and-keys) |
 | `error: /srv/madar/.env is missing` | The host isn't bootstrapped | Unchanged | [provision-host.md §4](provision-host.md#4-fill-the-env-file-and-re-run) |
-| `error: this host is missing its D3 folders or backup timers, which only root can create` | The host was bootstrapped before D3: the folders and the backup timers come from `bootstrap-vps.sh` now (B2-R1-4) | Unchanged | Run `sudo ./madar-infra/scripts/bootstrap-vps.sh <vps1\|vps2>` on that host, then re-run the job ([provision-host.md §3](provision-host.md#3-run-the-bootstrap-script)) |
+| `error: this host is missing its D3/D4 folders (the admin's /srv/admin/current on VPS-1) or backup timers, which only root can create` | The host was bootstrapped before D3 or D4: the folders, the backup timers and the admin's `/srv/admin/current` symlink come from `bootstrap-vps.sh` now (B2-R1-4, D4 B2-R1-2) | Unchanged | Run `sudo ./madar-infra/scripts/bootstrap-vps.sh <vps1\|vps2>` on that host, then re-run the job ([provision-host.md §3](provision-host.md#3-run-the-bootstrap-script)) |
 | `error: another deploy is running` | A manual deploy holds the lock | Unchanged | On VPS-1: `pgrep -af deploy.sh`. Wait for it, then re-run the job. |
 | Compose or Caddy errors before `pulling` | Step 1: `caddy`, `postgres` or `redis` didn't come up healthy, or the Caddyfile didn't load | The APIs are unchanged. A failed `caddy reload` keeps the old config. | Read that container's log. Fix in a new commit. |
 | `denied` or `unauthorized` at login or pull | The repository can't read the package | Unchanged | "Images in GHCR" below |
@@ -82,6 +82,55 @@ After a rollback, the new release's containers have been replaced, so `docker lo
 ```bash
 IMAGE_TAG=<sha> dc run --rm api-public
 ```
+
+## The admin deploy
+
+The admin SPA is a static bundle, so it does not ride the API image: `admin.yml` has its own `deploy`
+job (D4 T040, research R10) that runs on `master` after `check`.
+
+1. `check` uploads `admin/dist` (the `pnpm build` output its tests just approved).
+2. `deploy` joins `wg0`, rsyncs the bundle to `/srv/admin/releases/<sha>/`, and swaps
+   `/srv/admin/current` with `ln -sfn … current.new && mv -T …` — atomic, so Caddy serves either the
+   old tree or the new one.
+3. It fetches `https://10.8.0.1/` with the Caddy root CA and checks that the page names the entry
+   asset from `admin/dist/index.html` (its name carries the content hash, so it can only match the
+   bundle just built). **On a mismatch it repoints `current` at the release it read before the swap
+   and fails the job** (constitution IX).
+4. Only after the check passes does it prune: the newest 5 releases plus `placeholder`.
+
+`/srv/admin/current` and `/srv/admin/releases/placeholder/` come only from `bootstrap-vps.sh vps1`
+(it runs as root). On a host bootstrapped before D4, run it once before the D4 merge, or Caddy's
+admin root has nothing to serve (404):
+
+```bash
+# copy this commit's infra/ to ~/madar-infra on VPS-1 first (provision-host.md §3)
+ssh madar-vps1 'sudo ./madar-infra/scripts/bootstrap-vps.sh vps1'
+ssh madar-vps1 'readlink /srv/admin/current'      # releases/placeholder (or releases/<sha> later)
+```
+
+Without it, `deploy.sh` stops with the "missing its D3/D4 folders" error below, and this job fails at
+its first step with `::error::/srv/admin/current is missing on VPS-1`, naming the same command.
+
+Read it on the host:
+
+```bash
+readlink /srv/admin/current                      # releases/<sha>
+ls -1dt /srv/admin/releases/*/ | head -6
+curl -s --cacert ~/.config/madar/caddy-root.crt https://10.8.0.1/ | grep -o '/assets/index-[^"]*'
+```
+
+A failure before step 2 leaves `current` untouched. To go back to any kept release by hand:
+
+```bash
+ssh ubuntu@10.8.0.1
+sudo -iu deploy
+cd /srv/admin
+ln -sfn releases/<sha> current.new && mv -T current.new current
+readlink /srv/admin/current                      # releases/<sha>
+```
+
+Then reload nothing: Caddy follows the symlink on every request. The admin is reachable only over
+WireGuard ([admin-access.md](admin-access.md)).
 
 ## Roll back
 
@@ -227,9 +276,31 @@ What it does **not** apply:
 | Change | Applied by |
 | --- | --- |
 | `api-public`, `api-admin`, `worker-media`, `migrate` or `cli` in `vps1.yml` | The next backend deploy. To apply it now, in the "Working on VPS-1" shell: `dc up -d api-public api-admin worker-media`. |
+| A changed **network subnet** in `vps1.yml` | A full `dc down` of the attached services once, then the deploy: `up -d` cannot move a container to a re-subnetted network (D4, R1). D4's `172.30.0.0/24` is the one case. |
 | `/srv/madar/.env` | Nothing: it lives only on the host. Recreate the services that read it: `dc up -d --force-recreate api-public api-admin`, and `caddy` for `VPS1_IP`, `ACME_EMAIL` or `FIREBASE_PROJECT_ID`. |
 | `infra/firewall/`, `infra/wireguard/`, the sshd drop-in, Docker's start order | `bootstrap-vps.sh` only: [firewall-changes.md](firewall-changes.md) |
 | `vps2.yml`, or `infra/` on VPS-2 | `backend.yml`'s `deploy-vps2` on the next backend push, or `deploy.sh --host vps2 <tag>` by hand ([workers.md](workers.md)). |
+
+### The one-time network recreation (D4)
+
+`vps1.yml` fixes the default network to `172.30.0.0/24` with gateway `172.30.0.1`, because the public
+app trusts that gateway as Caddy's peer (`TRUSTED_PROXIES`, R1). Docker only applies a subnet when it
+creates the network, so the first deploy after this change needs one outage:
+
+```bash
+ssh ubuntu@10.8.0.1 && sudo -iu deploy && cd /srv/madar/infra
+export IMAGE_TAG=$(cat /srv/madar/current_tag)
+dc() { docker compose --env-file /srv/madar/.env -f compose/vps1.yml "$@"; }
+dc down                                   # the API, PostgreSQL and Redis stop: a few seconds of 502
+docker network rm madar_default 2>/dev/null || true
+docker compose --env-file /srv/madar/.env -f compose/vps1.yml up -d --wait
+docker network inspect madar_default --format '{{(index .IPAM.Config 0).Subnet}} {{(index .IPAM.Config 0).Gateway}}'
+# 172.30.0.0/24 172.30.0.1
+```
+
+Then confirm the API sees real client IPs (two devices on different networks get separate buckets,
+[response-cache-and-limits.md](response-cache-and-limits.md#the-rate-limits)) and that
+`/srv/madar/.env` holds `TRUSTED_PROXIES_PUBLIC=127.0.0.1,172.30.0.1` only if you changed the default.
 
 If CI can't sync (WireGuard or the deploy key is broken), apply it by hand from your machine, over WireGuard:
 

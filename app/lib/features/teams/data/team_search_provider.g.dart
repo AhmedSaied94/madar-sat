@@ -13,6 +13,10 @@ part of 'team_search_provider.dart';
 /// The query goes through [normalizeSearch], the app's copy of the server's `ar_normalize`,
 /// so «الأهلي» and «الاهلي» ask the same question and get the same teams; two characters
 /// are the minimum, because one letter matches half the database.
+///
+/// A failure is an [ApiFailure] carrying the envelope's `error.code`, so S1.2 can show its
+/// copy, and there is no automatic retry: the error state and «إعادة المحاولة» show at once
+/// (M-T045-3).
 
 @ProviderFor(teamSearch)
 final teamSearchProvider = TeamSearchFamily._();
@@ -22,6 +26,10 @@ final teamSearchProvider = TeamSearchFamily._();
 /// The query goes through [normalizeSearch], the app's copy of the server's `ar_normalize`,
 /// so «الأهلي» and «الاهلي» ask the same question and get the same teams; two characters
 /// are the minimum, because one letter matches half the database.
+///
+/// A failure is an [ApiFailure] carrying the envelope's `error.code`, so S1.2 can show its
+/// copy, and there is no automatic retry: the error state and «إعادة المحاولة» show at once
+/// (M-T045-3).
 
 final class TeamSearchProvider
     extends
@@ -38,11 +46,15 @@ final class TeamSearchProvider
   /// The query goes through [normalizeSearch], the app's copy of the server's `ar_normalize`,
   /// so «الأهلي» and «الاهلي» ask the same question and get the same teams; two characters
   /// are the minimum, because one letter matches half the database.
+  ///
+  /// A failure is an [ApiFailure] carrying the envelope's `error.code`, so S1.2 can show its
+  /// copy, and there is no automatic retry: the error state and «إعادة المحاولة» show at once
+  /// (M-T045-3).
   TeamSearchProvider._({
     required TeamSearchFamily super.from,
     required String super.argument,
   }) : super(
-         retry: null,
+         retry: _never,
          name: r'teamSearchProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -82,19 +94,23 @@ final class TeamSearchProvider
   }
 }
 
-String _$teamSearchHash() => r'85d6c9accb42b526a6be266d2efe4bb3f54f9605';
+String _$teamSearchHash() => r'47079ffd77f4037d359ca08c63eec52a362fb60d';
 
 /// `GET /v1/teams?q=` for S1.2's picker (D1's search).
 ///
 /// The query goes through [normalizeSearch], the app's copy of the server's `ar_normalize`,
 /// so «الأهلي» and «الاهلي» ask the same question and get the same teams; two characters
 /// are the minimum, because one letter matches half the database.
+///
+/// A failure is an [ApiFailure] carrying the envelope's `error.code`, so S1.2 can show its
+/// copy, and there is no automatic retry: the error state and «إعادة المحاولة» show at once
+/// (M-T045-3).
 
 final class TeamSearchFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<TeamSearchItem>>, String> {
   TeamSearchFamily._()
     : super(
-        retry: null,
+        retry: _never,
         name: r'teamSearchProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
@@ -106,6 +122,10 @@ final class TeamSearchFamily extends $Family
   /// The query goes through [normalizeSearch], the app's copy of the server's `ar_normalize`,
   /// so «الأهلي» and «الاهلي» ask the same question and get the same teams; two characters
   /// are the minimum, because one letter matches half the database.
+  ///
+  /// A failure is an [ApiFailure] carrying the envelope's `error.code`, so S1.2 can show its
+  /// copy, and there is no automatic retry: the error state and «إعادة المحاولة» show at once
+  /// (M-T045-3).
 
   TeamSearchProvider call(String query) =>
       TeamSearchProvider._(argument: query, from: this);

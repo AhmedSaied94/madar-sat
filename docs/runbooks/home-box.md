@@ -46,6 +46,29 @@ sudo wg show                       # a handshake with 10.8.0.1
 The WebRTC/VCN path is not used: the box talks to `10.8.0.1:6379` over `wg0`. Keep the hub's
 public UDP 51820 open (it is, for every peer).
 
+### MTU: always 1200, with the MSS clamp
+
+Add these to the box's `[Interface]`, whichever config file it uses:
+
+```ini
+MTU = 1200
+PostUp = iptables -t mangle -A FORWARD -o %i -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+PreDown = iptables -t mangle -D FORWARD -o %i -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+```
+
+**Never run the tunnel at the default 1420 inside another VPN.** On a laptop with Cloudflare WARP
+(MTU 1300) or ProtonVPN on, the tunnel's UDP packets travel inside that VPN, and every full-size packet
+from VPS-1 is dropped without an error. Pings and small replies still pass, so the tunnel looks up and
+`wg show` shows fresh handshakes, but a Redis reply that carries a task never arrives and the worker
+blocks (2026-11-02: 20 hours, 26 fetches queued). 1200 leaves room for one more tunnel's overhead. The
+clamp is for the worker: its connections start on Docker's bridge at 1500, so without it they still
+announce full-size segments.
+
+Check it with `ip link show <interface> | grep -o 'mtu [0-9]*'` (1200) and
+`sudo iptables -t mangle -S FORWARD | grep TCPMSS` (one line). A file change takes effect only after
+`sudo wg-quick down <interface> && sudo wg-quick up <interface>`; the first `down` after adding the
+clamp fails on its `PreDown` (see the recovery below).
+
 ### A box that already runs another tunnel
 
 If the box is also a staff peer (another interface already routes `10.8.0.0/24`), give the
@@ -114,6 +137,41 @@ ssh ubuntu@10.8.0.1 "sudo -iu deploy docker exec madar-redis-1 sh -c 'REDISCLI_A
 
 Then re-deploy (the deploy restarts Redis when the ACL file changed).
 
+## When the worker hangs
+
+A hung worker keeps its container up and its Redis connections open, but takes nothing. The signs:
+the container is `unhealthy`, its log stops after `Connected to …`/`ready`, or (after a lost reply)
+shows `Connection to broker lost` and nothing after it, and `celery:scrape_home` keeps growing. Kuma's
+`scrape-home` monitor turns `down` with the count once more than `SCRAPE_HOME_BACKLOG_MAX` fetches wait
+([uptime-kuma.md](uptime-kuma.md)).
+
+Three things now recover it without you:
+
+- the update timer restarts an `unhealthy` worker on its next tick (at most every 10 minutes; the
+  journal says `worker unhealthy (N failed checks in a row): restarting it`);
+- the worker's broker connection has a 30 s read timeout, TCP keepalive and a health check every
+  25 s (`BROKER_TRANSPORT_OPTIONS` in `backend/app/workers/__init__.py`), so a dead connection is
+  dropped and reopened instead of blocking;
+- the queued fetches expire after 2 hours, so a long outage replays nothing stale.
+
+If it keeps coming back, test the path with a large read from inside the worker. Small replies pass
+even on a broken path, so ping and `PING` prove nothing:
+
+```sh
+docker exec madar-home-box-worker-scrape-1 python -c "
+import os, time, redis
+r = redis.Redis.from_url(os.environ['REDIS_URL'], socket_timeout=8)
+for n in (1, 10):
+    t = time.time()
+    try: print(n, 'msgs', sum(map(len, r.lrange('celery:scrape_home', 0, n - 1))), 'bytes', round(time.time() - t, 2), 's')
+    except Exception as e: print(n, 'msgs FAIL', type(e).__name__)
+"
+```
+
+It only reads. On an empty queue it reads 0 bytes, which proves nothing; run it while fetches wait. A
+1-message read that passes and a 10-message read that times out means large packets are dropped: fix the
+MTU ([above](#mtu-always-1200-with-the-mss-clamp)), then `docker restart madar-home-box-worker-scrape-1`.
+
 ## Updates
 
 The timer runs `/srv/madar/infra/scripts/home-box-update.sh` every 10 minutes:
@@ -126,7 +184,8 @@ sudo /srv/madar/infra/scripts/home-box-update.sh --dry-run    # validates the Co
 ```
 
 The script logs in with `GHCR_READ_TOKEN`, pulls `madar-backend-amd64:stable`, logs out, and
-recreates the worker. `stable` moves only after both VPS deploys succeed, so the box never runs an
+recreates the worker. It then restarts the worker if Docker reports it `unhealthy`
+([When the worker hangs](#when-the-worker-hangs)). `stable` moves only after both VPS deploys succeed, so the box never runs an
 image the API rejected. CI never connects to the box: an offline box fails nothing and catches up
 on the next tick.
 

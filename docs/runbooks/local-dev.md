@@ -71,13 +71,26 @@ If `REDIS_URL` is already exported (from "Run the backend" above), the tests use
 The `dev` flavor calls `https://localhost:8443` (research R16):
 
 - **Emulator or phone:** `adb reverse tcp:8443 tcp:8443`, so the device's `localhost:8443` reaches your machine.
-- **The local CA:** debug builds trust the dev Caddy's root through the app's debug network security config (Lane M). Copy it out:
+- **The local CA:** the dev Caddy signs with its own root, which no device trusts. Copy it out:
 
   ```bash
   docker compose -f infra/compose/dev.yml cp caddy:/data/caddy/pki/authorities/local/root.crt ./root.crt
   ```
 
-  For a desktop browser, trust it as in [private-network.md "Install the admin CA root"](private-network.md#install-the-admin-ca-root), or pass `--cacert root.crt` to `curl`.
+  - **Android or a phone (Dart over `dart:io`):** Android's `network_security_config.xml`
+    and the phone's user certificates do not reach the app's API calls, so a debug build
+    takes the root from a dart-define instead:
+
+    ```bash
+    flutter run -t lib/main_dev.dart --dart-define-from-file=env/dev.json \
+      --dart-define=DEV_CA_PATH="$PWD/root.crt" --flavor dev
+    ```
+
+    `DEV_CA_PATH` is read by debug native builds only: a release build and any web build
+    ignore it (`app/lib/core/network/dev_ca.dart`). A wrong path fails the first request
+    with a message naming the file instead of a silent handshake error. `flutter test` and
+    `flutter build` need no dart-define.
+  - **A desktop browser:** trust it as in [private-network.md "Install the admin CA root"](private-network.md#install-the-admin-ca-root), or pass `--cacert root.crt` to `curl`.
 
 ## Reset
 

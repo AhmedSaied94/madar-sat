@@ -20,6 +20,8 @@ flutter run -t lib/main_prod.dart --dart-define-from-file=env/prod.json --flavor
   `env/prod.json` from the `APP_ENV_PROD` secret with `tool/write_env.sh`; a new key goes into
   `example.json`, your local files and that secret together
   (`../docs/runbooks/secrets.md`, "Update the app's flavor values"). There is no cleartext HTTP.
+  `MIRROR_BASE_URL` is one of those keys: the PWA's release host, read by the stage script
+  below and not by Dart (the page's bootstrap passes it to the app).
 - `dev` points at `infra/compose/dev.yml`'s Caddy (`https://localhost:8443`); from a
   device use `adb reverse tcp:8443 tcp:8443`. Debug builds trust user CAs for its root
   CA; release builds trust the system CAs only
@@ -35,8 +37,34 @@ flutter analyze
 flutter test                    # goldens included; needs the Flutter in .flutter-version
 ./tool/test_all_zones.sh        # the whole suite under TZ=UTC, then TZ=Africa/Cairo
 flutter build apk --debug --flavor prod -t lib/main_prod.dart --dart-define-from-file=env/prod.json
-flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+flutter build web --release --no-web-resources-cdn --pwa-strategy=none \
+  -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+./tool/stage_web_release.sh env/prod.json build/web_release   # the PWA's release layout
+node --test test_web/                                          # the service worker's logic
 ```
+
+- The PWA ships as a hashed release: `tool/stage_web_release.sh <env-file> <out-dir>` moves
+  everything but the shell into `r/<hash>/`, writes `release.json`, stamps the hash and
+  `MIRROR_BASE_URL` into `flutter_bootstrap.js`, `sw.js` and the `drift_worker.js` shim, and
+  writes `.br`/`.gz` beside every release file (contract in
+  `../specs/004-d04-mvp-launch/contracts/web-release.md`). Staging needs `brotli` and
+  `gzip`; the same build always gives the same hash.
+- The pinned Flutter 3.47.7 accepts `--pwa-strategy=none` even though `flutter build web --help`
+  hides it, and it still emits `flutter_service_worker.js` (and a standalone `flutter.js`) either
+  way — the flag changes nothing here. The stage script deletes both: `web/sw.js` is the app's
+  worker, and the bootstrap carries Flutter's loader inline. Keep the flag in the command so it
+  matches `pwa.yml`.
+- Test the worker with `node --test test_web/` (Node 22 and `python3`, no install). It never
+  caches API data: only the shell and the release files.
+- `web/sw.js` imports `sw_core.mjs` so the core can be tested as a module, but the bootstrap
+  registers `/sw.js` as a **classic** worker (Firefox has no module service workers), so the
+  stage script inlines the core with `tool/classic_sw.py`. An unstaged build (`flutter run`)
+  registers no worker. `test_web/sw_classic.test.mjs` loads the staged form the way it is
+  registered.
+- `flutter_bootstrap.js` probes the mirror (a HEAD of `main.dart.js`, 3 s) and catches a
+  failed entrypoint script, then loads once from the own origin: Flutter's `load()` never
+  rejects on a failed script. Only the first entrypoint starts the app
+  (`test_web/bootstrap.test.mjs`).
 
 ## Code generation (never hand-edit the output)
 

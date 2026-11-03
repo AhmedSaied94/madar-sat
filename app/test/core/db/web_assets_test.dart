@@ -17,10 +17,11 @@ void main() {
 
     test('opening the database passes the web options', () {
       // A source pin: without `web:` drift_flutter throws `ArgumentError` on the web and
-      // every D2 screen shows the load-failed state.
+      // every D2 screen shows the load-failed state. The wasm URL follows the release the
+      // bootstrap stamped (release_assets_test.dart).
       final source = File('lib/core/db/app_database.dart').readAsStringSync();
       expect(source, contains('DriftWebOptions('));
-      expect(source, contains("sqlite3Wasm: Uri.parse('sqlite3.wasm')"));
+      expect(source, contains('sqlite3Wasm: sqlite3WasmUri('));
       expect(source, contains("driftWorker: Uri.parse('drift_worker.js')"));
     });
   });

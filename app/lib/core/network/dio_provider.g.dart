@@ -54,7 +54,7 @@ final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
   }
 }
 
-String _$dioHash() => r'b56c1329bf0cca1d123bdbe333a1f0883a246d26';
+String _$dioHash() => r'589890f8290707a828e9aeebc6f496523da6dcd4';
 
 /// The generated client (swagger_parser, never hand-edited).
 

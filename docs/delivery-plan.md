@@ -29,7 +29,7 @@
 |---|---|---|
 | A1 | The Play Console account is **personal and created after Nov 2023**, so it needs a closed test with 12 testers for 14 days before production | Older or organization account: Android production ships with V1 on D12 |
 | A2 | Both OCI Ampere VPSs are already running, with reserved public IPs | Ampere capacity is often unavailable. Provision now; D1 slips until the boxes exist |
-| A3 | Firebase moves to **Blaze with a $5 budget alert** for the launch, so the PWA mirror can wait until D9–D10 | If staying on Spark: move the mirror work into D3–D4. Lane M then needs about one extra day |
+| A3 | **Decided 2026-11-03 (O6): Firebase stays on Spark**, so the PWA mirror, the release-folder build and the service worker move into D4 (spec 004). Lane M's D4 is about one day larger | — |
 | A4 | The MVP uses a **reduced test bar**. D11 restores your 80 % coverage rule (§7). Constitution v1.1.0 encodes this phased bar | If 80 % is required from day 1: the MVP takes about 6 days |
 | A5 | Card-sharing labels and BISS keys are dropped (O3), as the design assumes | Keeping them changes the schema and the S3/S12 screens |
 | A6 | Package ID `com.madarsat.app` (O1) | Any other ID is fine; it must be fixed before the first Play upload on D2 |
@@ -188,8 +188,8 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 | **D6 · 006** | All push types, per-type preferences, frequency-change detection + history | sporteventz; API-Football with a daily request budget | A15 outbox + composer, A16 users, A17 audit + diff | S3 live center (timeline, lineups, score animation) |
 | **D7 · 007** | `/v1/channels/sync` delta sync, `/v1/search`, cache review | Retire the Firestore bridge once 3 days of diffs are clean; alert routing | Team and channel merge tools, A11 lists, A12 feeds | S14 search, S11 rights, S13 sport switcher |
 | **D8 · 008** | Announcements; maintenance and soft-update config end to end | Restore drill, runbook v1 | Admin bug queue | S10 follow sheet, S15 competition order/hide, S12 feeds (if O8 keeps them), maintenance + soft-update UI |
-| **D9 · 009** | Load test at 5k concurrent; optional Caddy cache-handler | PWA mirror on VPS-1, content-hashed build in CI, CORS | **M2:** AdMob banner + paced interstitial (O9), UMP consent | Desktop two-pane (≥ 1024), hover and focus states |
-| **D10 · 010** | Integration bug fixes | Service-worker failover tests, emergency install link | **M2:** custom service worker (cache, mirror, FCM), share links, install-guide polish | Accessibility pass: font scale 1.3, screen-reader labels, RTL/bidi audit |
+| **D9 · 009** | Load test at 5k concurrent; optional Caddy cache-handler | Mirror load check at 5k (the mirror and hashed build shipped on D4, A3) | **M2:** AdMob banner + paced interstitial (O9), UMP consent | Desktop two-pane (≥ 1024), hover and focus states |
+| **D10 · 010** | Integration bug fixes | Service-worker failover tests beyond D4's, emergency install link | **M2:** service-worker polish (built on D4), share links, install-guide polish | Accessibility pass: font scale 1.3, screen-reader labels, RTL/bidi audit |
 | **D11 · 011** | Coverage to 80 %, contract tests, `pip-audit` | Secret scan, dependency audit, backup verification | Admin coverage to 80 %, Playwright suite | App coverage to 80 %, `integration_test` flows, golden updates |
 | **D12 · 012** | Release fixes | Production deploy, monitoring review | Android release build with ads | Store screenshots from real screens; final PWA release; Android production submitted when the Play gate clears |
 

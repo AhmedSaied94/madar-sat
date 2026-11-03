@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 // index.html carries the production CSP. React Fast Refresh needs an inline preamble,
 // so the dev server drops the CSP meta; `vite build` keeps it.
@@ -56,6 +56,8 @@ export default defineConfig(({ command, mode }) => ({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,
+    // Playwright owns e2e/; Vitest must not collect its specs.
+    exclude: [...configDefaults.exclude, 'e2e/**', 'playwright-report/**', 'test-results/**'],
     // Node ≥ 25 ships its own Web Storage global, which hides jsdom's localStorage/sessionStorage.
     execArgv: ['--no-experimental-webstorage'],
   },

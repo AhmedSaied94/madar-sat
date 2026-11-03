@@ -30,7 +30,13 @@ backups, which are exactly what an incident needs.
   inside it. Watch the bucket's used space; if it grows, lower `BACKUP_KEEP_MONTHLY` first.
 - Both jobs push a heartbeat to Uptime Kuma (`KUMA_PUSH_URL_BACKUP_DB`, `KUMA_PUSH_URL_BACKUP_MEDIA`,
   `KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY`). A backup that ran but did not push is a red monitor
-  ([uptime-kuma.md](uptime-kuma.md)).
+  ([uptime-kuma.md](uptime-kuma.md)). Since D4 (T030) a **missing** push URL stops the script before
+  it starts: a backup nobody can see fail is worse than no backup, and the silent `return 0` is what
+  kept the `backup-db` monitor grey on D3.
+- The heartbeat is what proves the schedule, so these three commands are the first check when a
+  monitor is red: `systemctl list-timers 'backup-*' --no-pager`,
+  `journalctl -u backup-db.service -n 50`, and the push URL's presence (`sudo grep -c
+  '^KUMA_PUSH_URL_BACKUP_DB=.' /srv/madar/.env` prints `1`).
 
 The secrets are in each host's `/srv/madar/.env` (mode 600, owner `deploy`):
 `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` on both hosts; the
@@ -86,7 +92,12 @@ ssh madar-vps1 'sudo -iu deploy docker compose --env-file /srv/madar/.env \
 ```
 
 `systemctl start backup-db.service` and `systemctl start backup-media.service` (as root) run the
-same thing through systemd; use them when you want the journal entry.
+same thing through systemd; use them when you want the journal entry. Both watch their Kuma monitor
+turn green within seconds — that is the proof the heartbeat path works end to end.
+
+If a run stops immediately with `KUMA_PUSH_URL_BACKUP_DB is not set` (or the media equivalents), the
+variable is missing or empty in that host's `.env`; fill it from the monitor's token
+([uptime-kuma.md §4](uptime-kuma.md#4-push-monitors-six)) and run it again.
 
 ## Restore the database
 

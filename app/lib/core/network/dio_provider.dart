@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../features/devices/data/device_identity_provider.dart';
 import '../../features/system/data/connectivity.dart';
 import '../config/remote_config.dart';
+import 'dev_ca.dart';
 import 'device_auth_interceptor.dart';
 import 'etag_interceptor.dart';
 import 'generated/export.dart';
@@ -20,28 +21,36 @@ Dio dio(Ref ref) {
       'API_BASE_URL must be passed with --dart-define-from-file=env/<flavor>.json',
     );
   }
-  return Dio(
+  final dio = Dio(
     BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 20),
       headers: const {'Accept': 'application/json'},
     ),
-  )..interceptors.addAll([
-      EtagInterceptor(),
-      // Every `/v1` request carries the device token once one exists, so the API's limits
-      // count each phone separately (R11, R27). The media host never goes through this Dio.
-      DeviceAuthInterceptor(
-        token: () => ref.read(deviceIdentityControllerProvider).value?.token,
-        baseUrl: baseUrl,
-      ),
-      // R29: no new connectivity plugin; a transport failure is "offline", the next answer
-      // is "online".
-      ConnectivityInterceptor(
-        onOnline: () => ref.read(connectivityStatusProvider.notifier).markOnline(),
-        onOffline: () => ref.read(connectivityStatusProvider.notifier).markOffline(),
-      ),
-    ]);
+  );
+  // A debug native build can trust the dev Caddy's own root (M-T045-1); release and web
+  // builds get null here and keep Dio's default adapter.
+  final devCa = devCaPath();
+  if (devCa != null) {
+    final adapter = devCaAdapter(devCa);
+    if (adapter != null) dio.httpClientAdapter = adapter;
+  }
+  return dio..interceptors.addAll([
+    EtagInterceptor(),
+    // Every `/v1` request carries the device token once one exists, so the API's limits
+    // count each phone separately (R11, R27). The media host never goes through this Dio.
+    DeviceAuthInterceptor(
+      token: () => ref.read(deviceIdentityControllerProvider).value?.token,
+      baseUrl: baseUrl,
+    ),
+    // R29: no new connectivity plugin; a transport failure is "offline", the next answer
+    // is "online".
+    ConnectivityInterceptor(
+      onOnline: () => ref.read(connectivityStatusProvider.notifier).markOnline(),
+      onOffline: () => ref.read(connectivityStatusProvider.notifier).markOffline(),
+    ),
+  ]);
 }
 
 /// The generated client (swagger_parser, never hand-edited).

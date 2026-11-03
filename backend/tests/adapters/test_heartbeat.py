@@ -7,7 +7,7 @@ import pytest
 
 from app.adapters import tasks
 from app.adapters.config import get_adapter_settings
-from app.adapters.tasks import heartbeat
+from app.adapters.tasks import heartbeat, scrape_home_backlog
 
 
 @pytest.fixture(autouse=True)
@@ -105,3 +105,59 @@ def test_a_rejected_push_is_not_sent(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_an_unknown_queue_has_no_url() -> None:
     assert get_adapter_settings().kuma_push_url("scrape") is None
+
+
+class FakeRedis:
+    def __init__(self, depth: int) -> None:
+        self.depth = depth
+        self.keys: list[str] = []
+
+    def llen(self, key: str) -> int:
+        self.keys.append(key)
+        return self.depth
+
+
+def _backlog(monkeypatch: pytest.MonkeyPatch, depth: int, *, url: str | None = "http://uptime-kuma:3001/api/push/t"):
+    if url is None:
+        monkeypatch.delenv("KUMA_PUSH_URL_SCRAPE_HOME", raising=False)
+    else:
+        monkeypatch.setenv("KUMA_PUSH_URL_SCRAPE_HOME", url)
+    monkeypatch.delenv("SCRAPE_HOME_BACKLOG_MAX", raising=False)
+    get_adapter_settings.cache_clear()
+    redis = FakeRedis(depth)
+    client = FakeClient()
+    monkeypatch.setattr(tasks, "_broker_redis", lambda: redis)
+    monkeypatch.setattr(tasks.httpx, "Client", lambda **kwargs: client)
+    return redis, client, scrape_home_backlog.apply().get()
+
+
+def test_a_short_home_box_queue_pushes_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    redis, client, result = _backlog(monkeypatch, depth=2)
+
+    assert redis.keys == ["celery:scrape_home"]  # the prefixed list that schedule_fetch pushes to
+    assert result == {"queue": "scrape_home", "depth": 2, "sent": True}
+    assert client.calls == [("http://uptime-kuma:3001/api/push/t", {"status": "up", "msg": "2 waiting"})]
+
+
+def test_the_limit_itself_is_still_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    _, client, _ = _backlog(monkeypatch, depth=6)
+    assert client.calls[0][1]["status"] == "up"
+
+
+def test_a_backed_up_home_box_queue_pushes_down_with_the_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    """2026-11-03: the hung worker left 26 fetches waiting and nothing alerted."""
+    _, client, result = _backlog(monkeypatch, depth=26)
+
+    assert result == {"queue": "scrape_home", "depth": 26, "sent": True}
+    assert client.calls[0][1] == {"status": "down", "msg": "26 fetches waiting"}
+
+
+def test_without_a_url_the_backlog_is_logged_not_pushed(monkeypatch: pytest.MonkeyPatch) -> None:
+    _, client, result = _backlog(monkeypatch, depth=26, url=None)
+
+    assert result == {"queue": "scrape_home", "depth": 26, "sent": False}
+    assert client.calls == []
+
+
+def test_the_backlog_check_is_routed_to_vps2() -> None:
+    assert tasks.IngestionRouter().route_for_task("ops.scrape_home_backlog") == {"queue": "imports"}

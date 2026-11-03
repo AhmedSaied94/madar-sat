@@ -41,12 +41,12 @@ one chat is the whole incident feed.
 | `api-public` | `https://api.<VPS1_IP>.sslip.io/healthz` | 60 s | Caddy, the public app and the database connection |
 | `media` | `https://media.<VPS1_IP>.sslip.io/logos/<a known file>` | 5 min | Caddy's media root and the disk |
 | `pwa` | `https://<FIREBASE_PROJECT_ID>.web.app/` | 5 min | Firebase Hosting serves the PWA |
-| `pwa-mirror` | `https://app.<VPS1_IP>.sslip.io/` | 5 min | Caddy's PWA mirror |
+| `pwa-mirror` | `https://app.<VPS1_IP>.sslip.io/release-check.txt` | 5 min | Caddy serves the mirror and the release job wrote the current hash (D4 T047). A 404 means no release has been copied yet |
 
 Use a real, existing file for `media` (the newest file in `/srv/media/logos/`); a 404 is red
 forever otherwise. **Accepted status codes**: `200-299`.
 
-## 4. Push monitors (six)
+## 4. Push monitors (seven)
 
 Each `heartbeat-*` beat entry pings a monitor every 5 minutes, so a dead worker queue, a paused
 `beat` or a stopped backup turns the monitor red after its heartbeat interval. Create each as
@@ -58,9 +58,15 @@ form below.
 | `celery-maintenance` | 300 s | `KUMA_PUSH_URL_MAINTENANCE` | VPS-2 | `worker-maintenance` and `beat` are alive |
 | `celery-imports` | 300 s | `KUMA_PUSH_URL_IMPORTS` | VPS-2 | `worker-imports` is alive (ingest, schedule_fetch) |
 | `celery-notifications` | 300 s | `KUMA_PUSH_URL_NOTIFICATIONS` | VPS-2 | `worker-notify` is alive (dispatcher, scheduler) |
+| `scrape-home` | 300 s | `KUMA_PUSH_URL_SCRAPE_HOME` | VPS-2 | the home box's `scrape_home` queue is draining: `down` (with the count) once more than `SCRAPE_HOME_BACKLOG_MAX` (default 6) fetches wait |
 | `backup-db` | every 25 h | `KUMA_PUSH_URL_BACKUP_DB` | VPS-2 | last night's database backup succeeded |
 | `backup-media` | every 25 h | `KUMA_PUSH_URL_BACKUP_MEDIA` | VPS-1 | last night's media mirror succeeded |
 | `backup-media-weekly` | every 8 days | `KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY` | VPS-1 | Sunday's restic snapshot succeeded |
+
+The home box cannot reach Kuma (it talks to Redis only), so `scrape-home` is pushed from VPS-2: the
+`scrape-home-backlog` beat entry runs `ops.scrape_home_backlog` on `worker-imports`, which reads the
+length of `celery:scrape_home`. A worker that hangs with its container up shows here as a growing
+queue ([home-box.md](home-box.md#when-the-worker-hangs)).
 
 Set each heartbeat interval a little longer than the job's own period (5 min → 300 s; nightly →
 25 h), so one delayed run does not alert. The interval is what makes a silent job detectable: the
@@ -77,13 +83,15 @@ the host-reachable URL with that token and **no query**; the workers and the bac
 
 | Host | Variables | Value in `/srv/madar/.env` |
 | --- | --- | --- |
-| VPS-2 | `KUMA_PUSH_URL_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB` | `http://uptime-kuma:3001/api/push/<token>` (Kuma's name in VPS-2's Compose network, which the workers and the backup container share) |
+| VPS-2 | `KUMA_PUSH_URL_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_SCRAPE_HOME`, `_BACKUP_DB` | `http://uptime-kuma:3001/api/push/<token>` (Kuma's name in VPS-2's Compose network, which the workers and the backup container share) |
 | VPS-1 | `KUMA_PUSH_URL_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY` | `http://<VPS2_VCN_IP>:3001/api/push/<token>` (over the VCN; VPS-2's firewall accepts port 3001 from VPS-1 only) |
 
 The backup scripts cut anything after a `?` before they append `status`, so a pasted Kuma URL would
-still report `down` correctly; the form above is the one that is also reachable.
+still report `down` correctly; the form above is the one that is also reachable. A backup script with
+an **empty** `KUMA_PUSH_URL_BACKUP_*` refuses to start (D4 T030), so a monitor that never turns green
+is the first sign the value was never filled in.
 
-After writing the six values into `/srv/madar/.env` on each host, restart the services that read them:
+After writing the seven values into `/srv/madar/.env` on each host, restart the services that read them:
 `worker-maintenance`, `worker-imports` and `worker-notify` on VPS-2, and `worker-media` on VPS-1 for
 the media ones (the backup scripts read them from `/srv/madar/.env` at run time, so the timers need
 nothing). The runbook step is
@@ -125,6 +133,8 @@ ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
 | `media` down | `ls /srv/media/logos/` and Caddy's log | the disk is full: `df -h /srv` |
 | `pwa` / `pwa-mirror` down | the Firebase console, and `ls /srv/app-mirror` | [firebase-hosting.md](firebase-hosting.md) |
 | `celery-*` down | `docker compose ps` on VPS-2 and `journalctl -u docker` | `docker compose up -d <service>`; if `beat` is the dead one, run it by hand before the next slot |
+| `scrape-home` down with a count | on the box: `docker inspect --format '{{.State.Health.Status}}' madar-home-box-worker-scrape-1` and `sudo wg show wg-homebox` | [home-box.md](home-box.md#when-the-worker-hangs); the update timer restarts an unhealthy worker within 10 minutes |
+| `scrape-home` silent (no push) | `worker-imports` on VPS-2, as for `celery-*` | the check itself runs there, not on the box |
 | `backup-db` down | `systemctl status backup-db.service` and its journal | [backups.md](backups.md#run-one-by-hand) |
 | `backup-media*` down | `systemctl status backup-media.service` on VPS-1 | [backups.md](backups.md#run-one-by-hand) |
 

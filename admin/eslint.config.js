@@ -28,7 +28,8 @@ const tokenTextStyles = [
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'coverage/', 'src/api/generated/','src/styles/tokens.ts'],
+    // playwright-report/ and test-results/ are what `pnpm e2e` writes (git-ignored).
+    ignores: ['dist/', 'coverage/', 'playwright-report/', 'test-results/', 'src/api/generated/','src/styles/tokens.ts'],
   },
   js.configs.recommended,
   tseslint.configs.strict,
@@ -65,6 +66,12 @@ export default tseslint.config(
   },
   {
     files: ['*.config.{js,ts}', 'scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['e2e/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

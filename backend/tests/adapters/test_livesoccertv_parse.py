@@ -71,6 +71,36 @@ def test_a_page_without_the_expected_tables_raises_layout_changed(adapter: Lives
         adapter.parse_broadcasts(not_a_match)
 
 
+ROW_5788304_TIME = (
+    "<span class=\"timecell\"><span id='ko5788304' title=\"Match ended\" class='ts ft' "
+    "dv='1792242000000' df='h:MMtt'> 9:00am</span></span>"
+)
+
+
+def _with_row_5788304_time(replacement: str) -> RawPage:
+    """The saved team page with one row's time cell swapped, as the live site served it."""
+    page = team_page()
+    assert ROW_5788304_TIME.encode() in page.body, "the fixture's row 5788304 changed"
+    return RawPage(url=page.url, status=200, body=page.body.replace(ROW_5788304_TIME.encode(), replacement.encode()))
+
+
+def test_a_postponed_row_is_skipped_and_the_rest_of_the_page_still_parses(adapter: LivesoccertvAdapter) -> None:
+    # Esteghlal's page on 2026-11-03: a postponed match keeps ``data-ko`` but prints a status, no epoch.
+    postponed = _with_row_5788304_time('<span class="timecell" title="Match postponed">Postp.</span>')
+
+    rows = adapter.parse_team(postponed)
+
+    assert len(rows) == 9
+    assert "5788304" not in {row.external_id for row in rows}
+
+
+def test_a_printed_time_without_its_epoch_span_is_still_a_layout_change(adapter: LivesoccertvAdapter) -> None:
+    no_epoch = _with_row_5788304_time('<span class="timecell"><span class="ts ft"> 9:00am</span></span>')
+
+    with pytest.raises(LayoutChanged):
+        adapter.parse_team(no_epoch)
+
+
 def test_an_empty_body_is_a_layout_change(adapter: LivesoccertvAdapter) -> None:
     with pytest.raises(LayoutChanged):
         adapter.parse_broadcasts(RawPage(url="https://www.livesoccertv.com/match/x/1", status=200, body=b""))

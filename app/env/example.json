@@ -11,5 +11,6 @@
   "FIREBASE_IOS_APP_ID": "",
   "FIREBASE_VAPID_KEY": "",
   "PRIVACY_URL": "",
-  "SHARE_URL": ""
+  "SHARE_URL": "",
+  "MIRROR_BASE_URL": ""
 }

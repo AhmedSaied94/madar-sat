@@ -79,6 +79,11 @@ RCLONE_CONFIG_OCI_TYPE=alias
 RCLONE_CONFIG_OCI_REMOTE=/oci
 RCLONE_CONFIG_OCI_ACCESS_KEY_ID=ci
 RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY=ci
+# D4 T030: the scripts refuse to run without a heartbeat URL. Nothing listens on this one, so each
+# push fails and is only logged — which is exactly the non-fatal path we want here.
+KUMA_PUSH_URL_BACKUP_DB=http://127.0.0.1:1/api/push/ci
+KUMA_PUSH_URL_BACKUP_MEDIA=http://127.0.0.1:1/api/push/ci
+KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY=http://127.0.0.1:1/api/push/ci
 ENV
 
 # The backup containers' shape (vps1.yml, vps2.yml): the image's user, no capabilities, caches in /tmp.

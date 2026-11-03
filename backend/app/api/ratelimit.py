@@ -7,6 +7,10 @@ The key is the device token's hash **only when that hash belongs to a live devic
 trusted client IP. A client that sends a fresh made-up token on every request therefore cannot
 escape the IP limit. ``/healthz`` is exempt. Redis down → allow: a cache outage never takes the API
 down.
+
+``RATE_LIMIT_EXEMPT_IPS`` (D4, research R3) skips the limiter for exact client IPs: it holds the
+load generator's address only during a test window and is empty by default. A non-empty list warns
+at startup, logs each exempt request at debug, and adds one info line per exempt IP per minute.
 """
 
 from __future__ import annotations
@@ -34,6 +38,30 @@ VALID_HASH_TTL_S = 10 * 60
 INVALID_HASH_TTL_S = 60
 REGISTER_WINDOW_S = 10 * 60
 HEALTH_PATH = "/healthz"
+
+# One info line per exempt IP per minute. Bounded because the setting is small and static, and a
+# restart is the only way it grows.
+_EXEMPT_SUMMARY: dict[str, int] = {}
+_EXEMPT_SUMMARY_MAX = 64
+
+
+def _log_exempt(ip: str, now: datetime) -> None:
+    """Every exempt request at debug; the first in each minute at info, as the window's evidence."""
+    log.debug("ratelimit.exempt ip=%s", ip)
+    minute = int(now.timestamp() // 60)
+    if _EXEMPT_SUMMARY.get(ip) == minute:
+        return
+    if len(_EXEMPT_SUMMARY) >= _EXEMPT_SUMMARY_MAX:
+        _EXEMPT_SUMMARY.clear()
+    _EXEMPT_SUMMARY[ip] = minute
+    log.info("ratelimit.exempt ip=%s minute=%d", ip, minute)
+
+
+def warn_if_exempt_allowlist() -> None:
+    """Say at startup that the limiter is off for somebody: a test window, never a normal state."""
+    exempt = get_settings().rate_limit_exempt_ips
+    if exempt:
+        log.warning("ratelimit.exempt_enabled ips=%s", ",".join(exempt))
 
 
 def _client() -> aioredis.Redis:
@@ -86,6 +114,9 @@ async def rate_limit(
     try:
         client = _client()
         ip = client_ip(request)
+        if ip in settings.rate_limit_exempt_ips:
+            _log_exempt(ip, now)
+            return
         token = parse_header(request.headers.get("authorization"))
         hashed = token_hash(token) if token else None
         verified = await _valid_device_hash(client, session, hashed) if hashed else False

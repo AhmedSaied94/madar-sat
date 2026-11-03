@@ -199,11 +199,29 @@ check_dir() {
   fi
 }
 
+# check_admin_current: Caddy's wg0 site serves /srv/admin/current, the symlink bootstrap points at
+# releases/placeholder before the first admin deploy (D4 T039). Without it the admin answers 404.
+check_admin_current() {
+  local link=$srv_root/admin/current
+  if [[ ! -L $link ]]; then
+    log "$link is not a symlink"
+    return 1
+  fi
+  if [[ ! -f $link/index.html ]]; then
+    log "$link points at $(readlink "$link"), which has no index.html"
+    return 1
+  fi
+}
+
 # check_dirs <vps1|vps2>: the folders the D3 services mount. /srv/backup belongs to the backup
 # image's user (uid 10001), because that container runs as it and writes the dump there (B2-R1-2).
+# On VPS-1, the admin release symlink (D4).
 check_dirs() {
   local role=$1 ok=0
   check_dir "$state_dir" 750 "$(id -u)" || ok=1
+  if [[ $role == vps1 ]]; then
+    check_admin_current || ok=1
+  fi
   if [[ $role == vps2 ]]; then
     check_dir "$srv_root/backup" 700 "$app_uid" || ok=1
     check_dir "$srv_root/kuma" 755 "$(id -u)" || ok=1
@@ -241,7 +259,7 @@ require_host_setup() {
   if check_dirs "$role" && check_timers "$role"; then
     return 0
   fi
-  die "this host is missing its D3 folders or backup timers, which only root can create: run 'sudo ./madar-infra/scripts/bootstrap-vps.sh $role' on it (docs/runbooks/provision-host.md §3), then deploy again"
+  die "this host is missing its D3/D4 folders (the admin's /srv/admin/current on VPS-1) or backup timers, which only root can create: run 'sudo ./madar-infra/scripts/bootstrap-vps.sh $role' on it (docs/runbooks/provision-host.md §3), then deploy again"
 }
 
 # Put back the ACL the last render replaced, so Redis can start on it (B2-R2-11, B2-R3-2).
