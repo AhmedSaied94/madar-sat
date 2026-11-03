@@ -94,6 +94,14 @@ jobs:
             || { echo "::error::the admin site does not serve the current release symlink"; exit 1; }
           grep -q 'handle /admin/api/\*' <<<"$admin" \
             || { echo "::error::the admin site lost its /admin/api handler"; exit 1; }
+          # A-R1-8: the admin shows media-host images and audio; only that host is allowed besides 'self'.
+          csp=$(grep -o 'Content-Security-Policy "[^"]*"' <<<"$admin")
+          for directive in "default-src 'self'" \
+            "img-src 'self' https://media.{\$VPS1_IP}.sslip.io;" \
+            "media-src 'self' https://media.{\$VPS1_IP}.sslip.io;"; do
+            grep -qF "$directive" <<<"$csp" \
+              || { echo "::error::the admin CSP lacks: $directive"; exit 1; }
+          done
 
           jq -e '.hosting.headers[]
             | select(.regex == "^/r/[0-9a-f]{16}/.*$")

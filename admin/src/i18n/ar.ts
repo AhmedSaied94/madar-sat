@@ -53,6 +53,7 @@ export const shell = {
   userLabel: 'المستخدم الحالي',
   comingSoonTitle: 'هذا القسم قيد البناء',
   comingSoonBody: 'تصل شاشات الإدارة تباعاً خلال الأيام القادمة.',
+  restoring: 'جارٍ استعادة الجلسة',
 } as const;
 
 export const login = {

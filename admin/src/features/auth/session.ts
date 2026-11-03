@@ -22,6 +22,8 @@ import { bindSession, endSession, refreshSession, setAccessToken } from '../../a
 
 interface SessionValue {
   session: Session | null;
+  /** True until the first restore from the refresh cookie settles: the guard must wait, not redirect. */
+  restoring: boolean;
   signIn: (session: Session) => void;
   signOut: () => void;
 }
@@ -33,6 +35,7 @@ export const REFRESH_LEAD_S = 60;
 
 export function SessionProvider({ children }: { children: ReactNode }): ReactElement {
   const [session, setSession] = useState<Session | null>(null);
+  const [restoring, setRestoring] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The cache belongs to the session: a second editor on the same tab must never see the first
   // editor's data or versions (A-R2-10).
@@ -57,7 +60,10 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
       .then((restored) => {
         if (!cancelled) setSession(restored);
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setRestoring(false);
+      });
 
     return () => {
       cancelled = true;
@@ -95,7 +101,10 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
     };
   }, [session]);
 
-  const value = useMemo<SessionValue>(() => ({ session, signIn, signOut }), [session, signIn, signOut]);
+  const value = useMemo<SessionValue>(
+    () => ({ session, restoring, signIn, signOut }),
+    [session, restoring, signIn, signOut],
+  );
   return createElement(SessionContext.Provider, { value }, children);
 }
 

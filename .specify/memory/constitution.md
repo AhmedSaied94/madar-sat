@@ -131,7 +131,8 @@ Authorization is enforced on the server, and no client or commit ever holds a se
 - Every request is validated by Pydantic, with enums and length caps (reports ≤ 280 chars). SQL
   goes through SQLAlchemy with bound parameters only; string-built SQL is forbidden.
 - The admin relies on React escaping. Any `dangerouslySetInnerHTML` goes through DOMPurify, and
-  the CSP is `default-src 'self'`.
+  the CSP is `default-src 'self'`. The only other origin allowed is the media host, and only in
+  `img-src` and `media-src`, so crests, logos, photos and audio load.
 - Rate limits are Redis sliding windows, keyed by device token, otherwise by client IP
   (`X-Forwarded-For` trusted from Caddy only). Per-IP limits MUST be generous, because CGNAT
   puts many users behind one IP.
@@ -387,4 +388,4 @@ constitution is re-read at each delivery-phase boundary (system-design §12).
 **Runtime guidance.** `CLAUDE.md`, `madar-design/README.md` and the component READMEs give the
 day-to-day detail. They MUST stay consistent with this document.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-10-29
+**Version**: 1.2.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-11-03
