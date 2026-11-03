@@ -83,6 +83,42 @@ After a rollback, the new release's containers have been replaced, so `docker lo
 IMAGE_TAG=<sha> dc run --rm api-public
 ```
 
+## The admin deploy
+
+The admin SPA is a static bundle, so it does not ride the API image: `admin.yml` has its own `deploy`
+job (D4 T040, research R10) that runs on `master` after `check`.
+
+1. `check` uploads `admin/dist` (the `pnpm build` output its tests just approved).
+2. `deploy` joins `wg0`, rsyncs the bundle to `/srv/admin/releases/<sha>/`, and swaps
+   `/srv/admin/current` with `ln -sfn … current.new && mv -T …` — atomic, so Caddy serves either the
+   old tree or the new one.
+3. It fetches `https://10.8.0.1/` with the Caddy root CA and checks that the page names the entry
+   asset from `admin/dist/index.html` (its name carries the content hash, so it can only match the
+   bundle just built). **On a mismatch it repoints `current` at the release it read before the swap
+   and fails the job** (constitution IX).
+4. Only after the check passes does it prune: the newest 5 releases plus `placeholder`.
+
+Read it on the host:
+
+```bash
+readlink /srv/admin/current                      # releases/<sha>
+ls -1dt /srv/admin/releases/*/ | head -6
+curl -s --cacert ~/.config/madar/caddy-root.crt https://10.8.0.1/ | grep -o '/assets/index-[^"]*'
+```
+
+A failure before step 2 leaves `current` untouched. To go back to any kept release by hand:
+
+```bash
+ssh ubuntu@10.8.0.1
+sudo -iu deploy
+cd /srv/admin
+ln -sfn releases/<sha> current.new && mv -T current.new current
+readlink /srv/admin/current                      # releases/<sha>
+```
+
+Then reload nothing: Caddy follows the symlink on every request. The admin is reachable only over
+WireGuard ([admin-access.md](admin-access.md)).
+
 ## Roll back
 
 **Migrations are never reversed.** Every migration keeps the previous release working (expand/contract, constitution "Migrations"), so an older release runs on the newer schema.
@@ -227,9 +263,31 @@ What it does **not** apply:
 | Change | Applied by |
 | --- | --- |
 | `api-public`, `api-admin`, `worker-media`, `migrate` or `cli` in `vps1.yml` | The next backend deploy. To apply it now, in the "Working on VPS-1" shell: `dc up -d api-public api-admin worker-media`. |
+| A changed **network subnet** in `vps1.yml` | A full `dc down` of the attached services once, then the deploy: `up -d` cannot move a container to a re-subnetted network (D4, R1). D4's `172.30.0.0/24` is the one case. |
 | `/srv/madar/.env` | Nothing: it lives only on the host. Recreate the services that read it: `dc up -d --force-recreate api-public api-admin`, and `caddy` for `VPS1_IP`, `ACME_EMAIL` or `FIREBASE_PROJECT_ID`. |
 | `infra/firewall/`, `infra/wireguard/`, the sshd drop-in, Docker's start order | `bootstrap-vps.sh` only: [firewall-changes.md](firewall-changes.md) |
 | `vps2.yml`, or `infra/` on VPS-2 | `backend.yml`'s `deploy-vps2` on the next backend push, or `deploy.sh --host vps2 <tag>` by hand ([workers.md](workers.md)). |
+
+### The one-time network recreation (D4)
+
+`vps1.yml` fixes the default network to `172.30.0.0/24` with gateway `172.30.0.1`, because the public
+app trusts that gateway as Caddy's peer (`TRUSTED_PROXIES`, R1). Docker only applies a subnet when it
+creates the network, so the first deploy after this change needs one outage:
+
+```bash
+ssh ubuntu@10.8.0.1 && sudo -iu deploy && cd /srv/madar/infra
+export IMAGE_TAG=$(cat /srv/madar/current_tag)
+dc() { docker compose --env-file /srv/madar/.env -f compose/vps1.yml "$@"; }
+dc down                                   # the API, PostgreSQL and Redis stop: a few seconds of 502
+docker network rm madar_default 2>/dev/null || true
+docker compose --env-file /srv/madar/.env -f compose/vps1.yml up -d --wait
+docker network inspect madar_default --format '{{(index .IPAM.Config 0).Subnet}} {{(index .IPAM.Config 0).Gateway}}'
+# 172.30.0.0/24 172.30.0.1
+```
+
+Then confirm the API sees real client IPs (two devices on different networks get separate buckets,
+[response-cache-and-limits.md](response-cache-and-limits.md#the-ip-limit)) and that
+`/srv/madar/.env` holds `TRUSTED_PROXIES_PUBLIC=127.0.0.1,172.30.0.1` only if you changed the default.
 
 If CI can't sync (WireGuard or the deploy key is broken), apply it by hand from your machine, over WireGuard:
 
