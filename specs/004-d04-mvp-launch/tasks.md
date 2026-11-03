@@ -105,8 +105,8 @@ Tests first (seen failing) → code → host or device validation → runbook an
 - [X] T004 [US1] Make `client_ip()` in `backend/app/auth/limits.py` read `get_settings().trusted_proxies` instead of `TRUSTED_PROXY`. Keep the right-most-untrusted-hop rule. Every hop in the list is skipped, not only `10.8.0.1`. The admin app keeps the default. T001 passes.
 - [ ] T005 [US1] In `backend/app/api/ratelimit.py`, return early from `rate_limit()` when `client_ip(request)` is in `settings.rate_limit_exempt_ips`, right after the IP is derived (around `:88`). Log `ratelimit.exempt` at debug per request plus one info summary a minute, and log a warning at app startup in `backend/app/public.py` when the list is non-empty. T002 passes. Then file `SR-1` (R1) in `specs/004-d04-mvp-launch/security-review.md` as `fixed (<sha>)` once B2's T034 is deployed.
 - [X] T006 [P] [US1] Write `backend/loadtest/mvp.js` (k6), following research R2:
-  - **Scenario `live`:** `constant-arrival-rate` at `__ENV.LIVE_RPS` (default 170) for `__ENV.DURATION` (default `10m`) on `GET /v1/live`. Half the iterations resend the last `ETag` as `If-None-Match`.
-  - **Scenario `matches`:** at `__ENV.MATCHES_RPS` (default 50) on `GET /v1/matches?date=` for today to +3 (UTC dates), with 10 % `GET /v1/matches/<id>` from ids seen.
+  - **Scenario `live`:** `constant-arrival-rate` at `__ENV.LIVE_RPS` (default 170) for `__ENV.DURATION` (default `10m`) on `GET /v1/live`. A share `__ENV.REVALIDATE_SHARE` (default 0.5) resends the last `ETag` as `If-None-Match`.
+  - **Scenario `matches`:** at `__ENV.MATCHES_RPS` (default 50) on `GET /v1/matches?from=&to=` (one UTC day each, `Z` bounds) for today to +3, with 10 % `GET /v1/matches/<id>` from ids seen.
   - **Tags:** each request is tagged `cache:hit` or `cache:miss` from the API's cache response header (or, if none exists, `304`/repeat requests count as `hit` and the first request per URL per minute as `miss`; record which in the report).
   - **Thresholds:** `http_req_duration{cache:hit}` `p(95)<150` on both scenarios; `http_req_duration{cache:miss}` `p(95)<400`; `http_req_failed<0.01`, with a `responseCallback` that counts only `200` and `304` as success, so `429` fails.
   - **Output:** a `handleSummary` that writes JSON for the report.
@@ -146,6 +146,14 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 - **T005 is half done:** the exempt-IP early return, the `ratelimit.exempt` logs, the once-a-minute summary and the startup warning are in and green (T002). Its last clause — `SR-1` filed as `fixed (<sha>)` — needs B2's T034 deployed, so it stays open.
 - **Not run here (they need the hosts, or a review that this session does not perform):** T008 (two networks), T009 (the load test and `docs/load-tests/…`), T010–T011 (the security review and the other lanes' `SR-n` tasks), T012 (the host review).
 - **Checked:** `ruff check` and `ruff format --check` clean, `mypy --strict app` clean, `pytest` **1374 passed, 4 failed**; the four are `tests/adapters/test_homebox_acl.py`, which fail on this machine because the dev Redis requires a password (the environment note in `docs/owner-actions.md` from D3), not from this lane. `export-openapi` writes no change, so the contract is untouched.
+
+### Review fixes (round 1)
+
+From [reviews/b1-round-1.md](reviews/b1-round-1.md).
+
+- [X] B1-R1-1 Fix the `matches` scenario in `backend/loadtest/mvp.js`: it calls `/v1/matches?date=…`, which the API rejects with 422 (the route requires `from` and `to`, `backend/app/api/public/matches.py:30-31`). Send `from`/`to` as UTC day bounds (ISO, `Z`) for today to +3, and add a `check()` that a 200 body has a `data` array. Correct the `date=` wording in T006, research R2 and `docs/runbooks/load-testing.md`. Prove it with a short local run against `uvicorn app.public:app` that shows zero 422s. (HIGH, per FR-001, FR-002, US1 AC2)
+- [X] B1-R1-2 Hold `/v1/live`'s full responses to 150 ms in `backend/loadtest/mvp.js`: today every request without `If-None-Match` is tagged `cache:miss` and gets the 400 ms budget (`:68-73`, `:110-113`). Add `http_req_duration{scenario:live}: ['p(95)<150']` (and a per-scenario threshold for `matches`), tag `miss` only as T006 says, and make the `If-None-Match` share an `-e` variable. Show with `k6 inspect` that the thresholds exist. (HIGH, per US1 AC1, FR-002, SC-001)
+- [X] B1-R1-3 Make `docs/runbooks/load-testing.md`'s open and close checks real (`:72`, `:120`): `docker logs … | grep ratelimit.exempt_enabled` never sees the warning, because it goes to stderr, so step 4's `# 0` can't fail. Check the effective value instead (`docker exec madar-api-public-1 printenv RATE_LIMIT_EXEMPT_IPS`, empty after closing), and run every docker command as `deploy` (`sudo -iu deploy docker …`). (HIGH, per the spec edge case "the allowlist is left filled" and T007)
 
 ---
 
@@ -271,6 +279,14 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   **After the merge.** None of these can run before the branch is deployed: the mirror has no `r/<hash>/` yet, `admin.yml`'s deploy job starts on `master`, and the first `web-v*` tag is the owner's. They are listed in `docs/owner-actions.md` under D4 Lane B2 "After merge".
 - [x] T049 [US3] Add B2's D4 items to `docs/owner-actions.md`: `TRUSTED_PROXIES_PUBLIC` only if the default changes, the one-time network recreation, the Kuma monitor change, the backup heartbeat result from T030, and tagging `web-v0.1.0`, each with its runbook link.
 
+### Review fixes (round 1)
+
+From [reviews/b2-round-1.md](reviews/b2-round-1.md).
+
+- [X] B2-R1-1 Make the `web-v*` release job readable past its mirror check in `.github/workflows/pwa.yml` (`:187`): the `release` job runs `jq … app/env/prod.json`, which exists only in the `build` job, so every release dies before the live deploy. Read the mirror from the artifact's `web_release/release.json` (`.mirror`) or a `build` job output, keep the `https://` check, and derive the `Origin` header from the Firebase project instead of hard-coding `madar-sat.web.app`. Prove it by running the step's script in a clean checkout with only the artifact present. (HIGH, per T045, FR-015, US3 AC6)
+- [X] B2-R1-2 Stop the merge from breaking the admin site: only `bootstrap-vps.sh` creates `/srv/admin/releases/placeholder` and the `current` symlink, `infra/scripts/deploy.sh` doesn't check them, and the owner's D4 "Before merge" list doesn't say to re-run the bootstrap. So the Caddy reload serves 404, and `.github/workflows/admin.yml:95`'s `readlink` fails with a bare exit 1. Add a `deploy.sh` check that fails naming `sudo bootstrap-vps.sh vps1`, give the `readlink` an `::error::` with the same fix, and put the bootstrap re-run first in `docs/owner-actions.md` D4 B2 "Before merge" and in `docs/runbooks/README.md`'s setup order. Add the missing-`current` case to `infra.yml`'s checks. (HIGH, per FR-020, US4 AC1, infra/CLAUDE.md)
+- [X] B2-R1-3 Put the admin `deploy` job (`.github/workflows/admin.yml:70-72`) and the PWA `release` job (`pwa.yml`) in `concurrency: deploy-vps1`. Give `.github/actions/vps1-sync` an input that skips the `infra/` rsync (`action.yml:62`) and use it in both jobs, so they don't overwrite `/srv/madar/infra/`. In `pwa.yml`, refuse a tag that isn't an ancestor of `origin/master`. Update `docs/runbooks/deploy-and-rollback.md:36`. Add an `infra.yml` check that every job using `vps1-sync` is in `deploy-vps1`. (HIGH, per constitution IX and deploy-and-rollback.md "deploys never overlap")
+
 ---
 
 ## Lane A
@@ -314,6 +330,13 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
   **Open:** needs the deployed admin (B2's T040); nothing here can be captured from the mock.
 - [x] T057 [US4] Add Lane A's D4 items to `docs/owner-actions.md`: the polish list, the test account and test match, and the live smoke runs.
+
+### Review fixes (round 1)
+
+From [reviews/a-round-1.md](reviews/a-round-1.md).
+
+- [X] A-R1-1 Fix the live finder in `admin/e2e/smoke.spec.ts` (`findMarkedMatch`, `:73-81`): it calls `stadium.isVisible()` without waiting while `MatchEditor` still shows `EditorSkeleton`, and `.catch(() => false)` hides errors. So every live row reads as unmarked and the run aborts with "found 0". Wait for the stadium field before reading it, let read errors fail the run, and add mock-mode `page.route` stubs proving that 0 and 2 marked rows abort with zero PATCH requests and 1 marked row is the one edited. (HIGH, per FR-022, US4 AC3, contracts/e2e-smoke.md step 3)
+- [X] A-R1-2 Stop mock mode from editing a real match in `admin/e2e/smoke.spec.ts` and `admin/playwright.config.ts`: mock mode reads `E2E_EMAIL`/`E2E_PASSWORD`, edits `ids[0]` without a marker check, and locally reuses any server on :5173, which can be `pnpm dev:wg` proxying to the deployed API. In mock mode use only the Prism fixture credentials, reject an `E2E_TARGET` other than `mock` or `live`, and don't reuse a running dev server (or use a dedicated port). Also make missing live variables (`E2E_EMAIL`, `E2E_PASSWORD`, `E2E_PUBLIC_API`, a non-blank `E2E_MATCH_MARKER`) throw instead of skipping. (HIGH, per FR-022, the spec edge case "the Playwright test runs against production data")
 
 ---
 
@@ -403,6 +426,13 @@ Lane M's code is in on `d04-m` in `../madar-m`, rebased on this branch.
 - **Checked:** `flutter analyze` clean; the app suite **657 tests green** on the test box with **90.6 % line coverage excluding generated code**; `node --test app/test_web/` 12/12; a real `flutter build web` staged end to end (hash `5db26a4bd373e254`, 46.2 MB raw → 12.0 MB in brotli, one release hash referenced by the shell, `.br` and `.gz` beside every release file).
 - **Not run here (a host, a console or a device is needed):** T069 (the preview channel), T070 (the `app-v0.3.0` tag), T071 (the bug bash — `bug-bash-results.md` is a template with "not run" per platform), T072 (the live timings).
 - **For the other lanes:** `pwa.yml` must `apt-get install -y brotli` before staging (the script refuses to run without it), and `app.yml` still needs B2's T046 step for `node --test app/test_web/`. The spec's `data-model.md` layout does not list `sw_core.mjs` at the root (or that 3.47.7 emits `flutter_service_worker.js`/`flutter.js`, which the stage script deletes).
+
+### Review fixes (round 1)
+
+From [reviews/m-round-1.md](reviews/m-round-1.md).
+
+- [X] M-R1-1 Make `app/web/sw.js` registrable: it starts with a static `import` from `./sw_core.mjs`, but `app/web/flutter_bootstrap.js:37` registers it as a classic worker (`register('/sw.js')`), which throws a SyntaxError. So no worker ever controls the page: no cached repeat open, no offline app, no release replacement. Either register with `{ type: 'module' }` (confirm iOS Safari ≥ 16.4 supports module service workers) or have `tool/stage_web_release.sh` emit a classic `sw.js` with the core inlined. Add a test under `app/test_web/` that loads `sw.js` the way it is registered, and log a registration failure without `?perf`. (HIGH, per FR-038, US2 AC9–11, T066)
+- [X] M-R1-2 Make the bootstrap's mirror fallback real in `app/web/flutter_bootstrap.js` (`:43-64`): on Flutter 3.47.7, `_flutter.loader.load()` always passes a callback, injects the entrypoint `<script>` and resolves without waiting or rejecting (`flutter_js/src/entrypoint_loader.js:62-65, 118-128`), so a blocked mirror never reaches the `catch` and the splash never leaves. Detect the entrypoint failure yourself (an `error` listener on the injected script, or a probe, plus a timeout for a hung mirror), then load once from the own origin; the loader's `_scriptLoaded` guard means a second `load()` won't inject again. Add a node test that stubs `_flutter.loader` and a failing mirror and expects one own-origin load. (HIGH, per US2 AC10, FR-038, T067)
 
 ---
 
