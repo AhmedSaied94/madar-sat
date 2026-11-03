@@ -73,8 +73,8 @@ Every service logs JSON with a `ts`, and the importers add `source` and `run`. `
 | `celery-maintenance`, `celery-imports`, `celery-notifications` | That queue has no worker, so its tasks pile up in Redis | `dc ps` on VPS-2, then `dc logs --tail 100 <the worker>` | [workers.md](workers.md#deploy-vps-2); a stopped `beat` alone shows as `celery-maintenance` and nothing scheduled |
 | `backup-db` | Last night's database backup did not report | `systemctl list-timers 'backup-*'`; `journalctl -u backup-db.service -n 50`; `restic snapshots --tag db --latest 3` | [backups.md](backups.md#run-one-by-hand). A backup with no push URL now refuses to run, so an empty `KUMA_PUSH_URL_BACKUP_DB` is the first thing to check |
 | `backup-media`, `backup-media-weekly` | The media mirror or the weekly snapshot did not report | The same journal check on VPS-1, plus `/srv/media` free space | [backups.md](backups.md#run-one-by-hand) |
-| `⛔ المصدر ‹name›` | The source failed N times in a row and is paused | `import_runs` for that source, then the run's `log` | [source-alerts.md](source-alerts.md): fix or wait, then resume in A13. If it is a blocked host, [§4](#4-a-source-is-blocked) |
-| `⚠️ المصدر ‹name›` | A run succeeded and found nothing | The same `report runs` output, and the source's page by hand | [source-alerts.md](source-alerts.md): a layout change is a parser fix with a saved-page test |
+| `⛔ المصدر ‹name›` | The source failed N times in a row and is paused | `import_runs` for that source, then the run's `log` | [source-alerts.md](source-alerts.md) (the breaker section): fix or wait, then resume in A13. If it is a blocked host, [§4](#4-a-source-is-blocked) |
+| `⚠️ المصدر ‹name›` | A run succeeded and found nothing | The same `report runs` output, and the source's page by hand | [source-alerts.md](source-alerts.md) (the zero-items section): a layout change is a parser fix with a saved-page test |
 | A slot is missing in `report runs` | The schedule fired but no run row exists: the queue had no consumer, or the fetch never reached `ingest` | `dc logs worker-imports beat` for `scheduled`/`skipped`, and whether it names `scrape_home` | [§4](#4-a-source-is-blocked) |
 
 The report is the evidence for the last two rows:
@@ -99,7 +99,7 @@ to move the fetch, not to raise the retry count:
 | To the bridge | Leave `legacy` (the Sat Air bridge) enabled; it needs nothing on the home box | The source is down and the fixtures are already in Sat Air |
 
 The variables and the per-source commands are in
-[imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches).
+[imports-and-sources.md](imports-and-sources.md#switch-where-a-source-fetches).
 
 While a fetch queue has no consumer, the tasks expire after two hours and nothing is replayed: a
 gap in `report runs` is the visible result. Restore the consumer, then start one run by hand from A13
@@ -141,5 +141,5 @@ alert.
 | Telegram is silent while Kuma is red | Kuma's notification is unset or failing: [uptime-kuma.md §2](uptime-kuma.md#2-the-telegram-notification). A red monitor with no Telegram is the dangerous state |
 | No Kuma alert at all, and the host is unreachable | [break-glass.md](break-glass.md); Oracle may have stopped the instance |
 | A push monitor goes red every night at the same minute | The job never runs: `systemctl list-timers` and `journalctl -u <unit>`; the timers are installed by the bootstrap, not by a deploy ([backups.md](backups.md#check-last-nights-backup)) |
-| A source stays paused after a fix | Resume it in A13 ([imports-and-sources.md](imports-and-sources.md#pause-and-resume)); the breaker does not clear itself |
+| A source stays paused after a fix | Resume it in A13 ([imports-and-sources.md](imports-and-sources.md#pause-resume-and-the-breaker)); the breaker does not clear itself |
 | The mirror is unreachable from outside but fine on the host | The certificate or the firewall: [tls-certificates.md](tls-certificates.md), then [exposure-check.md](exposure-check.md) |

@@ -286,7 +286,7 @@ docker network inspect madar_default --format '{{(index .IPAM.Config 0).Subnet}}
 ```
 
 Then confirm the API sees real client IPs (two devices on different networks get separate buckets,
-[response-cache-and-limits.md](response-cache-and-limits.md#the-ip-limit)) and that
+[response-cache-and-limits.md](response-cache-and-limits.md#the-rate-limits)) and that
 `/srv/madar/.env` holds `TRUSTED_PROXIES_PUBLIC=127.0.0.1,172.30.0.1` only if you changed the default.
 
 If CI can't sync (WireGuard or the deploy key is broken), apply it by hand from your machine, over WireGuard:
