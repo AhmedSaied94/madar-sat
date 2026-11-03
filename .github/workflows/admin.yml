@@ -52,3 +52,92 @@ jobs:
       - run: pnpm build
       - run: ./scripts/check-literals.sh
       - run: ./scripts/check-token-copy.sh
+      # The deploy job never builds: it ships exactly the bundle these checks approved (R10).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: admin-dist
+          path: admin/dist
+          if-no-files-found: error
+
+  # D4 T040 (research R10, contracts/ops-and-ci.md). On `master` only, after `check`: rsync the
+  # bundle to /srv/admin/releases/<sha>/, swap the `current` symlink atomically, prove the served
+  # page is the new one, and only then prune. A failed check puts the previous release back
+  # (constitution IX).
+  deploy:
+    needs: [check]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: deploy-vps1-admin
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: admin-dist
+          path: admin/dist
+      - id: sync
+        uses: ./.github/actions/vps1-sync
+        with:
+          wg-config: ${{ secrets.WG_CI_CONFIG }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: Copy the bundle and swap the symlink
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          read -ra ssh <<<"$SSH_COMMAND"
+          # The release Caddy's wg0 site serves is `/srv/admin/current`; remember it before the swap.
+          previous=$("${ssh[@]}" vps1 'readlink /srv/admin/current') < /dev/null
+          echo "PREVIOUS_RELEASE=$previous" >> "$GITHUB_ENV"
+          "${ssh[@]}" vps1 "install -d -m 755 /srv/admin/releases/$SHA" < /dev/null
+          rsync -a --delete -e "$SSH_COMMAND" admin/dist/ "vps1:/srv/admin/releases/$SHA/"
+          # Relative, so the mount keeps working; `mv -T` replaces a symlink atomically.
+          "${ssh[@]}" vps1 "ln -sfn releases/$SHA /srv/admin/current.new && mv -T /srv/admin/current.new /srv/admin/current" < /dev/null
+      - name: The served page is the bundle CI just built
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+        run: |
+          set -euo pipefail
+          read -ra ssh <<<"$SSH_COMMAND"
+          restore() {
+            "${ssh[@]}" vps1 "ln -sfn '$PREVIOUS_RELEASE' /srv/admin/current.new && mv -T /srv/admin/current.new /srv/admin/current" < /dev/null
+            echo "::error::the health check failed; /srv/admin/current is back on $PREVIOUS_RELEASE"
+          }
+          ca="$RUNNER_TEMP/caddy-root.crt"
+          "${ssh[@]}" vps1 'docker exec madar-caddy-1 cat /data/caddy/pki/authorities/local/root.crt' < /dev/null > "$ca"
+          # The entry asset name carries the content hash, so it only matches for this bundle.
+          entry=$(grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' admin/dist/index.html | head -1 || true)
+          if [[ -z $entry ]]; then
+            restore
+            echo "::error::admin/dist/index.html names no entry asset"
+            exit 1
+          fi
+          served=$(mktemp)
+          if ! curl -sS --fail --cacert "$ca" https://10.8.0.1/ -o "$served"; then
+            restore
+            exit 1
+          fi
+          if ! grep -qF "$entry" "$served"; then
+            restore
+            echo "::error::https://10.8.0.1/ does not serve $entry"
+            exit 1
+          fi
+          echo "Serving $entry from /srv/admin/current" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prune old releases
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+        run: |
+          set -euo pipefail
+          read -ra ssh <<<"$SSH_COMMAND"
+          # Keep the newest 5 plus the bootstrap page the symlink falls back to.
+          "${ssh[@]}" vps1 'ls -1dt /srv/admin/releases/*/ | grep -v "/placeholder/$" | tail -n +6 | xargs -r rm -rf' < /dev/null
+      - name: Leave WireGuard
+        if: always()
+        run: |
+          sudo wg-quick down wg0 || true
+          rm -rf "$RUNNER_TEMP/madar-ssh"
