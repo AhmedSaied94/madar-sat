@@ -39,6 +39,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [admin-access.md](admin-access.md) | Running the admin app on an editor's machine: `pnpm dev:wg` over WireGuard, Caddy's root CA, the Prism mock and its `?mock=` states |
 | [push-notifications.md](push-notifications.md) | FCM credentials, the reminder scheduler and dispatcher, reading and re-sending outbox rows, the audience query |
 | [response-cache-and-limits.md](response-cache-and-limits.md) | What `/v1` caches and for how long, turning it off, the device/IP/register limits and a CGNAT false positive |
+| [load-testing.md](load-testing.md) | The k6 load test: the allowlist window on VPS-1, the run from VPS-2, the CPU sampling, closing the window again, and the report |
 | [secrets.md](secrets.md) | Where every secret lives, rotating them, gitleaks failures and leaks |
 | [local-dev.md](local-dev.md) | PostgreSQL, Redis and HTTPS Caddy on your machine; the test settings |
 | [ci-workflows.md](ci-workflows.md) | What each workflow checks, common failures, re-runs, the T067 proofs |
@@ -125,6 +126,7 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
 | A reminder didn't arrive, or FCM rejects the credentials | [push-notifications.md](push-notifications.md) |
 | A 429 appears in the API log, or public reads feel slow | [response-cache-and-limits.md](response-cache-and-limits.md) |
+| You are about to load-test the API, or p95 misses its target | [load-testing.md](load-testing.md) |
 | A new editor, a forgotten password, someone leaves, or an admin session may have leaked | [staff-accounts.md](staff-accounts.md) |
 | An editor needs the admin app on their machine, or the mock's states | [admin-access.md](admin-access.md) |
 | A device needs the private network, or one is lost | [private-network.md "Peers"](private-network.md#peers) |
