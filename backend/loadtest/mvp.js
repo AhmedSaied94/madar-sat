@@ -10,18 +10,21 @@
 // `docs/runbooks/load-testing.md`.
 //
 // Two open-model scenarios, because latency must not throttle the load:
-//   live     constant arrival rate on GET /v1/live; every other iteration revalidates the last ETag
-//   matches  constant arrival rate on GET /v1/matches?date= for today to +3 (UTC dates), with
+//   live     constant arrival rate on GET /v1/live; a share of the iterations (`REVALIDATE_SHARE`,
+//            default 0.5) resends the last ETag as If-None-Match
+//   matches  constant arrival rate on GET /v1/matches?from=&to= for one UTC day, today to +3, with
 //            about 10 % of the iterations reading one match detail from ids already seen
 //
-// Cache tag: the API sends no cache response header, so the tag is request-side. A request that
-// carries `If-None-Match` is `cache:hit`; a first fetch of a URL (and, in `matches`, the first
-// fetch per minute) is `cache:miss`. The report says so (`cache_tags`), and the runbook reads it
-// next to the API's own `rc:` counters.
+// Cache tag: the API sends no cache response header, so the tag is request-side (T006). The first
+// fetch of a URL per minute, per VU, is `cache:miss`; every repeat (a 304 or a full 200 from the
+// API's response cache) is `cache:hit`. The report says so (`cache_tags`), and the runbook reads it
+// next to the API's own `rc:` counters. Each scenario also has its own p95 threshold, so a full
+// `/v1/live` 200 is held to 150 ms whatever its tag.
 //
 // A `429` is never a pass: the response callback accepts only `200` and `304`, and the report
 // counts the `429`s separately.
 
+import { check } from 'k6';
 import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 
@@ -33,6 +36,10 @@ if (!HOST) {
 const DURATION = __ENV.DURATION || '10m';
 const LIVE_RPS = Number(__ENV.LIVE_RPS || 170);
 const MATCHES_RPS = Number(__ENV.MATCHES_RPS || 50);
+const REVALIDATE_SHARE = Number(__ENV.REVALIDATE_SHARE ?? 0.5);
+if (!(REVALIDATE_SHARE >= 0 && REVALIDATE_SHARE <= 1)) {
+  throw new Error('REVALIDATE_SHARE must be between 0 and 1');
+}
 
 // Only 200 and 304 are success, so a 429 (the limiter answering the generator) fails the run.
 http.setResponseCallback(http.expectedStatuses(200, 304));
@@ -67,9 +74,14 @@ export const options = {
   },
   thresholds: {
     // FR-002: cached reads p95 < 150 ms on both scenarios, uncached p95 < 400 ms, < 1 % errors.
+    // US1 AC1: every /v1/live response (304 or full 200) p95 < 150 ms; matches as a whole < 400 ms.
     'http_req_duration{cache:hit}': ['p(95)<150'],
     'http_req_duration{cache:miss}': ['p(95)<400'],
+    'http_req_duration{scenario:live}': ['p(95)<150'],
+    'http_req_duration{scenario:matches}': ['p(95)<400'],
     http_req_failed: ['rate<0.01'],
+    // A 200 from /v1/matches must be the envelope with a `data` array.
+    checks: ['rate>0.99'],
   },
   summaryTrendStats: ['min', 'avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
   discardResponseBodies: false,
@@ -77,6 +89,7 @@ export const options = {
 
 // Per-VU state: each VU has its own module instance, which is what makes a revalidation realistic.
 let liveEtag = null;
+let liveMinute = -1;
 let matchEtags = {};
 let matchMinutes = -1;
 let matchIds = [];
@@ -100,20 +113,27 @@ function record(response, cacheHit) {
   }
 }
 
-function utcDate(offsetDays) {
-  const day = new Date();
-  day.setUTCDate(day.getUTCDate() + offsetDays);
-  return day.toISOString().slice(0, 10);
+// The route takes a `from`/`to` window (timezone-aware, at most 8 days), not a date: one UTC day.
+function utcDayWindow(offsetDays) {
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() + offsetDays);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  const iso = (day) => day.toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return `from=${encodeURIComponent(iso(start))}&to=${encodeURIComponent(iso(end))}`;
 }
 
 export function live() {
-  const revalidate = liveEtag !== null && __ITER % 2 === 1;
+  const minute = Math.floor(Date.now() / 60000);
+  const firstThisMinute = minute !== liveMinute;
+  liveMinute = minute;
+  const revalidate = liveEtag !== null && Math.random() < REVALIDATE_SHARE;
   const response = http.get(`${HOST}/v1/live`, {
-    tags: { cache: revalidate ? 'hit' : 'miss' },
+    tags: { cache: firstThisMinute ? 'miss' : 'hit' },
     headers: revalidate ? { 'If-None-Match': liveEtag } : {},
   });
 
-  record(response, revalidate);
+  record(response, !firstThisMinute);
   const etag = headerValue(response, 'etag');
   if (etag) {
     liveEtag = etag;
@@ -129,7 +149,7 @@ export function matches() {
   }
 
   const detail = matchIds.length > 0 && Math.random() < 0.1;
-  const path = detail ? `/v1/matches/${matchIds[Math.floor(Math.random() * matchIds.length)]}` : `/v1/matches?date=${utcDate(__ITER % 4)}`;
+  const path = detail ? `/v1/matches/${matchIds[Math.floor(Math.random() * matchIds.length)]}` : `/v1/matches?${utcDayWindow(__ITER % 4)}`;
   const url = `${HOST}${path}`;
   const known = matchEtags[path] || null;
   const revalidate = known !== null;
@@ -146,9 +166,15 @@ export function matches() {
   }
 
   if (!detail && response.status === 200) {
+    let body = null;
     try {
-      const body = response.json();
-      const rows = (body && body.data) || [];
+      body = response.json();
+    } catch (error) {
+      // Not JSON: the check below fails it.
+    }
+    const rows = body && Array.isArray(body.data) ? body.data : null;
+    check(response, { 'matches 200 has a data array': () => rows !== null });
+    if (rows !== null) {
       for (const row of rows) {
         if (row && row.id !== undefined) {
           matchIds.push(row.id);
@@ -157,8 +183,6 @@ export function matches() {
       if (matchIds.length > 50) {
         matchIds = matchIds.slice(-50);
       }
-    } catch (error) {
-      // A body that isn't the envelope is already an error share and a threshold miss.
     }
   }
 }
@@ -200,7 +224,9 @@ export function handleSummary(data) {
     live_rps: LIVE_RPS,
     matches_rps: MATCHES_RPS,
     duration: DURATION,
-    cache_tags: 'request-side: If-None-Match sent = cache:hit, first fetch of a URL = cache:miss (the API sends no cache response header)',
+    revalidate_share: REVALIDATE_SHARE,
+    cache_tags: 'request-side: first fetch of a URL per minute per VU = cache:miss, every repeat = cache:hit (the API sends no cache response header)',
+    checks_passed: metricValues(data, 'checks').rate ?? null,
     totals: {
       requests: total,
       error_rate: metricValues(data, 'http_req_failed').rate || 0,
@@ -226,6 +252,8 @@ export function handleSummary(data) {
     `all     p50 ${report.latency_ms.all.p50_ms} ms  p95 ${report.latency_ms.all.p95_ms} ms  p99 ${report.latency_ms.all.p99_ms} ms`,
     `hit     p95 ${report.latency_ms.cache_hit.p95_ms} ms (target < 150)`,
     `miss    p95 ${report.latency_ms.cache_miss.p95_ms} ms (target < 400)`,
+    `live    p95 ${report.latency_ms.live.p95_ms} ms (target < 150, every response)`,
+    `matches p95 ${report.latency_ms.matches.p95_ms} ms (target < 400)`,
     ...Object.entries(report.thresholds).map(
       ([name, rules]) => `${name} ${Object.entries(rules).map(([rule, ok]) => `${rule} ${ok ? 'PASS' : 'FAIL'}`).join(' ')}`,
     ),

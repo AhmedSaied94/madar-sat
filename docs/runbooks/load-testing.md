@@ -15,18 +15,28 @@ installed on the host.
 
 | Scenario | Rate (default) | Requests |
 | --- | --- | --- |
-| `live` | `LIVE_RPS` = 170/s for `DURATION` = 10m | `GET /v1/live`; every other iteration resends the last `ETag` as `If-None-Match` |
-| `matches` | `MATCHES_RPS` = 50/s for `DURATION` | `GET /v1/matches?date=` for today to +3 (UTC dates), and about 10 % `GET /v1/matches/<id>` from ids already seen |
+| `live` | `LIVE_RPS` = 170/s for `DURATION` = 10m | `GET /v1/live`; a share `REVALIDATE_SHARE` (default `0.5`) resends the last `ETag` as `If-None-Match` |
+| `matches` | `MATCHES_RPS` = 50/s for `DURATION` | `GET /v1/matches?from=<day>T00:00:00Z&to=<day+1>T00:00:00Z` for one UTC day, today to +3, and about 10 % `GET /v1/matches/<id>` from ids already seen |
 
-Both use `constant-arrival-rate`, so a slow response never lowers the load. Thresholds encode FR-002:
+Both use `constant-arrival-rate`, so a slow response never lowers the load. Thresholds encode FR-002
+and US1 AC1:
 
 - `http_req_duration{cache:hit}` `p(95)<150` and `http_req_duration{cache:miss}` `p(95)<400`, over both scenarios;
+- `http_req_duration{scenario:live}` `p(95)<150` over **every** `/v1/live` response, full `200`s
+  included, and `http_req_duration{scenario:matches}` `p(95)<400`;
+- `checks` `rate>0.99`: a `200` from `/v1/matches` must be the envelope with a `data` array;
 - `http_req_failed<0.01`, with a response callback that accepts **only** `200` and `304`, so a `429`
   (the limiter answering the generator) fails the run instead of passing as a client error.
 
-The `cache` tag is **request-side**, because the API sends no cache response header: a request that
-carries `If-None-Match` is `cache:hit`, and a first fetch of a URL, or the first fetch per minute in
-`matches`, is `cache:miss`. Read it beside the API's own `cache_hit` / `cache_miss` lines, not
+`k6 inspect` lists them without sending a request:
+
+```bash
+docker run --rm -i grafana/k6:2.3.0 inspect -e HOST=https://api.<VPS1_IP>.sslip.io - < backend/loadtest/mvp.js
+```
+
+The `cache` tag is **request-side**, because the API sends no cache response header: the first fetch
+of a URL per minute (per k6 VU) is `cache:miss`, and every repeat, `304` or a full `200` from the
+response cache, is `cache:hit`. Read it beside the API's own `cache_hit` / `cache_miss` lines, not
 instead of them.
 
 At the end, `handleSummary` prints a text block (requests, error share, `429` count, `304` share,
@@ -35,17 +45,20 @@ cache-hit share, p50/p95/p99, and each threshold as `PASS`/`FAIL`) and writes th
 
 ## 1. Confirm the address VPS-1 sees for VPS-2
 
-In the "Working on VPS-1" shell ([deploy-and-rollback](deploy-and-rollback.md#working-on-vps-1)),
-note the limiter's current keys, then send one request from VPS-2:
+Every VPS-1 command below runs in the "Working on VPS-1" shell
+([deploy-and-rollback](deploy-and-rollback.md#working-on-vps-1)), which is `deploy` (`sudo -iu
+deploy`, the user in the docker group). Commands run from your machine use `sudo -iu deploy docker
+…` over the `madar-vps1` / `madar-vps2` SSH aliases. Note the limiter's current keys, then send one
+request from VPS-2:
 
 ```bash
-# VPS-1
+# VPS-1, as deploy
 dc exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --scan --pattern "rl:ip:*"'
 ```
 
 ```bash
-# VPS-2 (ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118)
-curl -sS -o /dev/null -w '%{http_code}\n' https://api.<VPS1_IP>.sslip.io/v1/live
+# your machine
+ssh madar-vps2 "curl -sS -o /dev/null -w '%{http_code}\n' https://api.<VPS1_IP>.sslip.io/v1/live"
 ```
 
 Scan again on VPS-1: the new `rl:ip:<ip>:<minute>` key holds **VPS-2's public address** — that is the
@@ -65,15 +78,20 @@ other value alone:
 RATE_LIMIT_EXEMPT_IPS=203.0.113.7
 ```
 
-Then recreate the public API and confirm it noticed:
+Then recreate the public API and confirm the running container has the value. Check the effective
+setting, not the log: the startup warning goes to stderr, which a plain `docker logs … | grep`
+never sees.
 
 ```bash
+# VPS-1, as deploy
 dc up -d --force-recreate api-public
-docker logs --tail 50 madar-api-public-1 | grep ratelimit.exempt_enabled
+docker exec madar-api-public-1 sh -c 'test -n "$RATE_LIMIT_EXEMPT_IPS" && echo "OPEN: $RATE_LIMIT_EXEMPT_IPS" || { echo "still closed"; exit 1; }'
+# OPEN: 203.0.113.7
+docker logs --tail 50 madar-api-public-1 2>&1 | grep ratelimit.exempt_enabled   # the startup warning, for the report
 ```
 
 (The "Working on VPS-1" shell exports `IMAGE_TAG`; without it Compose wants the unusable `none`
-image.)
+image.) `still closed` means the `.env` edit or the recreate didn't take: fix it before step 3.
 
 The warning line lists the addresses. From now on every exempt request logs `ratelimit.exempt at
 debug` and one `info` line per minute: that is the window's evidence for the report. The `api-admin`
@@ -84,7 +102,7 @@ app is untouched (no limiter), and `/healthz` is exempt either way.
 Start the CPU and memory sample on VPS-1 first, in its own shell, so it covers the whole run:
 
 ```bash
-# VPS-1: every 10 s, UTC timestamps, both the API and Caddy
+# VPS-1, as deploy: every 10 s, UTC timestamps, both the API and Caddy
 for _ in $(seq 1 60); do
   date -u +%FT%TZ
   docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' madar-api-public-1 madar-caddy-1
@@ -96,9 +114,10 @@ Then from the repository checkout on your machine, stream the script to VPS-2. N
 copied there: the container reads the script from stdin.
 
 ```bash
-ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118 \
-  'docker run --rm -i grafana/k6:2.3.0 run \
-     -e HOST=https://api.<VPS1_IP>.sslip.io -e LIVE_RPS=170 -e MATCHES_RPS=50 -e DURATION=10m -' \
+ssh madar-vps2 \
+  'sudo -iu deploy docker run --rm -i grafana/k6:2.3.0 run \
+     -e HOST=https://api.<VPS1_IP>.sslip.io -e LIVE_RPS=170 -e MATCHES_RPS=50 \
+     -e REVALIDATE_SHARE=0.5 -e DURATION=10m -' \
   < backend/loadtest/mvp.js | tee /tmp/mvp-load-k6.txt
 ```
 
@@ -116,9 +135,16 @@ RATE_LIMIT_EXEMPT_IPS=
 ```
 
 ```bash
+# VPS-1, as deploy
 dc up -d --force-recreate api-public
-docker logs --tail 20 madar-api-public-1 | grep -c ratelimit.exempt_enabled   # 0
+docker exec madar-api-public-1 sh -c 'test -z "$RATE_LIMIT_EXEMPT_IPS" && echo closed || { echo "STILL OPEN: $RATE_LIMIT_EXEMPT_IPS"; exit 1; }'
+# closed
 ```
+
+`STILL OPEN` (exit 1) means the window is not closed: fix `.env` and recreate again before anything
+else. From your machine the same check is
+`ssh madar-vps1 "sudo -iu deploy docker exec madar-api-public-1 printenv RATE_LIMIT_EXEMPT_IPS"`,
+which must print an empty line.
 
 Leave it empty. An allowlisted address during normal traffic is a hole, and the security review
 checks for one ([quickstart](../../specs/004-d04-mvp-launch/quickstart.md#lane-b1-client-ip-load-security)).

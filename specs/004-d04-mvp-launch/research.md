@@ -25,7 +25,7 @@ Each entry: **Decision**, **Rationale**, **Alternatives considered**. File refer
 
 **Decision.** k6 (`grafana/k6` image, pinned, arm64), run with `docker run --rm` on VPS-2 against `https://api.<ip1>.sslip.io`. The script is `backend/loadtest/mvp.js`, with rates, duration, host and the `If-None-Match` share as `-e` variables. Two scenarios use the `constant-arrival-rate` executor:
 - `live`: 170 requests/s for 10 min. About half the requests send the previous `ETag`.
-- `matches`: 50 requests/s for 10 min, spread over today to +3, plus 10 % match-detail reads.
+- `matches`: 50 requests/s for 10 min, spread over today to +3 as one-UTC-day `from`/`to` windows (the route has no `date` parameter), plus 10 % match-detail reads.
 
 k6 thresholds encode FR-002 with requests tagged by cache outcome (`p(95)<150` for cached reads and `p(95)<400` for uncached ones, on both endpoints, `http_req_failed<0.01`, and a `429` counted as failed via `responseCallback`). VPS-1 CPU and memory are sampled with `docker stats --no-stream` every 10 s over SSH during the run. The report goes to `docs/load-tests/2026-11-04-mvp.md`.
 
