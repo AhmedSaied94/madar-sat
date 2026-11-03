@@ -33,7 +33,7 @@ records the running tag, pulls, runs `compose --profile workers up -d` for `work
 `worker-scrape`, `worker-maintenance` and `beat`, waits up to 90 s for all four healthchecks, and — like
 VPS-1 — rolls back to the previous tag when the start or the check fails ([workers.md](workers.md)).
 
-Deploys never overlap. Every job that joins the CI WireGuard peer through `.github/actions/vps1-sync` — `backend.yml`'s `deploy`, `infra.yml`'s `sync`, `admin.yml`'s `deploy` and `pwa.yml`'s `release` — shares the concurrency group `deploy-vps1` (`infra.yml` checks this). `deploy-vps2` has its own group and starts only after `deploy` has left `deploy-vps1`. Only `backend.yml` and `infra.yml`, which run on `master`, rsync `infra/` to `/srv/madar/infra/`; the admin deploy and the PWA release pass `sync-infra: "false"`, and a `web-v*` tag that isn't on `master` is refused. `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one waiting run per group, so a third merge replaces the waiting one, and the newest commit wins.
+Deploys never overlap. Every job that joins the CI WireGuard peer through `.github/actions/vps1-sync` — `backend.yml`'s `deploy`, `infra.yml`'s `sync`, `admin.yml`'s `deploy` and `pwa.yml`'s `release` — shares the concurrency group `deploy-vps1` (`infra.yml` checks this). `deploy-vps2` has its own group and starts only after `deploy` has left `deploy-vps1`. Only `backend.yml` and `infra.yml`, which run on `master`, rsync `infra/` to `/srv/madar/infra/`; the admin deploy and the PWA release pass `sync-infra: "false"`, and a `web-v*` tag that isn't on `master` is refused. `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one running and one waiting job per group: a third job that queues **cancels the waiting one**, even with `cancel-in-progress: false` (review B2-R2-1). Between two backend deploys or two syncs the newest commit wins and nothing is lost, but the four jobs ship different things, so a cancelled admin deploy or PWA release means that change is not live. After a merge or a `web-v*` tag, check each of them in the Actions tab, and re-run any job that shows "cancelled".
 
 The `build` job, under QEMU, is the slow part. SC-005 asks for a change to be live within 15 minutes.
 
@@ -69,6 +69,7 @@ curl -fsS http://127.0.0.1:8000/healthz               # what deploy.sh checks
 | `wg-quick` errors in "Join WireGuard", `Host key verification failed`, or `Permission denied (publickey)` | CI can't reach VPS-1 | Unchanged | Check `WG_CI_CONFIG`, `DEPLOY_KNOWN_HOSTS` and `DEPLOY_SSH_KEY` against [provision-host.md §8](provision-host.md#8-deploy-peer-and-keys) |
 | `error: /srv/madar/.env is missing` | The host isn't bootstrapped | Unchanged | [provision-host.md §4](provision-host.md#4-fill-the-env-file-and-re-run) |
 | `error: this host is missing its D3/D4 folders (the admin's /srv/admin/current on VPS-1) or backup timers, which only root can create` | The host was bootstrapped before D3 or D4: the folders, the backup timers and the admin's `/srv/admin/current` symlink come from `bootstrap-vps.sh` now (B2-R1-4, D4 B2-R1-2) | Unchanged | Run `sudo ./madar-infra/scripts/bootstrap-vps.sh <vps1\|vps2>` on that host, then re-run the job ([provision-host.md §3](provision-host.md#3-run-the-bootstrap-script)) |
+| `error: madar_default is <subnet> but vps1.yml wants <subnet>; … Nothing was stopped` | The synced `vps1.yml` asks for another subnet than the running network has; Docker can't change it in place (`check_network`, D4) | Unchanged | [The one-time network recreation](#the-one-time-network-recreation-d4), then re-run the job |
 | `error: another deploy is running` | A manual deploy holds the lock | Unchanged | On VPS-1: `pgrep -af deploy.sh`. Wait for it, then re-run the job. |
 | Compose or Caddy errors before `pulling` | Step 1: `caddy`, `postgres` or `redis` didn't come up healthy, or the Caddyfile didn't load | The APIs are unchanged. A failed `caddy reload` keeps the old config. | Read that container's log. Fix in a new commit. |
 | `denied` or `unauthorized` at login or pull | The repository can't read the package | Unchanged | "Images in GHCR" below |
@@ -285,10 +286,24 @@ What it does **not** apply:
 
 `vps1.yml` fixes the default network to `172.30.0.0/24` with gateway `172.30.0.1`, because the public
 app trusts that gateway as Caddy's peer (`TRUSTED_PROXIES`, R1). Docker only applies a subnet when it
-creates the network, so the first deploy after this change needs one outage:
+creates the network, so a host whose `madar_default` has another subnet needs one outage.
+
+**Done on VPS-1 on 2026-11-03.** The D4 merge's deploys ran into it before this procedure did:
+`compose up` stopped PostgreSQL and Redis, could not recreate the network under the running APIs
+(`network madar_default has active endpoints`) and left the API at 503 for about ten minutes, until
+the commands below ran. Since then `deploy.sh` compares the subnet before anything starts
+(`check_network`) and stops with `madar_default is <subnet> but vps1.yml wants <subnet> … Nothing was
+stopped`, so a host that still needs this (a VM rebuilt from an older bootstrap, or a future subnet
+change) keeps running until you do it.
+
+Run it when that error appears, after the merge's `infra.yml` sync has copied the new `vps1.yml`
+(the `grep` proves it):
 
 ```bash
-ssh ubuntu@10.8.0.1 && sudo -iu deploy && cd /srv/madar/infra
+ssh madar-vps1
+sudo -iu deploy
+cd /srv/madar/infra
+grep -n '172.30' compose/vps1.yml        # the subnet and gateway lines; nothing means the sync hasn't landed
 export IMAGE_TAG=$(cat /srv/madar/current_tag)
 dc() { docker compose --env-file /srv/madar/.env -f compose/vps1.yml "$@"; }
 dc down                                   # the API, PostgreSQL and Redis stop: a few seconds of 502
@@ -298,6 +313,9 @@ docker network inspect madar_default --format '{{(index .IPAM.Config 0).Subnet}}
 # 172.30.0.0/24 172.30.0.1
 ```
 
+That brings the stack back on the tag that was running. Then re-run the failed deploy jobs one at a
+time, `infra.yml` first, so the APIs move to the new image (and so the shared group can't cancel one).
+
 Then confirm the API sees real client IPs (two devices on different networks get separate buckets,
 [response-cache-and-limits.md](response-cache-and-limits.md#the-rate-limits)) and that
 `/srv/madar/.env` holds `TRUSTED_PROXIES_PUBLIC=127.0.0.1,172.30.0.1` only if you changed the default.
@@ -305,6 +323,6 @@ Then confirm the API sees real client IPs (two devices on different networks get
 If CI can't sync (WireGuard or the deploy key is broken), apply it by hand from your machine, over WireGuard:
 
 ```bash
-rsync -a --delete infra/ ubuntu@10.8.0.1:madar-infra/
-ssh ubuntu@10.8.0.1 'sudo rsync -a --delete --chown=deploy:deploy madar-infra/ /srv/madar/infra/ && sudo -iu deploy /srv/madar/infra/scripts/deploy.sh --infra-only'
+rsync -a --delete infra/ madar-vps1:madar-infra/
+ssh madar-vps1 'sudo rsync -a --delete --chown=deploy:deploy madar-infra/ /srv/madar/infra/ && sudo -iu deploy /srv/madar/infra/scripts/deploy.sh --infra-only'
 ```

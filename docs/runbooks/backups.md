@@ -158,7 +158,7 @@ The mirror is a plain copy, so one file comes back with:
 ssh madar-vps1 "sudo -iu deploy docker run --rm --user 10001:10001 --cap-drop ALL \
   --env-file /srv/madar/.env -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/cache \
   -v /srv/media:/srv/media $image \
-  rclone copy oci:madar-media/logos/<file>.webp /srv/media/logos/"
+  rclone copy oci:madar-media/logo/<xx>/<hash>.webp /srv/media/logo/<xx>/"
 ```
 
 A file deleted from the disk by mistake also comes back from the weekly snapshot: it is restored
@@ -168,8 +168,11 @@ into the container's own `/tmp` and copied across, so nothing is left on the hos
 ssh madar-vps1 "sudo -iu deploy docker run --rm --user 10001:10001 --cap-drop ALL \
   --env-file /srv/madar/.env -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/cache \
   -v /srv/media:/srv/media $image \
-  sh -c 'restic restore latest --tag media --target /tmp/restore --include /srv/media/logos/<file>.webp && cp /tmp/restore/srv/media/logos/<file>.webp /srv/media/logos/'"
+  sh -c 'restic restore latest --tag media --target /tmp/restore --include /srv/media/logo/<xx>/<hash>.webp && cp /tmp/restore/srv/media/logo/<xx>/<hash>.webp /srv/media/logo/<xx>/'"
 ```
+
+Media is content-addressed: `logo/`, `photo/` and `audio/`, each file under the first two characters of
+its hash (`logo/ea/eafa82….webp`). Take the path from the URL that 404s, or from the database row.
 
 Both leave the file owned by uid 10001, like the rest of `/srv/media`; the snapshot restore also
 keeps its mode 0600.

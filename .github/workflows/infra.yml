@@ -459,6 +459,8 @@ jobs:
           awk '/^restore_previous_acl\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/restore_acl.sh"
           source "$RUNNER_TEMP/restore_acl.sh"
           source "$RUNNER_TEMP/apply_infra.sh"
+          # The subnet guard has its own step ("the deploy stops before a subnet change …").
+          check_network() { :; }
           state_dir=$RUNNER_TEMP/state
           acl_dir=$state_dir/redis
           acl_target=$acl_dir/users.acl
@@ -535,6 +537,10 @@ jobs:
           log() { :; }
           # shellcheck disable=SC2034 # read by the extracted check_dirs
           app_uid=$(id -u)
+          # shellcheck disable=SC2034 # read by the extracted check_dirs; root on a host (Kuma's chown)
+          kuma_uid=$(id -u)
+          grep -qx 'kuma_uid=0' infra/scripts/deploy.sh \
+            || { echo "::error::deploy.sh must expect /srv/kuma owned by root: Kuma chowns it on every start"; exit 1; }
           state_dir=$RUNNER_TEMP/state
           srv_root=$RUNNER_TEMP/srv
           install -d -m 750 "$state_dir"
@@ -580,6 +586,40 @@ jobs:
           check_dirs vps1 || { echo "::error::the folder check rejected the admin tree bootstrap creates"; exit 1; }
           grep -A1 'readlink /srv/admin/current' .github/workflows/admin.yml | grep -q '::error::.*bootstrap-vps.sh vps1' \
             || { echo "::error::admin.yml's readlink does not name the bootstrap when the symlink is missing"; exit 1; }
+
+      # D4 (2026-11-03): a changed subnet in vps1.yml made `compose up` stop PostgreSQL and Redis and
+      # fail to recreate the network under the running APIs. check_network reads the subnet from the
+      # real vps1.yml render and stops the deploy before anything moves; only `docker network` is faked.
+      - name: the deploy stops before a subnet change it cannot apply
+        run: |
+          set -euo pipefail
+          awk '/^check_network\(\)/,/^}/' infra/scripts/deploy.sh > "$RUNNER_TEMP/check_network.sh"
+          # shellcheck disable=SC1091 # extracted at run time
+          source "$RUNNER_TEMP/check_network.sh"
+          die() { echo "$*"; exit 1; }
+          # shellcheck disable=SC2034 # read by the extracted check_network
+          vps1_compose=(docker compose -f infra/compose/vps1.yml --env-file infra/compose/example.env)
+          docker() {
+            if [[ $1 == network ]]; then
+              [[ -n $existing ]] || return 1
+              echo "$existing"
+              return 0
+            fi
+            command docker "$@"
+          }
+          existing=172.30.0.0/24
+          (check_network) || { echo "::error::check_network refused the subnet vps1.yml asks for"; exit 1; }
+          existing=
+          (check_network) || { echo "::error::check_network refused a host with no network yet"; exit 1; }
+          existing=172.18.0.0/16
+          if out=$(check_network); then
+            echo "::error::check_network let a 172.18.0.0/16 network through to compose up"
+            exit 1
+          fi
+          grep -q 'Nothing was stopped' <<<"$out" \
+            || { echo "::error::check_network's refusal does not say that nothing was stopped: $out"; exit 1; }
+          awk '/^apply_stateful_infra\(\)/,/^}/' infra/scripts/deploy.sh | grep -q '^  check_network$' \
+            || { echo "::error::apply_stateful_infra no longer calls check_network before compose up"; exit 1; }
 
       # B2-R1-3 (D4): every job that joins the CI WireGuard peer through vps1-sync shares one
       # concurrency group, so two runners never bring up the same peer. backend.yml's deploy-vps2

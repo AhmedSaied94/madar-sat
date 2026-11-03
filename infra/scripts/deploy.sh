@@ -56,6 +56,9 @@ health_timeout=60
 workers_timeout=90
 acl_gid=999  # the `redis` user's gid in redis:7.4.12, and the group bootstrap-vps.sh gives deploy
 app_uid=10001  # the `madar` user inside the backend image (backend/Dockerfile)
+# uptime-kuma:1's entrypoint chowns /app/data to PUID:PGID (default root) on every start, so the
+# owner of /srv/kuma is root whatever bootstrap set (D4: a deploy after a Kuma restart refused).
+kuma_uid=0
 redis_acl_changed=0
 api_services=(api-public api-admin)
 media_service=worker-media
@@ -224,7 +227,7 @@ check_dirs() {
   fi
   if [[ $role == vps2 ]]; then
     check_dir "$srv_root/backup" 700 "$app_uid" || ok=1
-    check_dir "$srv_root/kuma" 755 "$(id -u)" || ok=1
+    check_dir "$srv_root/kuma" 755 "$kuma_uid" || ok=1
     check_dir "$srv_root/secrets" 700 "$app_uid" || ok=1
   fi
   return "$ok"
@@ -287,11 +290,30 @@ reload_redis_acl() {
   die "Redis did not accept $acl_target; check the passwords, the directory's group (gid $acl_gid) and 'compose logs redis'"
 }
 
+# check_network: Docker applies a network's subnet only when it creates the network. With a changed
+# `ipam` block, `compose up` stops the stateful services, fails to recreate the network under the
+# running APIs ("has active endpoints") and leaves PostgreSQL and Redis down (D4, 2026-11-03). So
+# compare first, and stop before anything moves.
+check_network() {
+  local want have name
+  want=$("${vps1_compose[@]}" config --format json | python3 -c '
+import json, sys
+network = json.load(sys.stdin).get("networks", {}).get("default", {})
+config = (network.get("ipam") or {}).get("config") or [{}]
+print(network.get("name", ""), config[0].get("subnet", ""))')
+  read -r name want <<<"$want"
+  [[ -n $name && -n $want ]] || return 0
+  have=$(docker network inspect "$name" --format '{{(index .IPAM.Config 0).Subnet}}' 2>/dev/null) || return 0
+  [[ $have == "$want" ]] && return 0
+  die "$name is $have but vps1.yml wants $want; Docker cannot change a subnet in place. Nothing was stopped. Recreate the network once, a short outage (docs/runbooks/deploy-and-rollback.md#the-one-time-network-recreation-d4), then deploy again"
+}
+
 # The stateful services (caddy, postgres, redis) with the ACL restore around them: this `up` is what
 # recreates Redis on a changed definition, before `reload_redis_acl` runs, so a file Redis refuses
 # would leave it down with the good one still in `users.acl.prev` (B2-R3-2).
 apply_stateful_infra() {
   local failed=0
+  check_network
   "${vps1_compose[@]}" up -d --wait --wait-timeout 120 "${vps1_stateful[@]}" || failed=1
   if ((failed == 0)); then
     return 0
