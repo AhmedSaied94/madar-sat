@@ -75,6 +75,7 @@ is_shell_output() {
 #    loader, which the customisable bootstrap already carries inline. Staging into a
 #    directory that already holds a release would mix two layouts, so it must be absent or
 #    empty.
+[[ -e "$out" && ! -d "$out" ]] && die "$out is a file, not a directory"
 if [[ -d "$out" && -n $(ls -A "$out" 2>/dev/null) ]]; then
   die "$out already holds files; stage into a fresh directory (release folders are immutable)"
 fi

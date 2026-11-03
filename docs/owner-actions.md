@@ -506,7 +506,7 @@ release build and the iPhone PWA — every item below needs a host, a console or
   offline the app opens with its banner. → [firebase-hosting](runbooks/firebase-hosting.md#check-a-release-in-devtools)
 - [ ] **T070 Tag `app-v0.3.0`**, then install the signed AAB from the closed track. The bug bash
   needs that build, so this comes before T071. After the gate conditions hold, tag `web-v0.1.0`
-  (with B2 and B1). → [store-releases](runbooks/store-releases.md#android-release)
+  (with B2 and B1). → [store-releases](runbooks/store-releases.md#2-tag-the-release)
 - [ ] **T071 The bug bash.** Run [bug-bash.md](../specs/004-d04-mvp-launch/bug-bash.md) on the
   Android release build, the installed iPhone PWA (iOS ≥ 16.4) and desktop Chrome at 1440, and
   record it in `bug-bash-results.md`. Any crash or blocker is fixed with a test; cosmetics get a
