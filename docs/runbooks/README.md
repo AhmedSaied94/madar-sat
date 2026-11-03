@@ -22,6 +22,8 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, deploy keys, infra updates |
 | [break-glass.md](break-glass.md) | Getting back into a VM when WireGuard or SSH doesn't work, and an instance Oracle stopped |
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
+| [pwa-release.md](pwa-release.md) | Cutting a `web-v*` PWA release: the tag, what the job does, the mirror check, rolling the live channel back, pruning |
+| [on-call.md](on-call.md) | An alert just fired: the order to work it, where the logs are, one row per Kuma monitor and Telegram alert |
 | [store-releases.md](store-releases.md) | Android releases: tagging `app-v<x.y.z>`, the signed AAB, Play App Signing, the closed-track upload and the testers list, backing up the upload keystore, and push setup (the notification channel, the VAPID key, the service worker, the iPhone PWA test) |
 | [remote-config.md](remote-config.md) | The app's Remote Config keys and their bundled defaults, changing a host safely, raising `min_supported_build`, the live poll interval |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
@@ -97,7 +99,7 @@ The firewall rule and the `homebox` Redis user have to exist before anything sta
 9. **Once Lanes A and M have merged:** the PWA preview and its CORS origin ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)), then a green `master` run for every workflow (T067, second half).
 10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
 11. **Monitoring and backups:** create the Kuma monitors and the Telegram notification ([uptime-kuma.md](uptime-kuma.md) §1–§4) with the six `KUMA_PUSH_URL_*` values and the Telegram pair in `/srv/madar/.env`, then check the first night's backups ([backups.md](backups.md#check-last-nights-backup)). The directories and the timers come from `bootstrap-vps.sh` (run it on each host after pulling D3, then deploy); a deploy only verifies them (B2-R1-4). The first run creates the restic repository (B2-R1-5).
-12. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-ysscores-fetches)).
+12. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-a-source-fetches)).
 13. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
 14. **Reminders (D3):** the FCM service account on VPS-2 and `FCM_DRY_RUN=false`, one real reminder to the owner's phone ([push-notifications.md](push-notifications.md#the-fcm-service-account)), and the `/v1` limits left at their defaults ([response-cache-and-limits.md](response-cache-and-limits.md)).
 15. **Record:** [provision-host.md §10](provision-host.md#10-record), for each VM.
@@ -109,6 +111,8 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 
 | When | Go to |
 | --- | --- |
+| Something is alerting right now | [on-call.md](on-call.md) |
+| Releasing the PWA | [pwa-release.md](pwa-release.md) |
 | Releasing, or a deploy failed | [deploy-and-rollback.md](deploy-and-rollback.md) |
 | Releasing the Android app, or a Play upload was refused | [store-releases.md](store-releases.md) |
 | No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
@@ -152,7 +156,9 @@ Later days add these. Each arrives with the change that builds the part it cover
 | `store-releases.md` (grows) | Android production, then Codemagic, TestFlight and the App Store; the closed track is covered since D2 | D12; iOS D13–D20 |
 
 The monthly restore drill already has its commands in `backups.md`; D8 adds the schedule, report and
-`monitoring.md`'s alert review. Existing runbooks grow too: `firebase-hosting.md` with the public PWA release and the VPS-1 mirror (D4) and the emergency install link (D10); `tls-certificates.md` with the domain move (O4); `secrets.md` with the Play service account (D27).
+`monitoring.md`'s alert review. Existing runbooks grow too: `firebase-hosting.md` with the emergency
+install link (D10); `tls-certificates.md` with the domain move (O4); `secrets.md` with the Play
+service account (D27).
 
 **Keep these current.** A change that adds or changes an operated part (anything in `infra/` or `.github/`, a deploy step, a secret, a host setting, or a step the owner does by hand) adds or updates its runbook, and [owner-actions.md](../owner-actions.md), in the same change. A review flags a change that doesn't.
 

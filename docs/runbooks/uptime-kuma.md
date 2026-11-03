@@ -41,7 +41,7 @@ one chat is the whole incident feed.
 | `api-public` | `https://api.<VPS1_IP>.sslip.io/healthz` | 60 s | Caddy, the public app and the database connection |
 | `media` | `https://media.<VPS1_IP>.sslip.io/logos/<a known file>` | 5 min | Caddy's media root and the disk |
 | `pwa` | `https://<FIREBASE_PROJECT_ID>.web.app/` | 5 min | Firebase Hosting serves the PWA |
-| `pwa-mirror` | `https://app.<VPS1_IP>.sslip.io/` | 5 min | Caddy's PWA mirror |
+| `pwa-mirror` | `https://app.<VPS1_IP>.sslip.io/release-check.txt` | 5 min | Caddy serves the mirror and the release job wrote the current hash (D4 T047). A 404 means no release has been copied yet |
 
 Use a real, existing file for `media` (the newest file in `/srv/media/logos/`); a 404 is red
 forever otherwise. **Accepted status codes**: `200-299`.
@@ -81,7 +81,9 @@ the host-reachable URL with that token and **no query**; the workers and the bac
 | VPS-1 | `KUMA_PUSH_URL_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY` | `http://<VPS2_VCN_IP>:3001/api/push/<token>` (over the VCN; VPS-2's firewall accepts port 3001 from VPS-1 only) |
 
 The backup scripts cut anything after a `?` before they append `status`, so a pasted Kuma URL would
-still report `down` correctly; the form above is the one that is also reachable.
+still report `down` correctly; the form above is the one that is also reachable. A backup script with
+an **empty** `KUMA_PUSH_URL_BACKUP_*` refuses to start (D4 T030), so a monitor that never turns green
+is the first sign the value was never filled in.
 
 After writing the six values into `/srv/madar/.env` on each host, restart the services that read them:
 `worker-maintenance`, `worker-imports` and `worker-notify` on VPS-2, and `worker-media` on VPS-1 for

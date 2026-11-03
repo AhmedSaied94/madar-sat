@@ -40,6 +40,71 @@ jobs:
             echo "::endgroup::"
           done
 
+      # D4 T032/T034 (research R1, R3): the public app must see the real client IP. Caddy runs on
+      # the host and reaches `api-public` over the bridge, so that gateway is fixed and trusted, and
+      # uvicorn is told the same list. The allowlist for the load-test window is empty by default.
+      - name: the public API trusts only the fixed bridge gateway
+        run: |
+          set -euo pipefail
+          rendered=$(docker compose -f infra/compose/vps1.yml --env-file infra/compose/example.env \
+            --profile tools config --format json)
+          subnet=$(jq -r '.networks.default.ipam.config[0].subnet' <<<"$rendered")
+          [[ $subnet == 172.30.0.0/24 ]] \
+            || { echo "::error::VPS-1's default network is '$subnet', not 172.30.0.0/24 (R1)"; exit 1; }
+          gateway=$(jq -r '.networks.default.ipam.config[0].gateway' <<<"$rendered")
+          [[ $gateway == 172.30.0.1 ]] \
+            || { echo "::error::VPS-1's default gateway is '$gateway', not 172.30.0.1 (R1)"; exit 1; }
+          trusted=$(jq -r '.services["api-public"].environment.TRUSTED_PROXIES' <<<"$rendered")
+          [[ $trusted == "127.0.0.1,172.30.0.1" ]] \
+            || { echo "::error::api-public trusts '$trusted'"; exit 1; }
+          command=$(jq -r '.services["api-public"].command | join(" ")' <<<"$rendered")
+          [[ $command == *"--forwarded-allow-ips=$trusted"* ]] \
+            || { echo "::error::api-public's uvicorn does not trust the same list as settings ($command)"; exit 1; }
+          [[ $command == *"-w 2"* ]] || { echo "::error::api-public lost its two workers"; exit 1; }
+          exempt=$(jq -r '.services["api-public"].environment.RATE_LIMIT_EXEMPT_IPS' <<<"$rendered")
+          [[ -z $exempt ]] || { echo "::error::RATE_LIMIT_EXEMPT_IPS is not empty by default ('$exempt')"; exit 1; }
+          # The admin app must never inherit the public trust list from the shared .env.
+          admin=$(jq -r '.services["api-admin"].environment.TRUSTED_PROXIES // ""' <<<"$rendered")
+          [[ -z $admin ]] \
+            || { echo "::error::api-admin sets TRUSTED_PROXIES ('$admin'); it keeps the 10.8.0.1 default"; exit 1; }
+
+      # D4 T032/T041/T043 (research R8, R10, contracts/web-release.md): the release folder is
+      # immutable and precompressed, `release-check.txt` revalidates, and the admin site serves the
+      # symlink the deploy swaps.
+      - name: The mirror and the admin site follow the release contract
+        run: |
+          set -euo pipefail
+          app=$(awk '/^app\./,/^}/' infra/Caddyfile)
+          grep -q '@release path /r/\*' <<<"$app" \
+            || { echo "::error::the app. site has no /r/* release matcher"; exit 1; }
+          grep -q 'header @release Cache-Control "public, max-age=31536000, immutable"' <<<"$app" \
+            || { echo "::error::/r/* is not immutable"; exit 1; }
+          grep -q 'precompressed br gzip' <<<"$app" \
+            || { echo "::error::the app. site serves compressed on the fly instead of precompressed files"; exit 1; }
+          if grep -qE '^[[:space:]]*encode ' <<<"$app"; then
+            echo "::error::the app. site still encodes; the release job ships .br and .gz"
+            exit 1
+          fi
+          grep -q '@release_check path /release-check.txt' <<<"$app" \
+            || { echo "::error::the app. site does not revalidate /release-check.txt"; exit 1; }
+          awk '/@release_check/,/}/' <<<"$app" | grep -q 'Cache-Control "no-cache"' \
+            || { echo "::error::release-check.txt is cached"; exit 1; }
+          admin=$(awk '/^https:\/\/10\.8\.0\.1 \{/,/^}/' infra/Caddyfile)
+          grep -q 'root \* /srv/admin/current' <<<"$admin" \
+            || { echo "::error::the admin site does not serve the current release symlink"; exit 1; }
+          grep -q 'handle /admin/api/\*' <<<"$admin" \
+            || { echo "::error::the admin site lost its /admin/api handler"; exit 1; }
+
+          jq -e '.hosting.headers[]
+            | select(.regex == "^/r/[0-9a-f]{16}/.*$")
+            | .headers[]
+            | select(.value == "public, max-age=31536000, immutable")' infra/firebase/firebase.json >/dev/null \
+            || { echo "::error::firebase.json has no immutable rule for /r/<hash>/"; exit 1; }
+          for name in release.json drift_worker.js; do
+            grep -q "$name" <<<"$(jq -r '.hosting.headers[].source // ""' infra/firebase/firebase.json)" \
+              || { echo "::error::firebase.json does not revalidate $name"; exit 1; }
+          done
+
       # The backup profile is a one-shot: `config` must see it, and the media units call it by name.
       # Rendered as JSON: Compose prints volumes in long form, so a short-syntax grep never matches.
       - name: The backup services are defined behind their profile
@@ -157,6 +222,12 @@ jobs:
           for unit in infra/systemd/*.service; do
             grep -q 'compose/vps[12].yml run --rm -T' "$unit" \
               || { echo "::error::$unit does not run a backup container"; exit 1; }
+          done
+          # D4 T030: the heartbeat arrives only if the timer exists. The bootstrap is what installs
+          # and enables it (a deploy may not), so both roles' timers must stay in its list.
+          for timer in backup-db.timer backup-media.timer backup-media-weekly.timer; do
+            grep -q "\b$timer\b" infra/scripts/bootstrap-vps.sh \
+              || { echo "::error::bootstrap-vps.sh no longer installs $timer"; exit 1; }
           done
 
       # The backup scripts never echo a secret and never run without their key variables.

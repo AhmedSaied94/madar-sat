@@ -157,7 +157,7 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
 ### Carry-over (B2, first)
 
-- [ ] T030 [US3] Find out why the nightly database backup's Kuma heartbeat never arrived (003 T083 expected it the next morning; the owner reports no signal), fix the cause, and prove it. Check in this order, recording each result in the PR:
+- [x] T030 [US3] Find out why the nightly database backup's Kuma heartbeat never arrived (003 T083 expected it the next morning; the owner reports no signal), fix the cause, and prove it. Check in this order, recording each result in the PR:
   1. on VPS-2, `systemctl list-timers 'backup-*'` shows `backup-db.timer` enabled with a next run. 003's "bootstrap re-run for the backup timers" was an open owner item, so the timers may never have been installed;
   2. `journalctl -u backup-db.service --since -2d` shows a run and its exit code;
   3. `KUMA_PUSH_URL_BACKUP_DB` (and `_MEDIA`, `_MEDIA_WEEKLY` on VPS-1) are set in the host `.env` in the form `infra/backup/backup-db.sh:36` expects. 003 T086 left "the bare-form `KUMA_PUSH_URL_*` values" with the owner;
@@ -172,15 +172,17 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
   The monthly restore drill itself stays manual until D8 (`backups.md` "The monthly restore drill").
 
+  **Result (2026-11-03).** 1. `backup-db.timer` enabled, next run 2026-11-04 01:00 UTC, last run 2026-11-03 01:05 UTC. 2. The journal shows that run finishing with exit 0 and snapshot `9571f2b4`. 3. `KUMA_PUSH_URL_BACKUP_DB` is set in VPS-2's `.env` (`http://uptime-kuma:3001`). 4. The push landed: Kuma's `backup-db` heartbeat at 01:05:21 says `ok 20261103T010502Z`. 5. `restic snapshots --tag db` lists the same snapshot. The cause was the open 003 item itself: the timer was never installed before D3's bootstrap re-run, so 01:05 was its first scheduled run — and it reported. Code fix: both backup scripts now refuse to start when their `KUMA_PUSH_URL_*` is empty (a skipped heartbeat is how the monitor stayed grey), with the missing-URL cases added to `check-backup-heartbeat.sh`; `infra.yml` asserts `bootstrap-vps.sh` still installs all three timers. 003's T083 stays open until the next scheduled run (2026-11-04 01:00 UTC) also reports.
+
 ### Tests first (B2): write them and see them fail
 
-- [ ] T031 [P] [US3] Write `backend/tests/adapters/test_report.py` for the pure functions behind `python -m app.adapters.report` (research R6):
+- [x] T031 [P] [US3] Write `backend/tests/adapters/test_report.py` for the pure functions behind `python -m app.adapters.report` (research R6):
   - **Slots:** expected slots from `backend/app/adapters/schedule.py` for a 48 h window, including `ysscores-fixtures` every 3 h and `livesoccertv-48h` every 2 h.
   - **Matching:** runs matched to slots by `source` and `started_at` within the slot window.
   - **Manual runs:** detected from `audit_log` source actions (run now and resume) by source and time.
   - **Coverage:** per Cairo day for competitions with `priority IS NOT NULL`, counting matches with ≥ 1 visible channel link.
   - **Exit code:** non-zero when a slot is missing or manual.
-- [ ] T032 [P] [US3] Write the infra checks in `infra.yml`'s `check` job, failing today:
+- [x] T032 [P] [US3] Write the infra checks in `infra.yml`'s `check` job, failing today:
   - the rendered `vps1.yml` has the fixed network subnet `172.30.0.0/24` with gateway `172.30.0.1`;
   - `api-public` gets `TRUSTED_PROXIES` and `--forwarded-allow-ips`;
   - `RATE_LIMIT_EXEMPT_IPS` defaults to empty;
@@ -190,17 +192,25 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
 ### Implementation (B2)
 
-- [ ] T033 [US3] Implement `backend/app/adapters/report.py`, with sub-commands `runs --hours N` and `coverage --days N`. It is read-only and outputs plain text tables in the formats of [data-model.md](data-model.md#import-report-python--m-appadaptersreport-b2). T031 passes.
-- [ ] T034 [US3] In `infra/compose/vps1.yml`:
+- [x] T033 [US3] Implement `backend/app/adapters/report.py`, with sub-commands `runs --hours N` and `coverage --days N`. It is read-only and outputs plain text tables in the formats of [data-model.md](data-model.md#import-report-python--m-appadaptersreport-b2). T031 passes.
+- [x] T034 [US3] In `infra/compose/vps1.yml`:
   - give the default network a fixed IPAM subnet `172.30.0.0/24` with gateway `172.30.0.1`;
   - pass `TRUSTED_PROXIES: ${TRUSTED_PROXIES_PUBLIC:-127.0.0.1,172.30.0.1}` and `RATE_LIMIT_EXEMPT_IPS: ${RATE_LIMIT_EXEMPT_IPS:-}` to `api-public`;
   - give it a `command` with `--forwarded-allow-ips` set to the same trust list (keeping `-w 2`).
 
   Note the network recreation in `docs/runbooks/deploy-and-rollback.md`, because changing a network's subnet needs `dc down` of the attached services once. Merge with B1's T003–T005 (`contracts/ops-and-ci.md`). T032's Compose checks pass.
-- [ ] T035 [US3] Run `report runs --hours 48` and `report coverage --days 4` on VPS-2 (`dc exec worker-imports python -m app.adapters.report …`). Paste the output in the PR, and explain every missing or manual slot and every coverage gap (FR-010, FR-012).
-- [ ] T036 [P] [US3] For each distinct failed or `partial` run in the last 5 days of `/srv/raw/<source>/<day>/<run_id>/` on VPS-2, add a trimmed fixture `backend/tests/fixtures/<source>/edge-<slug>.html.gz` with no personal data, and a `parse` test in `backend/tests/adapters/` that fails before the fix (research R7, FR-011).
-- [ ] T037 [US3] Fix each parser in `backend/app/adapters/<source>.py` until T036's tests pass, keeping `parse` pure. If no edge pages exist, record "none found" with the run query in the PR.
-- [ ] T038 [US3] Write `docs/runbooks/on-call.md` (FR-013) and list it in `docs/runbooks/README.md` (index and the top of "After setup"). It has one row per Kuma monitor and Telegram alert (source breaker, zero items, backup heartbeats, `api-public`, media, `pwa`, `pwa-mirror`, Celery heartbeats): what it means → the first check → the fix, linking `deploy-and-rollback.md`, `imports-and-sources.md`, `source-alerts.md`, `backups.md`, `workers.md`, `home-box.md` and `uptime-kuma.md` instead of copying them. It also covers:
+- [x] T035 [US3] Run `report runs --hours 48` and `report coverage --days 4` on VPS-2 (`dc exec worker-imports python -m app.adapters.report …`). Paste the output in the PR, and explain every missing or manual slot and every coverage gap (FR-010, FR-012).
+
+  **Output (2026-11-03 03:30 UTC, run in a one-off container with the module mounted from this branch, since the image predates it).** `runs --hours 48`: **56 slots, 36 flagged**. Every one of the 16 `legacy` slots ran and is `partial` (161–216 found, 2–48 upserted; the run log's only skip is `channel_not_published`). **No `ysscores` slot after 2026-11-02 09:00 and no `livesoccertv` slot at all**: `worker-imports` logs `scheduled … queue: scrape_home` for both, and the home box — `scrape_home`'s only consumer — is offline (`home-box.md` "Take it offline": queued fetches expire after two hours, nothing is replayed). That is why no `import_runs` row exists and the slot reads `missing`. `coverage --days 4` lists every prioritized competition for 2026-11-03 … 11-06; the gaps are the Iraqi, Dutch, Moroccan, Omani, Libyan, Kuwaiti and Bahraini leagues with matches but no visible channel link, plus the competitions with no match yet that far out. No slot was `manual`, so no admin action queued a run in the window.
+- [x] T036 [P] [US3] For each distinct failed or `partial` run in the last 5 days of `/srv/raw/<source>/<day>/<run_id>/` on VPS-2, add a trimmed fixture `backend/tests/fixtures/<source>/edge-<slug>.html.gz` with no personal data, and a `parse` test in `backend/tests/adapters/` that fails before the fix (research R7, FR-011).
+
+  **None found.** The run query
+  `select id, source, started_at, status, items_found, items_upserted, error, raw_path from import_runs where started_at > now() - interval '5 days' and status <> 'succeeded' order by started_at desc`
+  returns 20 rows, all `legacy` (the Sat Air bridge), ids 1–29. Every one is `partial` for the same non-parse reason: 16 of 161–216 links name a legacy channel that is not in `channels` (`channel_not_published`, `upsert.py`), which is recorded in `run.json` by design. No fetched page failed, so there is no saved page a `parse` test could fail on.
+- [x] T037 [US3] Fix each parser in `backend/app/adapters/<source>.py` until T036's tests pass, keeping `parse` pure. If no edge pages exist, record "none found" with the run query in the PR.
+
+  **None found** — see T036. The 20 `partial` runs are the bridge's unpublished channel links, not a parser defect, so no adapter changed.
+- [x] T038 [US3] Write `docs/runbooks/on-call.md` (FR-013) and list it in `docs/runbooks/README.md` (index and the top of "After setup"). It has one row per Kuma monitor and Telegram alert (source breaker, zero items, backup heartbeats, `api-public`, media, `pwa`, `pwa-mirror`, Celery heartbeats): what it means → the first check → the fix, linking `deploy-and-rollback.md`, `imports-and-sources.md`, `source-alerts.md`, `backups.md`, `workers.md`, `home-box.md` and `uptime-kuma.md` instead of copying them. It also covers:
   - log locations (`dc logs <service>`, `journalctl -u backup-*`);
   - switching a blocked source to the home box or the bridge;
   - a mirror alert.
@@ -209,13 +219,13 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
 ### Mirror, releases and admin deploy (B2)
 
-- [ ] T039 [US3] Update `infra/scripts/bootstrap-vps.sh`:
+- [x] T039 [US3] Update `infra/scripts/bootstrap-vps.sh`:
   - create `/srv/admin/releases/placeholder/` from `infra/admin-placeholder/index.html` and a relative symlink `/srv/admin/current -> releases/placeholder`, migrating an existing flat `/srv/admin` once;
   - keep `/srv/app-mirror`;
   - ensure the backup timers are installed and enabled (feeds T030).
 
   Update `docs/runbooks/provision-host.md`.
-- [ ] T040 [US3] Add a `deploy` job to `.github/workflows/admin.yml` (research R10, `contracts/ops-and-ci.md`). It runs on `master` only, after `check`, with `concurrency: deploy-vps1-admin`:
+- [x] T040 [US3] Add a `deploy` job to `.github/workflows/admin.yml` (research R10, `contracts/ops-and-ci.md`). It runs on `master` only, after `check`, with `concurrency: deploy-vps1-admin`:
   1. download the `check` job's `admin/dist` artifact (add the upload to `check`);
   2. join wg0 with `.github/actions/vps1-sync` (`WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`);
   3. rsync to `vps1:/srv/admin/releases/$GITHUB_SHA/`;
@@ -225,15 +235,17 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   7. always leave wg0.
 
   A failure before step 4 leaves `current` unchanged; a failure at step 5 restores it. Prune only after step 5 passes. T048 forces each case once.
-- [ ] T041 [US3] In `infra/Caddyfile`, change the wg0 site's `root` to `/srv/admin/current`, keeping every header and the `/admin/api/*` handler unchanged. T032's check passes.
+- [x] T041 [US3] In `infra/Caddyfile`, change the wg0 site's `root` to `/srv/admin/current`, keeping every header and the `/admin/api/*` handler unchanged. T032's check passes.
 - [ ] T042 [US3] After Lane A's T051–T053 are on `master`, add to `admin.yml`'s `check` job, after `build`: `pnpm exec playwright install --with-deps chromium` and `pnpm e2e` (mock mode). Upload `admin/playwright-report/` on failure.
-- [ ] T043 [P] [US3] In `infra/Caddyfile`'s `app.` site (research R8, `contracts/web-release.md`):
+
+  **Waiting on Lane A.** `admin/e2e/`, `admin/playwright.config.ts` and the `e2e` script are Lane A's T051–T053, which are not on `master`; the step stays absent (not failing) until they are. Please fix this in a follow-up commit of this lane once `d04-a` merges.
+- [x] T043 [P] [US3] In `infra/Caddyfile`'s `app.` site (research R8, `contracts/web-release.md`):
   - add `@release path /r/*` with `Cache-Control: public, max-age=31536000, immutable`;
   - replace `encode zstd gzip` with `file_server { precompressed br gzip }`;
   - serve `/release-check.txt` with `no-cache`;
   - keep the CORS rule (the two exact Firebase origins, `GET`/`HEAD`), `nosniff` and no listing.
-- [ ] T044 [P] [US3] In `infra/firebase/firebase.json`, add the `^/r/[0-9a-f]{16}/.*$` immutable rule and add `release.json` and `drift_worker.js` (the shim) to the `no-cache` list. T032 passes.
-- [ ] T045 [US3] Rework `.github/workflows/pwa.yml` per `contracts/web-release.md`:
+- [x] T044 [P] [US3] In `infra/firebase/firebase.json`, add the `^/r/[0-9a-f]{16}/.*$` immutable rule and add `release.json` and `drift_worker.js` (the shim) to the `no-cache` list. T032 passes.
+- [x] T045 [US3] Rework `.github/workflows/pwa.yml` per `contracts/web-release.md`:
   - **On `master`:** build with `--pwa-strategy=none`, run `app/tool/stage_web_release.sh` with an empty mirror base, and deploy `build/web_release` to the `master` preview channel.
   - **On tag `web-v<semver>`** (validate the format):
     1. build once and stage with `MIRROR_BASE_URL` from `APP_ENV_PROD`;
@@ -244,7 +256,9 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
     A failure in steps 2–3 stops before step 4.
 - [ ] T046 [US3] Add a step to `.github/workflows/app.yml` that runs `node --test app/test_web/` with `actions/setup-node` (Node 22), after Lane M's T063 exists.
-- [ ] T047 [US3] Point Kuma's `pwa-mirror` monitor at `https://app.<ip1>.sslip.io/release-check.txt` in `docs/runbooks/uptime-kuma.md` (owner updates the monitor). Write `docs/runbooks/pwa-release.md`, or extend `docs/runbooks/firebase-hosting.md` and replace its "arrives on D4" notes. It covers: tagging `web-v*`, what the job does, checking the mirror, rolling back the live channel from Firebase Hosting's release history, and pruning. Update `docs/runbooks/README.md`.
+
+  **Waiting on Lane M.** `app/test_web/` is Lane M's T063; the step stays absent until it is on `master`.
+- [x] T047 [US3] Point Kuma's `pwa-mirror` monitor at `https://app.<ip1>.sslip.io/release-check.txt` in `docs/runbooks/uptime-kuma.md` (owner updates the monitor). Write `docs/runbooks/pwa-release.md`, or extend `docs/runbooks/firebase-hosting.md` and replace its "arrives on D4" notes. It covers: tagging `web-v*`, what the job does, checking the mirror, rolling back the live channel from Firebase Hosting's release history, and pruning. Update `docs/runbooks/README.md`.
 
 ### Validation (B2)
 
@@ -253,7 +267,9 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   - a push touching `admin/` deploys, and `readlink /srv/admin/current` names the SHA;
   - a deploy forced to fail before the swap leaves the previous SHA;
   - on the first `web-v*` tag (owner), the release job runs green, and a run with the mirror copy forced to fail stops before the live deploy (use `workflow_dispatch` on a throwaway tag).
-- [ ] T049 [US3] Add B2's D4 items to `docs/owner-actions.md`: `TRUSTED_PROXIES_PUBLIC` only if the default changes, the one-time network recreation, the Kuma monitor change, the backup heartbeat result from T030, and tagging `web-v0.1.0`, each with its runbook link.
+
+  **After the merge.** None of these can run before the branch is deployed: the mirror has no `r/<hash>/` yet, `admin.yml`'s deploy job starts on `master`, and the first `web-v*` tag is the owner's. They are listed in `docs/owner-actions.md` under D4 Lane B2 "After merge".
+- [x] T049 [US3] Add B2's D4 items to `docs/owner-actions.md`: `TRUSTED_PROXIES_PUBLIC` only if the default changes, the one-time network recreation, the Kuma monitor change, the backup heartbeat result from T030, and tagging `web-v0.1.0`, each with its runbook link.
 
 ---
 

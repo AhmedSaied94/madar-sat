@@ -70,9 +70,11 @@ export RCLONE_CONFIG_OCI_ACCESS_KEY_ID=ci
 export RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY=ci
 export RCLONE_BUCKET=madar-media
 # No heartbeat: a Kuma push is not what this check is about, and an empty value is a no-op.
-export KUMA_PUSH_URL_BACKUP_DB=
-export KUMA_PUSH_URL_BACKUP_MEDIA=
-export KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY=
+# D4 T030: the scripts refuse to run without a heartbeat URL. Nothing listens on this one, so each
+# push fails and is only logged, which keeps this drill about retention.
+export KUMA_PUSH_URL_BACKUP_DB=http://127.0.0.1:1/api/push/ci
+export KUMA_PUSH_URL_BACKUP_MEDIA=http://127.0.0.1:1/api/push/ci
+export KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY=http://127.0.0.1:1/api/push/ci
 
 fail() {
   printf 'check-backup-retention: %s\n' "$*" >&2

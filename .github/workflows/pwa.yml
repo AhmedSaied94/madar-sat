@@ -1,11 +1,16 @@
-# The Flutter web PWA → Firebase Hosting preview channel `master`, kept for 30 days (FR-025,
-# SD §5.2, research R14). Hosting config: infra/firebase/. The public release (web-v* tags and the
-# VPS-1 mirror) arrives on D4.
+# The Flutter web PWA: the `master` preview channel, and the public `web-v*` release (FR-025,
+# SD §5.2, contracts/web-release.md). Hosting config: infra/firebase/.
+#
+# A release is a content-addressed folder, `r/<hash>/`: the shell (index.html, sw.js, release.json)
+# stays small on Firebase and the app's own files are immutable on the VPS-1 mirror. The live
+# channel is only deployed after the mirror serves the new hash, so the shell never points at files
+# that are not there yet.
 name: pwa
 
 on:
   push:
     branches: [master]
+    tags: ["web-v*"]
     paths:
       - "app/**"
       - "infra/firebase/**"
@@ -16,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pwa-preview
+  group: pwa-${{ github.ref_type == 'tag' && 'release' || 'preview' }}
   cancel-in-progress: false
 
 jobs:
@@ -42,6 +47,8 @@ jobs:
     defaults:
       run:
         working-directory: app
+    outputs:
+      hash: ${{ steps.stage_release.outputs.hash }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -60,16 +67,60 @@ jobs:
       # the committed file is empty so a local `flutter run -d chrome` needs no project (R26).
       - run: ./tool/write_firebase_config.sh env/prod.json
       # --no-web-resources-cdn bundles CanvasKit instead of loading it from www.gstatic.com (FR-042).
-      - run: flutter build web --release --no-web-resources-cdn -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+      # --pwa-strategy=none keeps Flutter's own service worker out: `web/sw.js` owns the page (R12).
+      - run: flutter build web --release --no-web-resources-cdn --pwa-strategy=none -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+      - name: Validate the release tag
+        if: github.ref_type == 'tag'
+        run: |
+          [[ $GITHUB_REF_NAME =~ ^web-v[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+            || { echo "::error::the tag '$GITHUB_REF_NAME' is not web-v<major>.<minor>.<patch>"; exit 1; }
+      # The preview channel has no mirror: its release folder is served by Firebase itself, so the
+      # shell and the app's files share one origin (contracts/web-release.md).
+      - name: Stage the release layout (preview)
+        if: github.ref_type == 'branch'
+        run: |
+          set -euo pipefail
+          if [[ ! -x tool/stage_web_release.sh ]]; then
+            echo "::warning file=app/tool/stage_web_release.sh::the stage script is not on this commit; the preview deploys build/web"
+            exit 0
+          fi
+          jq '.MIRROR_BASE_URL = ""' env/prod.json > "$RUNNER_TEMP/preview.json"
+          ./tool/stage_web_release.sh "$RUNNER_TEMP/preview.json" build/web_release
+      # The release needs the real mirror: the shell asks for `r/<hash>/` there first.
+      - name: Stage the release layout (release)
+        id: stage_release
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          [[ -x tool/stage_web_release.sh ]] \
+            || { echo "::error file=app/tool/stage_web_release.sh::the release cannot be staged without this script"; exit 1; }
+          mirror=$(jq -r '.MIRROR_BASE_URL // ""' env/prod.json)
+          [[ $mirror == https://* ]] \
+            || { echo "::error::MIRROR_BASE_URL is '$mirror', not an https URL (contracts/web-release.md)"; exit 1; }
+          out=$(./tool/stage_web_release.sh env/prod.json build/web_release)
+          hash=$(sed -n 's/^RELEASE_HASH=//p' <<<"$out" | tail -1)
+          [[ $hash =~ ^[0-9a-f]{16}$ ]] \
+            || { echo "::error::the stage script printed no RELEASE_HASH (got '$out')"; exit 1; }
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+          echo "Staged release $hash" >> "$GITHUB_STEP_SUMMARY"
+      - name: Choose what to deploy
+        id: dist
+        run: |
+          if [[ -d build/web_release ]]; then
+            echo "path=build/web_release" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=build/web" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pwa-web
-          path: app/build/web
+          path: app/${{ steps.dist.outputs.path }}
           if-no-files-found: error
 
   # Deploys from its own job so the Firebase action runs without the Flutter toolchain.
   deploy:
     needs: build
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,3 +147,88 @@ jobs:
         run: |
           echo "Preview channel: $URLS (expires $EXPIRES)"
           echo "PWA preview: $URLS (expires $EXPIRES)" >> "$GITHUB_STEP_SUMMARY"
+
+  # D4 T045 (contracts/web-release.md): copy the release folder to the VPS-1 mirror, prove it is
+  # served with the immutable and CORS headers, and only then move the live channel onto it.
+  release:
+    needs: [build]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pwa-web
+          path: web_release
+      - id: sync
+        uses: ./.github/actions/vps1-sync
+        with:
+          wg-config: ${{ secrets.WG_CI_CONFIG }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      - name: Copy the release folder to the mirror
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+          HASH: ${{ needs.build.outputs.hash }}
+        run: |
+          set -euo pipefail
+          read -ra ssh <<<"$SSH_COMMAND"
+          # Content-addressed, so nothing is ever overwritten and `--delete` stays inside this hash.
+          "${ssh[@]}" vps1 "install -d -m 755 /srv/app-mirror/r/$HASH" < /dev/null
+          rsync -a --delete -e "$SSH_COMMAND" "web_release/r/$HASH/" "vps1:/srv/app-mirror/r/$HASH/"
+          printf '%s\n' "$HASH" | "${ssh[@]}" vps1 'cat > /srv/app-mirror/release-check.txt'
+      - name: The mirror serves the release with the right headers
+        env:
+          HASH: ${{ needs.build.outputs.hash }}
+        run: |
+          set -euo pipefail
+          mirror=$(jq -r '.MIRROR_BASE_URL' app/env/prod.json | sed 's:/*$::')
+          [[ $mirror == https://* ]] || { echo "::error::MIRROR_BASE_URL is not set in APP_ENV_PROD"; exit 1; }
+          # `Accept-Encoding: br` proves the precompressed file is served, not re-encoded per request.
+          headers=$(curl -sSI -H 'Origin: https://madar-sat.web.app' -H 'Accept-Encoding: br' \
+            "$mirror/r/$HASH/main.dart.js")
+          for expected in \
+            'HTTP/2 200' \
+            'cache-control: public, max-age=31536000, immutable' \
+            'access-control-allow-origin: https://madar-sat.web.app' \
+            'content-encoding: br' \
+            'x-content-type-options: nosniff'; do
+            grep -qi "$expected" <<<"$headers" \
+              || { echo "::error::the mirror for $HASH is missing '$expected'"; echo "$headers"; exit 1; }
+          done
+          # `release-check.txt` is what Kuma watching the mirror polls.
+          served=$(curl -sS "$mirror/release-check.txt")
+          [[ $served == "$HASH" ]] \
+            || { echo "::error::release-check.txt says '$served', not $HASH"; exit 1; }
+          echo "Mirror verified for $HASH" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prepare the hosting directory
+        run: |
+          set -euo pipefail
+          # firebase.json's `public` is this folder, relative to `infra/firebase`.
+          rm -rf infra/firebase/public
+          cp -a web_release infra/firebase/public
+      - name: Deploy the live channel
+        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          entryPoint: infra/firebase
+          channelId: live
+          firebaseToolsVersion: 15.34.2
+          disableComment: true
+      - name: Prune old mirror releases
+        env:
+          SSH_COMMAND: ${{ steps.sync.outputs.ssh-command }}
+        run: |
+          set -euo pipefail
+          read -ra ssh <<<"$SSH_COMMAND"
+          # Older than 30 days, always keeping the newest 3 (data-model.md).
+          # shellcheck disable=SC2016 # the remote shell expands these, not this one
+          "${ssh[@]}" vps1 'cd /srv/app-mirror/r && cutoff=$(($(date +%s) - 2592000)) && ls -1dt */ | tail -n +4 | while IFS= read -r old; do [ "$(stat -c %Y "$old")" -lt "$cutoff" ] && rm -rf -- "$old"; done; true' < /dev/null
+          echo "Pruned mirror releases older than 30 days, keeping the newest 3" >> "$GITHUB_STEP_SUMMARY"
+      - name: Leave WireGuard
+        if: always()
+        run: |
+          sudo wg-quick down wg0 || true
+          rm -rf "$RUNNER_TEMP/madar-ssh"
