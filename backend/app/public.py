@@ -21,12 +21,13 @@ from app.api.public import (
     satellites,
     teams,
 )
-from app.api.ratelimit import rate_limit
+from app.api.ratelimit import rate_limit, warn_if_exempt_allowlist
 from app.settings import get_settings
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    warn_if_exempt_allowlist()
     app = FastAPI(
         title="Madar Sat Public API",
         version=settings.contract_version,

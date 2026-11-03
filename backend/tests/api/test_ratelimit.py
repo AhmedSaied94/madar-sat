@@ -1,7 +1,12 @@
-"""Rate limits on /v1: device vs IP, windows, fail-open and the healthz exemption (T023)."""
+"""Rate limits on /v1: device vs IP, windows, fail-open and the healthz exemption (T023).
+
+D4 adds the env-only allowlist for the load-test window (research R3, FR-007): an exact client IP
+skips the limiter, everybody else keeps theirs, and a non-empty list is loud at startup.
+"""
 
 from __future__ import annotations
 
+import logging
 from uuid import uuid4
 
 from fastapi import Request
@@ -150,3 +155,90 @@ async def test_the_admin_app_has_no_rate_limit(anon_admin_client, monkeypatch):
 
     for _ in range(3):
         assert (await anon_admin_client.get("/admin/api/sources")).status_code == 401
+
+
+# --- D4 T002: RATE_LIMIT_EXEMPT_IPS ---------------------------------------------------------------
+
+
+def _exempt(monkeypatch, *ips: str) -> None:
+    monkeypatch.setattr(get_settings(), "rate_limit_exempt_ips", list(ips))
+
+
+def _trust(monkeypatch, *peers: str) -> None:
+    monkeypatch.setattr(get_settings(), "trusted_proxies", list(peers))
+
+
+async def test_an_empty_allowlist_exempts_nobody(public_client, monkeypatch):
+    _exempt(monkeypatch)
+    _tighten(monkeypatch, ip=1)
+
+    answers = [await public_client.get("/v1/satellites") for _ in range(2)]
+
+    assert [answer.status_code for answer in answers] == [200, 429]
+
+
+async def test_an_exempt_ip_is_never_limited_while_another_still_is(public_client, monkeypatch):
+    # The test client's peer is 127.0.0.1, so trusting it lets the header name the client.
+    _trust(monkeypatch, "127.0.0.1")
+    _exempt(monkeypatch, "203.0.113.7")
+    _tighten(monkeypatch, ip=1)
+    exempt = {"X-Forwarded-For": "203.0.113.7"}
+
+    for _ in range(5):
+        assert (await public_client.get("/v1/satellites", headers=exempt)).status_code == 200
+
+    other = [await public_client.get("/v1/satellites", headers={"X-Forwarded-For": "198.51.100.9"}) for _ in range(2)]
+    assert [answer.status_code for answer in other] == [200, 429]
+    assert int(other[-1].headers["retry-after"]) >= 1
+
+
+async def test_a_forged_allowlist_claim_from_an_untrusted_peer_is_limited(public_client, monkeypatch):
+    _exempt(monkeypatch, "203.0.113.7")
+    _tighten(monkeypatch, ip=1)
+    # trusted_proxies keeps its default (10.8.0.1), so the test peer's header is not believed.
+    forged = {"X-Forwarded-For": "203.0.113.7"}
+
+    answers = [await public_client.get("/v1/satellites", headers=forged) for _ in range(2)]
+
+    assert [answer.status_code for answer in answers] == [200, 429]
+
+
+async def test_each_exempt_request_logs_at_debug_and_the_summary_once_a_minute(public_client, monkeypatch, caplog):
+    _exempt(monkeypatch, "127.0.0.1")
+    _tighten(monkeypatch, ip=1)
+    monkeypatch.setattr(ratelimit, "_EXEMPT_SUMMARY", {})
+
+    with caplog.at_level(logging.DEBUG, logger="madar.ratelimit"):
+        for _ in range(3):
+            assert (await public_client.get("/v1/satellites")).status_code == 200
+
+    debug = [
+        record for record in caplog.records if record.levelno == logging.DEBUG and "ratelimit.exempt" in record.msg
+    ]
+    info = [record for record in caplog.records if record.levelno == logging.INFO and "ratelimit.exempt" in record.msg]
+    # The frozen clock keeps all three in the same minute, so one summary covers them.
+    assert len(debug) == 3
+    assert len(info) == 1
+
+
+def test_a_non_empty_allowlist_warns_at_startup(monkeypatch, caplog):
+    from app.public import create_app
+
+    _exempt(monkeypatch, "203.0.113.7")
+
+    with caplog.at_level(logging.WARNING, logger="madar.ratelimit"):
+        create_app()
+
+    warnings = [record for record in caplog.records if record.levelno == logging.WARNING]
+    assert any("ratelimit.exempt_enabled" in record.msg and "203.0.113.7" in record.getMessage() for record in warnings)
+
+
+def test_an_empty_allowlist_is_silent_at_startup(monkeypatch, caplog):
+    from app.public import create_app
+
+    _exempt(monkeypatch)
+
+    with caplog.at_level(logging.WARNING, logger="madar.ratelimit"):
+        create_app()
+
+    assert not [record for record in caplog.records if "ratelimit.exempt_enabled" in record.msg]

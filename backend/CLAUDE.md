@@ -24,7 +24,10 @@ Madar Sat backend: two ASGI apps — public `app.public:app` (`/v1`) and admin
   editor's copy stale too. Importers that touch a match, team or channel must keep that in mind.
 - **Auth** (`app/auth/`): argon2id passwords, 15-minute HS256 access tokens (`ADMIN_JWT_SECRET`), rotating
   hashed refresh tokens in `admin_refresh_tokens` (reuse revokes the family), the `madar_csrf` double
-  submit, login limiting in Redis. `require_editor` / `require_admin` load the admin from the database on
+  submit, login limiting in Redis. The client IP comes from `TRUSTED_PROXIES` (`client_ip()` in
+  `app/auth/limits.py`): Caddy only, right-most untrusted hop wins, and the public app trusts its
+  Compose bridge gateway. `RATE_LIMIT_EXEMPT_IPS` (empty by default, load-test window only) skips the
+  `/v1` limiter for exact IPs and warns at startup. `require_editor` / `require_admin` load the admin from the database on
   every request; the role in the token is never trusted. Every admin route except `auth/*` and `healthz`
   carries one (a test walks the routes).
 - **Push** uses an outbox. Producers only insert `notification_outbox` rows with a unique
