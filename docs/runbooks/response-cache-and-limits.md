@@ -38,6 +38,19 @@ Then `dc up -d --force-recreate api-public` and check `curl -fsS http://127.0.0.
 
 A dependency on every public router only (`app/api/ratelimit.py`); the admin app has none. `/healthz` is exempt. The window is two fixed buckets, weighted across the minute boundary.
 
+### Client IP
+
+The bucket key is the **client's** address, not the proxy's: `client_ip()` (`app/auth/limits.py`) reads `X-Forwarded-For` only when the request's peer is in `TRUSTED_PROXIES`, then takes the right-most hop that isn't itself trusted, so a forged left-most hop is ignored. Anything else returns the peer.
+
+| App | `TRUSTED_PROXIES` | Why |
+| --- | --- | --- |
+| `api-public` | `127.0.0.1,172.30.0.1` | Caddy runs with host networking and proxies to the published loopback port, so inside the container the peer is the Compose bridge gateway. B2 fixes that subnet (`172.30.0.0/24`, gateway `.1`). |
+| `api-admin` | `10.8.0.1` (the default) | Its Caddy is on wg0; nothing else can reach port 8001. |
+
+A comma list; each entry must parse as an IP or startup fails. Set it in VPS-1's `/srv/madar/.env` (B2's Compose passes it to `api-public`) and recreate. The symptom of a wrong value is one shared `rl:ip:` bucket for every client: no per-client limits and device registration capped for the whole internet at once.
+
+The limiter also has an allowlist for the load-test window, `RATE_LIMIT_EXEMPT_IPS` (empty by default, exact IPs). Its procedure is in [load-testing.md](load-testing.md#2-open-the-window).
+
 | Bucket | Key | Default |
 | --- | --- | --- |
 | Device, when `Authorization: Device <token>` belongs to a live device | `rl:d:<first 16 hex of sha256(token)>:<minute>` | 120 / min |
