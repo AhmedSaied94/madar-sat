@@ -446,7 +446,7 @@ From delivery-plan §3. The docs count working days, not dates.
 | Play closed test: 12 testers for 14 days (if A1) | D2, the first AAB to the closed track | 14 calendar days, then a production-access review (a few days) | Android production; D12 submits "when the Play gate clears" |
 | Play app review | Every submission | Hours to several days | Each Android release |
 | Apple Developer enrollment | **D0** | Individual: 1–2 days. Organization: weeks (D-U-N-S) | The iOS days D13 and D16–D18 (A7 is checked on D13) |
-| Firebase Blaze with a $5 budget alert (A3) | D0 | Minutes | The PWA launch on D4 without the quota risk |
+| ~~Firebase Blaze with a $5 budget alert (A3)~~ Not needed: O6 decided Spark on 2026-11-03; the mirror ships on D4 | D0 | — | — |
 | Bridge shadow run: 3 days of clean diffs | D2, when the bridge starts | ≥ 3 days (system-design §10: 1–2 weeks) | Retiring the bridge on D7 |
 | AdMob app and consent setup | D5 | AdMob reviews the app once it's on the Play Store | Ads in Android production (D12) |
 | Claude Design pass for the V3 screens | D17 | 1–2 days | D21. Delivery-plan §9 wants them by D20 |
@@ -464,7 +464,7 @@ From delivery-plan §9 and system-design §3.
 | O3 | Drop the card-sharing labels and BISS keys | D0 | Drop | Default in use; confirm |
 | A1 | Play account type | D0 | Personal, created after Nov 2023 | Unconfirmed |
 | A2 | Both VPSs running, with reserved IPs | D0 | — | Unconfirmed (B2 "Host facts") |
-| A3 / O6 | Blaze with a budget alert, or Spark with the mirror design | D0 | Blaze | Unconfirmed (Gaps 2) |
+| A3 / O6 | Blaze with a budget alert, or Spark with the mirror design | D0 | Blaze | **Decided 2026-11-03: Spark** (spec 004) |
 | O5 | Apple enrollment as an individual or an organization | D0, to start it | Individual | Unconfirmed |
 | O10 | Default satellites when the user skips | D1 | Nilesat + Badr | Default in use; confirm |
 | O7 | Live data source for minute, events and lineups | **D4**, before spec 005 is planned | Manual live entry on D5 | Open |
@@ -563,7 +563,7 @@ Each day gets its full section when it's implemented. These lines come from the 
 Places where the docs conflict, or say nothing about an owner step. Fix each one in the doc it names, then delete it here.
 
 1. **Resolved 2026-10-29: `master` protection.** The repo stays private with one contributor, so `master` is unprotected; delivery-plan §5.1, Day 0 step 4 and the D1 spec now say so. (Kept here so the later gap numbers don't shift.)
-2. **The Firebase plan.** Delivery-plan A3 assumes Blaze. System-design §2 (G6 and the constraints) and constitution IX describe Spark at $0, and system-design §3.3 still lists O6 as open.
+2. **Resolved 2026-11-03: the Firebase plan.** O6 is Spark (spec 004); delivery-plan A3 and system-design §3 now say so, matching constitution IX. (Kept so the later gap numbers don't shift.)
 3. **The OCI security list.** No task or delivery-plan step opens the ports in OCI's security list. System-design §7.2 only mentions it in passing ("even when the security list allows them").
 4. **The Play tracks:**
    - system-design §9 `app.yml` uploads to the **internal** track;

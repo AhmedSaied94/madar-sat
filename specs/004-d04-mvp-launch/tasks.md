@@ -265,15 +265,15 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
 
 ### Setup (A)
 
-- [ ] T050 [US4] Confirm `pnpm build` output has no inline `<script>` or `style=` attributes that `default-src 'self'` would block: open `admin/dist/index.html` under the CSP with `pnpm preview` and see no console CSP errors. Fix any in `admin/src/` and note the result in the PR.
-- [ ] T051 [P] [US4] Add `@playwright/test` (pinned) as a devDependency, `admin/playwright.config.ts` and the `"e2e": "playwright test"` script in `admin/package.json`:
+- [x] T050 [US4] Confirm `pnpm build` output has no inline `<script>` or `style=` attributes that `default-src 'self'` would block: open `admin/dist/index.html` under the CSP with `pnpm preview` and see no console CSP errors. Fix any in `admin/src/` and note the result in the PR.
+- [x] T051 [P] [US4] Add `@playwright/test` (pinned) as a devDependency, `admin/playwright.config.ts` and the `"e2e": "playwright test"` script in `admin/package.json`:
   - **`E2E_TARGET=mock` (default):** `webServer` starts `pnpm prism` and `pnpm dev`, with base URL `http://localhost:5173`.
   - **`E2E_TARGET=live`:** no `webServer`, base URL `E2E_BASE_URL`, and the internal CA comes from `NODE_EXTRA_CA_CERTS` (never `ignoreHTTPSErrors`).
   - Chromium only, retries 0, an HTML report to `admin/playwright-report/` (git-ignored).
 
 ### Tests first (A)
 
-- [ ] T052 [US4] Write `admin/e2e/smoke.spec.ts` per [contracts/e2e-smoke.md](contracts/e2e-smoke.md):
+- [x] T052 [US4] Write `admin/e2e/smoke.spec.ts` per [contracts/e2e-smoke.md](contracts/e2e-smoke.md):
   1. log in;
   2. A3; in live mode, set the date input (`copy.pickDate`) to `E2E_MATCH_DATE` (default `2000-01-01`);
   3. find exactly one row whose stadium starts with `E2E_MATCH_MARKER`, or the first row in mock mode. Zero or more than one aborts before any edit;
@@ -281,14 +281,23 @@ Lane B1's code and its tests are in on `d04-b1`, cut from `master` (`acbfece`).
   5. live only: poll `GET ${E2E_PUBLIC_API}/v1/matches/<id>` every 5 s until `data.stadium` matches, failing after 60 s, and print the elapsed seconds.
 
   Credentials and the marker come only from the environment. See it fail before T053 if selectors are missing.
-- [ ] T053 [US4] Add any stable `data-testid` or accessible labels the test needs to A3's rows and A4's stadium field (`admin/src/features/matches/`), with no visual change. Keep the Vitest suite green. `pnpm e2e` (mock) passes locally.
+- [x] T053 [US4] Add any stable `data-testid` or accessible labels the test needs to A3's rows and A4's stadium field (`admin/src/features/matches/`), with no visual change. Keep the Vitest suite green. `pnpm e2e` (mock) passes locally.
 
 ### Polish and validation (A)
 
 - [ ] T054 [P] [US4] Close the owner's D3 polish list (FR-023) once it is written in `docs/owner-actions.md`. Fix each item in `admin/src/` with a test, or move it to a named day with a reason. If the owner records "none", note that FR-023 is met.
+
+  **Open:** the D3 polish list is still an owner to-do, so this task has nothing to close yet. It is
+  recorded as the one before-merge owner item in [docs/owner-actions.md](../../docs/owner-actions.md#004-d4-mvp-launch);
+  "none" is a valid answer.
 - [ ] T055 [US4] After B2's T040 deploys, run the live smoke test from a WireGuard peer three times (quickstart A step 2), recording each edit-to-`/v1` time (≤ 60 s, SC-004). Clear the marker in A4 and see a live run abort before editing, then restore it. Document the live run in `docs/runbooks/admin-access.md`: the `E2E_*` variables, the test account, the test match, and never pointing it at another match.
+
+  **Partly done:** the runbook section is written ([admin-access.md "The live smoke test (D4)"](../../docs/runbooks/admin-access.md#the-live-smoke-test-d4)).
+  The three live runs wait on B2's T040 deploy and on the owner's account and test match.
 - [ ] T056 [US4] On the deployed admin, take the screenshots carried from 002 T107 (`Matches.png`, `MatchEditor.png`, `Dialogs.png`) and 003 T106–T107 (`Main.png`, `Teams.png`, `Competitions.png`, `Satellites.png`, `Channels.png`, `Commentators.png`, `Sources.png`, `SourceRun.png`) at 1440 and 1024, and attach them to the PR.
-- [ ] T057 [US4] Add Lane A's D4 items to `docs/owner-actions.md`: the polish list, the test account and test match, and the live smoke runs.
+
+  **Open:** needs the deployed admin (B2's T040); nothing here can be captured from the mock.
+- [x] T057 [US4] Add Lane A's D4 items to `docs/owner-actions.md`: the polish list, the test account and test match, and the live smoke runs.
 
 ---
 
