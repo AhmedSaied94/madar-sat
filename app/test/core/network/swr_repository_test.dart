@@ -482,7 +482,7 @@ void main() {
     /// escaped the listener's zone: the failure must be the stream's own error, not an
     /// uncaught exception (app/CLAUDE.md, "Data: stale-while-revalidate").
     Future<({List<T> events, List<Object> errors, List<Object> uncaught})> drain<T>(
-      Stream<T> open(),
+      Stream<T> Function() open,
     ) async {
       final events = <T>[];
       final errors = <Object>[];
@@ -547,7 +547,7 @@ void main() {
       expect(result.errors, isEmpty);
       expect(result.uncaught, isEmpty);
       expect(result.events, hasLength(2));
-      final last = result.events.last as SwrSnapshot<List<MatchSummary>>;
+      final last = result.events.last;
       expect(last.data!.map((m) => m.id), [1]);
       expect(last.failure, isNotNull);
     });

@@ -55,7 +55,7 @@ void main() {
         id: id,
         logo: null,
         name: name,
-        primaryCompetition: PrimaryCompetitionRef(id: 4, name: 'الدوري المصري الممتاز'),
+        primaryCompetition: const PrimaryCompetitionRef(id: 4, name: 'الدوري المصري الممتاز'),
         sport: Sport.football,
       );
 

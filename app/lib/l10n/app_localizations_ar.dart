@@ -862,6 +862,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get s16InstallBody => 'لتصلك تنبيهات المباريات وتغيّر الترددات';
 
   @override
+  String get s16InstallRow => 'تثبيت التطبيق';
+
+  @override
   String get s16Share => 'شارك التطبيق';
 
   @override

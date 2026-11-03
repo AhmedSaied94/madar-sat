@@ -1546,6 +1546,12 @@ abstract class AppLocalizations {
   /// **'لتصلك تنبيهات المباريات وتغيّر الترددات'**
   String get s16InstallBody;
 
+  /// No description provided for @s16InstallRow.
+  ///
+  /// In ar, this message translates to:
+  /// **'تثبيت التطبيق'**
+  String get s16InstallRow;
+
   /// No description provided for @s16Share.
   ///
   /// In ar, this message translates to:
