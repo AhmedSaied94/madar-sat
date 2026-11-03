@@ -49,13 +49,14 @@ if [[ -n $mirror && ! $mirror =~ ^https://[^/]+$ ]]; then
   die "MIRROR_BASE_URL must be https with no path, or empty (got '$mirror')"
 fi
 
-# The files the build leaves at the root, which stay there. Everything else is payload and
+# The files the build leaves at the root, which stay there (`privacy.html` is the policy page
+# at the stable address PRIVACY_URL names). Everything else is payload and
 # belongs to the release folder; `drift_worker.js` is payload (the real worker) and is
 # replaced at the root by the shim this script writes, and `release.json` is written here.
 is_shell() {
   case "$1" in
     index.html|flutter_bootstrap.js|manifest.json|favicon.png|sw.js|sw_core.mjs|\
-    firebase-messaging-sw.js|firebase-config.js) return 0 ;;
+    firebase-messaging-sw.js|firebase-config.js|privacy.html) return 0 ;;
     icons/*) return 0 ;;
   esac
   return 1

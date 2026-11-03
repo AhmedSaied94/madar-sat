@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>سياسة الخصوصية · مدار سات</title>
+  <meta name="description" content="سياسة الخصوصية لتطبيق مدار سات: ما الذي نحفظه، ولماذا، وكيف تحذفه.">
+  <style>
+    /* A static legal page outside the Flutter app: system colors only, so it follows the
+       reader's light or dark theme without copying token values. */
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      background: Canvas;
+      color: CanvasText;
+      font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+      line-height: 1.8;
+    }
+    main { max-width: 42rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+    h1 { font-size: 1.6rem; margin: 0 0 0.25rem; }
+    h2 { font-size: 1.15rem; margin: 2rem 0 0.5rem; }
+    .updated { opacity: 0.7; margin: 0 0 2rem; }
+    ul { padding-inline-start: 1.25rem; }
+    li { margin-block: 0.35rem; }
+    bdi { unicode-bidi: isolate; }
+    hr { margin: 3rem 0; border: 0; border-top: 1px solid GrayText; }
+    [lang="en"] { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>سياسة الخصوصية</h1>
+  <p class="updated">آخر تحديث: <bdi dir="ltr">2026-11-03</bdi></p>
+
+  <p>مدار سات دليل لمشاهدي كرة القدم عبر الطبق: أي قناة تنقل المباراة، وعلى أي قمر، وبأي تردد. لا يحتاج التطبيق إلى حساب، ولا نطلب اسمك أو بريدك أو رقم هاتفك أو موقعك.</p>
+
+  <h2>ما الذي نحفظه</h2>
+  <ul>
+    <li><strong>معرّف جهاز مجهول.</strong> عند أول تشغيل ينشئ خادمنا رمزاً عشوائياً لجهازك، ونحفظه مشفّراً بدالة تجزئة. لا يرتبط بهويتك.</li>
+    <li><strong>إعداداتك.</strong> المنصة (أندرويد أو الويب)، ونسخة التطبيق، واللغة، والمنطقة الزمنية، والأقمار التي اخترتها، والفرق والبطولات والمباريات التي تتابعها. نستخدمها لعرض المواعيد بتوقيتك وإرسال التذكيرات.</li>
+    <li><strong>رمز الإشعارات.</strong> إذا سمحت بالإشعارات، نحفظ الرمز الذي تعطيه خدمة Firebase Cloud Messaging لجهازك، ونستخدمه لإرسال تنبيهات المباريات التي تتابعها فقط.</li>
+    <li><strong>عنوان IP.</strong> يصل إلى خوادمنا مع كل طلب. نستخدمه لتحديد عدد الطلبات ومنع إساءة الاستخدام، وتنتهي هذه العدّادات خلال دقائق. قد يظهر في سجلات الخادم التي تُحذف تلقائياً بعد فترة قصيرة.</li>
+  </ul>
+
+  <h2>خدمات Google التي يستخدمها التطبيق</h2>
+  <ul>
+    <li><strong>Firebase Cloud Messaging</strong> لإرسال الإشعارات.</li>
+    <li><strong>Firebase Remote Config</strong> لقراءة إعدادات التطبيق من دون تحديثه.</li>
+    <li><strong>Firebase Crashlytics</strong> (تطبيق أندرويد) لتقارير الأعطال: طراز الجهاز، ونسخة النظام، وتفاصيل العطل التقنية.</li>
+  </ul>
+  <p>تعالج Google هذه البيانات وفق <a href="https://firebase.google.com/support/privacy" rel="noopener">سياسة خصوصية Firebase</a>. لا يعرض التطبيق إعلانات حالياً. إذا أضفناها في تطبيق أندرويد، سنطلب موافقتك حيث يلزم القانون ذلك، ونحدّث هذه الصفحة قبلها.</p>
+
+  <h2>ما لا نفعله</h2>
+  <ul>
+    <li>لا نبيع بياناتك ولا نشاركها مع أحد لأغراض الإعلان.</li>
+    <li>لا نبني ملفاً شخصياً عنك ولا نتتبّعك عبر تطبيقات أو مواقع أخرى.</li>
+  </ul>
+
+  <h2>نسخة الويب</h2>
+  <p>تحفظ نسخة الويب ملفات التطبيق وآخر البيانات التي عرضتها في متصفحك، حتى تفتح بسرعة وتعمل دون اتصال. تبقى هذه النسخة على جهازك، وتحذفها بمسح بيانات الموقع من متصفحك.</p>
+
+  <h2>أين تُحفظ البيانات ومدة حفظها</h2>
+  <p>تُحفظ على خوادمنا لدى Oracle Cloud، وتُنسخ احتياطياً بنسخ مشفّرة. تبقى بيانات جهازك ما دمت تستخدم التطبيق، أو حتى تحذفها. تُحذف النسخ الاحتياطية المشفّرة تلقائياً خلال ستة أشهر.</p>
+
+  <h2>حذف بياناتك</h2>
+  <p>من <strong>المزيد ← الإعدادات ← «حذف بيانات جهازي»</strong> نحذف فوراً من الخادم معرّف جهازك ومتابعاتك ورمز الإشعارات، ويبدأ التطبيق من جديد. حذف التطبيق يوقف الإشعارات، ولا تُرسل إليه بعدها أي بيانات.</p>
+
+  <h2>الأطفال</h2>
+  <p>التطبيق غير موجّه للأطفال دون 13 عاماً، ولا نجمع عنهم بيانات عن قصد.</p>
+
+  <h2>التغييرات والتواصل</h2>
+  <p>إذا تغيّرت هذه السياسة نحدّث هذه الصفحة وتاريخها أعلاه. لأي سؤال عن الخصوصية، راسلنا على البريد المذكور في صفحة التطبيق على Google Play.</p>
+
+  <hr>
+
+  <section lang="en" dir="ltr">
+    <h1>Privacy policy (English summary)</h1>
+    <p class="updated">Last updated: 2026-11-03</p>
+    <p>Madar Sat shows which channel, satellite and frequency carry each football match. It needs no account, and we never ask for your name, email, phone number or location.</p>
+    <ul>
+      <li><strong>What we store:</strong> an anonymous device ID that our server generates (stored hashed); your platform, app version, language, time zone, chosen satellites and follows; and, if you allow notifications, your Firebase Cloud Messaging token, used only for alerts about what you follow.</li>
+      <li><strong>IP address:</strong> seen with each request and used to limit abuse; those counters expire within minutes, and server logs are rotated after a short period.</li>
+      <li><strong>Google services:</strong> Firebase Cloud Messaging, Remote Config and, in the Android app, Crashlytics crash reports (device model, OS version, crash details), under the <a href="https://firebase.google.com/support/privacy" rel="noopener">Firebase privacy terms</a>. The app shows no ads today; if Android ads are added, we will ask for consent where the law requires it and update this page first.</li>
+      <li><strong>We never</strong> sell your data, share it for advertising, or track you across other apps or sites.</li>
+      <li><strong>Web version:</strong> app files and the last data you viewed are cached in your browser; clearing the site's data removes them.</li>
+      <li><strong>Storage and retention:</strong> on our servers at Oracle Cloud, with encrypted backups that are deleted within six months. Your device data stays until you delete it.</li>
+      <li><strong>Deleting your data:</strong> More → Settings → “حذف بيانات جهازي” deletes your device ID, follows and push token from our server at once.</li>
+      <li><strong>Children:</strong> the app is not directed at children under 13.</li>
+      <li><strong>Contact:</strong> the email address on the app's Google Play listing.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

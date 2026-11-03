@@ -19,6 +19,7 @@ void main() {
     'sw_core.mjs',
     'firebase-messaging-sw.js',
     'firebase-config.js',
+    'privacy.html',
     'icons/Icon-192.png',
   ];
 
