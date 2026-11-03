@@ -181,15 +181,34 @@ ensure_redis_acl_group() {
   install -d -m 750 -o deploy -g "$existing" /srv/madar/redis
 }
 
+# `/srv/admin/current` is the relative symlink Caddy serves. A deploy owns it once it exists; the
+# bootstrap only makes sure there is one, and clears the flat placeholder an older host left behind
+# (D4 T039). It never repoints a live release.
+ensure_admin_current() {
+  local link=/srv/admin/current
+  [[ -L $link ]] && { chown -h deploy:deploy "$link"; return 0; }
+  if [[ -e $link ]]; then
+    if [[ -d $link && -n $(ls -A "$link") ]]; then
+      die "$link exists and is not empty; move it aside and re-run"
+    fi
+    rm -rf -- "$link"
+  fi
+  ln -s releases/placeholder "$link"
+  chown -h deploy:deploy "$link"
+}
+
 ensure_dirs() {
   log "creating /srv folders"
   install -d -m 750 -o deploy -g deploy /srv/madar /srv/madar/infra
   install -d -m 755 -o deploy -g deploy /srv/snapshot /srv/app-mirror
   install -d -m 755 -o "$app_uid" -g "$app_uid" /srv/media /srv/reports
   if [[ $role == vps1 ]]; then
-    install -d -m 755 -o deploy -g deploy /srv/admin
-    [[ -f /srv/admin/index.html ]] \
-      || install -m 644 -o deploy -g deploy "$infra/admin-placeholder/index.html" /srv/admin/index.html
+    # Admin releases (D4 T039, R10): an atomically-swapped `current` symlink, with the bootstrap
+    # page as the first release. The flat `/srv/admin/index.html` of an older host is migrated once.
+    install -d -m 755 -o deploy -g deploy /srv/admin /srv/admin/releases /srv/admin/releases/placeholder
+    install -m 644 -o deploy -g deploy "$infra/admin-placeholder/index.html" \
+      /srv/admin/releases/placeholder/index.html
+    ensure_admin_current
   fi
   if [[ $role == vps2 ]]; then
     # The raw pages. Docker would create the missing bind source as root:root, and the uid-10001

@@ -60,8 +60,28 @@ services:
       retries: 3
       start_period: 10s
 
+  # The public app. `TRUSTED_PROXIES` (R1) is why this service needs a fixed network below: Caddy
+  # runs with `network_mode: host` and reaches the API through the bridge gateway, so the peer the
+  # API sees is that gateway and nothing else. uvicorn gets the same list, or it would rewrite the
+  # client address itself.
   api-public:
     <<: *backend
+    command:
+      - gunicorn
+      - app.public:app
+      - -k
+      - uvicorn.workers.UvicornWorker
+      - -w
+      - "2"
+      - -b
+      - 0.0.0.0:8000
+      - --forwarded-allow-ips=${TRUSTED_PROXIES_PUBLIC:-127.0.0.1,172.30.0.1}
+    environment:
+      HEALTHZ_FORCE_FAIL: ${HEALTHZ_FORCE_FAIL:-false}
+      # data-model.md: the public app trusts the loopback publish and the fixed bridge gateway.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES_PUBLIC:-127.0.0.1,172.30.0.1}
+      # Empty by default: only the load-test window fills it (docs/runbooks/load-testing.md, R3).
+      RATE_LIMIT_EXEMPT_IPS: ${RATE_LIMIT_EXEMPT_IPS:-}
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
@@ -234,3 +254,13 @@ volumes:
   redisdata:
   caddy_data:
   caddy_config:
+
+# A fixed subnet and gateway (R1): the public app trusts this gateway as Caddy's peer, so it must
+# not change when Docker recreates the network. Changing it needs `dc down` once, not just `up -d`
+# (docs/runbooks/deploy-and-rollback.md).
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1

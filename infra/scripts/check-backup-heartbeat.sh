@@ -118,9 +118,18 @@ expect_up() {
   [[ $pushed == status=up\ msg=* ]] || fail "$name: a good run pushed '${pushed:-nothing}', not up"
 }
 
+# D4 T030: a missing URL used to skip the heartbeat without a word, so the backup ran and its Kuma
+# monitor stayed grey for ever. It must now refuse to start, and it must not touch the backup.
+expect_missing_url() {
+  local name=$1 script=$2 variable=$3 code=0
+  : > "$tmp/pushes.log"
+  env -u "$variable" STUB_EXIT=0 "$infra/backup/$script" >/dev/null 2>&1 || code=$?
+  ((code != 0)) || fail "$name: the script ran without $variable instead of refusing"
+  [[ -z $(last_push) ]] || fail "$name: a script with no push URL still pushed something"
+}
+
 kuma_style="$kuma?status=up&msg=OK&ping="
 
-# The URL as Kuma displays it (what an owner pastes), and the bare one the runbook documents.
 for url in "$kuma_style" "$kuma"; do
   if [[ $url == "$kuma" ]]; then form="bare"; else form="kuma-style"; fi
   expect_down "backup-db ($form URL)" backup-db.sh KUMA_PUSH_URL_BACKUP_DB "$url"
@@ -128,5 +137,7 @@ for url in "$kuma_style" "$kuma"; do
   expect_down "backup-media --weekly ($form URL)" backup-media.sh KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY "$url" --weekly
 done
 expect_up "backup-media (kuma-style URL)" backup-media.sh KUMA_PUSH_URL_BACKUP_MEDIA "$kuma_style"
+expect_missing_url "backup-db" backup-db.sh KUMA_PUSH_URL_BACKUP_DB
+expect_missing_url "backup-media" backup-media.sh KUMA_PUSH_URL_BACKUP_MEDIA
 
-printf 'check-backup-heartbeat: ok (a failed backup pushes status=down on a Kuma-style and a bare push URL)\n'
+printf 'check-backup-heartbeat: ok (a failed backup pushes status=down on a Kuma-style and a bare push URL; a missing URL refuses to run)\n'

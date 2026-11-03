@@ -31,9 +31,9 @@ bucket=${RCLONE_BUCKET:-madar-media}
 : "${RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY:?RCLONE_CONFIG_OCI_SECRET_ACCESS_KEY is not set}"
 
 if [[ $mode == weekly ]]; then
-  heartbeat_url=${KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY:-}
+  heartbeat_url=${KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY:?KUMA_PUSH_URL_BACKUP_MEDIA_WEEKLY is not set: a backup that cannot report is a silent backup}
 else
-  heartbeat_url=${KUMA_PUSH_URL_BACKUP_MEDIA:-}
+  heartbeat_url=${KUMA_PUSH_URL_BACKUP_MEDIA:?KUMA_PUSH_URL_BACKUP_MEDIA is not set: a backup that cannot report is a silent backup}
 fi
 # `forget` prunes per group (host + paths) and the container's hostname changes every night, so the
 # host is pinned or every weekly snapshot is kept for ever (B2-R1-3).
@@ -44,10 +44,9 @@ log() { printf '[backup-media] %s\n' "$*"; }
 
 # One push, logged and never fatal. Kuma shows a push URL as `…/api/push/<token>?status=up&msg=OK&ping=`;
 # only the path is kept, or a `down` push would land inside `ping` and Kuma would record `up`
-# (B2-R2-1).
+# (B2-R2-1). The URL is required above (D4 T030).
 heartbeat() {
   local status=$1 message=$2
-  [[ -n $heartbeat_url ]] || return 0
   curl -fsS -m 10 --retry 2 -o /dev/null \
     "${heartbeat_url%%\?*}?status=${status}&msg=$(printf '%s' "$message" | tr ' ' '+')" \
     || log "heartbeat push failed (status=${status})"

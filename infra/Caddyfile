@@ -53,17 +53,30 @@ media.{$VPS1_IP}.sslip.io {
 	file_server
 }
 
-# PWA file mirror (SD §5.2). Content-hashed files are immutable; everything else revalidates.
+# PWA file mirror (SD §5.2, research R8). A release lives in `/r/<hash>/`, so every file in it is
+# immutable; the shell revalidates. The files arrive precompressed from the release job, so Caddy
+# serves `main.dart.js.br`/`.gz` instead of compressing multi-megabyte wasm per request on 1 OCPU.
 # Only the two PWA origins may read it cross-origin, and only with GET (SD §8).
 app.{$VPS1_IP}.sslip.io {
 	import public_headers
-	encode zstd gzip
 	root * /srv/app-mirror
 
 	@hashed path_regexp \.[0-9a-f]{8,}\.[A-Za-z0-9]+$
-	@unhashed not path_regexp \.[0-9a-f]{8,}\.[A-Za-z0-9]+$
+	# A release folder is content-addressed as a whole, so its files never change either. The
+	# `not path /r/*` keeps this rule from overriding the release one below.
+	@unhashed {
+		not path_regexp \.[0-9a-f]{8,}\.[A-Za-z0-9]+$
+		not path /r/*
+	}
 	header @hashed Cache-Control "public, max-age=31536000, immutable"
 	header @unhashed Cache-Control "no-cache"
+
+	# The release job writes this with the current hash; Kuma polls it (contracts/web-release.md).
+	@release_check path /release-check.txt
+	header @release_check Cache-Control "no-cache"
+
+	@release path /r/*
+	header @release Cache-Control "public, max-age=31536000, immutable"
 
 	header Vary Origin
 	# Repeated header lines are OR-ed: either origin matches.
@@ -74,12 +87,14 @@ app.{$VPS1_IP}.sslip.io {
 	}
 	header @pwa_origin Access-Control-Allow-Origin "{http.request.header.Origin}"
 
-	file_server
+	file_server {
+		precompressed br gzip
+	}
 }
 
 # Admin, reachable only over WireGuard: Caddy listens on the wg0 address alone, with its own CA.
-# /admin/api goes to api-admin (bound to 10.8.0.1:8001); the rest is the admin SPA (a placeholder
-# until D4).
+# /admin/api goes to api-admin (bound to 10.8.0.1:8001); the rest is the admin SPA, which is a
+# symlink to the release CI deployed (research R10).
 https://10.8.0.1 {
 	bind 10.8.0.1
 	tls internal
@@ -101,7 +116,8 @@ https://10.8.0.1 {
 	}
 	handle {
 		encode zstd gzip
-		root * /srv/admin
+		# `/srv/admin` is the mount; `current` is the relative symlink the deploy swaps atomically.
+		root * /srv/admin/current
 		try_files {path} /index.html
 		file_server
 	}
