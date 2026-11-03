@@ -133,6 +133,7 @@ export function EditorSections({ state, competitions, lockedFields, onChange }: 
         <div className="flex min-w-0 flex-1 flex-col">
           <Field
             label={copy.stadium}
+            data-testid="match-stadium"
             locked={locked('stadium')}
             value={state.stadium}
             onChange={(event) => onChange({ stadium: event.target.value })}

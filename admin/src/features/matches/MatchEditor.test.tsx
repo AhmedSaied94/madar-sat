@@ -380,6 +380,14 @@ describe('MatchEditor (A4)', () => {
     expect(screen.getAllByTestId('field-control')[0]).toHaveAttribute('data-state', 'locked');
   });
 
+  it('exposes the stadium field under a stable test id for the D4 smoke test', async () => {
+    renderEditor();
+    await waitForEditor();
+
+    // T053: Playwright's smoke test edits this one field, so its selector may not drift with the copy.
+    expect(screen.getByTestId('match-stadium')).toBe(screen.getByLabelText('الملعب'));
+  });
+
   it('prints the stored UTC time beside the Cairo one', async () => {    renderEditor();
     await waitForEditor();
 
