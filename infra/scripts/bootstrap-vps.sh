@@ -219,7 +219,9 @@ ensure_dirs() {
     # /srv/backup belongs to that user too: the backup container runs as uid 10001 and, without
     # CAP_DAC_OVERRIDE, cannot write a directory owned by anyone else (B2-R1-2).
     install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/backup
-    install -d -m 755 -o deploy -g deploy /srv/kuma
+    # Kuma's entrypoint chowns its data to root on every start, so root is the owner deploy.sh
+    # expects; a deploy-owned folder lasts only until Kuma restarts (D4).
+    install -d -m 755 -o root -g root /srv/kuma
     install -d -m 700 -o "$app_uid" -g "$app_uid" /srv/secrets
   fi
 }

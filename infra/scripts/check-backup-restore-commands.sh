@@ -50,8 +50,8 @@ fail() {
 
 # --- a host-shaped tree: the restic repository, the staging directory, the media, the bucket -----
 work=$tmp/work
-mkdir -p "$work/repo" "$work/staging" "$work/media/logos" "$work/oci" "$tmp/stub"
-printf 'a logo\n' > "$work/media/logos/one.webp"
+mkdir -p "$work/repo" "$work/staging" "$work/media/logo/ab" "$work/oci" "$tmp/stub"
+printf 'a logo\n' > "$work/media/logo/ab/one.webp"
 cat > "$tmp/stub/pg_dump" <<'STUB'
 #!/usr/bin/env bash
 file=
@@ -66,7 +66,7 @@ printf 'not really a dump\n' > "$file"
 STUB
 chmod 755 "$tmp/stub/pg_dump"
 docker run --rm -u 0 -v "$work:/w" "$image" \
-  sh -c 'chown -R 10001:10001 /w && chmod 600 /w/media/logos/one.webp'
+  sh -c 'chown -R 10001:10001 /w && chmod 600 /w/media/logo/ab/one.webp'
 
 cat > "$tmp/env" <<ENV
 RESTIC_REPOSITORY=/repo
@@ -124,18 +124,20 @@ done
 
 # --- the media restores --------------------------------------------------------------------------
 # What the documents say, with the placeholder filled in.
-mapfile -t mirror_found < <(grep -oE 'rclone copy oci:madar-media/logos/<file>\.webp /srv/media/logos/' "$backups_md" || true)
-((${#mirror_found[@]} > 0)) || fail "backups.md has no 'rclone copy oci:madar-media/logos/<file>.webp' restore"
-read -ra mirror_words <<<"${mirror_found[0]//<file>/one}"
+mapfile -t mirror_found < <(grep -oE 'rclone copy oci:madar-media/logo/<xx>/<hash>\.webp /srv/media/logo/<xx>/' "$backups_md" || true)
+((${#mirror_found[@]} > 0)) || fail "backups.md has no 'rclone copy oci:madar-media/logo/<xx>/<hash>.webp' restore"
+mirror_line=${mirror_found[0]//<xx>/ab}
+read -ra mirror_words <<<"${mirror_line//<hash>/one}"
 mapfile -t snapshot_found < <(grep -oE "restic restore latest --tag media[^']*" "$backups_md" || true)
 ((${#snapshot_found[@]} > 0)) || fail "backups.md has no 'restic restore latest --tag media' restore"
-snapshot_script=${snapshot_found[0]//<file>/one}
+snapshot_script=${snapshot_found[0]//<xx>/ab}
+snapshot_script=${snapshot_script//<hash>/one}
 
-lose_logo() { box -v "$work/media:/srv/media" "$image" rm -f /srv/media/logos/one.webp; }
-logo_field() { box -v "$work/media:/srv/media:ro" "$image" stat -c "$1" /srv/media/logos/one.webp; }
+lose_logo() { box -v "$work/media:/srv/media" "$image" rm -f /srv/media/logo/ab/one.webp; }
+logo_field() { box -v "$work/media:/srv/media:ro" "$image" stat -c "$1" /srv/media/logo/ab/one.webp; }
 expect_logo_back() {
   local what=$1
-  [[ $(box -v "$work/media:/srv/media:ro" "$image" cat /srv/media/logos/one.webp 2>&1) == "a logo" ]] \
+  [[ $(box -v "$work/media:/srv/media:ro" "$image" cat /srv/media/logo/ab/one.webp 2>&1) == "a logo" ]] \
     || fail "$what did not bring the logo back"
   [[ $(logo_field %u) == 10001 ]] || fail "$what left the logo owned by uid $(logo_field %u), not 10001"
 }

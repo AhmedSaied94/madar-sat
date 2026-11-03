@@ -39,12 +39,22 @@ one chat is the whole incident feed.
 | Name | URL | Interval | What it proves |
 | --- | --- | --- | --- |
 | `api-public` | `https://api.<VPS1_IP>.sslip.io/healthz` | 60 s | Caddy, the public app and the database connection |
-| `media` | `https://media.<VPS1_IP>.sslip.io/logos/<a known file>` | 5 min | Caddy's media root and the disk |
-| `pwa` | `https://<FIREBASE_PROJECT_ID>.web.app/` | 5 min | Firebase Hosting serves the PWA |
+| `media` | `https://media.<VPS1_IP>.sslip.io/logo/<xx>/<hash>.webp` (a real file) | 5 min | Caddy's media root and the disk |
+| `pwa` | `https://<FIREBASE_PROJECT_ID>.web.app/` | 5 min | Firebase Hosting serves the PWA on the live channel. Firebase answers "Site Not Found" (404) until the first `web-v*` release deploys it |
 | `pwa-mirror` | `https://app.<VPS1_IP>.sslip.io/release-check.txt` | 5 min | Caddy serves the mirror and the release job wrote the current hash (D4 T047). A 404 means no release has been copied yet |
 
-Use a real, existing file for `media` (the newest file in `/srv/media/logos/`); a 404 is red
-forever otherwise. **Accepted status codes**: `200-299`.
+Use a real, existing file for `media`: media is content-addressed under `/srv/media/{logo,photo,audio}/<xx>/`,
+so pick one with `find /srv/media/logo -type f -name '*.webp' | head -1` on VPS-1. A 404 is red
+forever otherwise. **Accepted status codes**: `200-299`. Turn on the Telegram notification on each
+monitor (**Edit → Notifications**); Kuma alerts only on monitors that have it switched on.
+
+**State on 2026-11-03.** All four exist. `api-public` and `media` are up with the notification on.
+`pwa` and `pwa-mirror` are **paused with the notification off**, because both answer 404 until the
+first PWA release. After the `web-v0.1.0` release job passes, open each one, **Edit**, switch the
+notification on, **Save**, then **Resume**; both should turn green.
+
+`/srv/kuma` belongs to root: the image's entrypoint chowns `/app/data` to `PUID:PGID`, root by default,
+on every start. `bootstrap-vps.sh` creates it that way and `deploy.sh` expects it.
 
 ## 4. Push monitors (seven)
 
@@ -130,7 +140,7 @@ ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" \
 | Alert | First check | Then |
 | --- | --- | --- |
 | `api-public` down | `docker compose ps api-public` on VPS-1, then `curl -fsS http://127.0.0.1:8000/healthz` | [deploy-and-rollback.md](deploy-and-rollback.md#roll-back) if the last deploy is the cause |
-| `media` down | `ls /srv/media/logos/` and Caddy's log | the disk is full: `df -h /srv` |
+| `media` down | `ls /srv/media/logo/` and Caddy's log | the disk is full: `df -h /srv` |
 | `pwa` / `pwa-mirror` down | the Firebase console, and `ls /srv/app-mirror` | [firebase-hosting.md](firebase-hosting.md) |
 | `celery-*` down | `docker compose ps` on VPS-2 and `journalctl -u docker` | `docker compose up -d <service>`; if `beat` is the dead one, run it by hand before the next slot |
 | `scrape-home` down with a count | on the box: `docker inspect --format '{{.State.Health.Status}}' madar-home-box-worker-scrape-1` and `sudo wg show wg-homebox` | [home-box.md](home-box.md#when-the-worker-hangs); the update timer restarts an unhealthy worker within 10 minutes |
