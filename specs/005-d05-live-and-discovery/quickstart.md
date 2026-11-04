@@ -12,7 +12,7 @@ How to prove the day's work. Commands use the SSH aliases `madar-vps1` and `mada
 
 ```bash
 ssh madar-vps2 'docker compose -f /srv/madar/infra/compose/vps2.yml run --rm worker-live \
-  python -m app.cli capture-live --filgoal <id> --yallakora <id> --minutes 130'
+  python -m app.cli capture-live --filgoal <id> --yallakora <match-path> --minutes 130'
 ```
 
 Expect saved pages under `/srv/raw/capture/<date>/` covering pre-match to full time, and `capture-report.md` with the fields, status strings, update delay, `LIVE_CONFIRM_WAIT_S` and the page caps. If a source is unusable, stop and tell the owner (spec Edge Cases).

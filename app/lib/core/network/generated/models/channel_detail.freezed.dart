@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ChannelDetail {
 
- Access? get access; Beam? get beam; Category? get category; String? get country;@JsonKey(name: 'display_name') String? get displayName; Frequency? get frequency;@JsonKey(name: 'frequency_changed_at') DateTime? get frequencyChangedAt;@JsonKey(name: 'frequency_note') String? get frequencyNote; int get id; Kind get kind; String? get logo; String get name;@JsonKey(name: 'other_carriages') List<ChannelCarriage> get otherCarriages; String? get package; String? get provider;@JsonKey(name: 'recent_frequency_changes') List<dynamic> get recentFrequencyChanges; SatelliteRef? get satellite;@JsonKey(name: 'upcoming_matches') List<MatchSummary> get upcomingMatches;
+ Access? get access; Beam? get beam; Category? get category; String? get country;@JsonKey(name: 'display_name') String? get displayName; Frequency? get frequency;@JsonKey(name: 'frequency_changed_at') DateTime? get frequencyChangedAt;@JsonKey(name: 'frequency_note') String? get frequencyNote; int get id; Kind get kind; String? get logo; String get name;@JsonKey(name: 'other_carriages') List<ChannelCarriage> get otherCarriages; String? get package; String? get provider;@JsonKey(name: 'recent_frequency_changes') List<FrequencyChange> get recentFrequencyChanges; SatelliteRef? get satellite;@JsonKey(name: 'upcoming_matches') List<MatchSummary> get upcomingMatches;
 /// Create a copy of ChannelDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $ChannelDetailCopyWith<$Res>  {
   factory $ChannelDetailCopyWith(ChannelDetail value, $Res Function(ChannelDetail) _then) = _$ChannelDetailCopyWithImpl;
 @useResult
 $Res call({
- Access? access, Beam? beam, Category? category, String? country,@JsonKey(name: 'display_name') String? displayName, Frequency? frequency,@JsonKey(name: 'frequency_changed_at') DateTime? frequencyChangedAt,@JsonKey(name: 'frequency_note') String? frequencyNote, int id, Kind kind, String? logo, String name,@JsonKey(name: 'other_carriages') List<ChannelCarriage> otherCarriages, String? package, String? provider,@JsonKey(name: 'recent_frequency_changes') List<dynamic> recentFrequencyChanges, SatelliteRef? satellite,@JsonKey(name: 'upcoming_matches') List<MatchSummary> upcomingMatches
+ Access? access, Beam? beam, Category? category, String? country,@JsonKey(name: 'display_name') String? displayName, Frequency? frequency,@JsonKey(name: 'frequency_changed_at') DateTime? frequencyChangedAt,@JsonKey(name: 'frequency_note') String? frequencyNote, int id, Kind kind, String? logo, String name,@JsonKey(name: 'other_carriages') List<ChannelCarriage> otherCarriages, String? package, String? provider,@JsonKey(name: 'recent_frequency_changes') List<FrequencyChange> recentFrequencyChanges, SatelliteRef? satellite,@JsonKey(name: 'upcoming_matches') List<MatchSummary> upcomingMatches
 });
 
 
@@ -89,7 +89,7 @@ as String,otherCarriages: null == otherCarriages ? _self.otherCarriages : otherC
 as List<ChannelCarriage>,package: freezed == package ? _self.package : package // ignore: cast_nullable_to_non_nullable
 as String?,provider: freezed == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as String?,recentFrequencyChanges: null == recentFrequencyChanges ? _self.recentFrequencyChanges : recentFrequencyChanges // ignore: cast_nullable_to_non_nullable
-as List<dynamic>,satellite: freezed == satellite ? _self.satellite : satellite // ignore: cast_nullable_to_non_nullable
+as List<FrequencyChange>,satellite: freezed == satellite ? _self.satellite : satellite // ignore: cast_nullable_to_non_nullable
 as SatelliteRef?,upcomingMatches: null == upcomingMatches ? _self.upcomingMatches : upcomingMatches // ignore: cast_nullable_to_non_nullable
 as List<MatchSummary>,
   ));
@@ -200,7 +200,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Access? access,  Beam? beam,  Category? category,  String? country, @JsonKey(name: 'display_name')  String? displayName,  Frequency? frequency, @JsonKey(name: 'frequency_changed_at')  DateTime? frequencyChangedAt, @JsonKey(name: 'frequency_note')  String? frequencyNote,  int id,  Kind kind,  String? logo,  String name, @JsonKey(name: 'other_carriages')  List<ChannelCarriage> otherCarriages,  String? package,  String? provider, @JsonKey(name: 'recent_frequency_changes')  List<dynamic> recentFrequencyChanges,  SatelliteRef? satellite, @JsonKey(name: 'upcoming_matches')  List<MatchSummary> upcomingMatches)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Access? access,  Beam? beam,  Category? category,  String? country, @JsonKey(name: 'display_name')  String? displayName,  Frequency? frequency, @JsonKey(name: 'frequency_changed_at')  DateTime? frequencyChangedAt, @JsonKey(name: 'frequency_note')  String? frequencyNote,  int id,  Kind kind,  String? logo,  String name, @JsonKey(name: 'other_carriages')  List<ChannelCarriage> otherCarriages,  String? package,  String? provider, @JsonKey(name: 'recent_frequency_changes')  List<FrequencyChange> recentFrequencyChanges,  SatelliteRef? satellite, @JsonKey(name: 'upcoming_matches')  List<MatchSummary> upcomingMatches)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ChannelDetail() when $default != null:
 return $default(_that.access,_that.beam,_that.category,_that.country,_that.displayName,_that.frequency,_that.frequencyChangedAt,_that.frequencyNote,_that.id,_that.kind,_that.logo,_that.name,_that.otherCarriages,_that.package,_that.provider,_that.recentFrequencyChanges,_that.satellite,_that.upcomingMatches);case _:
@@ -221,7 +221,7 @@ return $default(_that.access,_that.beam,_that.category,_that.country,_that.displ
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Access? access,  Beam? beam,  Category? category,  String? country, @JsonKey(name: 'display_name')  String? displayName,  Frequency? frequency, @JsonKey(name: 'frequency_changed_at')  DateTime? frequencyChangedAt, @JsonKey(name: 'frequency_note')  String? frequencyNote,  int id,  Kind kind,  String? logo,  String name, @JsonKey(name: 'other_carriages')  List<ChannelCarriage> otherCarriages,  String? package,  String? provider, @JsonKey(name: 'recent_frequency_changes')  List<dynamic> recentFrequencyChanges,  SatelliteRef? satellite, @JsonKey(name: 'upcoming_matches')  List<MatchSummary> upcomingMatches)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Access? access,  Beam? beam,  Category? category,  String? country, @JsonKey(name: 'display_name')  String? displayName,  Frequency? frequency, @JsonKey(name: 'frequency_changed_at')  DateTime? frequencyChangedAt, @JsonKey(name: 'frequency_note')  String? frequencyNote,  int id,  Kind kind,  String? logo,  String name, @JsonKey(name: 'other_carriages')  List<ChannelCarriage> otherCarriages,  String? package,  String? provider, @JsonKey(name: 'recent_frequency_changes')  List<FrequencyChange> recentFrequencyChanges,  SatelliteRef? satellite, @JsonKey(name: 'upcoming_matches')  List<MatchSummary> upcomingMatches)  $default,) {final _that = this;
 switch (_that) {
 case _ChannelDetail():
 return $default(_that.access,_that.beam,_that.category,_that.country,_that.displayName,_that.frequency,_that.frequencyChangedAt,_that.frequencyNote,_that.id,_that.kind,_that.logo,_that.name,_that.otherCarriages,_that.package,_that.provider,_that.recentFrequencyChanges,_that.satellite,_that.upcomingMatches);case _:
@@ -241,7 +241,7 @@ return $default(_that.access,_that.beam,_that.category,_that.country,_that.displ
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Access? access,  Beam? beam,  Category? category,  String? country, @JsonKey(name: 'display_name')  String? displayName,  Frequency? frequency, @JsonKey(name: 'frequency_changed_at')  DateTime? frequencyChangedAt, @JsonKey(name: 'frequency_note')  String? frequencyNote,  int id,  Kind kind,  String? logo,  String name, @JsonKey(name: 'other_carriages')  List<ChannelCarriage> otherCarriages,  String? package,  String? provider, @JsonKey(name: 'recent_frequency_changes')  List<dynamic> recentFrequencyChanges,  SatelliteRef? satellite, @JsonKey(name: 'upcoming_matches')  List<MatchSummary> upcomingMatches)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Access? access,  Beam? beam,  Category? category,  String? country, @JsonKey(name: 'display_name')  String? displayName,  Frequency? frequency, @JsonKey(name: 'frequency_changed_at')  DateTime? frequencyChangedAt, @JsonKey(name: 'frequency_note')  String? frequencyNote,  int id,  Kind kind,  String? logo,  String name, @JsonKey(name: 'other_carriages')  List<ChannelCarriage> otherCarriages,  String? package,  String? provider, @JsonKey(name: 'recent_frequency_changes')  List<FrequencyChange> recentFrequencyChanges,  SatelliteRef? satellite, @JsonKey(name: 'upcoming_matches')  List<MatchSummary> upcomingMatches)?  $default,) {final _that = this;
 switch (_that) {
 case _ChannelDetail() when $default != null:
 return $default(_that.access,_that.beam,_that.category,_that.country,_that.displayName,_that.frequency,_that.frequencyChangedAt,_that.frequencyNote,_that.id,_that.kind,_that.logo,_that.name,_that.otherCarriages,_that.package,_that.provider,_that.recentFrequencyChanges,_that.satellite,_that.upcomingMatches);case _:
@@ -256,7 +256,7 @@ return $default(_that.access,_that.beam,_that.category,_that.country,_that.displ
 @JsonSerializable()
 
 class _ChannelDetail implements ChannelDetail {
-  const _ChannelDetail({required this.access, required this.beam, required this.category, required this.country, @JsonKey(name: 'display_name') required this.displayName, required this.frequency, @JsonKey(name: 'frequency_changed_at') required this.frequencyChangedAt, @JsonKey(name: 'frequency_note') required this.frequencyNote, required this.id, required this.kind, required this.logo, required this.name, @JsonKey(name: 'other_carriages') required  List<ChannelCarriage> otherCarriages, required this.package, required this.provider, @JsonKey(name: 'recent_frequency_changes') required  List<dynamic> recentFrequencyChanges, required this.satellite, @JsonKey(name: 'upcoming_matches') required  List<MatchSummary> upcomingMatches}): _otherCarriages = otherCarriages,_recentFrequencyChanges = recentFrequencyChanges,_upcomingMatches = upcomingMatches;
+  const _ChannelDetail({required this.access, required this.beam, required this.category, required this.country, @JsonKey(name: 'display_name') required this.displayName, required this.frequency, @JsonKey(name: 'frequency_changed_at') required this.frequencyChangedAt, @JsonKey(name: 'frequency_note') required this.frequencyNote, required this.id, required this.kind, required this.logo, required this.name, @JsonKey(name: 'other_carriages') required  List<ChannelCarriage> otherCarriages, required this.package, required this.provider, @JsonKey(name: 'recent_frequency_changes') required  List<FrequencyChange> recentFrequencyChanges, required this.satellite, @JsonKey(name: 'upcoming_matches') required  List<MatchSummary> upcomingMatches}): _otherCarriages = otherCarriages,_recentFrequencyChanges = recentFrequencyChanges,_upcomingMatches = upcomingMatches;
   factory _ChannelDetail.fromJson(Map<String, dynamic> json) => _$ChannelDetailFromJson(json);
 
 @override final  Access? access;
@@ -280,8 +280,8 @@ class _ChannelDetail implements ChannelDetail {
 
 @override final  String? package;
 @override final  String? provider;
- final  List<dynamic> _recentFrequencyChanges;
-@override@JsonKey(name: 'recent_frequency_changes') List<dynamic> get recentFrequencyChanges {
+ final  List<FrequencyChange> _recentFrequencyChanges;
+@override@JsonKey(name: 'recent_frequency_changes') List<FrequencyChange> get recentFrequencyChanges {
   if (_recentFrequencyChanges is EqualUnmodifiableListView) return _recentFrequencyChanges;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_recentFrequencyChanges);
@@ -331,7 +331,7 @@ abstract mixin class _$ChannelDetailCopyWith<$Res> implements $ChannelDetailCopy
   factory _$ChannelDetailCopyWith(_ChannelDetail value, $Res Function(_ChannelDetail) _then) = __$ChannelDetailCopyWithImpl;
 @override @useResult
 $Res call({
- Access? access, Beam? beam, Category? category, String? country,@JsonKey(name: 'display_name') String? displayName, Frequency? frequency,@JsonKey(name: 'frequency_changed_at') DateTime? frequencyChangedAt,@JsonKey(name: 'frequency_note') String? frequencyNote, int id, Kind kind, String? logo, String name,@JsonKey(name: 'other_carriages') List<ChannelCarriage> otherCarriages, String? package, String? provider,@JsonKey(name: 'recent_frequency_changes') List<dynamic> recentFrequencyChanges, SatelliteRef? satellite,@JsonKey(name: 'upcoming_matches') List<MatchSummary> upcomingMatches
+ Access? access, Beam? beam, Category? category, String? country,@JsonKey(name: 'display_name') String? displayName, Frequency? frequency,@JsonKey(name: 'frequency_changed_at') DateTime? frequencyChangedAt,@JsonKey(name: 'frequency_note') String? frequencyNote, int id, Kind kind, String? logo, String name,@JsonKey(name: 'other_carriages') List<ChannelCarriage> otherCarriages, String? package, String? provider,@JsonKey(name: 'recent_frequency_changes') List<FrequencyChange> recentFrequencyChanges, SatelliteRef? satellite,@JsonKey(name: 'upcoming_matches') List<MatchSummary> upcomingMatches
 });
 
 
@@ -366,7 +366,7 @@ as String,otherCarriages: null == otherCarriages ? _self._otherCarriages : other
 as List<ChannelCarriage>,package: freezed == package ? _self.package : package // ignore: cast_nullable_to_non_nullable
 as String?,provider: freezed == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as String?,recentFrequencyChanges: null == recentFrequencyChanges ? _self._recentFrequencyChanges : recentFrequencyChanges // ignore: cast_nullable_to_non_nullable
-as List<dynamic>,satellite: freezed == satellite ? _self.satellite : satellite // ignore: cast_nullable_to_non_nullable
+as List<FrequencyChange>,satellite: freezed == satellite ? _self.satellite : satellite // ignore: cast_nullable_to_non_nullable
 as SatelliteRef?,upcomingMatches: null == upcomingMatches ? _self._upcomingMatches : upcomingMatches // ignore: cast_nullable_to_non_nullable
 as List<MatchSummary>,
   ));

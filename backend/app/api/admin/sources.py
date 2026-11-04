@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
 
 from app.api.admin import _docs
 from app.api.admin._common import ETAG_HEADER, Db, Editor, IdPath, Now
 from app.api.deps import ETag
 from app.api.envelope import Envelope, ok
+from app.api.errors import NotModified, validator_headers
+from app.api.etag import compute_etag, if_none_match
 from app.auth.roles import require_editor
 from app.schemas import admin as a
 from app.schemas import admin_examples as ex
@@ -26,6 +28,7 @@ _SOURCE_NOT_FOUND = _docs.not_found("source_not_found")
 _RUN_NOT_FOUND = _docs.not_found("import_run_not_found")
 _NAME = r"^[a-z][a-z0-9_]{0,63}$"
 SourceName = Annotated[str, Path(min_length=1, max_length=64, pattern=_NAME)]
+RAW_PAGE_MAX = 999
 
 _SOURCE_RESPONSES: dict[int | str, dict[str, Any]] = {
     200: {"description": "The source's health", **_docs.ok_example("source_health_ok", ex.SOURCE_HEALTH)},
@@ -100,7 +103,9 @@ async def pause_source(name: SourceName, session: Db, admin: Editor, now: Now) -
 async def resume_source(name: SourceName, session: Db, admin: Editor, now: Now) -> Envelope[a.SourceHealth]:
     item = await service.resume(session, admin, name, now)
     await session.commit()
-    send_manual_run(name)
+    # The live poller has no importer to run: the next scheduler tick picks it up.
+    if item.kind not in service.LIVE_KINDS:
+        send_manual_run(name)
     return ok(item)
 
 
@@ -148,3 +153,35 @@ async def list_source_runs(
 )
 async def get_import_run(run_id: IdPath, session: Db) -> Envelope[a.ImportRunDetail]:
     return ok(await service.run_detail(session, run_id))
+
+
+@router.get(
+    "/import-runs/{run_id}/raw",
+    response_model=Envelope[a.RawPage],
+    responses={
+        200: {
+            "description": "`pending` (poll again, up to 10 s), `ready` or `gone` (pruned, or none was saved)",
+            **ETAG_HEADER,
+            **_docs.ok_example("raw_page_ok", ex.RAW_PAGE),
+        },
+        **_docs.AUTHED,
+        304: _docs.NOT_MODIFIED,
+        404: _RUN_NOT_FOUND,
+        422: _docs.VALIDATION,
+    },
+    summary="A13: a run's saved page as inert text; the path comes from the run, never the request",
+)
+async def get_import_run_raw(
+    run_id: IdPath,
+    request: Request,
+    response: Response,
+    session: Db,
+    page: Annotated[int, Query(ge=0, le=RAW_PAGE_MAX)] = 0,
+) -> Envelope[a.RawPage]:
+    item = await service.raw_page(session, run_id, page)
+    # Built from the state, so a `pending` tag never matches a `ready` one.
+    etag = compute_etag("admin_import_run_raw", {"page": page, "state": item.state}, {}, path=request.url.path)
+    if if_none_match(request.headers.get("if-none-match"), etag):
+        raise NotModified(etag)
+    response.headers.update(validator_headers(etag))
+    return ok(item)

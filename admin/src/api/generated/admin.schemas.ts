@@ -267,6 +267,67 @@ export interface AdminMatchTeam {
   team_id: AdminMatchTeamTeamId;
 }
 
+export type AdminRightsHolderLogo = string | null;
+
+export type AdminRightsHolderLogoAssetId = number | null;
+
+export type AdminRightsHolderSortOrder = number | null;
+
+/**
+ * The full editor shape.
+ */
+export interface AdminRightsHolder {
+  carriages: AdminRightsHolderCarriage[];
+  competition_ids: number[];
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
+  id: number;
+  logo: AdminRightsHolderLogo;
+  logo_asset_id: AdminRightsHolderLogoAssetId;
+  name: string;
+  sort_order: AdminRightsHolderSortOrder;
+}
+
+export type AdminRightsHolderCarriageBeam = Beam | null;
+
+export type AdminRightsHolderCarriagePackage = string | null;
+
+export interface AdminRightsHolderCarriage {
+  access: Access;
+  beam: AdminRightsHolderCarriageBeam;
+  frequencies: AdminRightsHolderFrequency[];
+  package: AdminRightsHolderCarriagePackage;
+  satellite_ids: number[];
+}
+
+export interface AdminRightsHolderFrequency {
+  frequency_mhz: number;
+  is_primary: boolean;
+  polarization: Polarization;
+  symbol_rate: number;
+}
+
+export type AdminRightsHolderRowLogo = string | null;
+
+export type AdminRightsHolderRowSortOrder = number | null;
+
+export interface AdminRightsHolderRow {
+  competitions: string[];
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
+  id: number;
+  logo: AdminRightsHolderRowLogo;
+  name: string;
+  satellites: string[];
+  sort_order: AdminRightsHolderRowSortOrder;
+}
+
 export type AdminRole = typeof AdminRole[keyof typeof AdminRole];
 
 
@@ -820,6 +881,19 @@ export interface EnvelopeAdminMatch {
   success: boolean;
 }
 
+export type EnvelopeAdminRightsHolderData = AdminRightsHolder | null;
+
+export type EnvelopeAdminRightsHolderError = ErrorBody | null;
+
+export type EnvelopeAdminRightsHolderMeta = { [key: string]: unknown };
+
+export interface EnvelopeAdminRightsHolder {
+  data: EnvelopeAdminRightsHolderData;
+  error: EnvelopeAdminRightsHolderError;
+  meta: EnvelopeAdminRightsHolderMeta;
+  success: boolean;
+}
+
 export type EnvelopeAdminSatelliteData = AdminSatellite | null;
 
 export type EnvelopeAdminSatelliteError = ErrorBody | null;
@@ -948,6 +1022,19 @@ export interface EnvelopeNoneType {
   success: boolean;
 }
 
+export type EnvelopeRawPageData = RawPage | null;
+
+export type EnvelopeRawPageError = ErrorBody | null;
+
+export type EnvelopeRawPageMeta = { [key: string]: unknown };
+
+export interface EnvelopeRawPage {
+  data: EnvelopeRawPageData;
+  error: EnvelopeRawPageError;
+  meta: EnvelopeRawPageMeta;
+  success: boolean;
+}
+
 export type EnvelopeSessionData = Session | null;
 
 export type EnvelopeSessionError = ErrorBody | null;
@@ -987,6 +1074,19 @@ export interface EnvelopeSourceRunQueued {
   success: boolean;
 }
 
+export type EnvelopeUnresolvedNameRowData = UnresolvedNameRow | null;
+
+export type EnvelopeUnresolvedNameRowError = ErrorBody | null;
+
+export type EnvelopeUnresolvedNameRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeUnresolvedNameRow {
+  data: EnvelopeUnresolvedNameRowData;
+  error: EnvelopeUnresolvedNameRowError;
+  meta: EnvelopeUnresolvedNameRowMeta;
+  success: boolean;
+}
+
 export type EnvelopeListAdminCommentatorData = AdminCommentator[] | null;
 
 export type EnvelopeListAdminCommentatorError = ErrorBody | null;
@@ -1023,6 +1123,19 @@ export interface EnvelopeListAdminMatchRow {
   data: EnvelopeListAdminMatchRowData;
   error: EnvelopeListAdminMatchRowError;
   meta: EnvelopeListAdminMatchRowMeta;
+  success: boolean;
+}
+
+export type EnvelopeListAdminRightsHolderRowData = AdminRightsHolderRow[] | null;
+
+export type EnvelopeListAdminRightsHolderRowError = ErrorBody | null;
+
+export type EnvelopeListAdminRightsHolderRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeListAdminRightsHolderRow {
+  data: EnvelopeListAdminRightsHolderRowData;
+  error: EnvelopeListAdminRightsHolderRowError;
+  meta: EnvelopeListAdminRightsHolderRowMeta;
   success: boolean;
 }
 
@@ -1117,6 +1230,19 @@ export interface EnvelopeListTeamItem {
   success: boolean;
 }
 
+export type EnvelopeListUnresolvedNameRowData = UnresolvedNameRow[] | null;
+
+export type EnvelopeListUnresolvedNameRowError = ErrorBody | null;
+
+export type EnvelopeListUnresolvedNameRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeListUnresolvedNameRow {
+  data: EnvelopeListUnresolvedNameRowData;
+  error: EnvelopeListUnresolvedNameRowError;
+  meta: EnvelopeListUnresolvedNameRowMeta;
+  success: boolean;
+}
+
 export interface ErrorBody {
   code: string;
   message: string;
@@ -1189,6 +1315,8 @@ export const ImportRunDetailStatus = {
   failed: 'failed',
 } as const;
 
+export type ImportRunDetailWorker = string | null;
+
 export interface ImportRunDetail {
   error: ImportRunDetailError;
   finished_at: ImportRunDetailFinishedAt;
@@ -1214,9 +1342,15 @@ export interface ImportRunDetail {
   items_upserted: number;
   log: ImportRunDetailLog;
   log_available: boolean;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  pages: number;
   raw_path: ImportRunDetailRawPath;
   started_at: string;
   status: ImportRunDetailStatus;
+  worker: ImportRunDetailWorker;
 }
 
 export type ImportRunRowError = string | null;
@@ -1284,6 +1418,36 @@ export interface LastChange {
   at: string;
   kind: LastChangeKind;
   name: string;
+}
+
+export interface LiveCard {
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  error_share: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  matches_live: number;
+  sources: LiveSourceCard[];
+}
+
+export type LiveSourceCardState = typeof LiveSourceCardState[keyof typeof LiveSourceCardState];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const LiveSourceCardState = {
+  ok: 'ok',
+  failing: 'failing',
+  down: 'down',
+  invalid: 'invalid',
+} as const;
+
+export interface LiveSourceCard {
+  name: string;
+  state: LiveSourceCardState;
 }
 
 export interface LoginRequest {
@@ -1460,6 +1624,43 @@ export const Polarization = {
   R: 'R',
 } as const;
 
+export type RawPageContentType = string | null;
+
+export type RawPageState = typeof RawPageState[keyof typeof RawPageState];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const RawPageState = {
+  pending: 'pending',
+  ready: 'ready',
+  gone: 'gone',
+} as const;
+
+export type RawPageText = string | null;
+
+export type RawPageUrl = string | null;
+
+/**
+ * A saved page as inert text, never a link (005 research R13). ``pending``: poll again, up to 10 s.
+ */
+export interface RawPage {
+  content_type: RawPageContentType;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  page: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  pages: number;
+  state: RawPageState;
+  text: RawPageText;
+  truncated: boolean;
+  url: RawPageUrl;
+}
+
 export type RecentChangeEntityId = number | null;
 
 export interface RecentChange {
@@ -1468,6 +1669,60 @@ export interface RecentChange {
   by: ChangedBy;
   entity: string;
   entity_id: RecentChangeEntityId;
+}
+
+export type RightsHolderCarriageInputBeam = Beam | null;
+
+export type RightsHolderCarriageInputPackage = string | null;
+
+export interface RightsHolderCarriageInput {
+  access: Access;
+  beam?: RightsHolderCarriageInputBeam;
+  /** @maxItems 32 */
+  frequencies?: RightsHolderFrequencyInput[];
+  package?: RightsHolderCarriageInputPackage;
+  /** @maxItems 32 */
+  satellite_ids?: number[];
+}
+
+export type RightsHolderCreateLogoAssetId = number | null;
+
+export interface RightsHolderCreate {
+  /** @maxItems 32 */
+  carriages?: RightsHolderCarriageInput[];
+  /** @maxItems 200 */
+  competition_ids?: number[];
+  logo_asset_id?: RightsHolderCreateLogoAssetId;
+  /**
+   * @minLength 1
+   * @maxLength 120
+   */
+  name: string;
+}
+
+export interface RightsHolderFrequencyInput {
+  frequency_mhz: number;
+  is_primary?: boolean;
+  polarization: Polarization;
+  symbol_rate: number;
+}
+
+export type RightsHolderPatchCarriages = RightsHolderCarriageInput[] | null;
+
+export type RightsHolderPatchCompetitionIds = number[] | null;
+
+export type RightsHolderPatchLogoAssetId = number | null;
+
+export type RightsHolderPatchName = string | null;
+
+/**
+ * An omitted field stays as it is; ``competition_ids`` and ``carriages`` replace the whole list.
+ */
+export interface RightsHolderPatch {
+  carriages?: RightsHolderPatchCarriages;
+  competition_ids?: RightsHolderPatchCompetitionIds;
+  logo_asset_id?: RightsHolderPatchLogoAssetId;
+  name?: RightsHolderPatchName;
 }
 
 export type SatelliteCreateBestFrequency = Frequency | null;
@@ -1604,11 +1859,16 @@ export const SourceHealthKind = {
   scraper: 'scraper',
   api: 'api',
   internal: 'internal',
+  fixtures: 'fixtures',
+  live_reader: 'live_reader',
+  live: 'live',
 } as const;
 
 export type SourceHealthLastRun = ImportRunRow | null;
 
 export type SourceHealthLastSuccessAt = string | null;
+
+export type SourceHealthLive = LiveCard | null;
 
 /**
  * D2's ``SourceItem`` with the health fields added (A13).
@@ -1627,6 +1887,7 @@ export interface SourceHealth {
   kind: SourceHealthKind;
   last_run: SourceHealthLastRun;
   last_success_at: SourceHealthLastSuccessAt;
+  live: SourceHealthLive;
   name: string;
   paused: boolean;
   running: boolean;
@@ -1779,6 +2040,93 @@ export interface TeamRef {
   name: string;
 }
 
+export type UnresolvedContextAway = string | null;
+
+export type UnresolvedContextCompetition = string | null;
+
+export type UnresolvedContextHome = string | null;
+
+export type UnresolvedContextKickoffAt = string | null;
+
+export type UnresolvedContextMatchId = number | null;
+
+/**
+ * Where the source last showed the name. Written by the importers, so each part may be absent.
+ */
+export interface UnresolvedContext {
+  away?: UnresolvedContextAway;
+  competition?: UnresolvedContextCompetition;
+  home?: UnresolvedContextHome;
+  kickoff_at?: UnresolvedContextKickoffAt;
+  match_id?: UnresolvedContextMatchId;
+}
+
+export interface UnresolvedMap {
+  created?: boolean;
+  scope_to_competition?: boolean;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  target_id: number;
+}
+
+export type UnresolvedNameRowKind = typeof UnresolvedNameRowKind[keyof typeof UnresolvedNameRowKind];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const UnresolvedNameRowKind = {
+  team: 'team',
+  competition: 'competition',
+  channel: 'channel',
+} as const;
+
+export type UnresolvedNameRowState = typeof UnresolvedNameRowState[keyof typeof UnresolvedNameRowState];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const UnresolvedNameRowState = {
+  open: 'open',
+  mapped: 'mapped',
+  created: 'created',
+  ignored: 'ignored',
+} as const;
+
+export interface UnresolvedNameRow {
+  context: UnresolvedContext;
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
+  id: number;
+  kind: UnresolvedNameRowKind;
+  last_seen_at: string;
+  name: string;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  seen_count: number;
+  source: string;
+  state: UnresolvedNameRowState;
+  suggestions: UnresolvedSuggestion[];
+}
+
+export type UnresolvedSuggestionDetail = string | null;
+
+export interface UnresolvedSuggestion {
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  confidence: number;
+  detail: UnresolvedSuggestionDetail;
+  exact: boolean;
+  id: number;
+  name: string;
+}
+
 export type ListChannelsParams = {
 q?: string | null;
 satellite_id?: number | null;
@@ -1812,6 +2160,14 @@ export type GetDashboardParams = {
  */
 from: string;
 to: string;
+};
+
+export type GetImportRunRawParams = {
+/**
+ * @minimum 0
+ * @maximum 999
+ */
+page?: number;
 };
 
 export type ListMatchesParams = {
@@ -1857,4 +2213,27 @@ cursor?: string | null;
  */
 limit?: number;
 };
+
+export type ListNamesParams = {
+source?: string | null;
+kind?: 'team' | 'competition' | 'channel' | null;
+state?: ListNamesState;
+cursor?: string | null;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type ListNamesState = typeof ListNamesState[keyof typeof ListNamesState];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ListNamesState = {
+  open: 'open',
+  mapped: 'mapped',
+  created: 'created',
+  ignored: 'ignored',
+} as const;
 

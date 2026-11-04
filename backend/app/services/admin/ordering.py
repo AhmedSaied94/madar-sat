@@ -16,15 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import edit_conflict, precondition_required, validation_failed
 from app.auth.roles import AuthedAdmin
-from app.db.models import Competition, Satellite
+from app.db.models import Competition, RightsHolder, Satellite
 from app.schemas import admin as a
 from app.services.admin import versions, writer
 
-TARGETS: dict[str, Any] = {"competitions": Competition, "satellites": Satellite}
-
-
-def _not_found(entity: str) -> str:
-    return "competition_not_found" if entity == "competitions" else "satellite_not_found"
+# Each target's model, the column holding its position and the datasets a new order changes.
+TARGETS: dict[str, tuple[Any, str, tuple[str, ...]]] = {
+    "competitions": (Competition, "priority", ("competitions", "matches")),
+    "satellites": (Satellite, "priority", ("satellites",)),
+    "rights_holders": (RightsHolder, "sort_order", ("rights_holders", "competitions")),
+}
 
 
 async def reorder(
@@ -34,9 +35,9 @@ async def reorder(
     body: a.OrderRequest,
     now: datetime,
 ) -> a.BulkResult:
-    """``entity`` is ``competitions`` or ``satellites``."""
-    model = TARGETS[entity]
-    datasets = ("competitions", "matches") if entity == "competitions" else ("satellites",)
+    """``entity`` is a key of ``TARGETS``."""
+    model, column, datasets = TARGETS[entity]
+    position_of = getattr(model, column)
 
     # Every row is locked before any version is compared: nothing changes when one item is stale.
     rows: dict[int, Any] = {}
@@ -51,7 +52,7 @@ async def reorder(
         raise precondition_required()
 
     stale: list[int] = []
-    current = {item.id: versions.row_version(rows[item.id]) for item in body.items}
+    current = {item.id: await versions.version_of(session, rows[item.id]) for item in body.items}
     for item in body.items:
         if not versions.matches_etag(item.if_match, current[item.id]):
             stale.append(item.id)
@@ -61,9 +62,9 @@ async def reorder(
     changed: list[tuple[Any, int, int]] = []
     for position, item in enumerate(body.items, start=1):
         row = rows[item.id]
-        if row.priority != position:
-            changed.append((row, row.priority, position))
-            row.priority = position
+        if getattr(row, column) != position:
+            changed.append((row, getattr(row, column), position))
+            setattr(row, column, position)
 
     # Rows the editor didn't list keep their relative order, after the listed ones.
     listed = {item.id for item in body.items}
@@ -71,22 +72,24 @@ async def reorder(
         (
             await session.scalars(
                 select(model)
-                .where(model.id.not_in(listed), model.priority.is_not(None))
-                .order_by(model.priority.asc(), model.id)
+                .where(model.id.not_in(listed), position_of.is_not(None))
+                .order_by(position_of.asc(), model.id)
                 .with_for_update()
             )
         ).all()
     )
     for offset, row in enumerate(others, start=len(body.items) + 1):
-        if row.priority != offset:
-            changed.append((row, row.priority, offset))
-            row.priority = offset
+        if getattr(row, column) != offset:
+            changed.append((row, getattr(row, column), offset))
+            setattr(row, column, offset)
 
     for row, before, after in changed:
-        writer.add_audit(session, admin, entity.rstrip("s"), row.id, "update", {"priority": [before, after]})
+        writer.add_audit(session, admin, entity.rstrip("s"), row.id, "update", {column: [before, after]})
         if hasattr(row, "updated_at"):
             row.updated_at = now
     await writer.bump_datasets(session, datasets)
     return a.BulkResult(
-        updated=[a.BulkUpdated(id=item.id, etag=versions.row_version(rows[item.id])) for item in body.items]
+        updated=[
+            a.BulkUpdated(id=item.id, etag=await versions.version_of(session, rows[item.id])) for item in body.items
+        ]
     )

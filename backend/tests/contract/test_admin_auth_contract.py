@@ -63,7 +63,19 @@ D3_ROUTES = {
     ("GET", "/admin/api/sources/{name}/runs"),
     ("GET", "/admin/api/import-runs/{id}"),
 }
-ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES | D3_ROUTES
+D5_ROUTES = {
+    ("GET", "/admin/api/unresolved-names"),
+    ("POST", "/admin/api/unresolved-names/{id}/map"),
+    ("POST", "/admin/api/unresolved-names/{id}/ignore"),
+    ("GET", "/admin/api/import-runs/{id}/raw"),
+    ("GET", "/admin/api/rights-holders"),
+    ("POST", "/admin/api/rights-holders"),
+    ("POST", "/admin/api/rights-holders/reorder"),
+    ("GET", "/admin/api/rights-holders/{id}"),
+    ("PATCH", "/admin/api/rights-holders/{id}"),
+    ("DELETE", "/admin/api/rights-holders/{id}"),
+}
+ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES | D3_ROUTES | D5_ROUTES
 
 
 def _normalize(operations: set[tuple[str, str]]) -> set[tuple[str, str]]:

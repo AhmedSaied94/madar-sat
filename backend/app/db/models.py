@@ -260,6 +260,7 @@ class RightsHolderCarriage(Base):
     position: Mapped[int] = mapped_column(SmallInteger)
     access: Mapped[str] = mapped_column(Text)
     beam: Mapped[str | None] = mapped_column(Text)
+    package: Mapped[str | None] = mapped_column(Text)  # 0007
 
     __table_args__ = (UniqueConstraint("rights_holder_id", "position"),)
 
@@ -321,6 +322,8 @@ class Match(Base):
     status_label: Mapped[str | None] = mapped_column(Text)
     status_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_tbd: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 0007: written by the ``yallakora`` importer, served by ``match_detail.py``.
+    local_broadcaster_eg: Mapped[str | None] = mapped_column(Text)
     locked_fields: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -501,6 +504,142 @@ class DatasetVersion(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+# --- 0007: live scores, aliases and the unresolved-names queue (D5) ------------------------------
+
+
+class MatchEvent(Base):
+    __tablename__ = "match_events"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"))
+    side: Mapped[str] = mapped_column(Text)
+    type: Mapped[str] = mapped_column(Text)
+    minute: Mapped[str] = mapped_column(Text)
+    player_name: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"))
+    external_id: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MatchLineup(Base):
+    __tablename__ = "match_lineups"
+
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), primary_key=True)
+    side: Mapped[str] = mapped_column(Text, primary_key=True)
+    formation: Mapped[str | None] = mapped_column(Text)
+    players: Mapped[Any] = mapped_column(JSONB, default=list)
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MatchLiveState(Base):
+    """The cross-check's memory for one polled match; it outlives a clock fallback (research R5)."""
+
+    __tablename__ = "match_live_state"
+
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), primary_key=True)
+    confirmed_home: Mapped[int | None] = mapped_column(SmallInteger)
+    confirmed_away: Mapped[int | None] = mapped_column(SmallInteger)
+    confirmed_home_pen: Mapped[int | None] = mapped_column(SmallInteger)
+    confirmed_away_pen: Mapped[int | None] = mapped_column(SmallInteger)
+    candidate: Mapped[Any | None] = mapped_column(JSONB)
+    disagreement_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    has_page_slot: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    last_reading_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MatchSourceReading(Base):
+    """The latest reading per match and source. Never served to clients."""
+
+    __tablename__ = "match_source_readings"
+
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), primary_key=True)
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"), primary_key=True)
+    status: Mapped[str | None] = mapped_column(Text)
+    period: Mapped[str | None] = mapped_column(Text)
+    minute: Mapped[str | None] = mapped_column(Text)
+    home_score: Mapped[int | None] = mapped_column(SmallInteger)
+    away_score: Mapped[int | None] = mapped_column(SmallInteger)
+    home_pen: Mapped[int | None] = mapped_column(SmallInteger)
+    away_pen: Mapped[int | None] = mapped_column(SmallInteger)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class LiveSourceState(Base):
+    __tablename__ = "live_source_state"
+
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"), primary_key=True)
+    state: Mapped[str] = mapped_column(Text, default="ok", server_default="ok")
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LiveProblem(Base):
+    """One row per problem, so there is one alert per problem, also across restarts."""
+
+    __tablename__ = "live_problems"
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    raw_ref: Mapped[str | None] = mapped_column(Text)
+    alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    recovered_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TeamAlias(Base):
+    __tablename__ = "team_aliases"
+
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"), primary_key=True)
+    alias_norm: Mapped[str] = mapped_column(Text, primary_key=True)
+    # ``''`` means any competition (research R8).
+    competition_norm: Mapped[str] = mapped_column(Text, primary_key=True, default="", server_default="")
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CompetitionAlias(Base):
+    __tablename__ = "competition_aliases"
+
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"), primary_key=True)
+    alias_norm: Mapped[str] = mapped_column(Text, primary_key=True)
+    competition_id: Mapped[int] = mapped_column(ForeignKey("competitions.id", ondelete="CASCADE"))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ChannelAlias(Base):
+    __tablename__ = "channel_aliases"
+
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"), primary_key=True)
+    alias_norm: Mapped[str] = mapped_column(Text, primary_key=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id", ondelete="CASCADE"))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UnresolvedName(Base):
+    __tablename__ = "unresolved_names"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"))
+    kind: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    name_norm: Mapped[str] = mapped_column(Text)
+    competition_norm: Mapped[str] = mapped_column(Text, default="", server_default="")
+    context: Mapped[Any] = mapped_column(JSONB, default=dict)
+    seen_count: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    state: Mapped[str] = mapped_column(Text, default="open", server_default="open")
+    target_id: Mapped[int | None] = mapped_column(BigInteger)
+    resolved_by: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id", ondelete="SET NULL"))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 DATASET_NAMES = (
     "matches",
     "live",
@@ -512,4 +651,5 @@ DATASET_NAMES = (
     "rights_holders",
     "broadcast_presets",
     "sources",
+    "unresolved_names",
 )

@@ -34,6 +34,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [uptime-kuma.md](uptime-kuma.md) | Reaching Kuma over WireGuard, the first account, the exact four HTTP and eight push monitors, the Telegram notification, what each alert means |
 | [home-box.md](home-box.md) | Joining the scrape box to `wg0`, its `.env`, the update timer, checking it, taking it offline |
 | [workers.md](workers.md) | VPS-2's services and `beat`, `worker-media` and logos, the VPS-2 deploy and rollback, raw-page retention |
+| [live-poller.md](live-poller.md) | Live scores on VPS-2: what runs, the settings, pausing, each alert, updating a parser, the capture, the disk check |
 | [firewall-changes.md](firewall-changes.md) | Changing, testing and applying the iptables rules on either VM |
 | [exposure-check.md](exposure-check.md) | What the internet can reach, and the certificates and headers (T065) |
 | [tls-certificates.md](tls-certificates.md) | Let's Encrypt on sslip.io, failed issuance, a changed public IP |
@@ -118,6 +119,7 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | Releasing the Android app, or a Play upload was refused | [store-releases.md](store-releases.md) |
 | No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
 | A Telegram alert about a source, or one is still paused | [source-alerts.md](source-alerts.md) |
+| A live score is wrong or stale, a live alert, or fixing a live parser | [live-poller.md](live-poller.md) |
 | A backup monitor is red, or you need to restore something | [backups.md](backups.md) |
 | A monitor is red, or you need to add one | [uptime-kuma.md](uptime-kuma.md) |
 | A worker on VPS-2 or `worker-media` is unhealthy | [workers.md](workers.md) |

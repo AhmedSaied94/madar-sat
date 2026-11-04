@@ -218,14 +218,40 @@ class PlatformGroup(BaseModel):
     items: list[PlatformEntry]
 
 
+class MatchEvent(BaseModel):
+    """A structured fact from the feed. Goal-type events are absent while their score is unconfirmed."""
+
+    type: Literal["goal", "own_goal", "penalty", "missed_penalty", "red_card"]
+    side: Literal["home", "away"]
+    minute: str
+    player: str | None
+
+
+class LineupPlayer(BaseModel):
+    name: str
+    number: int | None
+    position: str | None
+    is_starter: bool
+
+
+class LineupSide(BaseModel):
+    formation: str | None
+    players: list[LineupPlayer]
+
+
+class MatchLineups(BaseModel):
+    home: LineupSide | None
+    away: LineupSide | None
+
+
 class MatchDetail(MatchSummary):
     stadium: str | None
     local_broadcaster_eg: str | None
     broadcasts: list[BroadcastEntry]
     carriages: list[CarriageEntry]
     platforms: list[PlatformGroup]
-    events: list[Any]
-    lineups: None
+    events: list[MatchEvent]
+    lineups: MatchLineups | None
     feed_id: int | None
 
 
@@ -275,10 +301,24 @@ class ChannelCarriage(BaseModel):
     frequency_changed_at: datetime | None
 
 
+class FrequencyChangeTuning(BaseModel):
+    frequency_mhz: int
+    polarization: Polarization
+    symbol_rate: int
+
+
+class FrequencyChange(BaseModel):
+    """Stays empty until D6 fills it; the type is fixed now so the app's section can be tested."""
+
+    old: FrequencyChangeTuning
+    new: FrequencyChangeTuning
+    detected_at: datetime
+
+
 class ChannelDetail(ChannelCarriage):
     other_carriages: list[ChannelCarriage]
     upcoming_matches: list[MatchSummary]
-    recent_frequency_changes: list[Any]
+    recent_frequency_changes: list[FrequencyChange]
 
 
 # --- Catalog ------------------------------------------------------------------
@@ -292,8 +332,17 @@ class Competition(BaseModel):
     priority: int | None
 
 
+class RightsHolderRef(NamedRef):
+    """A rights holder on S8: where it can be received and how many competitions it carries."""
+
+    satellites: list[SatelliteRef]
+    competition_count: int
+
+
 class CompetitionDetail(Competition):
-    rights_holders: list[NamedRef]
+    upcoming: list[MatchSummary]
+    recent: list[MatchSummary]
+    rights_holders: list[RightsHolderRef]
 
 
 class TeamSearchItem(BaseModel):

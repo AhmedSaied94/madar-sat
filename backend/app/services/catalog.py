@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
     Competition,
+    Match,
     MediaAsset,
     RightsHolder,
     RightsHolderCarriage,
@@ -17,6 +20,9 @@ from app.db.models import (
 )
 from app.schemas import public as s
 from app.services.common import media_url
+from app.services.matches import summaries_for_ids
+
+COMPETITION_MATCH_LIMIT = 30
 
 
 async def list_competitions(session: AsyncSession) -> list[s.Competition]:
@@ -28,7 +34,80 @@ async def list_competitions(session: AsyncSession) -> list[s.Competition]:
     return [s.Competition(id=c.id, sport=c.sport, name=c.name, logo=media_url(p), priority=c.priority) for c, p in rows]
 
 
-async def get_competition(session: AsyncSession, competition_id: int) -> s.CompetitionDetail | None:
+async def _competition_matches(
+    session: AsyncSession, competition_id: int, now: datetime
+) -> tuple[list[s.MatchSummary], list[s.MatchSummary]]:
+    """``(upcoming, recent)``: at most 30 each, soonest first and latest first."""
+    of_competition = (Match.competition_id == competition_id, Match.kickoff_at.is_not(None))
+    upcoming_ids = await session.scalars(
+        select(Match.id)
+        .where(*of_competition, Match.kickoff_at >= now)
+        .order_by(Match.kickoff_at.asc(), Match.id.asc())
+        .limit(COMPETITION_MATCH_LIMIT)
+    )
+    recent_ids = await session.scalars(
+        select(Match.id)
+        .where(*of_competition, Match.kickoff_at < now)
+        .order_by(Match.kickoff_at.desc(), Match.id.desc())
+        .limit(COMPETITION_MATCH_LIMIT)
+    )
+    upcoming = await summaries_for_ids(session, now, list(upcoming_ids))
+    recent = await summaries_for_ids(session, now, list(recent_ids))
+    recent.reverse()
+    return upcoming, recent
+
+
+async def _competition_rights_holders(session: AsyncSession, competition_id: int) -> list[s.RightsHolderRef]:
+    rows = (
+        await session.execute(
+            select(RightsHolder.id, RightsHolder.name, MediaAsset.path)
+            .join(RightsHolderCompetition, RightsHolderCompetition.rights_holder_id == RightsHolder.id)
+            .outerjoin(MediaAsset, MediaAsset.id == RightsHolder.logo_asset_id)
+            .where(RightsHolderCompetition.competition_id == competition_id)
+            .order_by(RightsHolder.name)
+        )
+    ).all()
+    holder_ids = [row[0] for row in rows]
+    if not holder_ids:
+        return []
+    count_rows = await session.execute(
+        select(RightsHolderCompetition.rights_holder_id, func.count())
+        .where(RightsHolderCompetition.rights_holder_id.in_(holder_ids))
+        .group_by(RightsHolderCompetition.rights_holder_id)
+    )
+    counts: dict[int, int] = {holder_id: count for holder_id, count in count_rows}
+    satellite_rows = await session.execute(
+        select(RightsHolderCarriage.rights_holder_id, Satellite)
+        .join(RightsHolderCarriageSatellite, RightsHolderCarriageSatellite.carriage_id == RightsHolderCarriage.id)
+        .join(Satellite, Satellite.id == RightsHolderCarriageSatellite.satellite_id)
+        .where(RightsHolderCarriage.rights_holder_id.in_(holder_ids))
+        .distinct()
+        .order_by(RightsHolderCarriage.rights_holder_id, Satellite.orbital_position, Satellite.id)
+    )
+    satellites: dict[int, list[s.SatelliteRef]] = {holder_id: [] for holder_id in holder_ids}
+    for holder_id, st in satellite_rows:
+        satellites[holder_id].append(
+            s.SatelliteRef(
+                id=st.id,
+                slug=st.slug,
+                name_ar=st.name_ar,
+                name_en=st.name_en,
+                orbital_position=float(st.orbital_position) if st.orbital_position is not None else None,
+            )
+        )
+    return [
+        s.RightsHolderRef(
+            id=row[0],
+            name=row[1],
+            logo=media_url(row[2]),
+            satellites=satellites[row[0]],
+            competition_count=counts[row[0]],
+        )
+        for row in rows
+    ]
+
+
+async def get_competition(session: AsyncSession, competition_id: int, now: datetime) -> s.CompetitionDetail | None:
     row = (
         await session.execute(
             select(Competition, MediaAsset.path)
@@ -40,20 +119,16 @@ async def get_competition(session: AsyncSession, competition_id: int) -> s.Compe
         return None
     c, logo_path = row
 
-    rh_rows = await session.execute(
-        select(RightsHolder.id, RightsHolder.name, MediaAsset.path)
-        .join(RightsHolderCompetition, RightsHolderCompetition.rights_holder_id == RightsHolder.id)
-        .outerjoin(MediaAsset, MediaAsset.id == RightsHolder.logo_asset_id)
-        .where(RightsHolderCompetition.competition_id == competition_id)
-        .order_by(RightsHolder.name)
-    )
+    upcoming, recent = await _competition_matches(session, competition_id, now)
     return s.CompetitionDetail(
         id=c.id,
         sport=c.sport,
         name=c.name,
         logo=media_url(logo_path),
         priority=c.priority,
-        rights_holders=[s.NamedRef(id=r[0], name=r[1], logo=media_url(r[2])) for r in rh_rows],
+        upcoming=upcoming,
+        recent=recent,
+        rights_holders=await _competition_rights_holders(session, competition_id),
     )
 
 

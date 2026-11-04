@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CompetitionDetail {
 
- int get id; String? get logo; String get name; int? get priority;@JsonKey(name: 'rights_holders') List<NamedRef> get rightsHolders; Sport get sport;
+ int get id; String? get logo; String get name; int? get priority; List<MatchSummary> get recent;@JsonKey(name: 'rights_holders') List<RightsHolderRef> get rightsHolders; Sport get sport; List<MatchSummary> get upcoming;
 /// Create a copy of CompetitionDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $CompetitionDetailCopyWith<CompetitionDetail> get copyWith => _$CompetitionDetai
 @override
 bool operator ==(Object other) {
   final _this = this as CompetitionDetail;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompetitionDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.logo, _this.logo) || other.logo == _this.logo)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.priority, _this.priority) || other.priority == _this.priority)&&const DeepCollectionEquality().equals(other.rightsHolders, _this.rightsHolders)&&(identical(other.sport, _this.sport) || other.sport == _this.sport));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompetitionDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.logo, _this.logo) || other.logo == _this.logo)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.priority, _this.priority) || other.priority == _this.priority)&&const DeepCollectionEquality().equals(other.recent, _this.recent)&&const DeepCollectionEquality().equals(other.rightsHolders, _this.rightsHolders)&&(identical(other.sport, _this.sport) || other.sport == _this.sport)&&const DeepCollectionEquality().equals(other.upcoming, _this.upcoming));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as CompetitionDetail;
-  return Object.hash(runtimeType,_this.id,_this.logo,_this.name,_this.priority,const DeepCollectionEquality().hash(_this.rightsHolders),_this.sport);
+  return Object.hash(runtimeType,_this.id,_this.logo,_this.name,_this.priority,const DeepCollectionEquality().hash(_this.recent),const DeepCollectionEquality().hash(_this.rightsHolders),_this.sport,const DeepCollectionEquality().hash(_this.upcoming));
 }
 
 @override
 String toString() {
   final _this = this as CompetitionDetail;
-  return 'CompetitionDetail(id: ${_this.id}, logo: ${_this.logo}, name: ${_this.name}, priority: ${_this.priority}, rightsHolders: ${_this.rightsHolders}, sport: ${_this.sport})';
+  return 'CompetitionDetail(id: ${_this.id}, logo: ${_this.logo}, name: ${_this.name}, priority: ${_this.priority}, recent: ${_this.recent}, rightsHolders: ${_this.rightsHolders}, sport: ${_this.sport}, upcoming: ${_this.upcoming})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $CompetitionDetailCopyWith<$Res>  {
   factory $CompetitionDetailCopyWith(CompetitionDetail value, $Res Function(CompetitionDetail) _then) = _$CompetitionDetailCopyWithImpl;
 @useResult
 $Res call({
- int id, String? logo, String name, int? priority,@JsonKey(name: 'rights_holders') List<NamedRef> rightsHolders, Sport sport
+ int id, String? logo, String name, int? priority, List<MatchSummary> recent,@JsonKey(name: 'rights_holders') List<RightsHolderRef> rightsHolders, Sport sport, List<MatchSummary> upcoming
 });
 
 
@@ -71,15 +71,17 @@ class _$CompetitionDetailCopyWithImpl<$Res>
 
 /// Create a copy of CompetitionDetail
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? logo = freezed,Object? name = null,Object? priority = freezed,Object? rightsHolders = null,Object? sport = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? logo = freezed,Object? name = null,Object? priority = freezed,Object? recent = null,Object? rightsHolders = null,Object? sport = null,Object? upcoming = null,}) {
   return _then(CompetitionDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,logo: freezed == logo ? _self.logo : logo // ignore: cast_nullable_to_non_nullable
 as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,priority: freezed == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
-as int?,rightsHolders: null == rightsHolders ? _self.rightsHolders : rightsHolders // ignore: cast_nullable_to_non_nullable
-as List<NamedRef>,sport: null == sport ? _self.sport : sport // ignore: cast_nullable_to_non_nullable
-as Sport,
+as int?,recent: null == recent ? _self.recent : recent // ignore: cast_nullable_to_non_nullable
+as List<MatchSummary>,rightsHolders: null == rightsHolders ? _self.rightsHolders : rightsHolders // ignore: cast_nullable_to_non_nullable
+as List<RightsHolderRef>,sport: null == sport ? _self.sport : sport // ignore: cast_nullable_to_non_nullable
+as Sport,upcoming: null == upcoming ? _self.upcoming : upcoming // ignore: cast_nullable_to_non_nullable
+as List<MatchSummary>,
   ));
 }
 
@@ -164,10 +166,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String? logo,  String name,  int? priority, @JsonKey(name: 'rights_holders')  List<NamedRef> rightsHolders,  Sport sport)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String? logo,  String name,  int? priority,  List<MatchSummary> recent, @JsonKey(name: 'rights_holders')  List<RightsHolderRef> rightsHolders,  Sport sport,  List<MatchSummary> upcoming)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CompetitionDetail() when $default != null:
-return $default(_that.id,_that.logo,_that.name,_that.priority,_that.rightsHolders,_that.sport);case _:
+return $default(_that.id,_that.logo,_that.name,_that.priority,_that.recent,_that.rightsHolders,_that.sport,_that.upcoming);case _:
   return orElse();
 
 }
@@ -185,10 +187,10 @@ return $default(_that.id,_that.logo,_that.name,_that.priority,_that.rightsHolder
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String? logo,  String name,  int? priority, @JsonKey(name: 'rights_holders')  List<NamedRef> rightsHolders,  Sport sport)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String? logo,  String name,  int? priority,  List<MatchSummary> recent, @JsonKey(name: 'rights_holders')  List<RightsHolderRef> rightsHolders,  Sport sport,  List<MatchSummary> upcoming)  $default,) {final _that = this;
 switch (_that) {
 case _CompetitionDetail():
-return $default(_that.id,_that.logo,_that.name,_that.priority,_that.rightsHolders,_that.sport);case _:
+return $default(_that.id,_that.logo,_that.name,_that.priority,_that.recent,_that.rightsHolders,_that.sport,_that.upcoming);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +207,10 @@ return $default(_that.id,_that.logo,_that.name,_that.priority,_that.rightsHolder
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String? logo,  String name,  int? priority, @JsonKey(name: 'rights_holders')  List<NamedRef> rightsHolders,  Sport sport)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String? logo,  String name,  int? priority,  List<MatchSummary> recent, @JsonKey(name: 'rights_holders')  List<RightsHolderRef> rightsHolders,  Sport sport,  List<MatchSummary> upcoming)?  $default,) {final _that = this;
 switch (_that) {
 case _CompetitionDetail() when $default != null:
-return $default(_that.id,_that.logo,_that.name,_that.priority,_that.rightsHolders,_that.sport);case _:
+return $default(_that.id,_that.logo,_that.name,_that.priority,_that.recent,_that.rightsHolders,_that.sport,_that.upcoming);case _:
   return null;
 
 }
@@ -220,21 +222,35 @@ return $default(_that.id,_that.logo,_that.name,_that.priority,_that.rightsHolder
 @JsonSerializable()
 
 class _CompetitionDetail implements CompetitionDetail {
-  const _CompetitionDetail({required this.id, required this.logo, required this.name, required this.priority, @JsonKey(name: 'rights_holders') required  List<NamedRef> rightsHolders, required this.sport}): _rightsHolders = rightsHolders;
+  const _CompetitionDetail({required this.id, required this.logo, required this.name, required this.priority, required  List<MatchSummary> recent, @JsonKey(name: 'rights_holders') required  List<RightsHolderRef> rightsHolders, required this.sport, required  List<MatchSummary> upcoming}): _recent = recent,_rightsHolders = rightsHolders,_upcoming = upcoming;
   factory _CompetitionDetail.fromJson(Map<String, dynamic> json) => _$CompetitionDetailFromJson(json);
 
 @override final  int id;
 @override final  String? logo;
 @override final  String name;
 @override final  int? priority;
- final  List<NamedRef> _rightsHolders;
-@override@JsonKey(name: 'rights_holders') List<NamedRef> get rightsHolders {
+ final  List<MatchSummary> _recent;
+@override List<MatchSummary> get recent {
+  if (_recent is EqualUnmodifiableListView) return _recent;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_recent);
+}
+
+ final  List<RightsHolderRef> _rightsHolders;
+@override@JsonKey(name: 'rights_holders') List<RightsHolderRef> get rightsHolders {
   if (_rightsHolders is EqualUnmodifiableListView) return _rightsHolders;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_rightsHolders);
 }
 
 @override final  Sport sport;
+ final  List<MatchSummary> _upcoming;
+@override List<MatchSummary> get upcoming {
+  if (_upcoming is EqualUnmodifiableListView) return _upcoming;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_upcoming);
+}
+
 
 /// Create a copy of CompetitionDetail
 /// with the given fields replaced by the non-null parameter values.
@@ -249,18 +265,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompetitionDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.logo, logo) || other.logo == logo)&&(identical(other.name, name) || other.name == name)&&(identical(other.priority, priority) || other.priority == priority)&&const DeepCollectionEquality().equals(other.rightsHolders, _rightsHolders)&&(identical(other.sport, sport) || other.sport == sport));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompetitionDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.logo, logo) || other.logo == logo)&&(identical(other.name, name) || other.name == name)&&(identical(other.priority, priority) || other.priority == priority)&&const DeepCollectionEquality().equals(other.recent, _recent)&&const DeepCollectionEquality().equals(other.rightsHolders, _rightsHolders)&&(identical(other.sport, sport) || other.sport == sport)&&const DeepCollectionEquality().equals(other.upcoming, _upcoming));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,logo,name,priority,const DeepCollectionEquality().hash(_rightsHolders),sport);
+    return Object.hash(runtimeType,id,logo,name,priority,const DeepCollectionEquality().hash(_recent),const DeepCollectionEquality().hash(_rightsHolders),sport,const DeepCollectionEquality().hash(_upcoming));
 }
 
 @override
 String toString() {
-    return 'CompetitionDetail(id: $id, logo: $logo, name: $name, priority: $priority, rightsHolders: $rightsHolders, sport: $sport)';
+    return 'CompetitionDetail(id: $id, logo: $logo, name: $name, priority: $priority, recent: $recent, rightsHolders: $rightsHolders, sport: $sport, upcoming: $upcoming)';
 }
 
 
@@ -271,7 +287,7 @@ abstract mixin class _$CompetitionDetailCopyWith<$Res> implements $CompetitionDe
   factory _$CompetitionDetailCopyWith(_CompetitionDetail value, $Res Function(_CompetitionDetail) _then) = __$CompetitionDetailCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String? logo, String name, int? priority,@JsonKey(name: 'rights_holders') List<NamedRef> rightsHolders, Sport sport
+ int id, String? logo, String name, int? priority, List<MatchSummary> recent,@JsonKey(name: 'rights_holders') List<RightsHolderRef> rightsHolders, Sport sport, List<MatchSummary> upcoming
 });
 
 
@@ -288,15 +304,17 @@ class __$CompetitionDetailCopyWithImpl<$Res>
 
 /// Create a copy of CompetitionDetail
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? logo = freezed,Object? name = null,Object? priority = freezed,Object? rightsHolders = null,Object? sport = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? logo = freezed,Object? name = null,Object? priority = freezed,Object? recent = null,Object? rightsHolders = null,Object? sport = null,Object? upcoming = null,}) {
   return _then(_CompetitionDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,logo: freezed == logo ? _self.logo : logo // ignore: cast_nullable_to_non_nullable
 as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,priority: freezed == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
-as int?,rightsHolders: null == rightsHolders ? _self._rightsHolders : rightsHolders // ignore: cast_nullable_to_non_nullable
-as List<NamedRef>,sport: null == sport ? _self.sport : sport // ignore: cast_nullable_to_non_nullable
-as Sport,
+as int?,recent: null == recent ? _self._recent : recent // ignore: cast_nullable_to_non_nullable
+as List<MatchSummary>,rightsHolders: null == rightsHolders ? _self._rightsHolders : rightsHolders // ignore: cast_nullable_to_non_nullable
+as List<RightsHolderRef>,sport: null == sport ? _self.sport : sport // ignore: cast_nullable_to_non_nullable
+as Sport,upcoming: null == upcoming ? _self._upcoming : upcoming // ignore: cast_nullable_to_non_nullable
+as List<MatchSummary>,
   ));
 }
 

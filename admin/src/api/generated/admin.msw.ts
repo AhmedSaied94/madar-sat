@@ -22,6 +22,7 @@ import type {
   EnvelopeAdminCommentator,
   EnvelopeAdminCompetition,
   EnvelopeAdminMatch,
+  EnvelopeAdminRightsHolder,
   EnvelopeAdminSatellite,
   EnvelopeAdminTeam,
   EnvelopeAdminUser,
@@ -33,6 +34,7 @@ import type {
   EnvelopeListAdminCommentator,
   EnvelopeListAdminCompetition,
   EnvelopeListAdminMatchRow,
+  EnvelopeListAdminRightsHolderRow,
   EnvelopeListAdminSatellite,
   EnvelopeListBroadcastPreset,
   EnvelopeListChannelItem,
@@ -40,11 +42,14 @@ import type {
   EnvelopeListImportRunRow,
   EnvelopeListSourceHealth,
   EnvelopeListTeamItem,
+  EnvelopeListUnresolvedNameRow,
   EnvelopeMediaAsset,
   EnvelopeNoneType,
+  EnvelopeRawPage,
   EnvelopeSession,
   EnvelopeSourceHealth,
   EnvelopeSourceRunQueued,
+  EnvelopeUnresolvedNameRow,
   ErrorEnvelope
 } from './admin.schemas';
 
@@ -410,10 +415,10 @@ export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMo
 
 export const getPatchCompetitionAdminApiCompetitionsCompetitionIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getGetDashboardAdminApiDashboardGetResponseMock = (): EnvelopeDashboard => ({"data":{"missing_channels":[{"competition":{"id":12,"name":"الدوري المصري الممتاز","priority":3},"matches":[{"away":"الزمالك","home":"الأهلي","id":48213,"kickoff_at":"2026-11-01T18:00:00Z"}]}],"missing_channels_count":9,"placeholders_to_complete":14,"recent_changes":[{"action":"update","at":"2026-11-01T08:00:41Z","by":{"kind":"admin","name":"محرر"},"entity":"match","entity_id":48213}],"sources":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetDashboardAdminApiDashboardGetResponseMock = (): EnvelopeDashboard => ({"data":{"missing_channels":[{"competition":{"id":12,"name":"الدوري المصري الممتاز","priority":3},"matches":[{"away":"الزمالك","home":"الأهلي","id":48213,"kickoff_at":"2026-11-01T18:00:00Z"}]}],"missing_channels_count":9,"placeholders_to_complete":14,"recent_changes":[{"action":"update","at":"2026-11-01T08:00:41Z","by":{"kind":"admin","name":"محرر"},"entity":"match","entity_id":48213}],"sources":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getGetDashboardAdminApiDashboardGetResponseMock200 = (): EnvelopeDashboard => ({"data":{"missing_channels":[{"competition":{"id":12,"name":"الدوري المصري الممتاز","priority":3},"matches":[{"away":"الزمالك","home":"الأهلي","id":48213,"kickoff_at":"2026-11-01T18:00:00Z"}]}],"missing_channels_count":9,"placeholders_to_complete":14,"recent_changes":[{"action":"update","at":"2026-11-01T08:00:41Z","by":{"kind":"admin","name":"محرر"},"entity":"match","entity_id":48213}],"sources":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetDashboardAdminApiDashboardGetResponseMock200 = (): EnvelopeDashboard => ({"data":{"missing_channels":[{"competition":{"id":12,"name":"الدوري المصري الممتاز","priority":3},"matches":[{"away":"الزمالك","home":"الأهلي","id":48213,"kickoff_at":"2026-11-01T18:00:00Z"}]}],"missing_channels_count":9,"placeholders_to_complete":14,"recent_changes":[{"action":"update","at":"2026-11-01T08:00:41Z","by":{"kind":"admin","name":"محرر"},"entity":"match","entity_id":48213}],"sources":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -476,10 +481,10 @@ export const getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteRespo
 
 export const getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock = (): EnvelopeImportRunDetail => ({"data":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"log":{"errors":[],"placeholders_created":[],"skipped_channels":7,"unmatched_matches":[]},"log_available":true,"raw_path":"livesoccertv/2026-11-01/run.json","started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock = (): EnvelopeImportRunDetail => ({"data":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"log":{"errors":[],"placeholders_created":[],"skipped_channels":7,"unmatched_matches":[]},"log_available":true,"pages":3,"raw_path":"livesoccertv/2026-11-01/run.json","started_at":"2026-11-01T07:58:00Z","status":"succeeded","worker":"worker-imports@vps2"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock200 = (): EnvelopeImportRunDetail => ({"data":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"log":{"errors":[],"placeholders_created":[],"skipped_channels":7,"unmatched_matches":[]},"log_available":true,"raw_path":"livesoccertv/2026-11-01/run.json","started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock200 = (): EnvelopeImportRunDetail => ({"data":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"log":{"errors":[],"placeholders_created":[],"skipped_channels":7,"unmatched_matches":[]},"log_available":true,"pages":3,"raw_path":"livesoccertv/2026-11-01/run.json","started_at":"2026-11-01T07:58:00Z","status":"succeeded","worker":"worker-imports@vps2"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -493,6 +498,24 @@ export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock404 = (): Erro
 
 
 export const getGetImportRunAdminApiImportRunsRunIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock = (): EnvelopeRawPage => ({"data":{"content_type":"text/html","page":0,"pages":3,"state":"ready","text":"<!doctype html>","truncated":false,"url":"https://www.filgoal.com/matches/"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock200 = (): EnvelopeRawPage => ({"data":{"content_type":"text/html","page":0,"pages":3,"state":"ready","text":"<!doctype html>","truncated":false,"url":"https://www.filgoal.com/matches/"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"import_run_not_found","message":"import run not found"},"meta":{},"success":false})
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
 export const getListMatchesAdminApiMatchesGetResponseMock = (): EnvelopeListAdminMatchRow => ({"data":[{"away":{"id":102,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الزمالك"},"broadcaster_count":1,"channel_count":14,"commentator":{"id":7,"name":"معلق تجريبي"},"competition":{"id":12,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الدوري المصري الممتاز","priority":3,"stage":"الجولة 9"},"estimated":false,"etag":"\"3f9a1c6d47b0e2a5c8d14f7b90e3a652\"","home":{"id":101,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"الأهلي"},"id":48213,"kickoff_at":"2026-10-31T18:00:00Z","locked":true,"match_date":"2026-10-31","missing_channels":false,"score":{"away":0,"away_pen":2,"home":1,"home_pen":3},"sources":["ysscores","legacy"],"status":"live","time_tbd":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
@@ -602,6 +625,116 @@ export const getUploadMediaAdminApiMediaPostResponseMock415 = (): ErrorEnvelope 
 
 
 export const getUploadMediaAdminApiMediaPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"media_invalid","message":"media invalid"},"meta":{},"success":false})
+
+export const getListRightsHoldersAdminApiRightsHoldersGetResponseMock = (): EnvelopeListAdminRightsHolderRow => ({"data":[{"competitions":["الدوري المصري الممتاز"],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"Eleven Sports","satellites":["نايل سات"],"sort_order":1}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetResponseMock200 = (): EnvelopeListAdminRightsHolderRow => ({"data":[{"competitions":["الدوري المصري الممتاز"],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"Eleven Sports","satellites":["نايل سات"],"sort_order":1}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostResponseMock = (): EnvelopeAdminRightsHolder => ({"data":{"carriages":[{"access":"encrypted","beam":"wide","frequencies":[{"frequency_mhz":11013,"is_primary":true,"polarization":"H","symbol_rate":27500}],"package":"الباقة الرياضية","satellite_ids":[2]}],"competition_ids":[12,14],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":77,"name":"Eleven Sports","sort_order":1},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostResponseMock201 = (): EnvelopeAdminRightsHolder => ({"data":{"carriages":[{"access":"encrypted","beam":"wide","frequencies":[{"frequency_mhz":11013,"is_primary":true,"polarization":"H","symbol_rate":27500}],"package":"الباقة الرياضية","satellite_ids":[2]}],"competition_ids":[12,14],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":77,"name":"Eleven Sports","sort_order":1},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock = (): EnvelopeBulkResult => ({"data":{"updated":[{"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":48213}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock200 = (): EnvelopeBulkResult => ({"data":{"updated":[{"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":48213}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock = (overrideResponse: Partial< EnvelopeNoneType > = {}): EnvelopeNoneType => ({data: null, error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock200 = (overrideResponse: Partial< EnvelopeNoneType > = {}): EnvelopeNoneType => ({data: null, error: faker.helpers.arrayElement([{code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})},null,]), meta: {}, success: faker.datatype.boolean(), ...overrideResponse})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"rights_holder_not_found","message":"rights holder not found"},"meta":{},"success":false})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock = (): EnvelopeAdminRightsHolder => ({"data":{"carriages":[{"access":"encrypted","beam":"wide","frequencies":[{"frequency_mhz":11013,"is_primary":true,"polarization":"H","symbol_rate":27500}],"package":"الباقة الرياضية","satellite_ids":[2]}],"competition_ids":[12,14],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":77,"name":"Eleven Sports","sort_order":1},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock200 = (): EnvelopeAdminRightsHolder => ({"data":{"carriages":[{"access":"encrypted","beam":"wide","frequencies":[{"frequency_mhz":11013,"is_primary":true,"polarization":"H","symbol_rate":27500}],"package":"الباقة الرياضية","satellite_ids":[2]}],"competition_ids":[12,14],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":77,"name":"Eleven Sports","sort_order":1},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"rights_holder_not_found","message":"rights holder not found"},"meta":{},"success":false})
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock = (): EnvelopeAdminRightsHolder => ({"data":{"carriages":[{"access":"encrypted","beam":"wide","frequencies":[{"frequency_mhz":11013,"is_primary":true,"polarization":"H","symbol_rate":27500}],"package":"الباقة الرياضية","satellite_ids":[2]}],"competition_ids":[12,14],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":77,"name":"Eleven Sports","sort_order":1},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock200 = (): EnvelopeAdminRightsHolder => ({"data":{"carriages":[{"access":"encrypted","beam":"wide","frequencies":[{"frequency_mhz":11013,"is_primary":true,"polarization":"H","symbol_rate":27500}],"package":"الباقة الرياضية","satellite_ids":[2]}],"competition_ids":[12,14],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":77,"name":"Eleven Sports","sort_order":1},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"rights_holder_not_found","message":"rights holder not found"},"meta":{},"success":false})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
 export const getListSatellitesAdminApiSatellitesGetResponseMock = (): EnvelopeListAdminSatellite => ({"data":[{"best_frequency":{"mhz":11996,"pol":"V","sr":27500},"etag":"\"b25d8e41f07a39c6d1e4a8b03c97f512\"","id":2,"kind":"satellite","logo":"https://media.example/logo/ab/ab12cd.webp","logo_asset_id":4,"name_ar":"نايل سات","name_en":"Nilesat 7.0W","orbital_position":-7,"priority":1,"reception_url":"https://www.youtube.com/watch?v=example","slug":"nilesat-7-0w","worst_frequency":{"mhz":11843,"pol":"H","sr":27500}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
@@ -715,10 +848,10 @@ export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock422 
 
 export const getPatchSatelliteAdminApiSatellitesSatelliteIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getListSourcesAdminApiSourcesGetResponseMock = (): EnvelopeListSourceHealth => ({"data":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListSourcesAdminApiSourcesGetResponseMock = (): EnvelopeListSourceHealth => ({"data":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListSourcesAdminApiSourcesGetResponseMock200 = (): EnvelopeListSourceHealth => ({"data":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListSourcesAdminApiSourcesGetResponseMock200 = (): EnvelopeListSourceHealth => ({"data":[{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -727,10 +860,10 @@ export const getListSourcesAdminApiSourcesGetResponseMock401 = (): ErrorEnvelope
 
 export const getListSourcesAdminApiSourcesGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
 
-export const getPauseSourceAdminApiSourcesNamePausePostResponseMock = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getPauseSourceAdminApiSourcesNamePausePostResponseMock200 = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPauseSourceAdminApiSourcesNamePausePostResponseMock200 = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getPauseSourceAdminApiSourcesNamePausePostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -744,10 +877,10 @@ export const getPauseSourceAdminApiSourcesNamePausePostResponseMock404 = (): Err
 
 export const getPauseSourceAdminApiSourcesNamePausePostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getResumeSourceAdminApiSourcesNameResumePostResponseMock = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getResumeSourceAdminApiSourcesNameResumePostResponseMock200 = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getResumeSourceAdminApiSourcesNameResumePostResponseMock200 = (): EnvelopeSourceHealth => ({"data":{"breaker":"closed","breaker_opened_at":null,"consecutive_failures":0,"error_rate_24h":0.25,"is_enabled":true,"items_24h":[41,64,58],"kind":"scraper","last_run":{"error":null,"finished_at":"2026-11-01T08:00:41Z","http_errors":0,"id":9123,"items_found":64,"items_upserted":12,"started_at":"2026-11-01T07:58:00Z","status":"succeeded"},"last_success_at":"2026-11-01T08:00:41Z","live":{"error_share":0.01,"matches_live":6,"sources":[{"name":"filgoal","state":"ok"}]},"name":"ysscores","paused":false,"running":false},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getResumeSourceAdminApiSourcesNameResumePostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -888,6 +1021,67 @@ export const getPatchTeamAdminApiTeamsTeamIdPatchResponseMock422 = (): ErrorEnve
 
 
 export const getPatchTeamAdminApiTeamsTeamIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getListNamesAdminApiUnresolvedNamesGetResponseMock = (): EnvelopeListUnresolvedNameRow => ({"data":[{"context":{"away":"الزمالك","competition":"الدوري المصري الممتاز","home":"Al Ahli","kickoff_at":"2026-11-04T18:00:00Z","match_id":48213},"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":91,"kind":"team","last_seen_at":"2026-11-04T16:30:00Z","name":"Al Ahli","seen_count":4,"source":"yallakora","state":"open","suggestions":[{"confidence":100,"detail":"الدوري المصري الممتاز","exact":true,"id":101,"name":"الأهلي"}]}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null,"open_count":1},"success":true})
+
+
+export const getListNamesAdminApiUnresolvedNamesGetResponseMock200 = (): EnvelopeListUnresolvedNameRow => ({"data":[{"context":{"away":"الزمالك","competition":"الدوري المصري الممتاز","home":"Al Ahli","kickoff_at":"2026-11-04T18:00:00Z","match_id":48213},"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":91,"kind":"team","last_seen_at":"2026-11-04T16:30:00Z","name":"Al Ahli","seen_count":4,"source":"yallakora","state":"open","suggestions":[{"confidence":100,"detail":"الدوري المصري الممتاز","exact":true,"id":101,"name":"الأهلي"}]}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null,"open_count":1},"success":true})
+
+
+
+export const getListNamesAdminApiUnresolvedNamesGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getListNamesAdminApiUnresolvedNamesGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getListNamesAdminApiUnresolvedNamesGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock = (): EnvelopeUnresolvedNameRow => ({"data":{"context":{"away":"الزمالك","competition":"الدوري المصري الممتاز","home":"Al Ahli","kickoff_at":"2026-11-04T18:00:00Z","match_id":48213},"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":91,"kind":"team","last_seen_at":"2026-11-04T16:30:00Z","name":"Al Ahli","seen_count":4,"source":"yallakora","state":"open","suggestions":[{"confidence":100,"detail":"الدوري المصري الممتاز","exact":true,"id":101,"name":"الأهلي"}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock200 = (): EnvelopeUnresolvedNameRow => ({"data":{"context":{"away":"الزمالك","competition":"الدوري المصري الممتاز","home":"Al Ahli","kickoff_at":"2026-11-04T18:00:00Z","match_id":48213},"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":91,"kind":"team","last_seen_at":"2026-11-04T16:30:00Z","name":"Al Ahli","seen_count":4,"source":"yallakora","state":"open","suggestions":[{"confidence":100,"detail":"الدوري المصري الممتاز","exact":true,"id":101,"name":"الأهلي"}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"unresolved_name_not_found","message":"unresolved name not found"},"meta":{},"success":false})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock = (): EnvelopeUnresolvedNameRow => ({"data":{"context":{"away":"الزمالك","competition":"الدوري المصري الممتاز","home":"Al Ahli","kickoff_at":"2026-11-04T18:00:00Z","match_id":48213},"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":91,"kind":"team","last_seen_at":"2026-11-04T16:30:00Z","name":"Al Ahli","seen_count":4,"source":"yallakora","state":"open","suggestions":[{"confidence":100,"detail":"الدوري المصري الممتاز","exact":true,"id":101,"name":"الأهلي"}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock200 = (): EnvelopeUnresolvedNameRow => ({"data":{"context":{"away":"الزمالك","competition":"الدوري المصري الممتاز","home":"Al Ahli","kickoff_at":"2026-11-04T18:00:00Z","match_id":48213},"etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"","id":91,"kind":"team","last_seen_at":"2026-11-04T16:30:00Z","name":"Al Ahli","seen_count":4,"source":"yallakora","state":"open","suggestions":[{"confidence":100,"detail":"الدوري المصري الممتاز","exact":true,"id":101,"name":"الأهلي"}]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"team_not_found","message":"team not found"},"meta":{},"success":false})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"alias_conflict","message":"alias conflict"},"meta":{},"success":false})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
 
 export const getLoginAdminApiAuthLoginPostMockHandler = (overrideResponse?: EnvelopeSession | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSession> | EnvelopeSession), options?: RequestHandlerOptions) => {
@@ -2955,6 +3149,94 @@ export const getGetImportRunAdminApiImportRunsRunIdGetMockHandler422 = (override
   }, options)
 }
 
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler = (overrideResponse?: EnvelopeRawPage | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeRawPage> | EnvelopeRawPage), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler200 = (overrideResponse?: EnvelopeRawPage | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeRawPage> | EnvelopeRawPage), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/import-runs/:runId/raw', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetImportRunRawAdminApiImportRunsRunIdRawGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
 export const getListMatchesAdminApiMatchesGetMockHandler = (overrideResponse?: EnvelopeListAdminMatchRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAdminMatchRow> | EnvelopeListAdminMatchRow), options?: RequestHandlerOptions) => {
   return http.get('*/admin/api/matches', async (info) => {
   
@@ -3449,6 +3731,516 @@ export const getUploadMediaAdminApiMediaPostMockHandler422 = (overrideResponse?:
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getUploadMediaAdminApiMediaPostResponseMock422()),
       { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getListRightsHoldersAdminApiRightsHoldersGetMockHandler = (overrideResponse?: EnvelopeListAdminRightsHolderRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAdminRightsHolderRow> | EnvelopeListAdminRightsHolderRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListRightsHoldersAdminApiRightsHoldersGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetMockHandler200 = (overrideResponse?: EnvelopeListAdminRightsHolderRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAdminRightsHolderRow> | EnvelopeListAdminRightsHolderRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListRightsHoldersAdminApiRightsHoldersGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListRightsHoldersAdminApiRightsHoldersGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListRightsHoldersAdminApiRightsHoldersGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListRightsHoldersAdminApiRightsHoldersGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostMockHandler = (overrideResponse?: EnvelopeAdminRightsHolder | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeAdminRightsHolder> | EnvelopeAdminRightsHolder), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateRightsHolderAdminApiRightsHoldersPostResponseMock()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostMockHandler201 = (overrideResponse?: EnvelopeAdminRightsHolder | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeAdminRightsHolder> | EnvelopeAdminRightsHolder), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateRightsHolderAdminApiRightsHoldersPostResponseMock201()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateRightsHolderAdminApiRightsHoldersPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateRightsHolderAdminApiRightsHoldersPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateRightsHolderAdminApiRightsHoldersPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateRightsHolderAdminApiRightsHoldersPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler = (overrideResponse?: EnvelopeBulkResult | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeBulkResult> | EnvelopeBulkResult), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler200 = (overrideResponse?: EnvelopeBulkResult | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeBulkResult> | EnvelopeBulkResult), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/rights-holders/reorder', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReorderRightsHoldersAdminApiRightsHoldersReorderPostResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler = (overrideResponse?: EnvelopeNoneType | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<EnvelopeNoneType> | EnvelopeNoneType), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler200 = (overrideResponse?: EnvelopeNoneType | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<EnvelopeNoneType> | EnvelopeNoneType), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.delete('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler = (overrideResponse?: EnvelopeAdminRightsHolder | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeAdminRightsHolder> | EnvelopeAdminRightsHolder), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler200 = (overrideResponse?: EnvelopeAdminRightsHolder | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeAdminRightsHolder> | EnvelopeAdminRightsHolder), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetRightsHolderAdminApiRightsHoldersHolderIdGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler = (overrideResponse?: EnvelopeAdminRightsHolder | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<EnvelopeAdminRightsHolder> | EnvelopeAdminRightsHolder), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler200 = (overrideResponse?: EnvelopeAdminRightsHolder | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<EnvelopeAdminRightsHolder> | EnvelopeAdminRightsHolder), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/rights-holders/:holderId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchResponseMock428()),
+      { status: 428,
         headers: { 'Content-Type': 'application/json' }
       })
   }, options)
@@ -4779,6 +5571,287 @@ export const getPatchTeamAdminApiTeamsTeamIdPatchMockHandler428 = (overrideRespo
       })
   }, options)
 }
+
+export const getListNamesAdminApiUnresolvedNamesGetMockHandler = (overrideResponse?: EnvelopeListUnresolvedNameRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListUnresolvedNameRow> | EnvelopeListUnresolvedNameRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/unresolved-names', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNamesAdminApiUnresolvedNamesGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNamesAdminApiUnresolvedNamesGetMockHandler200 = (overrideResponse?: EnvelopeListUnresolvedNameRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListUnresolvedNameRow> | EnvelopeListUnresolvedNameRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/unresolved-names', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNamesAdminApiUnresolvedNamesGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNamesAdminApiUnresolvedNamesGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/unresolved-names', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getListNamesAdminApiUnresolvedNamesGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/unresolved-names', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNamesAdminApiUnresolvedNamesGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNamesAdminApiUnresolvedNamesGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/unresolved-names', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNamesAdminApiUnresolvedNamesGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNamesAdminApiUnresolvedNamesGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/unresolved-names', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNamesAdminApiUnresolvedNamesGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler = (overrideResponse?: EnvelopeUnresolvedNameRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUnresolvedNameRow> | EnvelopeUnresolvedNameRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler200 = (overrideResponse?: EnvelopeUnresolvedNameRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUnresolvedNameRow> | EnvelopeUnresolvedNameRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/ignore', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler = (overrideResponse?: EnvelopeUnresolvedNameRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUnresolvedNameRow> | EnvelopeUnresolvedNameRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler200 = (overrideResponse?: EnvelopeUnresolvedNameRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUnresolvedNameRow> | EnvelopeUnresolvedNameRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/unresolved-names/:nameId/map', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
 export const getMadarSatAdminAPIMock = () => [
   getLoginAdminApiAuthLoginPostMockHandler(),
   getLogoutAdminApiAuthLogoutPostMockHandler(),
@@ -4807,12 +5880,19 @@ export const getMadarSatAdminAPIMock = () => [
   getAddHiddenChannelNameAdminApiHiddenChannelNamesPostMockHandler(),
   getRemoveHiddenChannelNameAdminApiHiddenChannelNamesNameDeleteMockHandler(),
   getGetImportRunAdminApiImportRunsRunIdGetMockHandler(),
+  getGetImportRunRawAdminApiImportRunsRunIdRawGetMockHandler(),
   getListMatchesAdminApiMatchesGetMockHandler(),
   getCreateMatchAdminApiMatchesPostMockHandler(),
   getBulkAdminApiMatchesBulkPostMockHandler(),
   getGetMatchAdminApiMatchesMatchIdGetMockHandler(),
   getPatchMatchAdminApiMatchesMatchIdPatchMockHandler(),
   getUploadMediaAdminApiMediaPostMockHandler(),
+  getListRightsHoldersAdminApiRightsHoldersGetMockHandler(),
+  getCreateRightsHolderAdminApiRightsHoldersPostMockHandler(),
+  getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler(),
+  getDeleteRightsHolderAdminApiRightsHoldersHolderIdDeleteMockHandler(),
+  getGetRightsHolderAdminApiRightsHoldersHolderIdGetMockHandler(),
+  getPatchRightsHolderAdminApiRightsHoldersHolderIdPatchMockHandler(),
   getListSatellitesAdminApiSatellitesGetMockHandler(),
   getCreateSatelliteAdminApiSatellitesPostMockHandler(),
   getOrderSatellitesAdminApiSatellitesOrderPutMockHandler(),
@@ -4828,5 +5908,8 @@ export const getMadarSatAdminAPIMock = () => [
   getCreateTeamAdminApiTeamsPostMockHandler(),
   getDeleteTeamAdminApiTeamsTeamIdDeleteMockHandler(),
   getGetTeamAdminApiTeamsTeamIdGetMockHandler(),
-  getPatchTeamAdminApiTeamsTeamIdPatchMockHandler()
+  getPatchTeamAdminApiTeamsTeamIdPatchMockHandler(),
+  getListNamesAdminApiUnresolvedNamesGetMockHandler(),
+  getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler(),
+  getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler()
 ]

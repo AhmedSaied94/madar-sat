@@ -9,6 +9,8 @@ import 'broadcast_entry.dart';
 import 'carriage_entry.dart';
 import 'commentator_ref.dart';
 import 'competition_ref.dart';
+import 'match_event.dart';
+import 'match_lineups.dart';
 import 'period.dart';
 import 'platform_group.dart';
 import 'score.dart';
@@ -29,14 +31,14 @@ abstract class MatchDetail with _$MatchDetail {
     required CommentatorRef? commentator,
     required CompetitionRef competition,
     required bool estimated,
-    required List<dynamic> events,
+    required List<MatchEvent> events,
     @JsonKey(name: 'feed_id')
     required int? feedId,
     required TeamRef home,
     required int id,
     @JsonKey(name: 'kickoff_at')
     required DateTime? kickoffAt,
-    required dynamic lineups,
+    required MatchLineups? lineups,
     @JsonKey(name: 'local_broadcaster_eg')
     required String? localBroadcasterEg,
     @JsonKey(name: 'match_date')
