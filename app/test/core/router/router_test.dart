@@ -14,6 +14,7 @@ import 'package:madar_sat/core/network/swr_providers.dart';
 import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/core/router/app_router.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
+import 'package:madar_sat/features/channel/presentation/channel_sheet.dart';
 import 'package:madar_sat/features/gallery/presentation/gallery_page.dart';
 import 'package:madar_sat/features/frequencies/presentation/frequencies_page.dart';
 import 'package:madar_sat/features/frequencies/presentation/satellite_channels_page.dart';
@@ -29,6 +30,7 @@ import 'package:madar_sat/features/matches/presentation/matches_page.dart';
 import 'package:madar_sat/features/my_satellites/presentation/my_satellites_page.dart';
 import 'package:madar_sat/features/shell/presentation/stub_page.dart';
 import 'package:madar_sat/features/system/presentation/system_views.dart';
+import 'package:madar_sat/features/team/presentation/team_page.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
 import '../../fixtures/fake_http_adapter.dart';
@@ -82,8 +84,6 @@ void main() {
   const routes = [
     '/live',
     '/day/2026-10-28',
-    '/channel/1',
-    '/team/1',
     '/competition/1',
     '/rights',
     '/rights/1',
@@ -117,6 +117,14 @@ void main() {
       '/match/7': (tester) => expect(
             tester.widget<MatchDetailPage>(find.byType(MatchDetailPage)).matchId,
             7,
+          ),
+      '/channel/9': (tester) => expect(
+            tester.widget<ChannelSheetPage>(find.byType(ChannelSheetPage)).channelId,
+            9,
+          ),
+      '/team/9': (tester) => expect(
+            tester.widget<TeamPage>(find.byType(TeamPage)).teamId,
+            9,
           ),
       '/my-satellites': (tester) => expect(find.byType(MySatellitesPage), findsOneWidget),
       '/satellites': (tester) => expect(find.byType(FrequenciesPage), findsOneWidget),
@@ -164,6 +172,10 @@ void main() {
       '/satellites/abc',
       '/satellites/-1',
       '/satellites/0x2',
+      '/channel/abc',
+      '/channel/0',
+      '/team/abc',
+      '/team/-1',
     ]) {
       testWidgets('$route has no whole-number id, so it goes home', (tester) async {
         final router = createAppRouter(includeGallery: false);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/generated/models/category.dart';
 import '../../../core/network/generated/models/channel_carriage.dart';
@@ -64,6 +65,7 @@ class ChannelList extends ConsumerWidget {
           carriage: open ? channel : _inSatellite(channel),
           expanded: open,
           onTap: () => ref.read(expandedChannelProvider(satelliteId).notifier).toggle(channel.id),
+          onOpenChannel: () => context.push('/channel/${channel.id}'),
           onWatchReception:
               reception == null ? null : () => openReception(context, ref, reception),
         );

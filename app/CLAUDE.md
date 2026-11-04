@@ -75,6 +75,9 @@ node --test test_web/                                          # the service wor
   caller can read the status and the `ETag`.
 - `dart run build_runner build -d` generates Freezed, json_serializable, drift, Retrofit
   and `@riverpod` parts. Run it after any change to a model, table or annotated provider.
+- A change to `lib/core/l10n/app_ar.arb` needs `flutter gen-l10n` as well: `build_runner`
+  does not regenerate `lib/l10n/`, and the accessors are committed, so a missing run shows up
+  as `undefined_getter` on every new string.
 - Generated folders are `lib/core/network/generated/`, `lib/l10n/`,
   `lib/core/db/*.g.dart`, `lib/core/theme/madar_tokens.dart` and every `*.g.dart` beside an
   annotated provider. Never edit them by hand, and keep them current: the `.g.dart` beside a
@@ -96,6 +99,12 @@ verbatim; change `tokens.json`, run `generate_tokens.py`, then re-copy and rerun
 - Find the screen's row in `../madar-design/app-flutter/SCREENS.md`, open its PNG, and
   read the HTML for structure, Arabic copy and states. Rebuild it; never paste mockup
   HTML.
+- `/channel/:id` (S6) is a **route that renders as a modal sheet** (`channel_sheet.dart`):
+  the previous route stays painted (`opaque: false` in `app_router.dart`), the scrim is the
+  sheet's own `Scaffold` ground, and a deep link to it opens the sheet over S2. `/team/:id`
+  (S7) is a full page. Both read the generated client through `SwrRepository`
+  (`channel:<id>`, `team:<id>`), and their match rows take live values only from
+  `/v1/live`.
 - Every component in `design-system/components/INDEX.md` is built once under its
   design name (`MatchRow`, `StatusBlock`, `FrequencyReadout`, ...). `Logo` includes
   `BrandMark`, `TeamCrest` and `LogoTile`.

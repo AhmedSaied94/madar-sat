@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show BuildContext;
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/channel/presentation/channel_sheet.dart';
 import '../../features/favorites/presentation/favorites_page.dart';
 import '../../features/frequencies/presentation/frequencies_page.dart';
 import '../../features/frequencies/presentation/satellite_channels_page.dart';
@@ -16,6 +17,7 @@ import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/shell/presentation/stub_page.dart';
 import '../../features/system/presentation/system_views.dart';
+import '../../features/team/presentation/team_page.dart';
 
 /// Ids are positive whole numbers of at most ten digits. `int.tryParse` alone would also
 /// take `-5`, `+5`, ` 5` and `0x10`.
@@ -78,11 +80,27 @@ GoRouter createAppRouter({
       ),
       GoRoute(
         path: '/channel/:id',
-        builder: (context, state) => StubPage(title: '/channel/${state.pathParameters['id']}'),
+        redirect: _requireIntegerId,
+        // A modal sheet, not a pushed page: the screen it was opened from stays behind it, and
+        // the sheet rises from the bottom. It is still a route, so `/channel/12` is a deep link
+        // a notification can open (§S6).
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          opaque: false,
+          child: ChannelSheetPage(channelId: _idOf(state)),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) => SlideTransition(
+            position: animation.drive(
+              Tween(begin: const Offset(0, 1), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeOutCubic)),
+            ),
+            child: child,
+          ),
+        ),
       ),
       GoRoute(
         path: '/team/:id',
-        builder: (context, state) => StubPage(title: '/team/${state.pathParameters['id']}'),
+        redirect: _requireIntegerId,
+        builder: (context, state) => TeamPage(teamId: _idOf(state)),
       ),
       GoRoute(
         path: '/competition/:id',

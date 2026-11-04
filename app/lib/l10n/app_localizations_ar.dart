@@ -958,4 +958,82 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get errorUnknownSatellite =>
       'أحد الأقمار لم يعد متاحاً، أعد اختيار أقماري';
+
+  @override
+  String get openChannel => 'عرض القناة';
+
+  @override
+  String weekdayDay(String weekday, String day) {
+    return '$weekday $day';
+  }
+
+  @override
+  String get s6FollowChannel => 'تابع القناة';
+
+  @override
+  String get s6FollowingChannel => 'تتابع القناة';
+
+  @override
+  String get s6FollowChannelHint => 'تنبيه عند تغيّر التردد';
+
+  @override
+  String get s6Copy => 'نسخ';
+
+  @override
+  String get s6OtherSatellites => 'على أقمار أخرى';
+
+  @override
+  String get s6UpcomingOnChannel => 'المباريات القادمة على القناة';
+
+  @override
+  String get s6FrequencyHistory => 'سجل التردد';
+
+  @override
+  String get s6Share => 'مشاركة القناة';
+
+  @override
+  String s6ShareText(String name) {
+    return '$name على مدار سات';
+  }
+
+  @override
+  String s6TuningWords(String polarization, String rate) {
+    return 'الاستقطاب $polarization · معدل الترميز $rate';
+  }
+
+  @override
+  String get s7Upcoming => 'القادمة';
+
+  @override
+  String get s7Title => 'الفريق';
+
+  @override
+  String get s7Results => 'النتائج';
+
+  @override
+  String get s7FollowTeam => 'تابع الفريق';
+
+  @override
+  String get s7FollowingTeam => 'تتابع الفريق';
+
+  @override
+  String get s7NoUpcoming => 'لا توجد مباريات قادمة';
+
+  @override
+  String get s7NoResults => 'لا توجد نتائج';
+
+  @override
+  String get s7ListNote => 'تظهر المباريات التالية فور إعلان الجدول';
+
+  @override
+  String get s8Rights => 'حقوق البث';
+
+  @override
+  String get s8FollowCompetition => 'تابع البطولة';
+
+  @override
+  String get s8FollowingCompetition => 'تتابع البطولة';
+
+  @override
+  String get s8NoUpcoming => 'لا توجد مباريات قادمة';
 }

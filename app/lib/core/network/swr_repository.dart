@@ -131,7 +131,7 @@ class SwrRepository {
       );
 
   /// `GET /v1/teams/{id}`, cached under `team:<id>`: S9's followed teams, so their names and
-  /// competitions show without a match being cached for them.
+  /// competitions show without a match being cached for them, and S7's header.
   Stream<SwrSnapshot<TeamDetail>> watchTeamDetail(int teamId) => _document<TeamDetail>(
         key: DocumentKeys.team(teamId),
         fetch: (etag) => _conditional<TeamDetail, EnvelopeTeamDetail>(
@@ -140,6 +140,33 @@ class SwrRepository {
           unwrap: (envelope) => _dataOf(envelope.success, envelope.error, envelope.data),
         ),
         decode: (json) => TeamDetail.fromJson((json! as Map).cast<String, Object?>()),
+        encode: (value) => value.toJson(),
+      );
+
+  /// `GET /v1/channels/{id}`, cached under `channel:<id>`: S6's sheet.
+  Stream<SwrSnapshot<ChannelDetail>> watchChannelDetail(int channelId) =>
+      _document<ChannelDetail>(
+        key: DocumentKeys.channel(channelId),
+        fetch: (etag) => _conditional<ChannelDetail, EnvelopeChannelDetail>(
+          etag: etag,
+          send: (client) => client.getChannelV1ChannelsChannelIdGet(channelId: channelId),
+          unwrap: (envelope) => _dataOf(envelope.success, envelope.error, envelope.data),
+        ),
+        decode: (json) => ChannelDetail.fromJson((json! as Map).cast<String, Object?>()),
+        encode: (value) => value.toJson(),
+      );
+
+  /// `GET /v1/competitions/{id}`, cached under `competition:<id>`: S8's page.
+  Stream<SwrSnapshot<CompetitionDetail>> watchCompetitionDetail(int competitionId) =>
+      _document<CompetitionDetail>(
+        key: DocumentKeys.competition(competitionId),
+        fetch: (etag) => _conditional<CompetitionDetail, EnvelopeCompetitionDetail>(
+          etag: etag,
+          send: (client) =>
+              client.getCompetitionV1CompetitionsCompetitionIdGet(competitionId: competitionId),
+          unwrap: (envelope) => _dataOf(envelope.success, envelope.error, envelope.data),
+        ),
+        decode: (json) => CompetitionDetail.fromJson((json! as Map).cast<String, Object?>()),
         encode: (value) => value.toJson(),
       );
 

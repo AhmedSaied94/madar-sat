@@ -1707,6 +1707,150 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أحد الأقمار لم يعد متاحاً، أعد اختيار أقماري'**
   String get errorUnknownSatellite;
+
+  /// No description provided for @openChannel.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض القناة'**
+  String get openChannel;
+
+  /// No description provided for @weekdayDay.
+  ///
+  /// In ar, this message translates to:
+  /// **'{weekday} {day}'**
+  String weekdayDay(String weekday, String day);
+
+  /// No description provided for @s6FollowChannel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع القناة'**
+  String get s6FollowChannel;
+
+  /// No description provided for @s6FollowingChannel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتابع القناة'**
+  String get s6FollowingChannel;
+
+  /// No description provided for @s6FollowChannelHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه عند تغيّر التردد'**
+  String get s6FollowChannelHint;
+
+  /// No description provided for @s6Copy.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ'**
+  String get s6Copy;
+
+  /// No description provided for @s6OtherSatellites.
+  ///
+  /// In ar, this message translates to:
+  /// **'على أقمار أخرى'**
+  String get s6OtherSatellites;
+
+  /// No description provided for @s6UpcomingOnChannel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المباريات القادمة على القناة'**
+  String get s6UpcomingOnChannel;
+
+  /// No description provided for @s6FrequencyHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل التردد'**
+  String get s6FrequencyHistory;
+
+  /// No description provided for @s6Share.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة القناة'**
+  String get s6Share;
+
+  /// No description provided for @s6ShareText.
+  ///
+  /// In ar, this message translates to:
+  /// **'{name} على مدار سات'**
+  String s6ShareText(String name);
+
+  /// No description provided for @s6TuningWords.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاستقطاب {polarization} · معدل الترميز {rate}'**
+  String s6TuningWords(String polarization, String rate);
+
+  /// No description provided for @s7Upcoming.
+  ///
+  /// In ar, this message translates to:
+  /// **'القادمة'**
+  String get s7Upcoming;
+
+  /// No description provided for @s7Title.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفريق'**
+  String get s7Title;
+
+  /// No description provided for @s7Results.
+  ///
+  /// In ar, this message translates to:
+  /// **'النتائج'**
+  String get s7Results;
+
+  /// No description provided for @s7FollowTeam.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع الفريق'**
+  String get s7FollowTeam;
+
+  /// No description provided for @s7FollowingTeam.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتابع الفريق'**
+  String get s7FollowingTeam;
+
+  /// No description provided for @s7NoUpcoming.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مباريات قادمة'**
+  String get s7NoUpcoming;
+
+  /// No description provided for @s7NoResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج'**
+  String get s7NoResults;
+
+  /// No description provided for @s7ListNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'تظهر المباريات التالية فور إعلان الجدول'**
+  String get s7ListNote;
+
+  /// No description provided for @s8Rights.
+  ///
+  /// In ar, this message translates to:
+  /// **'حقوق البث'**
+  String get s8Rights;
+
+  /// No description provided for @s8FollowCompetition.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع البطولة'**
+  String get s8FollowCompetition;
+
+  /// No description provided for @s8FollowingCompetition.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتابع البطولة'**
+  String get s8FollowingCompetition;
+
+  /// No description provided for @s8NoUpcoming.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مباريات قادمة'**
+  String get s8NoUpcoming;
 }
 
 class _AppLocalizationsDelegate
