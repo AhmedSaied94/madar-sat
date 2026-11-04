@@ -31,8 +31,8 @@ void main() {
       mySatelliteIds: {badrSatellite.id},
     );
     final history = frequencyHistory([
-      frequencyChangeJson(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
-      frequencyChangeJson(detectedAt: '2026-09-02T09:00:00Z', from: 11861, to: 11766),
+      sampleFrequencyChange(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
+      sampleFrequencyChange(detectedAt: '2026-09-02T09:00:00Z', from: 11861, to: 11766),
     ]);
 
     await goldenVariants(

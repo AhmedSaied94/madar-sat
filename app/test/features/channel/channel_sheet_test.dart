@@ -343,10 +343,10 @@ void main() {
       answerChannel(
         sampleChannelDetail(
           recentFrequencyChanges: [
-            frequencyChangeJson(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
-            frequencyChangeJson(detectedAt: '2026-09-02T09:00:00Z', from: 11861, to: 11766),
-            frequencyChangeJson(detectedAt: '2026-08-01T09:00:00Z', from: 11820, to: 11861),
-            frequencyChangeJson(detectedAt: '2026-07-01T09:00:00Z', from: 11900, to: 11820),
+            sampleFrequencyChange(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
+            sampleFrequencyChange(detectedAt: '2026-09-02T09:00:00Z', from: 11861, to: 11766),
+            sampleFrequencyChange(detectedAt: '2026-08-01T09:00:00Z', from: 11820, to: 11861),
+            sampleFrequencyChange(detectedAt: '2026-07-01T09:00:00Z', from: 11900, to: 11820),
           ],
         ),
       );
@@ -462,7 +462,7 @@ void main() {
           sampleChannelDetail(
             otherCarriages: [sampleOtherCarriage(id: 2, name: 'beIN on Badr')],
             recentFrequencyChanges: [
-              frequencyChangeJson(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
+              sampleFrequencyChange(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
             ],
           ),
         );

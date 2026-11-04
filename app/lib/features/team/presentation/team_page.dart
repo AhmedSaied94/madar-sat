@@ -21,10 +21,10 @@ import '../../follows/data/follows_repository.dart';
 import '../../follows/domain/follow_set.dart';
 import '../../live/live_merge.dart';
 import '../../live/live_poller.dart';
+import '../../matches/domain/match_days.dart';
+import '../../matches/presentation/match_days_list.dart';
 import '../data/team_providers.dart';
-import '../domain/team_matches.dart';
 import 'team_header.dart';
-import 'team_matches_list.dart';
 
 /// S7 Team (§S7, FR-042): the header, the follow toggle, and the two tabs of matches grouped
 /// by the local day of their kickoff.
@@ -42,7 +42,7 @@ class TeamPage extends ConsumerStatefulWidget {
 }
 
 class _TeamPageState extends ConsumerState<TeamPage> {
-  TeamTab _tab = TeamTab.upcoming;
+  MatchTab _tab = MatchTab.upcoming;
 
   void _revalidate() => ref.read(teamDetailProvider(widget.teamId).notifier).revalidate();
 
@@ -121,10 +121,10 @@ class _Loaded extends StatelessWidget {
   final SwrSnapshot<TeamDetail> snapshot;
   final DateTime now;
   final Map<int, LiveState> live;
-  final TeamTab tab;
+  final MatchTab tab;
   final bool following;
   final Set<int> followedTeams;
-  final ValueChanged<TeamTab> onTab;
+  final ValueChanged<MatchTab> onTab;
   final VoidCallback onFollow;
   final ValueChanged<int> onOpenMatch;
   final Future<void> Function() onRefresh;
@@ -134,9 +134,9 @@ class _Loaded extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final zone = MadarDisplayScope.zoneOf(context);
-    final rows = tab == TeamTab.upcoming ? detail.upcoming : detail.recent;
+    final rows = tab == MatchTab.upcoming ? detail.upcoming : detail.recent;
     final shown = applyLiveStates(rows, live);
-    final days = teamMatchDays(shown, tab: tab, offsetAt: zone.offsetAtUtc);
+    final days = matchDays(shown, tab: tab, offsetAt: zone.offsetAtUtc);
     final age = snapshot.staleAge(Freshness.matchDetail, now: now);
 
     return LivePollingScope(
@@ -158,10 +158,10 @@ class _Loaded extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s4),
-                child: Segmented<TeamTab>(
+                child: Segmented<MatchTab>(
                   options: [
-                    SegmentedOption(value: TeamTab.upcoming, label: l.s7Upcoming),
-                    SegmentedOption(value: TeamTab.results, label: l.s7Results),
+                    SegmentedOption(value: MatchTab.upcoming, label: l.matchTabUpcoming),
+                    SegmentedOption(value: MatchTab.results, label: l.matchTabResults),
                   ],
                   selected: tab,
                   onChanged: onTab,
@@ -183,19 +183,18 @@ class _Loaded extends StatelessWidget {
                   ),
                 ),
               ),
-            if (!hasTeamMatches(days))
+            if (!hasMatchDays(days))
               SliverToBoxAdapter(child: _Empty(tab: tab))
             else
               SliverToBoxAdapter(
-                child: TeamMatchesList(
+                child: MatchDaysList(
                   days: days,
-                  tab: tab,
                   now: now,
                   followedTeams: followedTeams,
                   onOpen: (match) => onOpenMatch(match.id),
                 ),
               ),
-            if (tab == TeamTab.upcoming) const SliverToBoxAdapter(child: _ListNote()),
+            if (tab == MatchTab.upcoming) const SliverToBoxAdapter(child: _ListNote()),
             const SliverToBoxAdapter(child: SizedBox(height: MadarSpace.s6)),
           ],
         ),
@@ -208,14 +207,14 @@ class _Loaded extends StatelessWidget {
 class _Empty extends StatelessWidget {
   const _Empty({required this.tab});
 
-  final TeamTab tab;
+  final MatchTab tab;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s6),
-      child: EmptyState(title: tab == TeamTab.upcoming ? l.s7NoUpcoming : l.s7NoResults),
+      child: EmptyState(title: tab == MatchTab.upcoming ? l.s7NoUpcoming : l.s7NoResults),
     );
   }
 }

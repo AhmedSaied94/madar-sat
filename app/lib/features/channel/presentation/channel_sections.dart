@@ -635,7 +635,7 @@ class FrequencyHistorySection extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _Tuning(frequency: change.before, note: change.beforeNote, dim: true),
+                    _Tuning(frequency: change.before, dim: true),
                     Padding(
                       padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s2),
                       child: Icon(
@@ -646,7 +646,7 @@ class FrequencyHistorySection extends StatelessWidget {
                         color: colors.textTertiary,
                       ),
                     ),
-                    _Tuning(frequency: change.after, note: change.afterNote, dim: false),
+                    _Tuning(frequency: change.after, dim: false),
                   ],
                 ),
               ],
@@ -684,24 +684,19 @@ class _DateChip extends StatelessWidget {
 }
 
 class _Tuning extends StatelessWidget {
-  const _Tuning({required this.frequency, required this.note, required this.dim});
+  const _Tuning({required this.frequency, required this.dim});
 
-  final Frequency? frequency;
-  final String? note;
+  final Frequency frequency;
+
+  /// True for the tuning it was before the change: the design dims it.
   final bool dim;
 
   @override
-  Widget build(BuildContext context) {
-    final current = frequency;
-    if (current == null) {
-      return FrequencyReadout(note: note, state: FrequencyReadoutState.note);
-    }
-    return FrequencyReadout(
-      mhz: current.mhz,
-      polarization: current.pol,
-      state: dim ? FrequencyReadoutState.dim : FrequencyReadoutState.ok,
-    );
-  }
+  Widget build(BuildContext context) => FrequencyReadout(
+        mhz: frequency.mhz,
+        polarization: frequency.pol,
+        state: dim ? FrequencyReadoutState.dim : FrequencyReadoutState.ok,
+      );
 }
 
 /// A part's heading inside the sheet.

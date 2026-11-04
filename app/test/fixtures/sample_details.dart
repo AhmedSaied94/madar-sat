@@ -20,7 +20,7 @@ ChannelDetail sampleChannelDetail({
   String? country = 'قطر',
   List<ChannelCarriage> otherCarriages = const [],
   List<MatchSummary> upcomingMatches = const [],
-  List<dynamic> recentFrequencyChanges = const [],
+  List<FrequencyChange> recentFrequencyChanges = const [],
 }) =>
     ChannelDetail(
       id: id,
@@ -114,7 +114,9 @@ CompetitionDetail sampleCompetitionDetail({
   String name = 'الدوري المصري الممتاز',
   int? priority = 1,
   Sport sport = Sport.football,
-  List<NamedRef> rightsHolders = const [],
+  List<MatchSummary> upcoming = const [],
+  List<MatchSummary> recent = const [],
+  List<RightsHolderRef> rightsHolders = const [],
 }) =>
     CompetitionDetail(
       id: id,
@@ -122,7 +124,25 @@ CompetitionDetail sampleCompetitionDetail({
       name: name,
       logo: null,
       priority: priority,
+      upcoming: upcoming,
+      recent: recent,
       rightsHolders: rightsHolders,
+    );
+
+/// A rights holder on S8: a name, the satellites it airs on, and how many competitions it
+/// carries.
+RightsHolderRef sampleRightsHolder({
+  required int id,
+  String name = 'beIN Sports',
+  List<SatelliteRef> satellites = const [],
+  int competitionCount = 9,
+}) =>
+    RightsHolderRef(
+      id: id,
+      name: name,
+      logo: null,
+      satellites: satellites,
+      competitionCount: competitionCount,
     );
 
 Map<String, Object?> competitionDetailJson(CompetitionDetail detail) =>
@@ -153,6 +173,24 @@ MatchSummary sampleTeamMatch({
   );
   return base;
 }
+
+/// One `recent_frequency_changes` row, as the contract sends it.
+FrequencyChange sampleFrequencyChange({
+  required String detectedAt,
+  required int from,
+  required int to,
+  String polarization = 'H',
+  int symbolRate = 27500,
+}) =>
+    FrequencyChange.fromJson(
+      frequencyChangeJson(
+        detectedAt: detectedAt,
+        from: from,
+        to: to,
+        polarization: polarization,
+        symbolRate: symbolRate,
+      ),
+    );
 
 /// A frequency history row in the shape `recent_frequency_changes` documents.
 Map<String, Object?> frequencyChangeJson({

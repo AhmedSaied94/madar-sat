@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/channel/presentation/channel_sheet.dart';
+import '../../features/competition/presentation/competition_page.dart';
 import '../../features/favorites/presentation/favorites_page.dart';
 import '../../features/frequencies/presentation/frequencies_page.dart';
 import '../../features/frequencies/presentation/satellite_channels_page.dart';
@@ -104,8 +105,8 @@ GoRouter createAppRouter({
       ),
       GoRoute(
         path: '/competition/:id',
-        builder: (context, state) =>
-            StubPage(title: '/competition/${state.pathParameters['id']}'),
+        redirect: _requireIntegerId,
+        builder: (context, state) => CompetitionPage(competitionId: _idOf(state)),
       ),
       // S9 and S16 carry the same rule inside their pages; these three are wrapped here, so
       // every root tab answers a back press the same way.

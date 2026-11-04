@@ -2,7 +2,8 @@ import '../../../core/network/generated/models/access.dart';
 import '../../../core/network/generated/models/channel_carriage.dart';
 import '../../../core/network/generated/models/channel_detail.dart';
 import '../../../core/network/generated/models/frequency.dart';
-import '../../../core/network/generated/models/polarization.dart';
+import '../../../core/network/generated/models/frequency_change.dart';
+import '../../../core/network/generated/models/frequency_change_tuning.dart';
 
 /// S6's own carriage, as the card at the top of the sheet draws it: the satellite, the
 /// tuning, the access and the package, read off the channel itself.
@@ -79,18 +80,12 @@ class FrequencyChangeView {
     required this.detectedAt,
     required this.before,
     required this.after,
-    this.beforeNote,
-    this.afterNote,
   });
 
   /// When the change was seen (UTC).
   final DateTime detectedAt;
-  final Frequency? before;
-  final Frequency? after;
-
-  /// The channel's tuning written in words instead of numbers (a terrestrial channel).
-  final String? beforeNote;
-  final String? afterNote;
+  final Frequency before;
+  final Frequency after;
 }
 
 /// How many changes the sheet lists (§S6: the last three).
@@ -99,50 +94,25 @@ const int frequencyHistoryLimit = 3;
 /// `ChannelDetail.recent_frequency_changes` as the sheet lists it: newest first, at most
 /// [frequencyHistoryLimit].
 ///
-/// The field is still untyped in the contract (`[]` until D6 fills it), so the documented
-/// shape is read defensively: a row without a usable frequency range, or with no date, is
-/// left out instead of drawing a half change.
-// ledger: untyped until B1's T017 types `recent_frequency_changes`; then take `List<FrequencyChange>`.
+/// The API keeps the list empty until D6 records changes (`FrequencyChange`), so this is
+/// only ever empty today; the ordering and the cap are here so D6 has nothing to add.
 List<FrequencyChangeView> frequencyHistory(
-  List<dynamic> raw, {
+  List<FrequencyChange> raw, {
   int limit = frequencyHistoryLimit,
 }) {
-  final changes = <FrequencyChangeView>[];
-  for (final row in raw) {
-    if (row is! Map) continue;
-    final detectedAt = DateTime.tryParse('${row['detected_at']}')?.toUtc();
-    final before = _frequency(row['old']);
-    final after = _frequency(row['new']);
-    if (detectedAt == null || (before == null && after == null)) continue;
-    changes.add(
+  final changes = [
+    for (final change in raw)
       FrequencyChangeView(
-        detectedAt: detectedAt,
-        before: before,
-        after: after,
-        beforeNote: _note(row['old']),
-        afterNote: _note(row['new']),
+        detectedAt: change.detectedAt,
+        before: _frequency(change.old),
+        after: _frequency(change.newValue),
       ),
-    );
-  }
-  changes.sort((a, b) => b.detectedAt.compareTo(a.detectedAt));
+  ]..sort((a, b) => b.detectedAt.compareTo(a.detectedAt));
   return changes.take(limit).toList(growable: false);
 }
 
-Frequency? _frequency(Object? raw) {
-  if (raw is! Map) return null;
-  final mhz = raw['frequency_mhz'];
-  final polarization = raw['polarization'];
-  final symbolRate = raw['symbol_rate'];
-  if (mhz is! num || symbolRate is! num || polarization is! String) return null;
-  return Frequency(
-    mhz: mhz.toInt(),
-    pol: Polarization.fromJson(polarization),
-    sr: symbolRate.toInt(),
-  );
-}
-
-String? _note(Object? raw) {
-  if (raw is! Map) return null;
-  final note = raw['note'];
-  return note is String && note.trim().isNotEmpty ? note : null;
-}
+Frequency _frequency(FrequencyChangeTuning tuning) => Frequency(
+      mhz: tuning.frequencyMhz,
+      pol: tuning.polarization,
+      sr: tuning.symbolRate,
+    );

@@ -1342,6 +1342,12 @@ abstract class AppLocalizations {
   /// **'الفرق'**
   String get s9TeamsSection;
 
+  /// No description provided for @s9CompetitionsSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'البطولات'**
+  String get s9CompetitionsSection;
+
   /// No description provided for @s9EmptyTitle.
   ///
   /// In ar, this message translates to:
@@ -1780,23 +1786,23 @@ abstract class AppLocalizations {
   /// **'الاستقطاب {polarization} · معدل الترميز {rate}'**
   String s6TuningWords(String polarization, String rate);
 
-  /// No description provided for @s7Upcoming.
+  /// No description provided for @matchTabUpcoming.
   ///
   /// In ar, this message translates to:
   /// **'القادمة'**
-  String get s7Upcoming;
+  String get matchTabUpcoming;
+
+  /// No description provided for @matchTabResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'النتائج'**
+  String get matchTabResults;
 
   /// No description provided for @s7Title.
   ///
   /// In ar, this message translates to:
   /// **'الفريق'**
   String get s7Title;
-
-  /// No description provided for @s7Results.
-  ///
-  /// In ar, this message translates to:
-  /// **'النتائج'**
-  String get s7Results;
 
   /// No description provided for @s7FollowTeam.
   ///
@@ -1851,6 +1857,30 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'لا توجد مباريات قادمة'**
   String get s8NoUpcoming;
+
+  /// No description provided for @s8Title.
+  ///
+  /// In ar, this message translates to:
+  /// **'البطولة'**
+  String get s8Title;
+
+  /// No description provided for @s8RightsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{جهة واحدة} =2{جهتان} few{{count} جهات} other{{count} جهة}}'**
+  String s8RightsCount(int count);
+
+  /// No description provided for @s8RightsLine.
+  ///
+  /// In ar, this message translates to:
+  /// **'{satellites} · {competitions}'**
+  String s8RightsLine(String satellites, String competitions);
+
+  /// No description provided for @s8CompetitionsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{بطولة واحدة} =2{بطولتان} few{{count} بطولات} other{{count} بطولة}}'**
+  String s8CompetitionsCount(int count);
 }
 
 class _AppLocalizationsDelegate

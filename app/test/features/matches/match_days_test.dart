@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:madar_sat/features/team/domain/team_matches.dart';
+import 'package:madar_sat/features/matches/domain/match_days.dart';
 
 import '../../fixtures/sample_details.dart';
 import '../../fixtures/sample_models.dart';
 
-/// S7's pure rules: two tabs, one local day per group, soonest first on «القادمة» and latest
-/// first on «النتائج» (contract app-screens §S7, FR-041).
+/// S7 and S8's shared pure rules: two tabs, one local day per group, soonest first on
+/// «القادمة» and latest first on «النتائج» (contract app-screens §S7/§S8, FR-041).
 void main() {
   // 18:00 on Oct 28 in the device's own zone, and +03 for the grouping.
   final now = sampleNow();
@@ -16,13 +16,13 @@ void main() {
 
   group('«القادمة»', () {
     test('soonest first, grouped by the local day of the kickoff', () {
-      final days = teamMatchDays(
+      final days = matchDays(
         [
           sampleTeamMatch(id: 3, kickoff: tomorrow),
           sampleTeamMatch(id: 1, kickoff: today),
           sampleTeamMatch(id: 2, kickoff: lateNight),
         ],
-        tab: TeamTab.upcoming,
+        tab: MatchTab.upcoming,
         offsetAt: (_) => zone,
       );
 
@@ -33,12 +33,12 @@ void main() {
     });
 
     test('a kickoff with no time keeps its match_date day and sits last in it', () {
-      final days = teamMatchDays(
+      final days = matchDays(
         [
           sampleTeamMatch(id: 1, kickoff: null, timeTbd: true),
           sampleTeamMatch(id: 2, kickoff: today),
         ],
-        tab: TeamTab.upcoming,
+        tab: MatchTab.upcoming,
         offsetAt: (_) => zone,
       );
 
@@ -46,19 +46,19 @@ void main() {
     });
 
     test('an empty list has nothing to draw', () {
-      expect(teamMatchDays(const [], tab: TeamTab.upcoming), isEmpty);
-      expect(hasTeamMatches(const []), isFalse);
+      expect(matchDays(const [], tab: MatchTab.upcoming), isEmpty);
+      expect(hasMatchDays(const []), isFalse);
     });
   });
 
   group('«النتائج»', () {
     test('latest first, with the days descending too', () {
-      final days = teamMatchDays(
+      final days = matchDays(
         [
           sampleTeamMatch(id: 1, kickoff: today),
           sampleTeamMatch(id: 2, kickoff: tomorrow),
         ],
-        tab: TeamTab.results,
+        tab: MatchTab.results,
         offsetAt: (_) => zone,
       );
 
@@ -68,12 +68,12 @@ void main() {
     });
 
     test('two matches at the same minute keep a stable order', () {
-      final days = teamMatchDays(
+      final days = matchDays(
         [
           sampleTeamMatch(id: 5, kickoff: today),
           sampleTeamMatch(id: 4, kickoff: today),
         ],
-        tab: TeamTab.results,
+        tab: MatchTab.results,
         offsetAt: (_) => zone,
       );
 
@@ -85,14 +85,14 @@ void main() {
     // 23:30 UTC is 02:30 the next day at +03 and still Oct 28 at UTC.
     final at = DateTime.utc(2026, 10, 28, 23, 30);
 
-    final inCairo = teamMatchDays(
+    final inCairo = matchDays(
       [sampleTeamMatch(id: 1, kickoff: at)],
-      tab: TeamTab.upcoming,
+      tab: MatchTab.upcoming,
       offsetAt: (_) => zone,
     );
-    final inUtc = teamMatchDays(
+    final inUtc = matchDays(
       [sampleTeamMatch(id: 1, kickoff: at)],
-      tab: TeamTab.upcoming,
+      tab: MatchTab.upcoming,
       offsetAt: (_) => Duration.zero,
     );
 

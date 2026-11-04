@@ -102,8 +102,10 @@ verbatim; change `tokens.json`, run `generate_tokens.py`, then re-copy and rerun
 - `/channel/:id` (S6) is a **route that renders as a modal sheet** (`channel_sheet.dart`):
   the previous route stays painted (`opaque: false` in `app_router.dart`), the scrim is the
   sheet's own `Scaffold` ground, and a deep link to it opens the sheet over S2. `/team/:id`
-  (S7) is a full page. Both read the generated client through `SwrRepository`
-  (`channel:<id>`, `team:<id>`), and their match rows take live values only from
+  (S7) and `/competition/:id` (S8) are full pages. All three read the generated client
+  through `SwrRepository` (`channel:<id>`, `team:<id>`, `competition:<id>`), share the day
+  grouping in `features/matches/domain/match_days.dart` and the list in
+  `features/matches/presentation/match_days_list.dart`, and take live values only from
   `/v1/live`.
 - Every component in `design-system/components/INDEX.md` is built once under its
   design name (`MatchRow`, `StatusBlock`, `FrequencyReadout`, ...). `Logo` includes

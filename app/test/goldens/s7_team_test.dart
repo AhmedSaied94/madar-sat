@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/theme/madar_tokens.dart';
 import 'package:madar_sat/design/components/segmented.dart';
-import 'package:madar_sat/features/team/domain/team_matches.dart';
+import 'package:madar_sat/features/matches/domain/match_days.dart';
+import 'package:madar_sat/features/matches/presentation/match_days_list.dart';
 import 'package:madar_sat/features/team/presentation/team_header.dart';
-import 'package:madar_sat/features/team/presentation/team_matches_list.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
 import '../fixtures/sample_details.dart';
@@ -19,7 +19,7 @@ void main() {
       sampleTeamMatch(id: 201, kickoff: sampleKickoffAt(hour: 16)),
       sampleTeamMatch(id: 202, kickoff: DateTime(2026, 10, 29, 19).toUtc(), home: 'الزمالك', away: 'بيراميدز'),
     ];
-    final days = teamMatchDays(rows, tab: TeamTab.upcoming);
+    final days = matchDays(rows, tab: MatchTab.upcoming);
 
     await goldenVariants(
       tester,
@@ -30,18 +30,23 @@ void main() {
           TeamHeader(detail: detail, logo: null, following: true, onFollow: () {}),
           Padding(
             padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s4),
-            child: Segmented<TeamTab>(
+            child: Segmented<MatchTab>(
               options: [
-                SegmentedOption(value: TeamTab.upcoming, label: AppLocalizations.of(context).s7Upcoming),
-                SegmentedOption(value: TeamTab.results, label: AppLocalizations.of(context).s7Results),
+                SegmentedOption(
+                  value: MatchTab.upcoming,
+                  label: AppLocalizations.of(context).matchTabUpcoming,
+                ),
+                SegmentedOption(
+                  value: MatchTab.results,
+                  label: AppLocalizations.of(context).matchTabResults,
+                ),
               ],
-              selected: TeamTab.upcoming,
+              selected: MatchTab.upcoming,
               onChanged: (_) {},
             ),
           ),
-          TeamMatchesList(
+          MatchDaysList(
             days: days,
-            tab: TeamTab.upcoming,
             now: sampleNow(),
             followedTeams: {detail.id},
             onOpen: (_) {},

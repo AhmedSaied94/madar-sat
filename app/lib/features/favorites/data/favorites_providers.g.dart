@@ -121,3 +121,65 @@ final class FavoriteTeamsProvider
 }
 
 String _$favoriteTeamsHash() => r'7cf2ec2a94888e2052d0776ba3a504a4c2b5cea5';
+
+/// The followed competitions with their names and logos, from `/v1/competitions/{id}` through
+/// the SWR cache: S9 lists a competition the cached matches know nothing about, and its row
+/// opens S8 (T086).
+///
+/// One request per followed competition the first time, then a conditional `If-None-Match`; a
+/// competition that cannot be read is left out rather than drawn with a guessed name.
+
+@ProviderFor(favoriteCompetitions)
+final favoriteCompetitionsProvider = FavoriteCompetitionsProvider._();
+
+/// The followed competitions with their names and logos, from `/v1/competitions/{id}` through
+/// the SWR cache: S9 lists a competition the cached matches know nothing about, and its row
+/// opens S8 (T086).
+///
+/// One request per followed competition the first time, then a conditional `If-None-Match`; a
+/// competition that cannot be read is left out rather than drawn with a guessed name.
+
+final class FavoriteCompetitionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<CompetitionDetail>>,
+          List<CompetitionDetail>,
+          FutureOr<List<CompetitionDetail>>
+        >
+    with
+        $FutureModifier<List<CompetitionDetail>>,
+        $FutureProvider<List<CompetitionDetail>> {
+  /// The followed competitions with their names and logos, from `/v1/competitions/{id}` through
+  /// the SWR cache: S9 lists a competition the cached matches know nothing about, and its row
+  /// opens S8 (T086).
+  ///
+  /// One request per followed competition the first time, then a conditional `If-None-Match`; a
+  /// competition that cannot be read is left out rather than drawn with a guessed name.
+  FavoriteCompetitionsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'favoriteCompetitionsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$favoriteCompetitionsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<CompetitionDetail>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<CompetitionDetail>> create(Ref ref) {
+    return favoriteCompetitions(ref);
+  }
+}
+
+String _$favoriteCompetitionsHash() =>
+    r'28dcbfd25eb485ea2f2b01db660c021b51fdfdbc';

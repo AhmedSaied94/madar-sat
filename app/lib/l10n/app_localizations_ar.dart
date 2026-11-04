@@ -747,6 +747,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get s9TeamsSection => 'الفرق';
 
   @override
+  String get s9CompetitionsSection => 'البطولات';
+
+  @override
   String get s9EmptyTitle => 'لم تتابع شيئاً بعد';
 
   @override
@@ -1002,13 +1005,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get s7Upcoming => 'القادمة';
+  String get matchTabUpcoming => 'القادمة';
+
+  @override
+  String get matchTabResults => 'النتائج';
 
   @override
   String get s7Title => 'الفريق';
-
-  @override
-  String get s7Results => 'النتائج';
 
   @override
   String get s7FollowTeam => 'تابع الفريق';
@@ -1036,4 +1039,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get s8NoUpcoming => 'لا توجد مباريات قادمة';
+
+  @override
+  String get s8Title => 'البطولة';
+
+  @override
+  String s8RightsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count جهة',
+      few: '$count جهات',
+      two: 'جهتان',
+      one: 'جهة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String s8RightsLine(String satellites, String competitions) {
+    return '$satellites · $competitions';
+  }
+
+  @override
+  String s8CompetitionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count بطولة',
+      few: '$count بطولات',
+      two: 'بطولتان',
+      one: 'بطولة واحدة',
+    );
+    return '$_temp0';
+  }
 }

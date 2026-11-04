@@ -287,6 +287,8 @@ class _Loaded extends ConsumerWidget {
                 match: match,
                 now: now,
                 onOpenTeam: (teamId) => context.push('/team/$teamId'),
+                onOpenCompetition: (competitionId) =>
+                    context.push('/competition/$competitionId'),
               ),
             ),
             if (manual.isNotEmpty) SliverToBoxAdapter(child: ManualBroadcasterCards(entries: manual)),

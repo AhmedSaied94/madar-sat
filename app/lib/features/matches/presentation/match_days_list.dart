@@ -7,22 +7,21 @@ import '../../../core/theme/madar_line.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/match_row.dart';
 import '../../../l10n/app_localizations.dart';
-import '../domain/team_matches.dart';
+import '../domain/match_days.dart';
 
-/// S7's matches, grouped by the local day of their kickoff: a date heading, then that day's
-/// rows in a card. The rows are `MatchRow`, as on S2, and open S3.
-class TeamMatchesList extends StatelessWidget {
-  const TeamMatchesList({
+/// A screen's matches grouped by the local day of their kickoff: a date heading, then that
+/// day's rows in a card. One widget for S7 and S8, so both read the same and a row opens S3
+/// from either.
+class MatchDaysList extends StatelessWidget {
+  const MatchDaysList({
     super.key,
     required this.days,
-    required this.tab,
     required this.now,
     required this.onOpen,
     required this.followedTeams,
   });
 
-  final List<TeamMatchDay> days;
-  final TeamTab tab;
+  final List<MatchDay> days;
   final DateTime now;
   final ValueChanged<MatchSummary> onOpen;
 
@@ -35,7 +34,7 @@ class TeamMatchesList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final day in days) ...[
-          _DayHeader(day: day.day, matches: day.matches),
+          MatchDayHeader(day: day.day, matches: day.matches),
           Padding(
             padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s4),
             child: DecoratedBox(
@@ -84,17 +83,20 @@ class TeamMatchesList extends StatelessWidget {
 
 /// «الخميس 29 أكتوبر», with the round beside it when the whole day is one competition's round
 /// (a day of two competitions is never labelled with one of them, constitution II).
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day, required this.matches});
+class MatchDayHeader extends StatelessWidget {
+  const MatchDayHeader({super.key, required this.day, required this.matches, this.stage});
 
   final DateTime day;
   final List<MatchSummary> matches;
+
+  /// The round to name; by default the one every match of the day shares, if any.
+  final String? stage;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
-    final stage = _stage(l);
+    final label = stage ?? _sharedStage();
 
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(
@@ -114,10 +116,10 @@ class _DayHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (stage != null)
+          if (label != null)
             Flexible(
               child: Text(
-                stage,
+                label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.end,
@@ -130,7 +132,7 @@ class _DayHeader extends StatelessWidget {
   }
 
   /// «الدوري المصري · الجولة 8» when every match of the day shares its competition and round.
-  String? _stage(AppLocalizations l) {
+  String? _sharedStage() {
     final withKickoff = matches.where((match) => match.kickoffAt != null).toList(growable: false);
     if (withKickoff.isEmpty) return null;
     final first = withKickoff.first.competition;
@@ -141,11 +143,12 @@ class _DayHeader extends StatelessWidget {
           match.competition.stage == first.stage,
     );
     if (!same) return null;
-    return _competitionLine(first);
+    return competitionLine(first);
   }
+}
 
-  static String _competitionLine(CompetitionRef competition) {
-    final stage = competition.stage;
-    return stage == null ? competition.name : '${competition.name} · $stage';
-  }
+/// «الدوري المصري · الجولة 8», or just the name when the round is unknown.
+String competitionLine(CompetitionRef competition) {
+  final stage = competition.stage;
+  return stage == null ? competition.name : '${competition.name} · $stage';
 }

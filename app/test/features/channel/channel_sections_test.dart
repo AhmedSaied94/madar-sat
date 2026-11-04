@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/network/generated/models/access.dart';
+import 'package:madar_sat/core/network/generated/models/frequency_change.dart';
 import 'package:madar_sat/core/network/generated/models/polarization.dart';
 import 'package:madar_sat/features/channel/domain/channel_sections.dart';
 
@@ -106,28 +107,51 @@ void main() {
   });
 
   group('frequency history', () {
+    FrequencyChange change({
+      required String detectedAt,
+      required int from,
+      required int to,
+      String polarization = 'H',
+    }) =>
+        FrequencyChange.fromJson(
+          frequencyChangeJson(
+            detectedAt: detectedAt,
+            from: from,
+            to: to,
+            polarization: polarization,
+          ),
+        );
+
     test('is empty until D6 fills it', () {
       expect(frequencyHistory(const []), isEmpty);
     });
 
-    test('reads the documented shape, newest first', () {
+    test('reads the contract type, newest first', () {
       final changes = frequencyHistory([
-        frequencyChangeJson(detectedAt: '2026-09-02T09:00:00Z', from: 11861, to: 11766),
-        frequencyChangeJson(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
+        change(detectedAt: '2026-09-02T09:00:00Z', from: 11861, to: 11766),
+        change(detectedAt: '2026-10-20T09:12:00Z', from: 11766, to: 11013),
       ]);
 
       expect(changes, hasLength(2));
       expect(changes.first.detectedAt, DateTime.utc(2026, 10, 20, 9, 12));
-      expect(changes.first.before!.mhz, 11766);
-      expect(changes.first.after!.mhz, 11013);
-      expect(changes.first.after!.pol, Polarization.h);
-      expect(changes.first.after!.sr, 27500);
+      expect(changes.first.before.mhz, 11766);
+      expect(changes.first.after.mhz, 11013);
+      expect(changes.first.after.pol, Polarization.h);
+      expect(changes.first.after.sr, 27500);
+    });
+
+    test('keeps the polarization it was told', () {
+      final changes = frequencyHistory([
+        change(detectedAt: '2026-10-20T09:12:00Z', from: 11861, to: 11766, polarization: 'V'),
+      ]);
+
+      expect(changes.single.after.pol, Polarization.v);
     });
 
     test('lists at most three', () {
       final changes = frequencyHistory([
         for (var day = 1; day <= 5; day++)
-          frequencyChangeJson(
+          change(
             detectedAt: '2026-10-0${day}T09:00:00Z',
             from: 11700 + day,
             to: 11800 + day,
@@ -135,32 +159,9 @@ void main() {
       ]);
 
       expect(changes, hasLength(3));
-      expect(changes.first.after!.mhz, 11805, reason: 'the newest change is kept first');
-      expect(changes.last.after!.mhz, 11803);
-    });
-
-    test('a row with no date or no usable tuning is left out, never drawn half', () {
-      final changes = frequencyHistory([
-        {'old': null, 'new': null, 'detected_at': '2026-10-20T09:12:00Z'},
-        {'old': {'frequency_mhz': 11766}, 'new': null, 'detected_at': '2026-10-21T09:12:00Z'},
-        {'old': null, 'new': {'frequency_mhz': 11013}, 'detected_at': 'not a date'},
-      ]);
-
-      expect(changes, isEmpty);
-    });
-
-    test('a note stands in for a frequency the channel does not have', () {
-      final changes = frequencyHistory([
-        {
-          'old': {'note': 'UHF 32'},
-          'new': {'frequency_mhz': 11013, 'polarization': 'V', 'symbol_rate': 27500},
-          'detected_at': '2026-10-20T09:12:00Z',
-        },
-      ]);
-
-      expect(changes.single.before, isNull);
-      expect(changes.single.beforeNote, 'UHF 32');
-      expect(changes.single.after!.mhz, 11013);
+      expect(changes.first.after.mhz, 11805, reason: 'the newest change is kept first');
+      expect(changes.last.after.mhz, 11803);
     });
   });
+
 }

@@ -15,6 +15,7 @@ import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/core/router/app_router.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
 import 'package:madar_sat/features/channel/presentation/channel_sheet.dart';
+import 'package:madar_sat/features/competition/presentation/competition_page.dart';
 import 'package:madar_sat/features/gallery/presentation/gallery_page.dart';
 import 'package:madar_sat/features/frequencies/presentation/frequencies_page.dart';
 import 'package:madar_sat/features/frequencies/presentation/satellite_channels_page.dart';
@@ -84,7 +85,6 @@ void main() {
   const routes = [
     '/live',
     '/day/2026-10-28',
-    '/competition/1',
     '/rights',
     '/rights/1',
     '/feeds',
@@ -124,6 +124,10 @@ void main() {
           ),
       '/team/9': (tester) => expect(
             tester.widget<TeamPage>(find.byType(TeamPage)).teamId,
+            9,
+          ),
+      '/competition/9': (tester) => expect(
+            tester.widget<CompetitionPage>(find.byType(CompetitionPage)).competitionId,
             9,
           ),
       '/my-satellites': (tester) => expect(find.byType(MySatellitesPage), findsOneWidget),
@@ -176,6 +180,8 @@ void main() {
       '/channel/0',
       '/team/abc',
       '/team/-1',
+      '/competition/abc',
+      '/competition/0',
     ]) {
       testWidgets('$route has no whole-number id, so it goes home', (tester) async {
         final router = createAppRouter(includeGallery: false);
