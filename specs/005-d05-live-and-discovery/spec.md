@@ -12,7 +12,7 @@
 | --- | --- |
 | Goal | Real live scores replace the clock estimate, and a fan can open a channel, a team and a competition |
 | Phase | V1, first day of Phase 2 (delivery-plan §6) |
-| Starts from | MVP public (`web-v0.1.0` is live on `https://madar-sat.web.app`; see Assumptions for what is still open from 004). Code carry-over from 004: the failed load test's fix (FR-060–FR-063); O7 decided, pending the live capture; samples captured from real live matches, which the parsers are written and tested against |
+| Starts from | MVP public (`web-v0.1.0` is live on `https://madar-sat.web.app`; see Assumptions for what is still open from 004). Code carry-over from 004: the failed load test's fix (FR-060–FR-063); O7 decided, pending the live capture; parsers start on saved finished and scheduled pages, and samples captured from real live matches complete them |
 | Contract | One new revision (the next free number is `0007`; the brief's `0003` is stale): `match_events`, `match_lineups`, match stats where YallaKora fills them in (this spec's plan designs the storage), `team_aliases`, `competition_aliases`, `channel_aliases`, `unresolved_names`. `MatchDetail.events/lineups`; `GET /v1/channels/{id}`, `/v1/teams/{id}`, `/v1/competitions/{id}` complete. Admin: unresolved-names queue endpoints, rights-holder CRUD |
 | Flags | `live_center` stays off until D6's UI lands |
 | Implements | SD §3 (O7), §6.2.3 (status), §6.6 (entity resolution, YallaKora row, safety), §6.7 (live scores and sources), §11 (freshness), §13 (R1) · PB §9 S6, S7, S8 · PB §10 A9, A13 |
@@ -26,18 +26,19 @@ Shorthand: **SD** = `docs/system-design.md`, **PB** = `docs/product-business.md`
 - Q: When a goal happens, should the 45 s limit for a live score reaching the app start when the score is confirmed, rather than when a source first shows it? → A: Yes. The 45 s starts at confirmation. Time spent waiting for the second source isn't counted, and the capture measures and records it. Constitution VIII and SD §11 get reworded to match.
 - Q: Should D5 include the fix for the failed D4 load test, and if so, which fix? → A: Yes, as carry-over. The owner checks the account's limits page and, if 4 OCPU is confirmed free, resizes VPS-1 to 2–3 OCPU. B1 re-runs the load test. If the limit isn't confirmed or the re-run still fails, B2 builds the Caddy `/v1/live` cache (FR-060–FR-063).
 - Q: On a busy match day, should the live poller open match pages for every linked match, or only some of them? → A: Only some. It reads the list page for every linked match and opens match pages for up to N matches per cycle, chosen by competition priority. The capture and the plan set N.
+- Q: Must the live parsers wait for a capture of a real live match? → A: No. They start on saved finished and scheduled pages, any status they haven't seen fails validation, and the capture confirms and completes them.
 
 ## User Scenarios & Testing *(mandatory)*
 
-Each story is one lane's work and maps to that lane's section of `tasks.md` (`## Lane B1`, `## Lane B2`, `## Lane A`, `## Lane M`). The order reflects how early each must finish: the capture and the contract come first, and every other lane builds on them.
+Each story is one lane's work and maps to that lane's section of `tasks.md` (`## Lane B1`, `## Lane B2`, `## Lane A`, `## Lane M`). The order reflects how early each must finish: the contract comes first, and every other lane builds on it.
 
 ### User Story 1 - Lane B1: the score and minute a fan sees come from a real feed, never from a guess (Priority: P1)
 
 As a fan, the score and minute I see come from a real feed, never from a guess.
 
-B1 first captures real live matches from FilGoal and YallaKora, because neither has been seen live yet. The capture confirms the fields, the status values and the update delay, and it sets how long the poller waits for the second source. B1 then builds the scheduler and the poller. FilGoal supplies status, minute, score, events and lineups. YallaKora confirms goals and supplies stats where it fills them in. A new score is published only when both sources show it, or, with one source down, when the remaining source shows it in two polls in a row. If both are down, the match falls back to the honest clock estimate. Problems reach the owner by Telegram, and no operator is needed during a match.
+B1 builds the scheduler, the poller and the parsers, starting the parsers straight away on saved finished and scheduled pages. Neither site has been seen live yet, so any status a parser hasn't seen fails validation instead of being guessed. B1 then captures real live matches from FilGoal and YallaKora. The capture confirms the fields, the status values and the update delay, completes the parsers, and sets how long the poller waits for the second source. FilGoal supplies status, minute, score, events and lineups. YallaKora confirms goals and supplies stats where it fills them in. A new score is published only when both sources show it, or, with one source down, when the remaining source shows it in two polls in a row. If both are down, the match falls back to the honest clock estimate. Problems reach the owner by Telegram, and no operator is needed during a match.
 
-**Why this priority**: This is the day's headline and the riskiest work. Nothing about these sources is confirmed until the capture runs, and the contract and the alias tables that B2 and Lane A need also come from B1.
+**Why this priority**: This is the day's headline and the riskiest work. The sources' live behaviour is unconfirmed until the capture runs, and the contract and the alias tables that B2 and Lane A need also come from B1.
 
 **Independent Test**: Replay a saved live capture through the poller and check each transition against SD §6.7's table. Then watch a real live match on the deployed hosts: `/v1/live` shows its status, minute and score with `estimated: false`, and the score matches the broadcast.
 
@@ -45,7 +46,7 @@ B1 first captures real live matches from FilGoal and YallaKora, because neither 
 
 **Acceptance Scenarios**:
 
-1. **Given** real live matches, **When** the capture runs from VPS-2, **Then** saved pages from both sources cover at least pre-match, first half, a goal, half-time, second half and full time. A capture report records the fields, status values and update delay found, the chosen wait for the second source, and any way the sources differ from SD §6.7. If the capture shows the sources can't work, the owner is told before any parser is written (Edge Cases).
+1. **Given** real live matches, **When** the capture runs from VPS-2, **Then** saved pages from both sources cover at least pre-match, first half, a goal, half-time, second half and full time. A capture report records the fields, status values and update delay found, the chosen wait for the second source, and any way the sources differ from SD §6.7. If the capture shows the sources can't work, the owner is told at once (Edge Cases).
 2. **Given** no match has `kickoff_at` between now − 150 min and now + 10 min outside a final state, **When** the scheduler runs every 60 s, **Then** it queues nothing and neither source is requested.
 3. **Given** a match in the window, **When** the poller runs, **Then** status, minute and score are updated and events are diffed. Every write bumps the `live` dataset version, and `/v1/live` is rebuilt at most every 15 s.
 4. **Given** both sources show the same new score, **Then** the score updates at once.
@@ -157,7 +158,7 @@ Lane A adds the unresolved-names queue to A13, completes run detail, and builds 
 
 #### Live data (Lane B1)
 
-- **FR-001**: Before any live parser is written, B1 MUST capture real live matches from both sources from VPS-2, and commit the samples as fixtures, with no personal data, plus a report covering fields, status values, update delay, the wait for the second source and any change needed to SD §6.7.
+- **FR-001**: B1 MAY write the live parsers before any capture, against saved finished and scheduled pages, with any status they haven't seen failing validation. Before the done check, B1 MUST capture real live matches from both sources from VPS-2, correct the parsers and complete their status maps from them, and commit the samples as fixtures, with no personal data, plus a report covering fields, status values, update delay, the wait for the second source and any change needed to SD §6.7.
 - **FR-002**: `live_scheduler` MUST run every 60 s, select matches with `kickoff_at` from now − 150 min to now + 10 min that aren't in a final state, plus matches already on `feed` with no final state up to kickoff + 210 min, and do nothing when there are none. `/v1/live` MUST serve the same set. Runs MUST NOT overlap, and only one beat runs.
 - **FR-003**: `poll_live` MUST read FilGoal for status, minute, score, events and lineups, and YallaKora to confirm goals and for stats where filled in. It MUST request a list page every 60 s at most for every linked match, and open a match's page only while that match is live or has changed, for at most N matches per cycle per host, chosen by competition priority. The capture and the plan set N, as a setting that needs no code change.
 - **FR-003a**: A match without an opened page MUST still get real status and score from the list pages if they carry them, under the same cross-check, and has no events or lineups until it gets a page. If the list pages don't carry them, it stays on the clock estimate. This updates SD §6.7's Requests rule, which is reworded to match.
@@ -215,13 +216,13 @@ Lane A adds the unresolved-names queue to A13, completes run detail, and builds 
 
 - **FR-050**: `tasks.md` MUST have `## Lane B1`, `## Lane B2`, `## Lane A`, `## Lane M` and `## Done check`, the Done check copied word for word from Appendix A, row 005.
 - **FR-051**: Each lane MUST change only its own folders and tick only its own section. B1's live readers and poller live outside `backend/app/adapters/` (B2's folder) and may use its shared fetcher, raw store, rate limiter and alerts; a change those shared parts need is B2's task. Generated files are never edited by hand.
-- **FR-052**: Tests come first for parsers, the cross-check rules, status changes and resolution. Parsers MUST be tested against the captured pages, not hand-written samples.
+- **FR-052**: Tests come first for parsers, the cross-check rules, status changes and resolution. Parsers MUST be tested against real saved pages, finished and scheduled at first and then captured live pages, never hand-written samples.
 - **FR-053**: No secret MUST be committed.
 - **FR-054**: Every changed operated part (the live poller and its alerts, the `yallakora` source, the unresolved queue) MUST add or update its runbook in the same change, including what to do for each new alert in the on-call page, and each lane adds its D5 items to `docs/owner-actions.md` when it finishes.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Live capture**: dated samples of both sources across a real match, with a report that sets the parsers' fields and the cross-check wait.
+- **Live capture**: dated samples of both sources across a real match, with a report that confirms the parsers' fields and status values and sets the cross-check wait.
 - **Source reading**: what one source reported for one match in one poll, valid or not. It is kept only as long as the cross-check needs it, and it is never served to clients.
 - **Match event**: a goal, own goal, penalty, missed penalty or red card, with side, minute, player and source. Unique per match, source and external ID.
 - **Match lineup**: formation and players per side, where the source has them.
@@ -270,7 +271,7 @@ Lane A adds the unresolved-names queue to A13, completes run detail, and builds 
 
 ### Dependencies between lanes today
 
-- B1's capture needs a real live match, so check the day's fixtures first. Parser work waits for it; contract work doesn't.
+- B1's capture needs a real live match, so check the day's fixtures first. Parser and contract work don't wait for it; completing the parsers does.
 - B1's contract PR merges first; Lane A and Lane M generate their clients from it, and B2 rebases on the revision.
 - B1's poller needs B2's resolver and aliases to link matches; they agree the interface in the plan.
 - B1's readers and B2's `yallakora` adapter share one rate limit for the YallaKora host.

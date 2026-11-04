@@ -468,7 +468,7 @@ Rules for every brief:
 #### D5 · 005-d05-live-and-discovery
 
 **Goal:** real live scores replace the clock estimate, and a fan can open a channel, a team and a competition.
-**Starts from:** MVP public; O7 decided (SD §3.3); samples captured from real live matches, which the parsers are written and tested against.
+**Starts from:** MVP public; O7 decided (SD §3.3); the parsers start on saved finished and scheduled pages, and samples captured from real live matches complete them.
 **Contract:** `0003`: `match_events`, `match_lineups`, match stats where YallaKora fills them in (spec 005 designs the storage), alias tables (`team_aliases`, `competition_aliases`, `channel_aliases`), `unresolved_names`. `MatchDetail.events/lineups`; `GET /v1/channels/{id}`, `/v1/teams/{id}`, `/v1/competitions/{id}` complete. Admin: unresolved-names queue endpoints, rights-holder CRUD.
 
 | Lane | Story | Read | Acceptance |

@@ -8,7 +8,7 @@
 
 Real live scores replace the clock estimate, and a fan can open a channel, a team and a competition.
 
-- **B1** captures real live matches from FilGoal and YallaKora, then builds `backend/app/live/`: a 60 s scheduler, a poller with a pure cross-check, a watchdog, and one alert per problem. It also ships revision `0007`, the contract, and the load-test re-run.
+- **B1** builds `backend/app/live/`, starting the parsers on saved finished and scheduled pages and completing them from a capture of real live matches: a 60 s scheduler, a poller with a pure cross-check, a watchdog, and one alert per problem. It also ships revision `0007`, the contract, and the load-test re-run.
 - **B2** adds the `yallakora` importer, the alias step in the resolver and the unresolved-names queue writer, and starts `worker-live`. It builds the Caddy `/v1/live` cache only if the resize doesn't fix the load test.
 - **A** adds the A13 queue, completes run detail with the raw page, adds the Live poller card, and builds A9.
 - **M** replaces the three stub routes with S6, S7 and S8.
@@ -31,7 +31,7 @@ The approach is in [research.md](research.md) (R1–R19). The key choices:
 
 **Testing**:
 
-- **Backend:** pytest on PostgreSQL 16. Parsers run on captured pages. Table-driven `crosscheck.decide` tests cover every SD §6.7 row. Integration tests cover the cycle, fallback, recovery, the watchdog, manual status and `locked_fields`. Schemathesis covers the new routes.
+- **Backend:** pytest on PostgreSQL 16. Parsers run on saved finished and scheduled pages, then on captured live pages. Table-driven `crosscheck.decide` tests cover every SD §6.7 row. Integration tests cover the cycle, fallback, recovery, the watchdog, manual status and `locked_fields`. Schemathesis covers the new routes.
 - **Admin:** Vitest with MSW, Playwright against Prism.
 - **App:** `flutter_test` through `rtest`, with goldens.
 - **Manual:** one real match, the load re-run, device checks.
@@ -125,13 +125,13 @@ docs/owner-actions.md                               # each lane on finishing
 1. **Before lanes start (planning, owner):** commit the O7 edits, constitution 1.3.0 and this spec to `master`. Owner: check the OCI limits and resize VPS-1.
 2. **B1, morning:** `0007` and the contract PR (by 13:00). A and M generate from it, and B2 rebases.
 3. **B2, morning:** merge the shared signatures in [live-pipeline](contracts/live-pipeline.md#shared-code-b2-owns) to `master` as stubs, then buckets and `worker-live` with its raw mount. B1 rebases on them.
-4. **B1, before the first suitable match:** `capture-live`, its deny list and B2's buckets are merged and deployed. Then capture and report. Parsers follow it, and tests run on replay until the next match.
+4. **B1, before the first suitable match:** `capture-live`, its deny list and B2's buckets are merged and deployed. Then capture and report, and complete the parsers, which started in the morning on saved finished and scheduled pages. Tests run on replay until the next match.
 5. **B1:** the load re-run after the resize. **B2:** the Caddy cache only if needed.
 6. **A later match:** the real-match done check, on the deployed parsers. If no later kickoff fits today, it moves to the next match day and no other lane is held.
 
 ### Risks to watch
 
-- **One match can't be both capture and done check.** Evening European fixtures are the likely window, so the parsers finish late. The capture takes an early kickoff and the done check a later one; with no later kickoff, the done check moves to the next match day. Pure rules, the contract and other lanes don't wait.
+- **One match can't be both capture and done check.** Evening European fixtures are the likely window, so the parsers can't be completed until then. The capture takes an early kickoff and the done check a later one; with no later kickoff, the done check moves to the next match day. Pure rules, the contract and other lanes don't wait.
 - **Few names link on the first day.** FilGoal's and our spellings may differ, so affected matches stay honest on the clock. The capture's names go through the queue early, and the owner clears them before the done-check match.
 - **Delivery-plan's revision numbers are stale** for D5 (`0003`) and D6 (`0004`). The owner may want them corrected with the O7 edits.
 

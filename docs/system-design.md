@@ -478,7 +478,7 @@ Importers never touch fields listed in `locked_fields`. They remove only the `ma
 3. Every write bumps the `live` dataset version. `/v1/live` is rebuilt at most every 15 s and served to all clients from Redis.
 4. If an admin sets a manual status, it wins until cleared.
 
-**Sources (O7).** Both were checked from VPS-2 on finished matches only. A capture of real live matches must confirm the fields, status codes and update delay before the parsers are written.
+**Sources (O7).** Both were checked from VPS-2 on finished matches only. The parsers start on saved finished and scheduled pages, and any status they haven't seen fails validation. A capture of real live matches must then confirm the fields, status codes and update delay, and complete the parsers.
 
 | Source | Reads | Used for |
 |---|---|---|

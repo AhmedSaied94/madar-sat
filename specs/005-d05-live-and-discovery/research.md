@@ -12,13 +12,13 @@ A read-only look from the owner's laptop, not VPS-2, and not during a confirmed 
 
 So the list pages appear to carry what the page-cap decision needs. Live values and status strings are still unknown.
 
-## R1. Capture first, with a small recorder
+## R1. Parsers start now, and a small recorder completes them
 
 **Decision:** `python -m app.cli capture-live` runs on VPS-2 in the `worker-live` image. It saves both list pages every 60 s and the match pages of chosen IDs while they are live, under `/srv/raw/capture/<date>/`, using the shared fetcher, rate limits and `robots.txt` deny list. B1 commits a trimmed set under `backend/tests/live/fixtures/` (`backend/tests/fixtures/` is B2's) and writes `specs/005-d05-live-and-discovery/capture-report.md`.
 
-**Why:** Nothing has been seen live, and SD §6.7 requires this before parsers. VPS-2 is where the poller will run, so its IP's treatment is part of the evidence.
+**Why:** Finished and scheduled pages show the page structure, FilGoal's JSON model, names, IDs, scores, events and lineups, so parsers can start on them at once. Only live pages show the in-play status codes, the minute format, half-time, extra time, penalties and the update delay. Starting early is safe because an unseen status fails validation instead of being guessed. VPS-2 is where the poller will run, so its IP's treatment is part of the evidence.
 
-**Rejected:** Browser or manual saving (doesn't measure delay). Parsers from finished-match pages (status strings and minutes wouldn't be seen).
+**Rejected:** Browser or manual saving (doesn't measure delay). Holding all parser work for the capture (it would tie the day to evening fixtures). Treating parsers from finished pages as complete (status strings and minutes wouldn't be seen).
 
 ## R2. B1's code lives in `backend/app/live/`
 

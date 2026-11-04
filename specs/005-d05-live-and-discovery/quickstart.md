@@ -21,7 +21,7 @@ Expect saved pages under `/srv/raw/capture/<date>/` covering pre-match to full t
 
 ```bash
 cd backend
-uv run pytest tests/live -q        # parsers on the captured pages; every SD §6.7 row
+uv run pytest tests/live -q        # parsers on saved and captured pages; every SD §6.7 row
 ```
 
 | Check | Expect |

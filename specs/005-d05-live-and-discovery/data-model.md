@@ -159,6 +159,6 @@ open ─map─▶ mapped        open ─create+map─▶ created        open ─
 
 ## Status mapping
 
-`app/live/sources/*.py` map each source's strings to the §6.2.3 states (`scheduled`, `live` with `1H`/`2H`, `halftime`, `extra_time` with `ET1`/`ET2`, `penalties`, `finished`, `postponed`, `cancelled`, `abandoned`). Each mapping table comes from the capture, and an unknown string fails validation. Strings seen so far: «لم تبدأ», «تأجيل».
+`app/live/sources/*.py` map each source's strings to the §6.2.3 states (`scheduled`, `live` with `1H`/`2H`, `halftime`, `extra_time` with `ET1`/`ET2`, `penalties`, `finished`, `postponed`, `cancelled`, `abandoned`). Each mapping table starts from saved pages and the capture completes it. An unknown string fails validation. Strings seen so far: «لم تبدأ», «تأجيل».
 
 The final states `finished`, `cancelled` and `abandoned` end polling. `postponed` stays as stored and leaves the window normally.
