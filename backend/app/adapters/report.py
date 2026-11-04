@@ -130,9 +130,7 @@ def _slot_times(crontab: Any, start: datetime, end: datetime) -> list[datetime]:
 def expected_slots(start: datetime, end: datetime) -> list[Slot]:
     """The scheduled slots of ``schedule.py`` in ``[start, end]``, oldest first."""
     slots = [
-        Slot(name, source, at)
-        for name, source, crontab in _slot_entries()
-        for at in _slot_times(crontab, start, end)
+        Slot(name, source, at) for name, source, crontab in _slot_entries() for at in _slot_times(crontab, start, end)
     ]
     return sorted(slots, key=lambda slot: (slot.at, slot.schedule))
 
@@ -166,21 +164,13 @@ def match_slots(
 
     results = []
     for slot in slots:
-        candidates = [
-            run
-            for run in by_source.get(slot.source, ())
-            if slot.at <= run.started_at <= slot.at + tolerance
-        ]
+        candidates = [run for run in by_source.get(slot.source, ()) if slot.at <= run.started_at <= slot.at + tolerance]
         if not candidates:
             results.append(SlotResult(slot, None, False, "missing"))
             continue
         run = candidates[0]
         trigger = next(
-            (
-                item
-                for item in trigger_list
-                if item.at <= run.started_at <= item.at + MANUAL_GRACE
-            ),
+            (item for item in trigger_list if item.at <= run.started_at <= item.at + MANUAL_GRACE),
             None,
         )
         reason = "scheduled" if trigger is None else f"manual ({'run now' if trigger.kind == 'run' else 'resume'})"
@@ -262,10 +252,7 @@ def render_coverage(rows: Sequence[CoverageRow]) -> list[str]:
 def _table(rows: list[list[str]]) -> list[str]:
     """Left-aligned columns, two spaces apart, no borders: readable in a journal and a PR."""
     widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
-    return [
-        "  ".join(cell.ljust(widths[index]) for index, cell in enumerate(row)).rstrip()
-        for row in rows
-    ]
+    return ["  ".join(cell.ljust(widths[index]) for index, cell in enumerate(row)).rstrip() for row in rows]
 
 
 # --- the two read-only queries -------------------------------------------------
@@ -284,8 +271,7 @@ def _fetch_runs(start: datetime, end: datetime) -> list[RunFacts]:
             .order_by(ImportRun.started_at)
         ).all()
     return [
-        RunFacts(run.id, run.source, run.started_at, run.status, run.items_found, run.items_upserted)
-        for run in found
+        RunFacts(run.id, run.source, run.started_at, run.status, run.items_found, run.items_upserted) for run in found
     ]
 
 

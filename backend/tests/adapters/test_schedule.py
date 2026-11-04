@@ -36,5 +36,19 @@ def test_the_windows_are_utc() -> None:
     assert str(BEAT_SCHEDULE["satair-bridge"]["schedule"]) == "<crontab: 30 1-22/3 * * * (m/h/dM/MY/d)>"
 
 
+def test_yallakora_runs_daily_and_every_six_hours_for_today_through_schedule_fetch() -> None:
+    """D5 T057: a pause or an open breaker must stop both."""
+    daily = BEAT_SCHEDULE["yallakora-daily"]
+    today = BEAT_SCHEDULE["yallakora-today"]
+    for entry in (daily, today):
+        assert entry["task"] == "adapters.schedule_fetch"
+        assert entry["args"] == ("yallakora",)
+        assert entry["options"] == {"queue": "imports"}
+    assert "kwargs" not in daily
+    assert today["kwargs"] == {"window": "today"}
+    assert str(daily["schedule"]) == "<crontab: 20 2 * * * (m/h/dM/MY/d)>"
+    assert str(today["schedule"]) == "<crontab: 20 8,14,20 * * * (m/h/dM/MY/d)>"
+
+
 def test_building_the_schedule_twice_gives_the_same_entries() -> None:
     assert build_beat_schedule().keys() == BEAT_SCHEDULE.keys()

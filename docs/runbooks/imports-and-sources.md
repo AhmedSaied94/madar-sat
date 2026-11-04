@@ -6,15 +6,18 @@ FR-020 to FR-028, research R14–R18). The code is in `backend/app/adapters/`; t
 [`specs/002-d02-core-flows/contracts/ingestion.md`](../../specs/002-d02-core-flows/contracts/ingestion.md)
 and [`specs/003-d03-follow-push-sources/contracts/pipelines-and-ops.md`](../../specs/003-d03-follow-push-sources/contracts/pipelines-and-ops.md).
 
-Three sources run after D3:
+Four sources run after D5:
 
 | Source | `sources.name` | Where it fetches | What it brings |
 | --- | --- | --- | --- |
 | ysscores | `ysscores` | `scrape_home` on the home box by default, `scrape` on VPS-2 when switched | Today … +3 Cairo days of fixtures: teams, logos, kickoff, competition, stage |
 | Sat Air, through Firestore | `legacy` | `scrape` on VPS-2 | The same days from the old app: channel links, hidden flags, per-channel commentators, a second name when ysscores misses one |
 | LiveSoccerTV | `livesoccertv` | `scrape_home` by default (`LIVESOCCERTV_FETCH_QUEUE`) | The broadcasters of the matches Madar already has in the next 48 h, and hidden placeholders for names Madar lacks |
+| YallaKora | `yallakora` | `scrape` on VPS-2 | Today … +3 Cairo days of Egyptian and Arab fixtures, and the Egyptian broadcaster (`matches.local_broadcaster_eg`). On a row another source holds it adds only the broadcaster and its id |
 
-Nothing writes a status or a score: importers bring fixtures and channels only (constitution II).
+Nothing writes a status or a score: importers bring fixtures and channels only (constitution II). The
+live poller writes those ([workers.md](workers.md)), and shares `www.yallakora.com`'s rate bucket with
+this importer.
 
 ## The schedule
 
@@ -29,8 +32,10 @@ them (R17).
 | `satair-bridge` | every 3 h, at :30, from 01:30 (`30 1-22/3 * * *`) | `adapters.schedule_fetch("legacy")` on `imports` |
 | `livesoccertv-48h` | every 2 h at :45 (`45 */2 * * *`) | `adapters.schedule_fetch("livesoccertv")` on `imports` |
 | `livesoccertv-t60` | every 10 min (`*/10 * * * *`) | `adapters.schedule_fetch("livesoccertv", window="t60")`: only kickoffs 55–70 minutes away |
+| `yallakora-daily` | daily at 02:20 (`20 2 * * *`) | `adapters.schedule_fetch("yallakora")` on `imports`: today to +3 |
+| `yallakora-today` | at 08:20, 14:20 and 20:20 (`20 8,14,20 * * *`) | `adapters.schedule_fetch("yallakora", window="today")`: today only |
 | `prune-raw-pages` | daily at 03:15 (`15 3 * * *`) | `adapters.prune_raw_pages()` on `maintenance` |
-| `heartbeat-maintenance`, `-imports`, `-notifications` | every 5 min (`*/5 * * * *`) | `ops.heartbeat(<queue>)` on that queue (R20, [uptime-kuma.md](uptime-kuma.md)) |
+| `heartbeat-maintenance`, `-imports`, `-notifications`, `-live` | every 5 min (`*/5 * * * *`) | `ops.heartbeat(<queue>)` on that queue (R20, [uptime-kuma.md](uptime-kuma.md)) |
 
 `schedule_fetch` then sends the fetch to the source's own queue. The pipeline is `adapters.fetch` →
 a `ScrapeResult` message on `imports` → `adapters.ingest`. A run that finds its lock held
@@ -153,13 +158,64 @@ fix worked. See [source-alerts.md](source-alerts.md) for what each alert means.
 1. On VPS-2, set the value in `/srv/madar/.env` (mode 600, owner `deploy`): `scrape` for VPS-2 or
    `scrape_home` for the home box.
 2. Restart the services that read it, so the new value is loaded:
-   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify uptime-kuma beat`
+   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify worker-live uptime-kuma beat`
 3. Check the next run's `import_runs.source` and which worker handled it
    (`docker compose exec -T worker-scrape celery -A app.workers inspect active`).
 
 Set ysscores back to `scrape_home` when it stops blocking VPS IPs (it answers `403` to a plain client
 and to datacenter addresses; the home box is why it exists). LiveSoccerTV has no such block, so it may
 run from either side; it is on the home box by default so the VPS keeps its CPU for the app.
+
+## YallaKora
+
+`/matches-center?date=YYYY-MM-DD`, one page per Cairo day, from `www.yallakora.com`'s shared bucket
+(one request per 4 s, a burst of 2). `robots.txt` allows that URL. It forbids `/*?*?*`, so never add a
+second `?`. The times on the page are a 24-hour Cairo clock.
+
+Run it by hand on VPS-2:
+
+```sh
+ssh madar-vps2 \
+  'sudo -iu deploy docker compose -p madar exec -T worker-imports celery -A app.workers call adapters.schedule_fetch --queue imports --args "[\"yallakora\"]" --kwargs "{\"manual\":true}"'
+```
+
+Then check it on VPS-1, which has the database:
+
+```sh
+dc exec postgres psql -U madar -d madar -c "
+  select id, status, items_found, items_upserted, error from import_runs
+   where source = 'yallakora' order by id desc limit 3"
+dc exec postgres psql -U madar -d madar -c "select count(*) from matches where local_broadcaster_eg is not null"
+```
+
+**What it may write.** On a row it created, every field that isn't locked. On a row another source
+holds (the duplicate probe found it), only `local_broadcaster_eg` and its own external id, so two
+importers don't rewrite each other's spelling. A card with no channel leaves the broadcaster alone.
+
+**A first run can add duplicates.** The probe joins rows on both team ids and a kickoff within 45 min,
+or on the same normalized names on the same day. A team spelled differently from ysscores, and with
+no alias yet, matches neither, so that fixture appears twice until an editor maps the name in A13 and
+someone removes the extra row. Compare `report coverage` before and after the first run.
+
+## The unresolved queue
+
+Anything an importer can't match waits in `unresolved_names`, and nothing is created: the match keeps
+the text name. One row per `(source, kind, name_norm, competition_norm)`: a repeat raises `seen_count`
+and refreshes `context`. An editor works it in A13: map to an existing entity, create one, or ignore.
+
+- **Who writes it:** `ysscores`, `legacy`, `yallakora` (teams and competitions), `livesoccertv`
+  (channels, while keeping the hidden placeholder, D5 R11), and the live poller.
+- **Mapping takes effect on the next run.** Resolution goes external id → alias for this competition
+  → alias for any competition → the name rules, and an alias belongs to one source.
+- **A decided row stays decided.** `ignored`, `mapped` and `created` rows never reopen, and their count
+  stops rising. Ignoring is permanent until someone changes that row in SQL.
+
+```sh
+# what waits, most seen first (on VPS-1)
+dc exec postgres psql -U madar -d madar -c "
+  select source, kind, name, seen_count, last_seen_at from unresolved_names
+   where state = 'open' order by seen_count desc limit 30"
+```
 
 ## LiveSoccerTV
 

@@ -149,9 +149,9 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 
 ### Shared parts and infrastructure (B2, first)
 
-- [ ] T042 [US3] In `backend/tests/adapters/test_heartbeat.py`, add a test that `live` is a heartbeat queue with a `heartbeat-live` beat entry. Then add `live` to `HEARTBEAT_QUEUES` in `backend/app/adapters/tasks.py`, `kuma_push_url_live` to `backend/app/adapters/config.py`, the beat entry to `backend/app/adapters/schedule.py`, and `KUMA_PUSH_URL_LIVE` to `infra/compose/example.env`.
+- [X] T042 [US3] In `backend/tests/adapters/test_heartbeat.py`, add a test that `live` is a heartbeat queue with a `heartbeat-live` beat entry. Then add `live` to `HEARTBEAT_QUEUES` in `backend/app/adapters/tasks.py`, `kuma_push_url_live` to `backend/app/adapters/config.py`, the beat entry to `backend/app/adapters/schedule.py`, and `KUMA_PUSH_URL_LIVE` to `infra/compose/example.env`.
 - [ ] T043 [US3] Start `worker-live` on VPS-2: give it `RAW_ROOT: ${RAW_ROOT:-/srv/raw}` and the `/srv/raw:/srv/raw` volume in `infra/compose/vps2.yml`, as `worker-imports` has, add it to the service list in `infra/scripts/deploy.sh` and any `infra.yml` expectation, and update `docs/runbooks/workers.md` (it says `worker-live` isn't started) and `docs/runbooks/uptime-kuma.md` (the `live` push monitor). Deploy so the capture can run.
-- [ ] T044 [P] [US3] In `backend/tests/adapters/test_ratelimit.py`, test that `www.filgoal.com` and `www.yallakora.com` have `Bucket(capacity=2, refill_seconds=4.0)`, and that the poller and importer share the key. Then add them to `DEFAULT_LIMITS` in `backend/app/adapters/ratelimit.py`.
+- [X] T044 [P] [US3] In `backend/tests/adapters/test_ratelimit.py`, test that `www.filgoal.com` and `www.yallakora.com` have `Bucket(capacity=2, refill_seconds=4.0)`, and that the poller and importer share the key. Then add them to `DEFAULT_LIMITS` in `backend/app/adapters/ratelimit.py`.
 - [ ] T045 [US3] By the morning, merge the signatures in [live-pipeline](contracts/live-pipeline.md#shared-code-b2-owns) to `master` in a small PR, as stubs that need no new table, and tell B1 to rebase: `record_unresolved(session, *, source, kind, name, competition, context)` in `backend/app/adapters/unresolved.py` (logs only for now), `resolve_channel` in `backend/app/adapters/resolve.py` (always unresolved for now), and, complete with a test in `backend/tests/adapters/test_health.py`, `record_live_cycle(session, *, status, items_found, finished_at)` in `backend/app/adapters/health.py`, which never sets `breaker_opened_at`. T054 and T053 fill them in.
 - [ ] T046 [US3] Rebase `d05-b2` on B1's merged contract PR before writing to the new tables from `backend/app/adapters/`.
 
@@ -162,26 +162,33 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 
 ### Importer and resolver: tests first (B2)
 
-- [ ] T049 [P] [US3] Save real YallaKora list pages under `backend/tests/fixtures/yallakora/` from VPS-2, with no personal data. In `backend/tests/adapters/test_yallakora.py`, test: the parser is pure; Cairo wall-clock times become UTC; `liveScoreMatchId` becomes `external_id`; the `channel` value becomes the Egyptian broadcaster; competition and stage text are cleaned; a page with no match list raises `LayoutChanged`; a no-matches day returns `[]`; it writes no status or score.
-- [ ] T050 [P] [US3] In `backend/tests/adapters/test_resolve.py`, test the order: external ID, then scoped alias, then unscoped alias (`reason="alias"`), then today's name rules; `resolve_channel`; and `resolve_competition` with its alias table. Existing tests still pass.
-- [ ] T051 [P] [US3] In `backend/tests/adapters/test_unresolved.py`, test `record_unresolved`: one row per `(source, kind, name_norm, competition_norm)`; a repeat raises `seen_count` and refreshes `context` and `last_seen_at`; an `ignored`, `mapped` or `created` row doesn't reopen; `name` capped at 200. In `test_upsert.py`, test a run with an unknown team creates no team, queues the name and keeps the text name, and that `local_broadcaster_eg` is written from a fixture but skipped when it is in `locked_fields`.
-- [ ] T052 [P] [US3] In `backend/tests/adapters/test_raw_view.py`, test `adapters.read_raw_page`: reads only the run's `raw_path`, writes `rawview:<run>:<page>` with text capped at 512 KB and a 5-min TTL, marks `truncated`, and handles a pruned path.
+- [X] T049 [P] [US3] Save real YallaKora list pages under `backend/tests/fixtures/yallakora/` from VPS-2, with no personal data. In `backend/tests/adapters/test_yallakora.py`, test: the parser is pure; Cairo wall-clock times become UTC; `liveScoreMatchId` becomes `external_id`; the `channel` value becomes the Egyptian broadcaster; competition and stage text are cleaned; a page with no match list raises `LayoutChanged`; a no-matches day returns `[]`; it writes no status or score.
+- [X] T050 [P] [US3] In `backend/tests/adapters/test_resolve.py`, test the order: external ID, then scoped alias, then unscoped alias (`reason="alias"`), then today's name rules; `resolve_channel`; and `resolve_competition` with its alias table. Existing tests still pass.
+- [X] T051 [P] [US3] In `backend/tests/adapters/test_unresolved.py`, test `record_unresolved`: one row per `(source, kind, name_norm, competition_norm)`; a repeat raises `seen_count` and refreshes `context` and `last_seen_at`; an `ignored`, `mapped` or `created` row doesn't reopen; `name` capped at 200. In `test_upsert.py`, test a run with an unknown team creates no team, queues the name and keeps the text name, and that `local_broadcaster_eg` is written from a fixture but skipped when it is in `locked_fields`.
+- [X] T052 [P] [US3] In `backend/tests/adapters/test_raw_view.py`, test `adapters.read_raw_page`: reads only the run's `raw_path`, writes `rawview:<run>:<page>` with text capped at 512 KB and a 5-min TTL, marks `truncated`, and handles a pruned path.
 
 ### Importer and resolver: implementation (B2)
 
-- [ ] T053 [US3] Add the alias step and `resolve_channel` to `backend/app/adapters/resolve.py`. T050 passes.
-- [ ] T054 [US3] Implement `backend/app/adapters/unresolved.py`, and call it from `backend/app/adapters/upsert.py` wherever `outcome.unresolved` is filled, for ysscores, the bridge and YallaKora. In `backend/app/adapters/livesoccertv_links.py`, also record a `channel` row while keeping its placeholder ([R11](research.md#r11-livesoccertvs-placeholders-stay)), and use `channel_aliases` first. T051 passes.
-- [ ] T055 [US3] Write `backend/app/adapters/yallakora.py` implementing `SourceAdapter`, `allowed_hosts = {"www.yallakora.com"}`, with `robots`-safe list URLs only. Register it in `adapter_for` and `IngestionRouter` in `backend/app/adapters/tasks.py`, on the `scrape` queue. T049 passes.
-- [ ] T056 [US3] Write `local_broadcaster_eg` in `backend/app/adapters/upsert.py`, skipped when locked (`MATCH_LOCKABLE`). T051's broadcaster test passes.
-- [ ] T057 [US3] Add `yallakora-daily` and `yallakora-today` (every 6 h, today only) to `backend/app/adapters/schedule.py`, with a test that both go through `adapters.schedule_fetch`.
-- [ ] T058 [US3] Add `adapters.read_raw_page` on `maintenance` to `backend/app/adapters/tasks.py`. T052 passes.
+- [X] T053 [US3] Add the alias step and `resolve_channel` to `backend/app/adapters/resolve.py`. T050 passes.
+- [X] T054 [US3] Implement `backend/app/adapters/unresolved.py`, and call it from `backend/app/adapters/upsert.py` wherever `outcome.unresolved` is filled, for ysscores, the bridge and YallaKora. In `backend/app/adapters/livesoccertv_links.py`, also record a `channel` row while keeping its placeholder ([R11](research.md#r11-livesoccertvs-placeholders-stay)), and use `channel_aliases` first. T051 passes.
+- [X] T055 [US3] Write `backend/app/adapters/yallakora.py` implementing `SourceAdapter`, `allowed_hosts = {"www.yallakora.com"}`, with `robots`-safe list URLs only. Register it in `adapter_for` and `IngestionRouter` in `backend/app/adapters/tasks.py`, on the `scrape` queue. T049 passes.
+- [X] T056 [US3] Write `local_broadcaster_eg` in `backend/app/adapters/upsert.py`, skipped when locked (`MATCH_LOCKABLE`). T051's broadcaster test passes.
+- [X] T057 [US3] Add `yallakora-daily` and `yallakora-today` (every 6 h, today only) to `backend/app/adapters/schedule.py`, with a test that both go through `adapters.schedule_fetch`.
+- [X] T058 [US3] Add `adapters.read_raw_page` on `maintenance` to `backend/app/adapters/tasks.py`. T052 passes.
 
 ### Ops and validation (B2)
 
-- [ ] T059 [US3] Update `docs/runbooks/imports-and-sources.md` (the schedule, `yallakora`, the queue) and `docs/runbooks/source-alerts.md`; add a `yallakora` row to the on-call page.
+- [X] T059 [US3] Update `docs/runbooks/imports-and-sources.md` (the schedule, `yallakora`, the queue) and `docs/runbooks/source-alerts.md`; add a `yallakora` row to the on-call page.
 - [ ] T060 [US3] Deploy and run `yallakora` on the live host ([quickstart](quickstart.md#b2-yallakora-and-the-queue)). Put the evidence in the PR: the `import_runs` row, broadcasters on matches, queue rows, 0 new teams, competitions or channels (SC-006), and `seen_count` rising with no duplicate on a second run.
-- [ ] T061 [US3] Add Lane B2's items to `docs/owner-actions.md`: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` on VPS-2 if missing, `KUMA_PUSH_URL_LIVE` and its monitor, the OCI resize, and the disk check.
+- [X] T061 [US3] Add Lane B2's items to `docs/owner-actions.md`: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` on VPS-2 if missing, `KUMA_PUSH_URL_LIVE` and its monitor, the OCI resize, and the disk check.
 - [ ] T062 [US3] **Only if B1's T040 asks (FR-062):** build a custom arm64 Caddy image with `cache-handler` under `infra/`, cache `/v1/live` for at most 15 s keeping `ETag` and `304`, cover it in `infra.yml`, update `docs/runbooks/load-testing.md` and `deploy-and-rollback.md`, and tell B1 to re-run. Otherwise, close this task as not needed and say why.
+
+### Notes (B2)
+
+- **T050–T054 and T056 were tested against B1's draft `0007`, not a merged one.** T046 stays open: after rebasing, re-run `tests/adapters`. Those tests fail on `d05-b2` until then, because the tables don't exist on this branch.
+- **T049's pages came from the owner's laptop,** not VPS-2, which wasn't reachable. Re-save one page from VPS-2 during T060 and check it parses the same.
+- **Still open, and why:** T043 needs the deploy; T045 needs the PR opened and merged; T047 needs T048's result for SD §2 and §7.1; T060 needs the deploy and a reachable host; T062 runs only if B1's T040 asks.
+- **Decided while building:** YallaKora writes only the broadcaster and its id on a row another source holds. `API_PUBLIC_WORKERS` makes the worker count a setting, so the resize needs no release.
 
 ---
 

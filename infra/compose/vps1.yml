@@ -72,7 +72,8 @@ services:
       - -k
       - uvicorn.workers.UvicornWorker
       - -w
-      - "2"
+      # The resize step in docs/runbooks/provision-host.md sets it with VPS-1's core count.
+      - "${API_PUBLIC_WORKERS:-2}"
       - -b
       - 0.0.0.0:8000
       - --forwarded-allow-ips=${TRUSTED_PROXIES_PUBLIC:-127.0.0.1,172.30.0.1}

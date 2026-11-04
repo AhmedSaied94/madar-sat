@@ -70,7 +70,7 @@ Every service logs JSON with a `ts`, and the importers add `source` and `run`. `
 | `media` | Caddy's `/srv/media` or the disk; channel logos and match images stop loading | `curl -sI https://media.$VPS1_IP.sslip.io/logo/<xx>/<a known file>.webp`; `df -h /srv/media` | [workers.md](workers.md#worker-media) for the rehoster, [backups.md](backups.md) for the disk |
 | `pwa` | Firebase Hosting does not serve the live shell | `curl -sI https://<PWA_HOST>/index.html` | [pwa-release.md](pwa-release.md#roll-back-the-live-channel): the previous release is one Firebase rollback away |
 | `pwa-mirror` | Caddy's `/srv/app-mirror` or `release-check.txt` is missing, so first loads fall back to Firebase (the Spark quota) | `curl -s https://app.$VPS1_IP/release-check.txt` and compare with `release.json` on the live channel | [pwa-release.md](pwa-release.md#check-the-mirror); if the folder is gone, re-run the release job for that tag |
-| `celery-maintenance`, `celery-imports`, `celery-notifications` | That queue has no worker, so its tasks pile up in Redis | `dc ps` on VPS-2, then `dc logs --tail 100 <the worker>` | [workers.md](workers.md#deploy-vps-2); a stopped `beat` alone shows as `celery-maintenance` and nothing scheduled |
+| `celery-maintenance`, `celery-imports`, `celery-notifications`, `celery-live` | That queue has no worker, so its tasks pile up in Redis | `dc ps` on VPS-2, then `dc logs --tail 100 <the worker>` | [workers.md](workers.md#deploy-vps-2); a stopped `beat` alone shows as `celery-maintenance` and nothing scheduled |
 | `backup-db` | Last night's database backup did not report | `systemctl list-timers 'backup-*'`; `journalctl -u backup-db.service -n 50`; `restic snapshots --tag db --latest 3` | [backups.md](backups.md#run-one-by-hand). A backup with no push URL now refuses to run, so an empty `KUMA_PUSH_URL_BACKUP_DB` is the first thing to check |
 | `backup-media`, `backup-media-weekly` | The media mirror or the weekly snapshot did not report | The same journal check on VPS-1, plus `/srv/media` free space | [backups.md](backups.md#run-one-by-hand) |
 | `⛔ المصدر ‹name›` | The source failed N times in a row and is paused | `import_runs` for that source, then the run's `log` | [source-alerts.md](source-alerts.md) (the breaker section): fix or wait, then resume in A13. If it is a blocked host, [§4](#4-a-source-is-blocked) |
@@ -96,6 +96,7 @@ to move the fetch, not to raise the retry count:
 | --- | --- | --- |
 | To the home box (default) | `YSSCORES_FETCH_QUEUE=scrape_home`, `LIVESOCCERTV_FETCH_QUEUE=scrape_home` in `.env`, both hosts' workers healthy, the box's timer running ([home-box.md](home-box.md)) | ysscores only answers a residential address (R21) |
 | To VPS-2 | The same two variables set to `scrape` in VPS-2's `.env`, then `dc up -d worker-scrape` | The box is offline and the source tolerates a datacenter IP |
+| `yallakora` | Nothing to move: it always fetches from VPS-2 on `scrape`. Keep it paused in A13 and tell B2 | A 403 from VPS-2 also threatens the live poller, which shares the host and its bucket ([imports-and-sources.md](imports-and-sources.md#yallakora)) |
 | To the bridge | Leave `legacy` (the Sat Air bridge) enabled; it needs nothing on the home box | The source is down and the fixtures are already in Sat Air |
 
 The variables and the per-source commands are in

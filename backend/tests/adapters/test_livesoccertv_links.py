@@ -255,3 +255,114 @@ def test_the_matches_dataset_moves_when_a_link_changes(sync_session, match) -> N
     )
 
     assert dataset_versions(sync_session)["matches"] == before["matches"] + 1
+
+
+# --- D5: the unresolved queue and channel aliases (T054, R11) ------------------------------------
+
+
+def _queued(session) -> list:
+    return list(
+        session.execute(
+            text("SELECT source, kind, name, context, seen_count, state FROM unresolved_names ORDER BY id")
+        ).mappings()
+    )
+
+
+def _broadcast(session, match, name: str = "قناة جديدة", country: str = "Egypt"):
+    return apply_broadcasts(
+        session,
+        match_id=match.id,
+        channels=[BroadcastChannel(name=name, country=country)],
+        countries=COUNTRIES,
+    )
+
+
+def _channel_alias(session, alias: str, channel_id: int) -> None:
+    session.execute(
+        text(
+            "INSERT INTO channel_aliases (source, alias_norm, channel_id) "
+            "VALUES ('livesoccertv', ar_normalize(:alias), :channel_id)"
+        ),
+        {"alias": alias, "channel_id": channel_id},
+    )
+
+
+def test_a_new_placeholder_also_records_a_channel_row(sync_session, match) -> None:
+    before = dataset_versions(sync_session)["unresolved_names"]
+
+    outcome = _broadcast(sync_session, match)
+
+    assert outcome.placeholders_created == ["قناة جديدة"]  # R11: the placeholder stays
+    [row] = _queued(sync_session)
+    assert (row["source"], row["kind"], row["name"], row["seen_count"]) == ("livesoccertv", "channel", "قناة جديدة", 1)
+    assert row["context"]["match_id"] == match.id
+    assert row["context"]["home"] == match.home_team_name
+    assert dataset_versions(sync_session)["unresolved_names"] == before + 1
+
+
+def test_an_existing_placeholder_raises_the_count(sync_session, match) -> None:
+    _broadcast(sync_session, match)
+    outcome = _broadcast(sync_session, match)
+
+    assert outcome.placeholders_created == []
+    assert [row["seen_count"] for row in _queued(sync_session)] == [2]
+
+
+def test_one_page_listing_a_placeholder_twice_counts_once(sync_session, match) -> None:
+    apply_broadcasts(
+        sync_session,
+        match_id=match.id,
+        channels=[
+            BroadcastChannel(name="قناة جديدة", country="Egypt"),
+            BroadcastChannel(name="قناة جديدة", country="Algeria"),
+        ],
+        countries=COUNTRIES,
+    )
+    _broadcast(sync_session, match)
+
+    assert [row["seen_count"] for row in _queued(sync_session)] == [2]
+
+
+def test_a_real_channel_is_not_queued(sync_session, match) -> None:
+    new_channel(sync_session, "ON Sport 1")
+
+    _broadcast(sync_session, match, name="ON Sport 1")
+
+    assert _queued(sync_session) == []
+
+
+def test_a_name_from_an_unlisted_country_is_not_queued(sync_session, match) -> None:
+    _broadcast(sync_session, match, country="Portugal")
+    assert _queued(sync_session) == []
+
+
+def test_a_channel_alias_comes_first_and_makes_no_placeholder(sync_session, match) -> None:
+    target = new_channel(sync_session, "القناة الهدف")
+    _channel_alias(sync_session, "قناة جديدة", target.id)
+
+    outcome = _broadcast(sync_session, match)
+
+    assert outcome.placeholders_created == []
+    assert list(links_of(sync_session, match.id)) == [target.id]
+    assert _queued(sync_session) == []
+    assert placeholders(sync_session) == []
+
+
+def test_an_alias_written_after_a_placeholder_moves_the_link_to_its_target(sync_session, match) -> None:
+    _broadcast(sync_session, match)
+    target = new_channel(sync_session, "القناة الهدف")
+    _channel_alias(sync_session, "قناة جديدة", target.id)
+
+    _broadcast(sync_session, match)
+
+    assert list(links_of(sync_session, match.id)) == [target.id]
+    assert len(placeholders(sync_session)) == 1  # kept, per R11
+
+
+def test_an_alias_to_a_deleted_channel_is_not_used(sync_session, match) -> None:
+    target = new_channel(sync_session, "القناة المحذوفة", deleted=True)
+    _channel_alias(sync_session, "قناة جديدة", target.id)
+
+    _broadcast(sync_session, match)
+
+    assert target.id not in links_of(sync_session, match.id)

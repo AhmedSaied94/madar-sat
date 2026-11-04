@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.adapters.resolve import (
     STOP_WORDS,
     competition_similarity,
+    resolve_channel,
     resolve_competition,
     resolve_team,
     strip_arabic_affixes,
     tokenize,
 )
 from app.db.models import Competition, CompetitionExternalId, Team, TeamCompetition
+from app.domain.arabic import ar_normalize
+from tests.adapters.helpers import new_channel
 
 
 class TestThePort:
@@ -153,3 +156,149 @@ class TestTeam:
         assert result.entity_id is None
         assert result.name == "فريق غير موجود"
         assert result.reason == "unresolved"
+
+
+def _team_alias(session: Session, source: str, alias: str, team_id: int, competition: str | None = None) -> None:
+    session.execute(
+        text(
+            "INSERT INTO team_aliases (source, alias_norm, competition_norm, team_id) "
+            "VALUES (:source, :alias, :competition, :team_id)"
+        ),
+        {
+            "source": source,
+            "alias": ar_normalize(alias),
+            "competition": ar_normalize(competition) if competition else "",
+            "team_id": team_id,
+        },
+    )
+
+
+def _team(session: Session, legacy_id: str) -> Team:
+    return session.execute(select(Team).where(Team.legacy_id == legacy_id)).scalar_one()
+
+
+class TestTeamAliases:
+    """D5 R8: external id, then the scoped alias, then any-competition alias, then the name rules."""
+
+    def test_an_alias_resolves_a_name_with_no_team(self, sync_session: Session, loaded_snapshot) -> None:
+        zamalek = _team(sync_session, "team-zamalek")
+        _team_alias(sync_session, "yallakora", "نادي الفارس الأبيض", zamalek.id)
+
+        result = resolve_team(sync_session, external_id=None, name=" نادى الفارس الأبيض ", source="yallakora")
+
+        assert (result.entity_id, result.reason) == (zamalek.id, "alias")
+
+    def test_the_external_id_comes_before_an_alias(self, sync_session: Session, loaded_snapshot) -> None:
+        city = _team(sync_session, "team-city")
+        _team_alias(sync_session, "ysscores", "اسم", city.id)
+
+        result = resolve_team(sync_session, external_id="990002", name="اسم")
+
+        assert (result.entity_id, result.reason) == (_team(sync_session, "team-zamalek").id, "external_id")
+
+    def test_the_scoped_alias_comes_before_the_unscoped_one(self, sync_session: Session, loaded_snapshot) -> None:
+        egypt = _team(sync_session, "team-ahly-eg")
+        saudi = _team(sync_session, "team-ahly-sa")
+        _team_alias(sync_session, "yallakora", "الأهلي", egypt.id)
+        _team_alias(sync_session, "yallakora", "الأهلي", saudi.id, competition="الدوري السعودي")
+
+        scoped = resolve_team(
+            sync_session, external_id=None, name="الأهلي", competition_name="الدوري السعودي", source="yallakora"
+        )
+        other = resolve_team(
+            sync_session, external_id=None, name="الأهلي", competition_name="كأس مصر", source="yallakora"
+        )
+
+        assert (scoped.entity_id, scoped.reason) == (saudi.id, "alias")
+        assert (other.entity_id, other.reason) == (egypt.id, "alias")
+
+    def test_an_alias_comes_before_the_name_rules(self, sync_session: Session, loaded_snapshot) -> None:
+        city = _team(sync_session, "team-city")
+        _team_alias(sync_session, "yallakora", "الزمالك", city.id)
+
+        result = resolve_team(sync_session, external_id=None, name="الزمالك", source="yallakora")
+
+        assert (result.entity_id, result.reason) == (city.id, "alias")
+
+    def test_an_alias_belongs_to_its_source(self, sync_session: Session, loaded_snapshot) -> None:
+        _team_alias(sync_session, "yallakora", "اسم مستعار", _team(sync_session, "team-city").id)
+
+        result = resolve_team(sync_session, external_id=None, name="اسم مستعار", source="ysscores")
+
+        assert (result.entity_id, result.reason) == (None, "unresolved")
+
+    def test_an_alias_scoped_to_another_competition_does_not_apply(
+        self, sync_session: Session, loaded_snapshot
+    ) -> None:
+        _team_alias(sync_session, "yallakora", "اسم مستعار", _team(sync_session, "team-city").id, competition="كأس مصر")
+
+        result = resolve_team(
+            sync_session, external_id=None, name="اسم مستعار", competition_name="الدوري السعودي", source="yallakora"
+        )
+
+        assert result.entity_id is None
+
+
+class TestCompetitionAlias:
+    def _alias(self, session: Session, source: str, alias: str, competition_id: int) -> None:
+        session.execute(
+            text("INSERT INTO competition_aliases (source, alias_norm, competition_id) VALUES (:s, :a, :c)"),
+            {"s": source, "a": ar_normalize(alias), "c": competition_id},
+        )
+
+    def test_an_alias_comes_after_the_id_and_before_the_name(self, sync_session: Session, loaded_snapshot) -> None:
+        first = sync_session.execute(select(Competition).where(Competition.legacy_id == "comp-1")).scalar_one()
+        second = sync_session.execute(select(Competition).where(Competition.legacy_id == "comp-2")).scalar_one()
+        self._alias(sync_session, "yallakora", first.name, second.id)
+
+        result = resolve_competition(sync_session, external_id=None, name=first.name, source="yallakora")
+
+        assert (result.entity_id, result.reason) == (second.id, "alias")
+        untouched = resolve_competition(sync_session, external_id=None, name=first.name, source="ysscores")
+        assert (untouched.entity_id, untouched.reason) == (first.id, "name")
+
+
+class TestChannel:
+    def _alias(self, session: Session, source: str, alias: str, channel_id: int) -> None:
+        session.execute(
+            text("INSERT INTO channel_aliases (source, alias_norm, channel_id) VALUES (:s, :a, :c)"),
+            {"s": source, "a": ar_normalize(alias), "c": channel_id},
+        )
+
+    def test_an_alias_comes_before_the_name(self, sync_session: Session, loaded_snapshot) -> None:
+        named = new_channel(sync_session, "قناة باسمها")
+        target = new_channel(sync_session, "القناة الهدف")
+        self._alias(sync_session, "livesoccertv", "قناة باسمها", target.id)
+
+        result = resolve_channel(sync_session, name="قناة باسمها", source="livesoccertv")
+
+        assert (result.entity_id, result.reason) == (target.id, "alias")
+        assert named.id != target.id
+
+    def test_exactly_one_same_name_resolves(self, sync_session: Session, loaded_snapshot) -> None:
+        channel = new_channel(sync_session, "قناة وحيدة")
+
+        result = resolve_channel(sync_session, name=" قناة وحيدة ", source="yallakora")
+
+        assert (result.entity_id, result.reason) == (channel.id, "name")
+
+    def test_two_with_the_same_name_do_not_resolve(self, sync_session: Session, loaded_snapshot) -> None:
+        new_channel(sync_session, "قناة مكررة", country="Egypt")
+        new_channel(sync_session, "قناة مكررة", country="Qatar")
+
+        result = resolve_channel(sync_session, name="قناة مكررة", source="yallakora")
+
+        assert (result.entity_id, result.reason) == (None, "unresolved")
+
+    def test_a_deleted_channel_or_a_placeholder_does_not_resolve(self, sync_session: Session, loaded_snapshot) -> None:
+        new_channel(sync_session, "قناة محذوفة", deleted=True)
+        hidden = new_channel(sync_session, "قناة مؤقتة")
+        hidden.placeholder_source = "livesoccertv"
+        sync_session.flush()
+
+        for name in ("قناة محذوفة", "قناة مؤقتة"):
+            assert resolve_channel(sync_session, name=name, source="yallakora").entity_id is None
+
+    def test_nothing_with_that_name_keeps_the_text(self, sync_session: Session, loaded_snapshot) -> None:
+        result = resolve_channel(sync_session, name="لا توجد", source="yallakora")
+        assert (result.entity_id, result.name, result.reason) == (None, "لا توجد", "unresolved")

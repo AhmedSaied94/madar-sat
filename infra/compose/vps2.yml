@@ -1,8 +1,8 @@
 # VPS-2 "workers": the Celery processes of SD §6.1, exactly one beat, and Flower (FR-020).
 # Everything is under the `workers` profile, so a Compose command must name `--profile workers`:
 #   IMAGE_TAG=<sha> docker compose --env-file /srv/madar/.env -f compose/vps2.yml --profile workers \
-#     up -d worker-imports worker-scrape worker-maintenance beat      # scripts/deploy.sh --host vps2
-# `worker-live`, `worker-notify` and `flower` stay defined but are not started on D2.
+#     up -d worker-imports worker-scrape worker-maintenance worker-notify worker-live uptime-kuma beat   # scripts/deploy.sh --host vps2
+# `flower` stays defined but is not started.
 # Every image is linux/arm64. Secrets come only from /srv/madar/.env (mode 600). The workers reach
 # PostgreSQL and Redis on VPS-1's VCN IP (DATABASE_URL, REDIS_URL, CELERY_BROKER_URL).
 name: madar
@@ -54,9 +54,14 @@ services:
     <<: *worker
     command: ["celery", "-A", "app.workers", "worker", "-Q", "scrape", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
 
+  # The live poller of D5 (SD §6.7), and `capture-live`. It saves raw pages like the importers do.
   worker-live:
     <<: *worker
     command: ["celery", "-A", "app.workers", "worker", "-Q", "live", "-n", "worker@%h", "-c", "1", "--loglevel=INFO", "--without-gossip", "--without-mingle"]
+    environment:
+      RAW_ROOT: ${RAW_ROOT:-/srv/raw}
+    volumes:
+      - /srv/raw:/srv/raw
 
   # The dispatcher and scheduler of D3 (SD §6.8). It is the only service that needs the FCM service
   # account, so it is the only one that mounts /srv/secrets: the file is mode 600 and read-only here,
@@ -89,7 +94,7 @@ services:
       start_period: 30s
 
   # Uptime Kuma (R20): the monitors the owner creates from docs/runbooks/uptime-kuma.md — four HTTP
-  # checks and six push monitors. Its UI is published on the VCN address only; VPS-1's wg0 Caddy
+  # checks and eight push monitors. Its UI is published on the VCN address only; VPS-1's wg0 Caddy
   # proxies it at https://10.8.0.1/kuma/, so it is never public. Data lives in /srv/kuma.
   uptime-kuma:
     <<: *service

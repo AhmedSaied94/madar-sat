@@ -146,6 +146,12 @@ jobs:
             || { echo "::error::Kuma is gone from vps2.yml"; exit 1; }
           jq -e '.services["backup-db"].profiles == ["backup"]' <<<"$v2" >/dev/null \
             || { echo "::error::backup-db is not behind the backup profile"; exit 1; }
+          # The live poller saves raw pages, and the deploy must start it (D5 T043).
+          jq -e '.services["worker-live"] | (.volumes | any(.source == "/srv/raw")) and .environment.RAW_ROOT != null' \
+            <<<"$v2" >/dev/null \
+            || { echo "::error::worker-live lost RAW_ROOT or the /srv/raw mount"; exit 1; }
+          grep -Eq '^vps2_services=\(.*\bworker-live\b' infra/scripts/deploy.sh \
+            || { echo "::error::deploy.sh no longer starts worker-live"; exit 1; }
 
       # B2-R1-1: the backup services carry their own tag. The timer's shell has no IMAGE_TAG (it is
       # set by deploy.sh), and `madar-backup` is tagged by this workflow (the run SHA and the moving

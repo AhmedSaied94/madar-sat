@@ -39,8 +39,10 @@ def _at(slots: list[Slot], source: str) -> list[datetime]:
 def test_the_slots_cover_the_window_at_the_schedule_rates() -> None:
     slots = expected_slots(T0, T0 + timedelta(hours=47, minutes=59))
 
-    # The three full-listing entries of schedule.py: every 3 h, every 3 h from 01:00, every 2 h.
-    assert _sources(slots) == {"ysscores", "legacy", "livesoccertv"}
+    # The full-listing entries of schedule.py: every 3 h, every 3 h from 01:00, every 2 h, and daily.
+    # `yallakora-today` re-reads one day of the same listing, so it is no slot, like the T−60 entry.
+    assert _sources(slots) == {"ysscores", "legacy", "livesoccertv", "yallakora"}
+    assert len(_at(slots, "yallakora")) == 2
 
     ysscores = _at(slots, "ysscores")
     assert len(ysscores) == 16

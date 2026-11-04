@@ -24,11 +24,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, timedelta
 from typing import Any, cast
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.adapters.base import NormalizedFixture, ParsedFixture
+from app.adapters.health import bump_datasets
 from app.adapters.resolve import ResolveResult, resolve_competition, resolve_team
+from app.adapters.unresolved import Kind, record_unresolved
 from app.db.models import (
     AuditLog,
     Competition,
@@ -42,7 +44,7 @@ from app.db.models import (
 log = logging.getLogger(__name__)
 
 KICKOFF_TOLERANCE = timedelta(minutes=45)
-SOURCES = ("ysscores", "legacy", "manual")
+SOURCES = ("ysscores", "legacy", "manual", "yallakora")
 
 
 class SkipItem(Exception):
@@ -72,6 +74,7 @@ class RunOutcome:
     kickoff_changed: bool = False
     skipped: list[dict[str, str]] = field(default_factory=list)
     unresolved: list[dict[str, str | None]] = field(default_factory=list)
+    names_queued: int = 0
     postponed: list[dict[str, str]] = field(default_factory=list)
     logo_jobs: list[LogoJob] = field(default_factory=list)
 
@@ -135,6 +138,8 @@ class UpsertPipeline:
 
         if outcome.changed:
             self._bump(outcome.kickoff_changed)
+        if outcome.names_queued:
+            bump_datasets(self.session, ["unresolved_names"])
         return outcome
 
     def _bump(self, kickoff_changed: bool) -> None:
@@ -181,9 +186,13 @@ class UpsertPipeline:
                 )
 
         match_id, created = self._find_or_create(item, competition, home_team, away_team)
+        self._queue_unresolved(match_id, item, competition, home_team, away_team, outcome)
         locked, changed_fields, kickoff_changed = self._write_fields(
             match_id, item, competition, home_team, away_team, created=created
         )
+        broadcaster = self._write_broadcaster(match_id, item, locked)
+        if broadcaster:
+            changed_fields = {**changed_fields, "local_broadcaster_eg": broadcaster}
         # Only an adapter that supplied a link set may reconcile them (B2-R1-2, FR-022).
         link_changes: dict[str, Any] = {}
         if item.links is not None:
@@ -208,6 +217,61 @@ class UpsertPipeline:
         self._queue_logos(item, competition, home_team, away_team, outcome)
         _ = locked  # read under the lock; kept for the caller's logs
         return created, changed, kickoff_changed
+
+    def _queue_unresolved(
+        self,
+        match_id: int,
+        item: NormalizedFixture,
+        competition: ResolveResult,
+        home_team: ResolveResult,
+        away_team: ResolveResult,
+        outcome: RunOutcome,
+    ) -> None:
+        """What the run couldn't match waits for an editor; the match keeps its text names (FR-022)."""
+        context = {
+            "match_id": match_id,
+            "home": item.home,
+            "away": item.away,
+            "competition": item.competition,
+            "kickoff_at": item.kickoff_at,
+        }
+        unmatched: list[tuple[Kind, ResolveResult]] = [
+            ("competition", competition),
+            ("team", home_team),
+            ("team", away_team),
+        ]
+        for kind, result in unmatched:
+            if result.entity_id is not None or not result.name:
+                continue
+            if record_unresolved(
+                self.session,
+                source=self.source,
+                kind=kind,
+                name=result.name,
+                competition=item.competition if kind == "team" else None,
+                context=context,
+            ):
+                outcome.names_queued += 1
+
+    def _write_broadcaster(self, match_id: int, item: NormalizedFixture, locked: frozenset[str]) -> list[Any] | None:
+        """Write the Egyptian broadcaster unless locked: ``[before, after]``, or ``None`` unchanged.
+
+        Revision ``0007`` (Lane B1) adds the column. A card with no channel says nothing about it,
+        so it never clears a stored value.
+        """
+        wanted = item.local_broadcaster_eg
+        if wanted is None or "local_broadcaster_eg" in locked:
+            return None
+        before = self.session.execute(
+            text("SELECT local_broadcaster_eg FROM matches WHERE id = :id"), {"id": match_id}
+        ).scalar_one()
+        if before == wanted:
+            return None
+        self.session.execute(
+            text("UPDATE matches SET local_broadcaster_eg = :value, updated_at = now() WHERE id = :id"),
+            {"value": wanted, "id": match_id},
+        )
+        return [before, wanted]
 
     def _find_or_create(
         self,
@@ -366,6 +430,10 @@ class UpsertPipeline:
         return locked, diff, kickoff_changed
 
     def _fields_are_frozen(self, match: Match) -> bool:
+        if self.source == "yallakora":
+            # It adds the broadcaster and its id to a row another source holds, and leaves the rest:
+            # two importers rewriting each other's spelling would stale every open editor (D5).
+            return match.source != "yallakora"
         if self.source != "legacy":
             return False
         if match.source == "ysscores":

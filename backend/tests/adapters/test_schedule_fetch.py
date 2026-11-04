@@ -150,16 +150,35 @@ def test_the_bridge_goes_to_vps2(sync_session, sent) -> None:
     assert sent == [{"args": ["legacy"], "queue": "scrape"}]
 
 
+def test_yallakora_goes_to_vps2_for_the_whole_window_by_default(sync_session, sent) -> None:
+    schedule_fetch.apply(args=("yallakora",)).get()
+    assert sent == [{"args": ["yallakora"], "queue": "scrape"}]
+
+
+def test_the_today_window_asks_for_one_day(sync_session, sent) -> None:
+    schedule_fetch.apply(args=("yallakora",), kwargs={"window": "today"}).get()
+    assert sent == [{"args": ["yallakora"], "kwargs": {"days": 1}, "queue": "scrape"}]
+
+
+def test_a_paused_yallakora_is_skipped(sync_session, sent) -> None:
+    _pause(sync_session, "yallakora")
+    assert schedule_fetch.apply(args=("yallakora",), kwargs={"window": "today"}).get()["why"] == "paused"
+    assert sent == []
+
+
 def test_the_beat_schedule_has_every_entry_and_calls_no_fetch_directly() -> None:
     assert set(BEAT_SCHEDULE) == {
         "ysscores-fixtures",
         "satair-bridge",
         "livesoccertv-48h",
         "livesoccertv-t60",
+        "yallakora-daily",
+        "yallakora-today",
         "prune-raw-pages",
         "heartbeat-maintenance",
         "heartbeat-imports",
         "heartbeat-notifications",
+        "heartbeat-live",
         "scrape-home-backlog",
     }
 

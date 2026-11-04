@@ -96,6 +96,7 @@ class TestRouting:
 
     def test_the_bridge_ingest_prune_and_logo_queues(self) -> None:
         assert self.router.route_for_task("adapters.fetch", args=("legacy",)) == {"queue": "scrape"}
+        assert self.router.route_for_task("adapters.fetch", args=("yallakora",)) == {"queue": "scrape"}
         assert self.router.route_for_task("adapters.ingest") == {"queue": "imports"}
         assert self.router.route_for_task("adapters.prune_raw_pages") == {"queue": "maintenance"}
         assert self.router.route_for_task("adapters.rehost_logo") == {"queue": "media"}

@@ -13,7 +13,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | WireGuard | Hub `10.8.0.1`, UDP 51820 | None: `ssh -J ubuntu@10.8.0.1 ubuntu@10.1.0.118` | Peer, outbound only |
 | Public hostnames | `api.<VPS1_IP>.sslip.io`, `media.<VPS1_IP>.sslip.io`, `app.<VPS1_IP>.sslip.io` | None | None |
 | Admin | `https://10.8.0.1`, over WireGuard only | None | None |
-| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `beat`, Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home` and a 10-minute update timer |
+| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `worker-live`, `beat`, Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home` and a 10-minute update timer |
 
 | Runbook | What it covers |
 | --- | --- |
@@ -31,7 +31,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs`, `log` and `run.json`, pausing a source, the breaker, LiveSoccerTV and its placeholders, switching a fetch queue, the bridge's configuration |
 | [source-alerts.md](source-alerts.md) | The Telegram bot and chat, what "⛔ المصدر متوقف" and "⚠️ لم يجد أي عناصر" mean, and what to do |
 | [backups.md](backups.md) | Nightly database and media backups, retention, running one by hand, restoring the database and one media file, the monthly restore drill |
-| [uptime-kuma.md](uptime-kuma.md) | Reaching Kuma over WireGuard, the first account, the exact four HTTP and seven push monitors, the Telegram notification, what each alert means |
+| [uptime-kuma.md](uptime-kuma.md) | Reaching Kuma over WireGuard, the first account, the exact four HTTP and eight push monitors, the Telegram notification, what each alert means |
 | [home-box.md](home-box.md) | Joining the scrape box to `wg0`, its `.env`, the update timer, checking it, taking it offline |
 | [workers.md](workers.md) | VPS-2's services and `beat`, `worker-media` and logos, the VPS-2 deploy and rollback, raw-page retention |
 | [firewall-changes.md](firewall-changes.md) | Changing, testing and applying the iptables rules on either VM |
@@ -98,7 +98,7 @@ The firewall rule and the `homebox` Redis user have to exist before anything sta
 8. **Secret-scan proof:** [ci-workflows.md "Prove the secret scan"](ci-workflows.md#prove-the-secret-scan) (T067, first half).
 9. **Once Lanes A and M have merged:** the PWA preview and its CORS origin ([firebase-hosting.md §4](firebase-hosting.md#4-the-preview-channel)), then a green `master` run for every workflow (T067, second half).
 10. **VPS-2's workers:** the `deploy-vps2` job needs the `VPS2_VCN_IP` variable and VPS-2's host key in `DEPLOY_KNOWN_HOSTS` ([workers.md](workers.md#deploy-vps-2)). Check the four services are healthy and exactly one `beat` runs.
-11. **Monitoring and backups:** create the Kuma monitors and the Telegram notification ([uptime-kuma.md](uptime-kuma.md) §1–§4) with the seven `KUMA_PUSH_URL_*` values and the Telegram pair in `/srv/madar/.env`, then check the first night's backups ([backups.md](backups.md#check-last-nights-backup)). The directories and the timers come from `bootstrap-vps.sh` (run it on each host after pulling D3, then deploy); a deploy only verifies them (B2-R1-4). The first run creates the restic repository (B2-R1-5).
+11. **Monitoring and backups:** create the Kuma monitors and the Telegram notification ([uptime-kuma.md](uptime-kuma.md) §1–§4) with the eight `KUMA_PUSH_URL_*` values and the Telegram pair in `/srv/madar/.env`, then check the first night's backups ([backups.md](backups.md#check-last-nights-backup)). The directories and the timers come from `bootstrap-vps.sh` (run it on each host after pulling D3, then deploy); a deploy only verifies them (B2-R1-4). The first run creates the restic repository (B2-R1-5).
 12. **Start the home box's worker:** its peer, `.env`, the Redis ACL, the firewall rule and its timer happened in stage 4, before the first deploy ([home-box.md](home-box.md)). Starting it is what makes ysscores arrive from the box; without it, switch `YSSCORES_FETCH_QUEUE=scrape` ([imports-and-sources.md](imports-and-sources.md#switch-where-a-source-fetches)).
 13. **The first unattended run:** after the next `ysscores-fixtures` slot, read `import_runs` ([imports-and-sources.md](imports-and-sources.md#read-what-a-run-did)).
 14. **Reminders (D3):** the FCM service account on VPS-2 and `FCM_DRY_RUN=false`, one real reminder to the owner's phone ([push-notifications.md](push-notifications.md#the-fcm-service-account)), and the `/v1` limits left at their defaults ([response-cache-and-limits.md](response-cache-and-limits.md)).
@@ -132,6 +132,8 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A reminder didn't arrive, or FCM rejects the credentials | [push-notifications.md](push-notifications.md) |
 | A 429 appears in the API log, or public reads feel slow | [response-cache-and-limits.md](response-cache-and-limits.md) |
 | You are about to load-test the API, or p95 misses its target | [load-testing.md](load-testing.md) |
+| VPS-1 needs more CPU | [provision-host.md "Resize an instance"](provision-host.md#resize-an-instance) |
+| A name didn't match, or YallaKora added a duplicate | [imports-and-sources.md "The unresolved queue"](imports-and-sources.md#the-unresolved-queue) |
 | A new editor, a forgotten password, someone leaves, or an admin session may have leaked | [staff-accounts.md](staff-accounts.md) |
 | An editor needs the admin app on their machine, or the mock's states | [admin-access.md](admin-access.md) |
 | A device needs the private network, or one is lost | [private-network.md "Peers"](private-network.md#peers) |
