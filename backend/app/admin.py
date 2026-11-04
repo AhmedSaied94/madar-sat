@@ -23,9 +23,11 @@ from app.api.admin import (
     matches,
     media,
     ordering,
+    rights_holders,
     satellites,
     sources,
     teams,
+    unresolved_names,
 )
 from app.auth.tokens import signing_key
 from app.settings import get_settings
@@ -70,6 +72,8 @@ def create_app() -> FastAPI:
         sources.router,
         dashboard.router,
         ordering.router,
+        unresolved_names.router,
+        rights_holders.router,
     ):
         app.include_router(router)
 

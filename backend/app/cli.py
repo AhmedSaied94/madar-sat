@@ -106,6 +106,34 @@ def _run_admin_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_capture_live(args: argparse.Namespace) -> int:
+    """Save live pages for the capture report (research R1). Never runs without a user agent."""
+    import redis
+
+    from app.adapters.config import get_adapter_settings
+    from app.adapters.fetcher import HttpFetcher
+    from app.adapters.ratelimit import RateLimiter
+    from app.live.capture import run_capture, targets
+    from app.workers.config import get_worker_settings
+
+    settings = get_adapter_settings()
+    user_agent = settings.require_user_agent()
+    items = targets(args.filgoal, args.yallakora)
+    client = redis.Redis.from_url(get_worker_settings().broker_url)
+    try:
+        with HttpFetcher(RateLimiter(client), user_agent) as fetcher:
+            saved = run_capture(
+                items,
+                lambda url, host: fetcher.get(url, allowed_hosts=frozenset({host})),
+                Path(settings.raw_root),
+                args.minutes,
+            )
+    finally:
+        client.close()
+    print(f"saved {saved} pages under {settings.raw_root}/capture/")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -133,6 +161,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--snapshot-dir", required=True)
     p.add_argument("--report-dir", required=True)
 
+    p = sub.add_parser("capture-live", help="Save live list and match pages for the capture report")
+    p.add_argument("--filgoal", action="append", default=[], metavar="MATCH_ID", help="A FilGoal match id")
+    p.add_argument("--yallakora", action="append", default=[], metavar="PATH", help="A YallaKora match path")
+    p.add_argument("--minutes", type=int, default=150, help="How long to record, one round a minute")
+
     return parser
 
 
@@ -145,6 +178,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_load_snapshot(args)
     if args.command == "rehost-media":
         return cmd_rehost_media(args)
+    if args.command == "capture-live":
+        return cmd_capture_live(args)
     if args.command in ("create-admin", "set-admin-password", "deactivate-admin"):
         return _run_admin_command(args)
     parser.error(f"unknown command {args.command}")

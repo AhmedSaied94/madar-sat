@@ -18,6 +18,9 @@ from app.db.models import (
     Match,
     MatchChannel,
     MatchCustomBroadcast,
+    MatchEvent,
+    MatchLineup,
+    MatchLiveState,
     Satellite,
     Team,
 )
@@ -28,6 +31,8 @@ from app.services.common import hidden_names, media_url, visible_link
 from app.services.matches import build_match_summary, fetch_media_paths, frequency, satellite_ref
 
 CommentatorLookup = Callable[[int | None], s.CommentatorRef | None]
+# A timeline must not contradict the score: these wait until a pending score is confirmed.
+GOAL_EVENT_TYPES = frozenset({"goal", "own_goal", "penalty"})
 
 
 def _path(paths: dict[int, str], asset_id: int | None) -> str | None:
@@ -241,17 +246,42 @@ async def get_match_detail(session: AsyncSession, match_id: int, now: datetime) 
         (),
     )
 
+    # An estimated state comes from the clock, so nothing from the feed may sit beside it.
+    events, lineups = ([], None) if summary.estimated else await _live_details(session, match_id)
+
     return s.MatchDetail(
         **summary.model_dump(),
         stadium=match.stadium,
-        local_broadcaster_eg=None,
+        local_broadcaster_eg=match.local_broadcaster_eg,
         broadcasts=broadcasts,
         carriages=carriage_entries,
         platforms=platform_groups,
-        events=[],
-        lineups=None,
+        events=events,
+        lineups=lineups,
         feed_id=feed_id,
     )
+
+
+def _minute_key(minute: str) -> tuple[int, int]:
+    """``45+2`` sorts after ``45`` and before ``46``; text order would put ``9`` after ``45``."""
+    regular, _, stoppage = minute.partition("+")
+    return int(regular), int(stoppage or 0)
+
+
+async def _live_details(session: AsyncSession, match_id: int) -> tuple[list[s.MatchEvent], s.MatchLineups | None]:
+    pending = await session.scalar(select(MatchLiveState.candidate).where(MatchLiveState.match_id == match_id))
+    event_rows = await session.scalars(select(MatchEvent).where(MatchEvent.match_id == match_id))
+    events = [
+        s.MatchEvent(type=e.type, side=e.side, minute=e.minute, player=e.player_name)
+        for e in sorted(event_rows, key=lambda e: (_minute_key(e.minute), e.id))
+        if pending is None or e.type not in GOAL_EVENT_TYPES
+    ]
+    sides = {
+        row.side: s.LineupSide(formation=row.formation, players=row.players)
+        for row in await session.scalars(select(MatchLineup).where(MatchLineup.match_id == match_id))
+    }
+    lineups = s.MatchLineups(home=sides.get("home"), away=sides.get("away")) if sides else None
+    return events, lineups
 
 
 def _commentators(c: dict[str, Any], comment_ref: CommentatorLookup) -> list[s.CommentatorRef]:

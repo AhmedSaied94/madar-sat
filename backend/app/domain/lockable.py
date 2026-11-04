@@ -25,6 +25,7 @@ MATCH_LOCKABLE = frozenset(
         "away_score",
         "home_pen",
         "away_pen",
+        "local_broadcaster_eg",
     }
 )
 

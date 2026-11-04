@@ -9,6 +9,7 @@ import 'beam.dart';
 import 'category.dart';
 import 'channel_carriage.dart';
 import 'frequency.dart';
+import 'frequency_change.dart';
 import 'kind.dart';
 import 'match_summary.dart';
 import 'satellite_ref.dart';
@@ -39,7 +40,7 @@ abstract class ChannelDetail with _$ChannelDetail {
     required String? package,
     required String? provider,
     @JsonKey(name: 'recent_frequency_changes')
-    required List<dynamic> recentFrequencyChanges,
+    required List<FrequencyChange> recentFrequencyChanges,
     required SatelliteRef? satellite,
     @JsonKey(name: 'upcoming_matches')
     required List<MatchSummary> upcomingMatches,

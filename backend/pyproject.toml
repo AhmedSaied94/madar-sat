@@ -95,7 +95,7 @@ addopts = "-q"
 filterwarnings = ["error::DeprecationWarning"]
 
 [tool.coverage.run]
-source = ["app/domain", "app/services", "app/adapters", "app/devices", "app/notifications"]
+source = ["app/domain", "app/services", "app/adapters", "app/devices", "app/notifications", "app/live"]
 # SQLAlchemy's async layer runs on greenlets; without this, lines after an await go untraced.
 concurrency = ["greenlet", "thread"]
 

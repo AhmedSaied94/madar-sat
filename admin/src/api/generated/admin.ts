@@ -37,6 +37,7 @@ import type {
   EnvelopeAdminCommentator,
   EnvelopeAdminCompetition,
   EnvelopeAdminMatch,
+  EnvelopeAdminRightsHolder,
   EnvelopeAdminSatellite,
   EnvelopeAdminTeam,
   EnvelopeAdminUser,
@@ -48,6 +49,7 @@ import type {
   EnvelopeListAdminCommentator,
   EnvelopeListAdminCompetition,
   EnvelopeListAdminMatchRow,
+  EnvelopeListAdminRightsHolderRow,
   EnvelopeListAdminSatellite,
   EnvelopeListBroadcastPreset,
   EnvelopeListChannelItem,
@@ -55,27 +57,35 @@ import type {
   EnvelopeListImportRunRow,
   EnvelopeListSourceHealth,
   EnvelopeListTeamItem,
+  EnvelopeListUnresolvedNameRow,
   EnvelopeMediaAsset,
   EnvelopeNoneType,
+  EnvelopeRawPage,
   EnvelopeSession,
   EnvelopeSourceHealth,
   EnvelopeSourceRunQueued,
+  EnvelopeUnresolvedNameRow,
   ErrorEnvelope,
   GetDashboardParams,
+  GetImportRunRawParams,
   HiddenChannelNameCreate,
   ListChannelsParams,
   ListCommentatorsParams,
   ListMatchesParams,
+  ListNamesParams,
   ListSourceRunsParams,
   ListTeamsParams,
   LoginRequest,
   MatchCreate,
   MatchPatch,
   OrderRequest,
+  RightsHolderCreate,
+  RightsHolderPatch,
   SatelliteCreate,
   SatellitePatch,
   TeamCreate,
-  TeamPatch
+  TeamPatch,
+  UnresolvedMap
 } from './admin.schemas';
 
 import { adminHttp } from '../http';
@@ -2164,6 +2174,107 @@ export function useGetImportRun<TData = Awaited<ReturnType<typeof getImportRun>>
 
 
 /**
+ * @summary A13: a run's saved page as inert text; the path comes from the run, never the request
+ */
+export const getImportRunRaw = (
+    runId: number,
+    params?: GetImportRunRawParams,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeRawPage>(
+      {url: `/admin/api/import-runs/${runId}/raw`, method: 'GET',
+        params, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getGetImportRunRawQueryKey = (runId?: number,
+    params?: GetImportRunRawParams,) => {
+    return [
+    `/admin/api/import-runs/${runId}/raw`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetImportRunRawQueryOptions = <TData = Awaited<ReturnType<typeof getImportRunRaw>>, TError = ErrorType<void | ErrorEnvelope>>(runId: number,
+    params?: GetImportRunRawParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRunRaw>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetImportRunRawQueryKey(runId,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportRunRaw>>> = ({ signal }) => getImportRunRaw(runId,params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(runId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getImportRunRaw>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetImportRunRawQueryResult = NonNullable<Awaited<ReturnType<typeof getImportRunRaw>>>
+export type GetImportRunRawQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useGetImportRunRaw<TData = Awaited<ReturnType<typeof getImportRunRaw>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number,
+    params: undefined |  GetImportRunRawParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRunRaw>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportRunRaw>>,
+          TError,
+          Awaited<ReturnType<typeof getImportRunRaw>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetImportRunRaw<TData = Awaited<ReturnType<typeof getImportRunRaw>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number,
+    params?: GetImportRunRawParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRunRaw>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImportRunRaw>>,
+          TError,
+          Awaited<ReturnType<typeof getImportRunRaw>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetImportRunRaw<TData = Awaited<ReturnType<typeof getImportRunRaw>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number,
+    params?: GetImportRunRawParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRunRaw>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A13: a run's saved page as inert text; the path comes from the run, never the request
+ */
+
+export function useGetImportRunRaw<TData = Awaited<ReturnType<typeof getImportRunRaw>>, TError = ErrorType<void | ErrorEnvelope>>(
+ runId: number,
+    params?: GetImportRunRawParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getImportRunRaw>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetImportRunRawQueryOptions(runId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
  * @summary A3: the matches of a window of at most 8 days
  */
 export const listMatches = (
@@ -2609,6 +2720,449 @@ export const useUploadMedia = <TError = ErrorType<ErrorEnvelope>,
       > => {
 
       const mutationOptions = getUploadMediaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary A9: every rights holder, by `sort_order` (nulls last), then name
+ */
+export const listRightsHolders = (
+    
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeListAdminRightsHolderRow>(
+      {url: `/admin/api/rights-holders`, method: 'GET', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getListRightsHoldersQueryKey = () => {
+    return [
+    `/admin/api/rights-holders`
+    ] as const;
+    }
+
+    
+export const getListRightsHoldersQueryOptions = <TData = Awaited<ReturnType<typeof listRightsHolders>>, TError = ErrorType<void | ErrorEnvelope>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRightsHolders>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRightsHoldersQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRightsHolders>>> = ({ signal }) => listRightsHolders(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRightsHolders>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListRightsHoldersQueryResult = NonNullable<Awaited<ReturnType<typeof listRightsHolders>>>
+export type ListRightsHoldersQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useListRightsHolders<TData = Awaited<ReturnType<typeof listRightsHolders>>, TError = ErrorType<void | ErrorEnvelope>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRightsHolders>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRightsHolders>>,
+          TError,
+          Awaited<ReturnType<typeof listRightsHolders>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListRightsHolders<TData = Awaited<ReturnType<typeof listRightsHolders>>, TError = ErrorType<void | ErrorEnvelope>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRightsHolders>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRightsHolders>>,
+          TError,
+          Awaited<ReturnType<typeof listRightsHolders>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListRightsHolders<TData = Awaited<ReturnType<typeof listRightsHolders>>, TError = ErrorType<void | ErrorEnvelope>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRightsHolders>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A9: every rights holder, by `sort_order` (nulls last), then name
+ */
+
+export function useListRightsHolders<TData = Awaited<ReturnType<typeof listRightsHolders>>, TError = ErrorType<void | ErrorEnvelope>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRightsHolders>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListRightsHoldersQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Create a rights holder (takes no `If-Match`)
+ */
+export const createRightsHolder = (
+    rightsHolderCreate: RightsHolderCreate,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeAdminRightsHolder>(
+      {url: `/admin/api/rights-holders`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: rightsHolderCreate, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getCreateRightsHolderMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRightsHolder>>, TError,{data: RightsHolderCreate}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRightsHolder>>, TError,{data: RightsHolderCreate}, TContext> => {
+
+const mutationKey = ['createRightsHolder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRightsHolder>>, {data: RightsHolderCreate}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRightsHolder(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRightsHolderMutationResult = NonNullable<Awaited<ReturnType<typeof createRightsHolder>>>
+    export type CreateRightsHolderMutationBody = RightsHolderCreate
+    export type CreateRightsHolderMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Create a rights holder (takes no `If-Match`)
+ */
+export const useCreateRightsHolder = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRightsHolder>>, TError,{data: RightsHolderCreate}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createRightsHolder>>,
+        TError,
+        {data: RightsHolderCreate},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateRightsHolderMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary A9: set the order (each row carries its version)
+ */
+export const reorderRightsHolders = (
+    orderRequest: OrderRequest,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeBulkResult>(
+      {url: `/admin/api/rights-holders/reorder`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: orderRequest, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getReorderRightsHoldersMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderRightsHolders>>, TError,{data: OrderRequest}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderRightsHolders>>, TError,{data: OrderRequest}, TContext> => {
+
+const mutationKey = ['reorderRightsHolders'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderRightsHolders>>, {data: OrderRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reorderRightsHolders(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderRightsHoldersMutationResult = NonNullable<Awaited<ReturnType<typeof reorderRightsHolders>>>
+    export type ReorderRightsHoldersMutationBody = OrderRequest
+    export type ReorderRightsHoldersMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary A9: set the order (each row carries its version)
+ */
+export const useReorderRightsHolders = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderRightsHolders>>, TError,{data: OrderRequest}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reorderRightsHolders>>,
+        TError,
+        {data: OrderRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getReorderRightsHoldersMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Delete a rights holder and its carriages (admin role)
+ */
+export const deleteRightsHolder = (
+    holderId: number,
+ options?: SecondParameter<typeof adminHttp>,) => {
+      
+      
+      return adminHttp<EnvelopeNoneType>(
+      {url: `/admin/api/rights-holders/${holderId}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getDeleteRightsHolderMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRightsHolder>>, TError,{holderId: number}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRightsHolder>>, TError,{holderId: number}, TContext> => {
+
+const mutationKey = ['deleteRightsHolder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRightsHolder>>, {holderId: number}> = (props) => {
+          const {holderId} = props ?? {};
+
+          return  deleteRightsHolder(holderId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRightsHolderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRightsHolder>>>
+    
+    export type DeleteRightsHolderMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Delete a rights holder and its carriages (admin role)
+ */
+export const useDeleteRightsHolder = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRightsHolder>>, TError,{holderId: number}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRightsHolder>>,
+        TError,
+        {holderId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteRightsHolderMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary One rights holder
+ */
+export const getRightsHolder = (
+    holderId: number,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeAdminRightsHolder>(
+      {url: `/admin/api/rights-holders/${holderId}`, method: 'GET', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getGetRightsHolderQueryKey = (holderId?: number,) => {
+    return [
+    `/admin/api/rights-holders/${holderId}`
+    ] as const;
+    }
+
+    
+export const getGetRightsHolderQueryOptions = <TData = Awaited<ReturnType<typeof getRightsHolder>>, TError = ErrorType<void | ErrorEnvelope>>(holderId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRightsHolder>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRightsHolderQueryKey(holderId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRightsHolder>>> = ({ signal }) => getRightsHolder(holderId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(holderId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRightsHolder>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetRightsHolderQueryResult = NonNullable<Awaited<ReturnType<typeof getRightsHolder>>>
+export type GetRightsHolderQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useGetRightsHolder<TData = Awaited<ReturnType<typeof getRightsHolder>>, TError = ErrorType<void | ErrorEnvelope>>(
+ holderId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRightsHolder>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRightsHolder>>,
+          TError,
+          Awaited<ReturnType<typeof getRightsHolder>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRightsHolder<TData = Awaited<ReturnType<typeof getRightsHolder>>, TError = ErrorType<void | ErrorEnvelope>>(
+ holderId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRightsHolder>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRightsHolder>>,
+          TError,
+          Awaited<ReturnType<typeof getRightsHolder>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRightsHolder<TData = Awaited<ReturnType<typeof getRightsHolder>>, TError = ErrorType<void | ErrorEnvelope>>(
+ holderId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRightsHolder>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary One rights holder
+ */
+
+export function useGetRightsHolder<TData = Awaited<ReturnType<typeof getRightsHolder>>, TError = ErrorType<void | ErrorEnvelope>>(
+ holderId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRightsHolder>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetRightsHolderQueryOptions(holderId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Update a rights holder; `competition_ids` and `carriages`, if sent, replace the whole list
+ */
+export const patchRightsHolder = (
+    holderId: number,
+    rightsHolderPatch: RightsHolderPatch,
+ options?: SecondParameter<typeof adminHttp>,) => {
+      
+      
+      return adminHttp<EnvelopeAdminRightsHolder>(
+      {url: `/admin/api/rights-holders/${holderId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: rightsHolderPatch
+    },
+      options);
+    }
+  
+
+
+export const getPatchRightsHolderMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchRightsHolder>>, TError,{holderId: number;data: RightsHolderPatch}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchRightsHolder>>, TError,{holderId: number;data: RightsHolderPatch}, TContext> => {
+
+const mutationKey = ['patchRightsHolder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchRightsHolder>>, {holderId: number;data: RightsHolderPatch}> = (props) => {
+          const {holderId,data} = props ?? {};
+
+          return  patchRightsHolder(holderId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchRightsHolderMutationResult = NonNullable<Awaited<ReturnType<typeof patchRightsHolder>>>
+    export type PatchRightsHolderMutationBody = RightsHolderPatch
+    export type PatchRightsHolderMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Update a rights holder; `competition_ids` and `carriages`, if sent, replace the whole list
+ */
+export const usePatchRightsHolder = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchRightsHolder>>, TError,{holderId: number;data: RightsHolderPatch}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchRightsHolder>>,
+        TError,
+        {holderId: number;data: RightsHolderPatch},
+        TContext
+      > => {
+
+      const mutationOptions = getPatchRightsHolderMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -3813,6 +4367,229 @@ export const usePatchTeam = <TError = ErrorType<ErrorEnvelope>,
       > => {
 
       const mutationOptions = getPatchTeamMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary A13: the names the importers couldn't match
+ */
+export const listNames = (
+    params?: ListNamesParams,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeListUnresolvedNameRow>(
+      {url: `/admin/api/unresolved-names`, method: 'GET',
+        params, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+
+export const getListNamesQueryKey = (params?: ListNamesParams,) => {
+    return [
+    `/admin/api/unresolved-names`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListNamesQueryOptions = <TData = Awaited<ReturnType<typeof listNames>>, TError = ErrorType<void | ErrorEnvelope>>(params?: ListNamesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNamesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNames>>> = ({ signal }) => listNames(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNames>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListNamesQueryResult = NonNullable<Awaited<ReturnType<typeof listNames>>>
+export type ListNamesQueryError = ErrorType<void | ErrorEnvelope>
+
+
+export function useListNames<TData = Awaited<ReturnType<typeof listNames>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params: undefined |  ListNamesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNames>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listNames>>,
+          TError,
+          Awaited<ReturnType<typeof listNames>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListNames<TData = Awaited<ReturnType<typeof listNames>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params?: ListNamesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNames>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listNames>>,
+          TError,
+          Awaited<ReturnType<typeof listNames>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListNames<TData = Awaited<ReturnType<typeof listNames>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params?: ListNamesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A13: the names the importers couldn't match
+ */
+
+export function useListNames<TData = Awaited<ReturnType<typeof listNames>>, TError = ErrorType<void | ErrorEnvelope>>(
+ params?: ListNamesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNames>>, TError, TData>>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListNamesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Ignore a name; later runs don't reopen it
+ */
+export const ignoreName = (
+    nameId: number,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeUnresolvedNameRow>(
+      {url: `/admin/api/unresolved-names/${nameId}/ignore`, method: 'POST', ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getIgnoreNameMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ignoreName>>, TError,{nameId: number}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof ignoreName>>, TError,{nameId: number}, TContext> => {
+
+const mutationKey = ['ignoreName'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ignoreName>>, {nameId: number}> = (props) => {
+          const {nameId} = props ?? {};
+
+          return  ignoreName(nameId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IgnoreNameMutationResult = NonNullable<Awaited<ReturnType<typeof ignoreName>>>
+    
+    export type IgnoreNameMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Ignore a name; later runs don't reopen it
+ */
+export const useIgnoreName = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ignoreName>>, TError,{nameId: number}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ignoreName>>,
+        TError,
+        {nameId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getIgnoreNameMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Map a name to an entity: writes the alias, used from the next run
+ */
+export const mapName = (
+    nameId: number,
+    unresolvedMap: UnresolvedMap,
+ options?: SecondParameter<typeof adminHttp>,signal?: AbortSignal
+) => {
+      
+      
+      return adminHttp<EnvelopeUnresolvedNameRow>(
+      {url: `/admin/api/unresolved-names/${nameId}/map`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: unresolvedMap, ...(signal ? { signal }: {})
+    },
+      options);
+    }
+  
+
+
+export const getMapNameMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapName>>, TError,{nameId: number;data: UnresolvedMap}, TContext>, request?: SecondParameter<typeof adminHttp>}
+): UseMutationOptions<Awaited<ReturnType<typeof mapName>>, TError,{nameId: number;data: UnresolvedMap}, TContext> => {
+
+const mutationKey = ['mapName'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapName>>, {nameId: number;data: UnresolvedMap}> = (props) => {
+          const {nameId,data} = props ?? {};
+
+          return  mapName(nameId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MapNameMutationResult = NonNullable<Awaited<ReturnType<typeof mapName>>>
+    export type MapNameMutationBody = UnresolvedMap
+    export type MapNameMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Map a name to an entity: writes the alias, used from the next run
+ */
+export const useMapName = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapName>>, TError,{nameId: number;data: UnresolvedMap}, TContext>, request?: SecondParameter<typeof adminHttp>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof mapName>>,
+        TError,
+        {nameId: number;data: UnresolvedMap},
+        TContext
+      > => {
+
+      const mutationOptions = getMapNameMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

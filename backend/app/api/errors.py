@@ -144,6 +144,11 @@ def run_in_progress() -> ApiError:
     return ApiError(409, "run_in_progress")
 
 
+def alias_conflict() -> ApiError:
+    """An alias with the same key already points at another target (A13)."""
+    return ApiError(409, "alias_conflict")
+
+
 def source_not_runnable() -> ApiError:
     """A source with no importer to run: ``manual``, or ``legacy`` without the bridge configured."""
     return ApiError(409, "source_not_runnable")

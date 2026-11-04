@@ -33,7 +33,10 @@ _ChannelDetail _$ChannelDetailFromJson(Map<String, dynamic> json) =>
           .toList(),
       package: json['package'] as String?,
       provider: json['provider'] as String?,
-      recentFrequencyChanges: json['recent_frequency_changes'] as List<dynamic>,
+      recentFrequencyChanges:
+          (json['recent_frequency_changes'] as List<dynamic>)
+              .map((e) => FrequencyChange.fromJson(e as Map<String, dynamic>))
+              .toList(),
       satellite: json['satellite'] == null
           ? null
           : SatelliteRef.fromJson(json['satellite'] as Map<String, dynamic>),
