@@ -93,3 +93,11 @@
     background: var(--accent);
   }
 }
+
+@layer components {
+  /* A13's raw page: the saved HTML is shown as inert text in a scroll box whose height comes from the
+     spacing tokens, so no arbitrary value reaches the JSX. */
+  .raw-page-text {
+    max-height: calc(var(--space-12) * 9);
+  }
+}

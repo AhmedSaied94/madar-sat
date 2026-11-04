@@ -189,10 +189,21 @@ interface ChannelEditorProps {
   open: boolean;
   /** The row «إضافة على قمر آخر» copies; only used when `channelId` is null. */
   seed?: ChannelDraft | null;
+  /** Prefills the name of a new channel, for A13's «جديد». */
+  initialName?: string;
+  /** Hands the new channel's id back, so A13 can bind the queued name to it. */
+  onCreated?: (channelId: number) => void;
   onClose: () => void;
 }
 
-export function ChannelEditor({ channelId, open, seed = null, onClose }: ChannelEditorProps): ReactElement {
+export function ChannelEditor({
+  channelId,
+  open,
+  seed = null,
+  initialName,
+  onCreated,
+  onClose,
+}: ChannelEditorProps): ReactElement {
   const detail = useGetChannel(channelId ?? 0, {
     query: { enabled: open && channelId !== null, structuralSharing: false },
   });
@@ -236,7 +247,7 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
     if (channelId === null) {
       if (seeded.current === 'new') return;
       seeded.current = 'new';
-      const start = seed ?? emptyChannelDraft();
+      const start = seed ?? { ...emptyChannelDraft(), name: initialName ?? '' };
       setBaseline(emptyChannelDraft());
       setBaselineEtag(null);
       reset(start);
@@ -247,7 +258,7 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
     seeded.current = `channel-${channelId}`;
     adopt(draftOf(server), etagOf(detail.data));
     setSaveError(null);
-  }, [open, channelId, server, seed, detail.data, adopt, reset]);
+  }, [open, channelId, server, seed, detail.data, adopt, reset, initialName]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
 
@@ -318,7 +329,8 @@ export function ChannelEditor({ channelId, open, seed = null, onClose }: Channel
         if (parsed.country.trim() !== '') body.country = parsed.country.trim();
         body.show_in_match = parsed.showInMatch;
         if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
-        await createChannel(body);
+        const created = await createChannel(body);
+        if (created.data) onCreated?.(created.data.id);
       } else {
         const body = buildChannelPatch(parsed, baseline);
         if (Object.keys(body).length === 0) {

@@ -217,6 +217,21 @@ dc exec postgres psql -U madar -d madar -c "
    where state = 'open' order by seen_count desc limit 30"
 ```
 
+### Working the queue in A13
+
+The queue sits under the source cards at `/sources`. Its count is `meta.open_count`, and the source
+dropdown filters the list; rows are ordered by `last_seen_at`, newest first.
+
+- **ربط (map).** Opens the suggestions. Nothing is written until you press حفظ. With more than one
+  `exact` candidate the row shows «اختر الفريق» instead, and the alias is scoped to the competition in
+  the row's context — that is what «حصر الربط على البطولة» means, and it is locked on for that case.
+- **جديد (create).** Opens the team, competition or channel form filled with the source's name. Saving
+  it creates the entity and then maps the name to it. If that map fails, the row stays open and the
+  toast says so; map it again from ربط.
+- **تجاهل (ignore).** Permanent; the row leaves the open list.
+- Errors: `409 alias_conflict` means the same name is already bound to another entity — reload the row
+  before deciding; `409 edit_conflict` means someone else cleared or changed it first.
+
 ## LiveSoccerTV
 
 What it reads: for each planned match, the home team's page `/teams/<country>/<slug>/`, then the match

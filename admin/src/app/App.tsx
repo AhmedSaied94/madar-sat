@@ -15,6 +15,7 @@ import { MatchesPage } from '../features/matches/MatchesPage';
 import { SatellitesPage } from '../features/satellites/SatellitesPage';
 import { SourceRunPage } from '../features/sources/SourceRunPage';
 import { SourcesPage } from '../features/sources/SourcesPage';
+import { RightsHoldersPage } from '../features/rights/RightsHoldersPage';
 import { TeamsPage } from '../features/teams/TeamsPage';
 import { Shell } from '../features/shell/Shell';
 import { shell } from '../i18n/ar';
@@ -60,6 +61,7 @@ export const appRoutes: RouteObject[] = [
       { path: 'competitions', element: <CompetitionsPage /> },
       { path: 'channels', element: <ChannelsPage /> },
       { path: 'satellites', element: <SatellitesPage /> },
+      { path: 'rights-holders', element: <RightsHoldersPage /> },
       { path: 'commentators', element: <CommentatorsPage /> },
       { path: 'sources', element: <SourcesPage /> },
       { path: 'import-runs/:id', element: <SourceRunPage /> },
