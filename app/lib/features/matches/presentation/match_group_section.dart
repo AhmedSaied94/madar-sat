@@ -16,11 +16,16 @@ class CompetitionSection extends StatelessWidget {
     required this.group,
     required this.now,
     required this.onOpen,
+    this.onOpenCompetition,
   });
 
   final CompetitionGroup group;
   final DateTime now;
   final ValueChanged<MatchSummary> onOpen;
+
+  /// Opens S8 for this competition; the header is the target (T086). Null draws the header
+  /// with no action.
+  final ValueChanged<int>? onOpenCompetition;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +42,9 @@ class CompetitionSection extends StatelessWidget {
           logo: mediaImage(context, logo),
           size: _logoSize,
         ),
+        onTap: competition.id == null || onOpenCompetition == null
+            ? null
+            : () => onOpenCompetition!(competition.id!),
       ),
       matches: group.matches,
       now: now,
@@ -135,22 +143,21 @@ class _GroupSection extends StatelessWidget {
 }
 
 class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({required this.title, required this.leading, this.stage});
+  const _GroupHeader({required this.title, required this.leading, this.stage, this.onTap});
 
   final String title;
   final String? stage;
   final Widget leading;
+
+  /// Opens S8 when the header names a competition (T086).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
     final stage = this.stage;
-    return Semantics(
-      header: true,
-      label: stage == null ? title : '$title${l.listSeparator}$stage',
-      excludeSemantics: true,
-      child: Row(
+    final row = Row(
         children: [
           leading,
           const SizedBox(width: MadarSpace.s2),
@@ -183,7 +190,23 @@ class _GroupHeader extends StatelessWidget {
             ),
           ],
         ],
-      ),
+    );
+    return Semantics(
+      header: true,
+      button: onTap != null,
+      label: stage == null ? title : '$title${l.listSeparator}$stage',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: onTap == null
+          ? row
+          : Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(MadarRadii.lg),
+                child: row,
+              ),
+            ),
     );
   }
 }

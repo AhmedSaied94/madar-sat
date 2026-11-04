@@ -8,6 +8,7 @@ import '../../../core/format/time.dart';
 import '../../../core/l10n/dates.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/network/generated/models/match_summary.dart';
+import '../../../core/network/generated/models/competition_detail.dart';
 import '../../../core/network/generated/models/team_detail.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/bottom_nav.dart';
@@ -24,10 +25,11 @@ import '../../follows/domain/follow_set.dart';
 import '../../system/presentation/system_views.dart';
 import '../data/favorites_providers.dart';
 
-/// S9 Favorites: the next three matches of what is followed, then the followed teams.
+/// S9 Favorites: the next three matches of what is followed, then the followed teams and the
+/// followed competitions.
 ///
-/// D2's follow actions do not exist yet (D5's S8 brings competitions, channels and
-/// commentators), so those sections are absent rather than empty (contract app-screens).
+/// Channels and commentators have no follow action yet (D6 and later), so those sections stay
+/// absent rather than empty (contract app-screens).
 class FavoritesPage extends ConsumerWidget {
   const FavoritesPage({super.key});
 
@@ -128,6 +130,7 @@ class FavoritesPage extends ConsumerWidget {
                                     ),
                                   ),
                           },
+                          if (follows.competitions.isNotEmpty) const _CompetitionsSection(),
                           _SectionHeader(
                             title: l.s9TeamsSection,
                             count: follows.teams.length,
@@ -190,6 +193,61 @@ class FavoritesPage extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// «البطولات»: the followed competitions, each with its remove and its way into S8 (T086).
+///
+/// It is drawn only when at least one is followed: the add button belongs to S14's picker,
+/// which has no competitions step yet.
+class _CompetitionsSection extends ConsumerWidget {
+  const _CompetitionsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final colors = context.madarColors;
+    final followed = ref.watch(followSetValueProvider);
+    final competitions = ref.watch(favoriteCompetitionsProvider);
+    final repository = ref.read(followsRepositoryProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionHeader(title: l.s9CompetitionsSection, count: followed.competitions.length),
+        switch (competitions) {
+          final async when async.isLoading => const Skeleton(),
+          final async when async.hasError => SystemFailureView(
+              failure: const ApiFailure(),
+              onRetry: () => ref.invalidate(favoriteCompetitionsProvider),
+            ),
+          final async => MadarListGroup(
+              children: [
+                for (final competition in async.value ?? const <CompetitionDetail>[])
+                  MadarListRow(
+                    key: ValueKey(competition.id),
+                    icon: Icons.emoji_events_outlined,
+                    title: competition.name,
+                    trailing: IconButton(
+                      tooltip: l.s9RemoveTeam(competition.name),
+                      onPressed: () => repository.set(
+                        FollowKind.competition,
+                        competition.id,
+                        follow: false,
+                      ),
+                      icon: Icon(
+                        Icons.close,
+                        size: (MadarText.textStrong.fontSize ?? 0) + 2,
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                    onTap: () => context.push('/competition/${competition.id}'),
+                  ),
+              ],
+            ),
+        },
+      ],
     );
   }
 }

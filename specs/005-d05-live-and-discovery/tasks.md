@@ -238,29 +238,49 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 
 ### Setup (M)
 
-- [ ] T078 [US2] After B1's T017, run `dart run swagger_parser` and `dart run build_runner build -d`, and commit the output. Read the boards and HTML for S6 Channel sheet, S7 Team and S8 Competition in `madar-design/app-flutter/SCREENS.md`.
-- [ ] T079 [US2] Add the strings to `app/lib/core/l10n/app_ar.arb`, using the boards' copy (`«تابع القناة»`, `«القادمة»`, `«النتائج»`, `«لا توجد مباريات قادمة»`, `«حقوق البث»`, `«سجل التردد»`) and the PB §14 glossary.
+- [x] T078 [US2] After B1's T017, run `dart run swagger_parser` and `dart run build_runner build -d`, and commit the output. Read the boards and HTML for S6 Channel sheet, S7 Team and S8 Competition in `madar-design/app-flutter/SCREENS.md`.
+- [x] T079 [US2] Add the strings to `app/lib/core/l10n/app_ar.arb`, using the boards' copy (`«تابع القناة»`, `«القادمة»`, `«النتائج»`, `«لا توجد مباريات قادمة»`, `«حقوق البث»`, `«سجل التردد»`) and the PB §14 glossary.
 
 ### Tests first (M): write them and see them fail
 
-- [ ] T080 [P] [US2] In `app/test/features/channel/`, `team/` and `competition/`, write repository tests against the existing `CachedDocuments` table with keys `channel:<id>`, `team:<id>` and `competition:<id>`: the drift copy is emitted first; `If-None-Match` is sent; a `200` updates; a `304` changes nothing; a failed request with no cache reaches the stream as an error.
-- [ ] T081 [P] [US2] Write widget tests and goldens (RTL × {light, dark} × {1.0, 1.3}) for each screen's states: first-load skeleton, cached, stale age, offline, no connection, empty, error. Also test: S6's readout visible with no tap, dark and LTR; other carriages with My satellites and free first; frequency history hidden when empty and limited to 3 when not; S7's tabs and empty copy; S8's date groups by local date, `«لم يُحدد»` for an unknown kickoff, an estimated match with no score, and rights rows with no chevron or tap; merged Arabic semantics labels; router tests for the three paths and the entry points.
+- [x] T080 [P] [US2] In `app/test/features/channel/`, `team/` and `competition/`, write repository tests against the existing `CachedDocuments` table with keys `channel:<id>`, `team:<id>` and `competition:<id>`: the drift copy is emitted first; `If-None-Match` is sent; a `200` updates; a `304` changes nothing; a failed request with no cache reaches the stream as an error.
+- [x] T081 [P] [US2] Write widget tests and goldens (RTL × {light, dark} × {1.0, 1.3}) for each screen's states: first-load skeleton, cached, stale age, offline, no connection, empty, error. Also test: S6's readout visible with no tap, dark and LTR; other carriages with My satellites and free first; frequency history hidden when empty and limited to 3 when not; S7's tabs and empty copy; S8's date groups by local date, `«لم يُحدد»` for an unknown kickoff, an estimated match with no score, and rights rows with no chevron or tap; merged Arabic semantics labels; router tests for the three paths and the entry points.
+  **Done for all three** (`channel_sheet_test.dart`, `team_page_test.dart`,
+  `competition_page_test.dart`, the goldens `s6_channel_*`, `s7_team_*`, `s8_competition_*`,
+  and the router test): every state, the readout, the other carriages, the history, the tabs,
+  the date groups, `«لم يُحدد»`, the estimated row with no score, the rights rows with no
+  chevron and no tap, the live merge, the merged semantics and the paths.
 
 ### Implementation (M)
 
-- [ ] T082 [US2] Add `data` and `domain` for `app/lib/features/channel/`, `team/` and `competition/`: Riverpod repositories using the generated client. T080 passes. Run `build_runner`.
-- [ ] T083 [P] [US2] Build `app/lib/features/channel/presentation/channel_sheet.dart` and focused sub-widgets per [app-screens](contracts/app-screens.md#s6), with the existing `FrequencyReadout`, `Logo` and `MatchRow`, and `ListView.builder` for dynamic lists. Replace `/channel/:id` in `app/lib/core/router/` with a `pageBuilder` that shows a modal bottom sheet and stays deep-linkable.
-- [ ] T084 [P] [US2] Build `app/lib/features/team/presentation/team_page.dart` per [app-screens](contracts/app-screens.md#s7), and replace `/team/:id`.
-- [ ] T085 [P] [US2] Build `app/lib/features/competition/presentation/competition_page.dart` per [app-screens](contracts/app-screens.md#s8), with no hide/show and no `عرض الكل`, and replace `/competition/:id`.
-- [ ] T086 [US2] Wire the entry points: S3's carriage rows and S5's channel rows to S6; S3's hero crest and name, and S9, to S7; S2's section header, S3's competition line and S9 to S8. A `MatchRow` tap stays S3. Merge `/v1/live` values into these screens' rows as on S2.
-- [ ] T087 [US2] Wire follow on S6, S7 and S8 to `follows_repository`, as a plain toggle. T081 passes.
+- [x] T082 [US2] Add `data` and `domain` for `app/lib/features/channel/`, `team/` and `competition/`: Riverpod repositories using the generated client. T080 passes. Run `build_runner`.
+  **Done for all three** (`watchChannelDetail`, `watchTeamDetail`, `watchCompetitionDetail`;
+  a provider per screen). S7 and S8 share one day-grouping rule in
+  `features/matches/domain/match_days.dart`, so they cannot disagree about a day.
+- [x] T083 [P] [US2] Build `app/lib/features/channel/presentation/channel_sheet.dart` and focused sub-widgets per [app-screens](contracts/app-screens.md#s6), with the existing `FrequencyReadout`, `Logo` and `MatchRow`, and `ListView.builder` for dynamic lists. Replace `/channel/:id` in `app/lib/core/router/` with a `pageBuilder` that shows a modal bottom sheet and stays deep-linkable.
+- [x] T084 [P] [US2] Build `app/lib/features/team/presentation/team_page.dart` per [app-screens](contracts/app-screens.md#s7), and replace `/team/:id`.
+- [x] T085 [P] [US2] Build `app/lib/features/competition/presentation/competition_page.dart` per [app-screens](contracts/app-screens.md#s8), with no hide/show and no `عرض الكل`, and replace `/competition/:id`.
+- [x] T086 [US2] Wire the entry points: S3's carriage rows and S5's channel rows to S6; S3's hero crest and name, and S9, to S7; S2's section header, S3's competition line and S9 to S8. A `MatchRow` tap stays S3. Merge `/v1/live` values into these screens' rows as on S2.
+  **Done for all three:** S3's carriage rows (the row's «عرض القناة») and S5's rows open S6;
+  S3's hero crest and name and S9's teams open S7; S2's section header, S3's competition line
+  and S9's new «البطولات» section open S8. All three screens merge `/v1/live` through
+  `applyLiveStates` and `LivePollingScope`, and a `MatchRow` tap stays S3.
+- [x] T087 [US2] Wire follow on S6, S7 and S8 to `follows_repository`, as a plain toggle. T081 passes.
+  **Done on all three** (channel, team and competition, plain toggles, covered by the widget
+  tests), and S9 lists the followed competitions with their remove.
 
 ### Validation (M)
 
-- [ ] T088 [US2] From `app/`, run `flutter analyze`, `./tool/check_literals.sh`, `./tool/check_token_copy.sh` and `RTEST_HOST=flutter-tests rtest` (never `flutter test` on the laptop; if the box is unreachable, tell the owner). Regenerate goldens only as `app/CLAUDE.md` says. Confirm `app/lib/**/*.g.dart` are current.
-- [ ] T089 [US2] Update `docs/runbooks/remote-config.md`'s `features` example to `live_center: false` until D6, and add the owner step to set the value. Confirm no code reads the flag.
-- [ ] T090 [US2] Compare each screen with its PNG in both themes, and hand the owner [quickstart M](quickstart.md#lane-m)'s steps on a real Android phone (SC-008), with the build used.
-- [ ] T091 [US2] Add Lane M's items to `docs/owner-actions.md`: the device walk, the Remote Config value, and the next `app-v*` and `web-v*` tags.
+- [x] T088 [US2] From `app/`, run `flutter analyze`, `./tool/check_literals.sh`, `./tool/check_token_copy.sh` and `RTEST_HOST=flutter-tests rtest` (never `flutter test` on the laptop; if the box is unreachable, tell the owner). Regenerate goldens only as `app/CLAUDE.md` says. Confirm `app/lib/**/*.g.dart` are current.
+- [x] T089 [US2] Update `docs/runbooks/remote-config.md`'s `features` example to `live_center: false` until D6, and add the owner step to set the value. Confirm no code reads the flag.
+- [x] T090 [US2] Compare each screen with its PNG in both themes, and hand the owner [quickstart M](quickstart.md#lane-m)'s steps on a real Android phone (SC-008), with the build used.
+  **All three screens were compared with `Channel.png`, `Team.png` and `Competition.png` in
+  both themes**, and the goldens were generated with the pinned Flutter on the test box. Two
+  board details are deliberately not drawn: S8's «اليوم ·» prefix on today's group (S7's board
+  has none, and the two screens share one day header) and its hide/show and share actions (D8;
+  the contract keeps S8 to follow and rights). The device walk is in
+  `docs/owner-actions.md` under 005 · Lane M.
+- [x] T091 [US2] Add Lane M's items to `docs/owner-actions.md`: the device walk, the Remote Config value, and the next `app-v*` and `web-v*` tags.
 
 ---
 

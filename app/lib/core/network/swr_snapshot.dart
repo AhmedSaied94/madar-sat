@@ -18,6 +18,12 @@ abstract final class DocumentKeys {
   /// A team's detail, so S9's Teams section can name a followed team it has no match for.
   static String team(int id) => 'team:$id';
 
+  /// S6's channel sheet: its carriage, the other carriages and the upcoming matches.
+  static String channel(int id) => 'channel:$id';
+
+  /// S8's competition page: its matches by date and its rights holders.
+  static String competition(int id) => 'competition:$id';
+
   static String satelliteChannels(int satelliteId) => 'satellite:$satelliteId:channels';
 
   /// S4's day, filtered by satellite. It is a different query from S2's day, so it never

@@ -21,10 +21,23 @@ import '../../../core/config/media_image.dart';
 /// [match] is already merged with the live state (`detailWithLiveState`), so what it says
 /// is what may be shown. The whole hero reads as one Arabic label.
 class MatchHero extends StatelessWidget {
-  const MatchHero({super.key, required this.match, this.now});
+  const MatchHero({
+    super.key,
+    required this.match,
+    this.now,
+    this.onOpenTeam,
+    this.onOpenCompetition,
+  });
 
   final MatchDetail match;
   final DateTime? now;
+
+  /// Opens S7 for the team that was tapped (its crest or its name). Null draws the hero
+  /// without that action.
+  final ValueChanged<int>? onOpenTeam;
+
+  /// Opens S8 for the competition named above the teams. Null draws it as plain text.
+  final ValueChanged<int>? onOpenCompetition;
 
   @override
   Widget build(BuildContext context) {
@@ -50,13 +63,25 @@ class MatchHero extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _CompetitionLine(competition: match.competition),
+            _CompetitionLine(
+              competition: match.competition,
+              onTap: onOpenCompetition == null || match.competition.id == null
+                  ? null
+                  : () => onOpenCompetition!(match.competition.id!),
+            ),
             const SizedBox(height: MadarSpace.s4),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _Team(name: match.home.name, logo: match.home.logo, individual: individual),
+                  child: _Team(
+                    name: match.home.name,
+                    logo: match.home.logo,
+                    individual: individual,
+                    onTap: onOpenTeam == null || match.home.id == null
+                        ? null
+                        : () => onOpenTeam!(match.home.id!),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s2),
@@ -76,7 +101,14 @@ class MatchHero extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: _Team(name: match.away.name, logo: match.away.logo, individual: individual),
+                  child: _Team(
+                    name: match.away.name,
+                    logo: match.away.logo,
+                    individual: individual,
+                    onTap: onOpenTeam == null || match.away.id == null
+                        ? null
+                        : () => onOpenTeam!(match.away.id!),
+                  ),
                 ),
               ],
             ),
@@ -204,15 +236,18 @@ class MatchHero extends StatelessWidget {
 }
 
 class _CompetitionLine extends StatelessWidget {
-  const _CompetitionLine({required this.competition});
+  const _CompetitionLine({required this.competition, this.onTap});
 
   final CompetitionRef competition;
+
+  /// Opens S8 for this competition (T086).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.madarColors;
     final stage = competition.stage;
-    return Wrap(
+    final line = Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: MadarSpace.s2,
@@ -241,20 +276,34 @@ class _CompetitionLine extends StatelessWidget {
           ),
       ],
     );
+    if (onTap == null) return line;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(MadarRadii.lg),
+      child: line,
+    );
   }
 }
 
 class _Team extends StatelessWidget {
-  const _Team({required this.name, required this.logo, required this.individual});
+  const _Team({
+    required this.name,
+    required this.logo,
+    required this.individual,
+    this.onTap,
+  });
 
   final String name;
   final String? logo;
   final bool individual;
 
+  /// Opens S7 for this team (T086). The crest and the name are the target.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.madarColors;
-    return Column(
+    final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (!individual) ...[
@@ -273,6 +322,17 @@ class _Team extends StatelessWidget {
           style: MadarText.heading2.copyWith(color: colors.textPrimary),
         ),
       ],
+    );
+    if (onTap == null) return content;
+    // The hero keeps its one merged label (constitution, §13.8), so this target is touch only:
+    // a screen reader reads the whole hero rather than two extra buttons.
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(MadarRadii.lg),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
+        child: content,
+      ),
     );
   }
 }

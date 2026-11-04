@@ -282,7 +282,15 @@ class _Loaded extends ConsumerWidget {
                   ),
                 ),
               ),
-            SliverToBoxAdapter(child: MatchHero(match: match, now: now)),
+            SliverToBoxAdapter(
+              child: MatchHero(
+                match: match,
+                now: now,
+                onOpenTeam: (teamId) => context.push('/team/$teamId'),
+                onOpenCompetition: (competitionId) =>
+                    context.push('/competition/$competitionId'),
+              ),
+            ),
             if (manual.isNotEmpty) SliverToBoxAdapter(child: ManualBroadcasterCards(entries: manual)),
             ...whereToWatch.build(),
             if (MatchInfoSection.hasContent(match))

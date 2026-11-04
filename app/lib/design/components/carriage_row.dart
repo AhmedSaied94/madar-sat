@@ -197,7 +197,7 @@ class _CarriageRowState extends State<CarriageRow> {
                   if (widget.onOpenChannel != null)
                     _Action(
                       icon: Icons.open_in_new,
-                      label: l.details,
+                      label: l.openChannel,
                       onTap: widget.onOpenChannel,
                     ),
                 ],
