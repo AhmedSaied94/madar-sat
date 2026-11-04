@@ -7,8 +7,10 @@ names that could not be resolved, which is where an editor looks after a ``parti
 
 from __future__ import annotations
 
+import codecs
 import gzip
 import json
+import re
 import shutil
 from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime, timedelta
@@ -22,6 +24,9 @@ RUN_INFO = "run.json"
 # A fetched page's extension, per source: ysscores answers HTML, the bridge JSON (data-model).
 SUFFIX = {"ysscores": "html", "legacy": "json"}
 DEFAULT_SUFFIX = "html"
+CONTENT_TYPES = {"html": "text/html", "json": "application/json"}
+GONE: dict[str, Any] = {"gone": True}
+_PAGE_FILE = re.compile(r"^(\d+)\.([a-z]+)\.gz$")
 
 
 class RawStore:
@@ -71,6 +76,47 @@ class RawStore:
                 except OSError:
                     pass  # something else in there; keep the day folder
         return removed
+
+
+def read_page(root: str | Path, raw_path: str | None, page: int, *, max_bytes: int) -> dict[str, Any]:
+    """One saved page of a run as ``rawview:`` holds it, or ``{"gone": True}`` if it can't be read (D5 R13)."""
+    base = Path(root).resolve()
+    if not raw_path:
+        return GONE
+    run_dir = (base / raw_path).resolve()
+    if not run_dir.is_relative_to(base) or not run_dir.is_dir():
+        return GONE
+    numbered = sorted((int(found.group(1)), found.group(2), path.name) for path, found in _saved_pages(run_dir))
+    if not 0 <= page < len(numbered):
+        return GONE
+    _, suffix, filename = numbered[page]
+    try:
+        with gzip.open(run_dir / filename) as handle:
+            body = handle.read(max_bytes + 1)  # never inflate more than the view can hold
+    except (OSError, EOFError):
+        return GONE
+    # Incremental, so a cap inside a character drops that character instead of garbling it.
+    text = codecs.getincrementaldecoder("utf-8")("replace").decode(body[:max_bytes], final=len(body) <= max_bytes)
+    return {
+        "pages": len(numbered),
+        "url": _page_url(run_dir, page),
+        "content_type": CONTENT_TYPES.get(suffix, "text/plain"),
+        "text": text,
+        "truncated": len(body) > max_bytes,
+    }
+
+
+def _saved_pages(run_dir: Path) -> list[tuple[Path, re.Match[str]]]:
+    return [(path, found) for path in run_dir.iterdir() if (found := _PAGE_FILE.match(path.name))]
+
+
+def _page_url(run_dir: Path, page: int) -> str | None:
+    """``run.json`` names the pages; a run from before D5, or one whose file is gone, doesn't."""
+    try:
+        urls = json.loads((run_dir / RUN_INFO).read_text(encoding="utf-8")).get("page_urls") or []
+    except (OSError, ValueError, AttributeError):
+        return None
+    return urls[page] if page < len(urls) else None
 
 
 def _safe(name: str) -> str:

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import text
 
-from app.adapters.health import record_run, source_is_paused
+from app.adapters.health import record_live_cycle, record_run, source_is_paused
 from tests.adapters.helpers import dataset_versions
 
 NOW = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
@@ -195,3 +195,57 @@ def test_every_run_bumps_the_sources_dataset(sync_session) -> None:
         now=NOW,
     )
     assert dataset_versions(sync_session)["sources"] == before + 1
+
+
+# --- record_live_cycle (D5 T045): the poller's health, with no breaker --------------------------
+
+
+def _live_row(sync_session) -> tuple:
+    # 0007 seeds the row; the insert keeps these tests independent of it.
+    sync_session.execute(
+        text("INSERT INTO sources (name, kind) VALUES ('live_poller', 'internal') ON CONFLICT (name) DO NOTHING")
+    )
+    return _live_values(sync_session)
+
+
+def _live_values(sync_session) -> tuple:
+    return sync_session.execute(
+        text("SELECT consecutive_failures, breaker_opened_at, last_success_at FROM sources WHERE name = 'live_poller'")
+    ).one()
+
+
+def test_a_failed_live_cycle_counts_and_never_opens_the_breaker(sync_session) -> None:
+    _live_row(sync_session)
+    for _ in range(10):  # far past SOURCE_BREAKER_THRESHOLD
+        record_live_cycle(sync_session, status="failed", items_found=0, finished_at=NOW)
+
+    failures, breaker_opened_at, last_success_at = _live_values(sync_session)
+    assert failures == 10
+    assert breaker_opened_at is None
+    assert last_success_at is None
+
+
+def test_a_good_live_cycle_resets_the_count_and_moves_last_success(sync_session) -> None:
+    _live_row(sync_session)
+    record_live_cycle(sync_session, status="failed", items_found=0, finished_at=NOW)
+    record_live_cycle(sync_session, status="succeeded", items_found=4, finished_at=NOW)
+
+    assert _live_values(sync_session) == (0, None, NOW)
+
+
+def test_a_cycle_with_no_items_and_no_failure_changes_nothing(sync_session) -> None:
+    """The poller reports an empty page as ``failed`` itself; an idle cycle says nothing about health."""
+    _live_row(sync_session)
+    record_live_cycle(sync_session, status="failed", items_found=0, finished_at=NOW)
+    record_live_cycle(sync_session, status="succeeded", items_found=0, finished_at=NOW)
+
+    assert _live_values(sync_session) == (1, None, None)
+
+
+def test_a_live_cycle_leaves_the_datasets_alone(sync_session) -> None:
+    """One cycle a minute must not move A13's ``ETag``; the poller bumps when something changed."""
+    _live_row(sync_session)
+    before = dataset_versions(sync_session)
+    record_live_cycle(sync_session, status="succeeded", items_found=4, finished_at=NOW)
+
+    assert dataset_versions(sync_session) == before

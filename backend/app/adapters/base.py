@@ -100,6 +100,8 @@ class ParsedFixture(BaseModel):
     legacy_id: str | None = None
     # The source marks the fixture postponed: no kickoff is known any more (R16, B2-R1-10).
     postponed: bool = False
+    # YallaKora's channel text, which is what an Egyptian viewer watches it on (D5 FR-020).
+    local_broadcaster_eg: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +127,7 @@ class NormalizedFixture:
     ys_match_id: str | None = None
     legacy_id: str | None = None
     postponed: bool = False
+    local_broadcaster_eg: str | None = None
 
 
 @runtime_checkable
@@ -202,4 +205,5 @@ def normalize_fixture(item: ParsedFixture) -> NormalizedFixture:
         links=item.links,
         ys_match_id=item.ys_match_id,
         legacy_id=item.legacy_id,
+        local_broadcaster_eg=clean_text(item.local_broadcaster_eg),
     )

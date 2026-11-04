@@ -30,7 +30,7 @@ Deploys are automatic. A push to `master` that changes `backend/**` (or `backend
 
 VPS-2's deploy is shorter because nothing there owns state: no Caddy, no migrations, no Redis. It
 records the running tag, pulls, runs `compose --profile workers up -d` for `worker-imports`,
-`worker-scrape`, `worker-maintenance` and `beat`, waits up to 90 s for all four healthchecks, and — like
+`worker-scrape`, `worker-maintenance`, `worker-notify`, `worker-live`, `uptime-kuma` and `beat`, waits up to 90 s for all their healthchecks, and — like
 VPS-1 — rolls back to the previous tag when the start or the check fails ([workers.md](workers.md)).
 
 Deploys never overlap. Every job that joins the CI WireGuard peer through `.github/actions/vps1-sync` — `backend.yml`'s `deploy`, `infra.yml`'s `sync`, `admin.yml`'s `deploy` and `pwa.yml`'s `release` — shares the concurrency group `deploy-vps1` (`infra.yml` checks this). `deploy-vps2` has its own group and starts only after `deploy` has left `deploy-vps1`. Only `backend.yml` and `infra.yml`, which run on `master`, rsync `infra/` to `/srv/madar/infra/`; the admin deploy and the PWA release pass `sync-infra: "false"`, and a `web-v*` tag that isn't on `master` is refused. `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one running and one waiting job per group: a third job that queues **cancels the waiting one**, even with `cancel-in-progress: false` (review B2-R2-1). Between two backend deploys or two syncs the newest commit wins and nothing is lost, but the four jobs ship different things, so a cancelled admin deploy or PWA release means that change is not live. After a merge or a `web-v*` tag, check each of them in the Actions tab, and re-run any job that shows "cancelled".

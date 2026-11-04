@@ -29,11 +29,16 @@ YSSCORES_BUCKET = Bucket(capacity=2, refill_seconds=4.0)
 FIREBASE_BUCKET = Bucket(capacity=5, refill_seconds=1.0)
 # R14: one request every four seconds to LiveSoccerTV, never a burst.
 LIVESOCCERTV_BUCKET = Bucket(capacity=1, refill_seconds=4.0)
+# D5 R3: the live poller and the `yallakora` importer spend one bucket per host, through one key.
+FILGOAL_BUCKET = Bucket(capacity=2, refill_seconds=4.0)
+YALLAKORA_BUCKET = Bucket(capacity=2, refill_seconds=4.0)
 
 DEFAULT_LIMITS: Mapping[str, Bucket] = {
     "www.ysscores.com": YSSCORES_BUCKET,
     "firestore.googleapis.com": FIREBASE_BUCKET,
     "www.livesoccertv.com": LIVESOCCERTV_BUCKET,
+    "www.filgoal.com": FILGOAL_BUCKET,
+    "www.yallakora.com": YALLAKORA_BUCKET,
 }
 
 TTL_SECONDS = 3600

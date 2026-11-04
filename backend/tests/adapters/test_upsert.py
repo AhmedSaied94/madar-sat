@@ -512,3 +512,184 @@ def test_the_run_takes_the_row_lock_before_it_reads(sync_session: Session, loade
         other.close()
 
     assert outcome.skipped == [{"ref": external_id, "reason": "error"}]
+
+
+# --- D5: the unresolved queue and the Egyptian broadcaster (T051) -------------------------------
+
+
+def _queued(sync_session: Session) -> list[Any]:
+    return list(
+        sync_session.execute(
+            text("SELECT source, kind, name, competition_norm, context, seen_count FROM unresolved_names ORDER BY id")
+        ).mappings()
+    )
+
+
+def _yk(**overrides: Any) -> NormalizedFixture:
+    fields: dict[str, Any] = {
+        "home": "فريق لا يوجد",
+        "away": "مان سيتي",
+        "competition": "الدوري المصري الممتاز",
+        "external_id": "114019",
+        "url": "https://www.yallakora.com/egypt-cup/3066/match/114019/x",
+    }
+    fields.update(overrides)
+    return fixture(**fields)
+
+
+def _broadcaster(sync_session: Session, match_id: int) -> str | None:
+    return sync_session.execute(
+        text("SELECT local_broadcaster_eg FROM matches WHERE id = :id"), {"id": match_id}
+    ).scalar_one()
+
+
+def _yk_match(sync_session: Session, external_id: str = "114019") -> Match:
+    return sync_session.execute(
+        select(Match)
+        .join(MatchExternalId, MatchExternalId.match_id == Match.id)
+        .where(MatchExternalId.source == "yallakora", MatchExternalId.external_id == external_id)
+    ).scalar_one()
+
+
+def test_an_unknown_team_is_queued_and_the_match_keeps_the_text_name(sync_session: Session, loaded_snapshot) -> None:
+    teams = sync_session.execute(select(func.count()).select_from(Team)).scalar_one()
+    before = versions(sync_session)
+
+    outcome = pipeline(sync_session, "yallakora").run([_yk()])
+
+    assert outcome.created == 1
+    assert sync_session.execute(select(func.count()).select_from(Team)).scalar_one() == teams
+    match = _yk_match(sync_session)
+    assert (match.home_team_id, match.home_team_name) == (None, "فريق لا يوجد")
+    [row] = _queued(sync_session)
+    assert (row["source"], row["kind"], row["name"], row["seen_count"]) == ("yallakora", "team", "فريق لا يوجد", 1)
+    assert row["context"]["match_id"] == match.id
+    assert row["context"]["away"] == "مان سيتي"
+    assert row["context"]["competition"] == "الدوري المصري الممتاز"
+    assert row["context"]["kickoff_at"] == KICKOFF.isoformat()
+    assert versions(sync_session)["unresolved_names"] == before["unresolved_names"] + 1
+
+
+def test_an_unknown_competition_is_queued_and_none_is_created(sync_session: Session, loaded_snapshot) -> None:
+    competitions = sync_session.execute(select(func.count()).select_from(Competition)).scalar_one()
+
+    pipeline(sync_session, "yallakora").run([_yk(home="الزمالك", competition="كأس لا توجد")])
+
+    assert sync_session.execute(select(func.count()).select_from(Competition)).scalar_one() == competitions
+    assert [(row["kind"], row["name"]) for row in _queued(sync_session)] == [("competition", "كأس لا توجد")]
+    assert _yk_match(sync_session).competition_name == "كأس لا توجد"
+
+
+def test_a_second_run_raises_the_count_and_adds_no_row(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session, "yallakora").run([_yk()])
+    pipeline(sync_session, "yallakora").run([_yk()])
+
+    assert [row["seen_count"] for row in _queued(sync_session)] == [2]
+
+
+def test_every_importer_queues_what_it_cannot_match(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session, "ysscores").run([fixture(home="فريق لا يوجد")])
+
+    assert [(row["source"], row["name"]) for row in _queued(sync_session)] == [("ysscores", "فريق لا يوجد")]
+
+
+def test_nothing_unmatched_queues_nothing_and_moves_no_version(sync_session: Session, loaded_snapshot) -> None:
+    before = versions(sync_session)["unresolved_names"]
+
+    pipeline(sync_session).run([fixture()])
+
+    assert _queued(sync_session) == []
+    assert versions(sync_session)["unresolved_names"] == before
+
+
+def test_an_alias_written_after_a_run_is_used_by_the_next_one(sync_session: Session, loaded_snapshot) -> None:
+    """SC-007: an editor's mapping takes effect on the next import, for that source."""
+    pipeline(sync_session, "yallakora").run([_yk(home="الزمالك الجديد")])
+    assert _yk_match(sync_session).home_team_id is None
+    sync_session.execute(
+        text("INSERT INTO team_aliases (source, alias_norm, team_id) VALUES ('yallakora', ar_normalize(:a), :t)"),
+        {"a": "الزمالك الجديد", "t": team_id(sync_session, "team-zamalek")},
+    )
+
+    pipeline(sync_session, "yallakora").run([_yk(home="الزمالك الجديد")])
+
+    sync_session.expire_all()
+    assert _yk_match(sync_session).home_team_id == team_id(sync_session, "team-zamalek")
+
+
+def test_the_broadcaster_is_written_on_create_and_on_change(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session, "yallakora").run([_yk(local_broadcaster_eg="ON Sport")])
+    match_id = _yk_match(sync_session).id
+    assert _broadcaster(sync_session, match_id) == "ON Sport"
+
+    second = pipeline(sync_session, "yallakora").run([_yk(local_broadcaster_eg="ON Sport")])
+    assert second.updated == 0
+
+    third = pipeline(sync_session, "yallakora").run([_yk(local_broadcaster_eg="ON Sport MAX")])
+    assert third.updated == 1
+    assert _broadcaster(sync_session, match_id) == "ON Sport MAX"
+    audit = (
+        sync_session.execute(
+            select(AuditLog)
+            .where(AuditLog.entity == "matches", AuditLog.entity_id == match_id)
+            .order_by(AuditLog.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    assert audit.diff["local_broadcaster_eg"] == ["ON Sport", "ON Sport MAX"]
+
+
+def test_a_card_with_no_channel_does_not_clear_the_broadcaster(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session, "yallakora").run([_yk(local_broadcaster_eg="ON Sport")])
+
+    outcome = pipeline(sync_session, "yallakora").run([_yk()])
+
+    assert outcome.updated == 0
+    assert _broadcaster(sync_session, _yk_match(sync_session).id) == "ON Sport"
+
+
+def test_a_locked_broadcaster_is_skipped(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session, "yallakora").run([_yk(local_broadcaster_eg="ON Sport")])
+    match = _yk_match(sync_session)
+    sync_session.execute(update_match(match.id).values(locked_fields=["local_broadcaster_eg"]))
+
+    outcome = pipeline(sync_session, "yallakora").run([_yk(local_broadcaster_eg="MBC مصر")])
+
+    assert outcome.updated == 0
+    assert _broadcaster(sync_session, match.id) == "ON Sport"
+
+
+def test_yallakora_never_overwrites_a_fixture_another_source_owns(sync_session: Session, loaded_snapshot) -> None:
+    """Otherwise each run would rewrite the other's spelling and stage, and stale every open editor."""
+    pipeline(sync_session, "ysscores").run([fixture()])
+    owned = _stored(sync_session, "ys-1001")
+    stage, kickoff = owned.competition_stage, owned.kickoff_at
+
+    outcome = pipeline(sync_session, "yallakora").run(
+        [
+            fixture(
+                external_id="114019",
+                stage="مرحلة أخرى",
+                kickoff_at=KICKOFF + timedelta(minutes=30),
+                local_broadcaster_eg="ON Sport",
+            )
+        ]
+    )
+
+    assert (outcome.created, outcome.updated) == (0, 1)
+    sync_session.expire_all()
+    kept = _yk_match(sync_session)
+    assert kept.id == owned.id  # the probe joined them, and the row gained YallaKora's id
+    assert (kept.competition_stage, kept.kickoff_at) == (stage, kickoff)
+    assert _broadcaster(sync_session, kept.id) == "ON Sport"
+
+
+def test_yallakora_updates_a_fixture_it_created(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session, "yallakora").run([_yk()])
+
+    outcome = pipeline(sync_session, "yallakora").run([_yk(stage="دور الـ 32")])
+
+    assert outcome.updated == 1
+    sync_session.expire_all()
+    assert _yk_match(sync_session).competition_stage == "دور الـ 32"

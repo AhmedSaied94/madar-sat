@@ -7,6 +7,7 @@ import pytest
 
 from app.adapters import tasks
 from app.adapters.config import get_adapter_settings
+from app.adapters.schedule import BEAT_SCHEDULE
 from app.adapters.tasks import heartbeat, scrape_home_backlog
 
 
@@ -105,6 +106,22 @@ def test_a_rejected_push_is_not_sent(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_an_unknown_queue_has_no_url() -> None:
     assert get_adapter_settings().kuma_push_url("scrape") is None
+
+
+def test_live_is_a_heartbeat_queue_with_its_own_beat_entry_and_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A dead ``worker-live`` must go quiet in Kuma like every other queue (D5 T042)."""
+    monkeypatch.setenv("KUMA_PUSH_URL_LIVE", "http://uptime-kuma:3001/api/push/live-token")
+    get_adapter_settings.cache_clear()
+
+    assert "live" in tasks.HEARTBEAT_QUEUES
+    assert get_adapter_settings().kuma_push_url("live") == "http://uptime-kuma:3001/api/push/live-token"
+    assert tasks.IngestionRouter().route_for_task("ops.heartbeat", args=("live",)) == {"queue": "live"}
+
+    entry = BEAT_SCHEDULE["heartbeat-live"]
+    assert entry["task"] == "ops.heartbeat"
+    assert entry["args"] == ("live",)
+    assert entry["options"] == {"queue": "live"}
+    assert str(entry["schedule"]) == str(BEAT_SCHEDULE["heartbeat-imports"]["schedule"])
 
 
 class FakeRedis:

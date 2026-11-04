@@ -153,7 +153,7 @@ Rotate in this order, or every client answers `WRONGPASS`:
    IMAGE_TAG=$(cat /srv/madar/current_tag) \
      docker compose --env-file /srv/madar/.env --profile workers \
        -f /srv/madar/infra/compose/vps2.yml up -d --force-recreate \
-       worker-imports worker-scrape worker-maintenance beat
+       worker-imports worker-scrape worker-maintenance worker-notify worker-live uptime-kuma beat
    ```
 4. On the home box, update `REDIS_URL` in its `/srv/madar/.env`, then recreate its worker:
 

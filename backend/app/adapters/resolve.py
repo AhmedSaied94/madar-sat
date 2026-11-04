@@ -2,13 +2,16 @@
 
 In order:
 
-* competition — a known external id, then an exact ``(sport, name_norm)`` match;
-* team — a known external id, exactly one team with the same normalized name and sport, or,
-  among several, the highest competition similarity (≥ 0.5, no tie), using a Python port of
-  ``competitionSimilarity`` from ``../old_app/src/utils/arabicMatch.js``.
+* competition — a known external id, an alias, then an exact ``(sport, name_norm)`` match;
+* team — a known external id, an alias (for this competition, then for any: D5 R8), exactly one
+  team with the same normalized name and sport, or, among several, the highest competition
+  similarity (≥ 0.5, no tie), using a Python port of ``competitionSimilarity`` from
+  ``../old_app/src/utils/arabicMatch.js``;
+* channel — an alias, then exactly one published channel with that name.
 
-Anything else keeps its text name, gets no id, and is listed in ``run.json``. Teams are never
-created here.
+Anything else keeps its text name and gets no id; the caller queues it with
+``unresolved.record_unresolved``. Nothing is ever created here. The alias tables are revision
+``0007``'s (Lane B1), named in SQL as ``health.py`` does. A deleted channel's alias is not used.
 """
 
 from __future__ import annotations
@@ -17,10 +20,11 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Channel,
     Competition,
     CompetitionExternalId,
     Team,
@@ -31,7 +35,17 @@ from app.domain.arabic import ar_normalize
 
 MIN_SIMILARITY = 0.5
 
-Reason = Literal["external_id", "name", "competition_similarity", "tie", "unresolved"]
+Reason = Literal["external_id", "alias", "name", "competition_similarity", "tie", "unresolved"]
+
+TEAM_ALIAS_SQL = """
+SELECT team_id FROM team_aliases
+ WHERE source = :source AND alias_norm = :alias AND competition_norm = :competition
+"""
+COMPETITION_ALIAS_SQL = "SELECT competition_id FROM competition_aliases WHERE source = :source AND alias_norm = :alias"
+CHANNEL_ALIAS_SQL = """
+SELECT a.channel_id FROM channel_aliases a JOIN channels c ON c.id = a.channel_id
+ WHERE a.source = :source AND a.alias_norm = :alias AND c.deleted_at IS NULL
+"""
 
 # The JS list, verbatim (`STOP_WORDS` in arabicMatch.js), with the English entries kept.
 STOP_WORDS = frozenset(
@@ -137,6 +151,9 @@ def resolve_competition(
             return ResolveResult(hit, name, "external_id")
     normalized = ar_normalize(name)
     if normalized:
+        alias = _alias_target(session, COMPETITION_ALIAS_SQL, source=source, alias=normalized)
+        if alias is not None:
+            return ResolveResult(alias, name, "alias")
         rows = (
             session.execute(
                 select(Competition.id).where(Competition.sport == sport, Competition.name_norm == normalized)
@@ -171,6 +188,9 @@ def resolve_team(
     normalized = ar_normalize(name)
     if not normalized:
         return ResolveResult(None, name, "unresolved")
+    alias = _team_alias(session, source=source, alias=normalized, competition_name=competition_name)
+    if alias is not None:
+        return ResolveResult(alias, name, "alias")
     candidates = (
         session.execute(select(Team.id).where(Team.sport == sport, Team.name_norm == normalized)).scalars().all()
     )
@@ -187,6 +207,46 @@ def resolve_team(
     if len(winners) > 1:
         return ResolveResult(None, name, "tie")
     return ResolveResult(winners[0], name, "competition_similarity")
+
+
+def resolve_channel(session: Session, *, name: str | None, source: str) -> ResolveResult:
+    """An alias, then exactly one published channel with that name; never a placeholder (R11)."""
+    normalized = ar_normalize(name)
+    if not normalized:
+        return ResolveResult(None, name, "unresolved")
+    alias = _alias_target(session, CHANNEL_ALIAS_SQL, source=source, alias=normalized)
+    if alias is not None:
+        return ResolveResult(alias, name, "alias")
+    rows = (
+        session.execute(
+            select(Channel.id).where(
+                Channel.name_norm == normalized,
+                Channel.deleted_at.is_(None),
+                Channel.placeholder_source.is_(None),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(rows) == 1:
+        return ResolveResult(rows[0], name, "name")
+    return ResolveResult(None, name, "unresolved")
+
+
+def _alias_target(session: Session, sql: str, **params: str) -> int | None:
+    found = session.execute(text(sql), params).scalar_one_or_none()
+    return None if found is None else int(found)
+
+
+def _team_alias(session: Session, *, source: str, alias: str, competition_name: str | None) -> int | None:
+    """The alias for this competition, then the one for any competition (R8)."""
+    competition = ar_normalize(competition_name)
+    scopes = (competition, "") if competition else ("",)
+    for scope in scopes:
+        found = _alias_target(session, TEAM_ALIAS_SQL, source=source, alias=alias, competition=scope)
+        if found is not None:
+            return found
+    return None
 
 
 def _competition_score(session: Session, team_id: int, competition_name: str | None) -> float:
