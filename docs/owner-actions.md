@@ -574,7 +574,7 @@ From delivery-plan §9 and system-design §3.
 | A3 / O6 | Blaze with a budget alert, or Spark with the mirror design | D0 | Blaze | **Decided 2026-11-03: Spark** (spec 004) |
 | O5 | Apple enrollment as an individual or an organization | D0, to start it | Individual | Unconfirmed |
 | O10 | Default satellites when the user skips | D1 | Nilesat + Badr | Default in use; confirm |
-| O7 | Live data source for minute, events and lineups | **D4**, before spec 005 is planned | Manual live entry on D5 | Open |
+| O7 | Live data source for minute, events and lineups | **D4**, before spec 005 is planned | Rejected: manual live entry. If the capture fails: API-Football Pro or the clock estimate alone | **Decided 2026-11-04, pending the live capture: FilGoal main, YallaKora cross-check.** The owner accepts the risk of terms not yet read (system-design §3.3, §6.7) |
 | O8 | Keep Feeds | D7 | Drop from the app, keep the table | Open |
 | O9 | Interstitial placement (P5) | D8 | On return from match detail | Open |
 | O4 | Buy a domain (about $10/year) | D13 | Stay on sslip.io | Open |
@@ -606,8 +606,10 @@ Each day gets its full section when it's implemented. These lines come from the 
   - read the load-test report and the security-review results (no CRITICAL may stay open);
   - run the bug-bash on Android, the iPhone PWA and desktop;
   - approve making the PWA public (Gaps 13);
-  - **decide O7**.
-- **D5:** start the AdMob app and consent setup.
+  - **decide O7** (decided 2026-11-04; see the table above).
+- **D5:**
+  - start the AdMob app and consent setup;
+  - set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` on VPS-2 if they aren't there yet, since the live poller's alerts use them.
 - **D6:**
   - an API-Football account and key on the host (Gaps 9);
   - review the audience queries for every push type;

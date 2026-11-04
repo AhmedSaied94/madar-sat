@@ -184,7 +184,7 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 
 | Day · spec | B1 | B2 | A → M2 | M |
 |---|---|---|---|---|
-| **D5 · 005** | Live poller, `match_events`, `match_lineups` (needs O7) | YallaKora adapter; unresolved-names backend (alias tables, queue) | A13 unresolved queue + run detail; A9 rights editor | S6 channel, S7 team, S8 competition |
+| **D5 · 005** | Live poller (FilGoal + YallaKora, O7), `match_events`, `match_lineups` | YallaKora adapter; unresolved-names backend (alias tables, queue) | A13 unresolved queue + run detail; A9 rights editor | S6 channel, S7 team, S8 competition |
 | **D6 · 006** | All push types, per-type preferences, frequency-change detection + history | sporteventz; API-Football with a daily request budget | A15 outbox + composer, A16 users, A17 audit + diff | S3 live center (timeline, lineups, score animation) |
 | **D7 · 007** | `/v1/channels/sync` delta sync, `/v1/search`, cache review | Retire the Firestore bridge once 3 days of diffs are clean; alert routing | Team and channel merge tools, A11 lists, A12 feeds | S14 search, S11 rights, S13 sport switcher |
 | **D8 · 008** | Announcements; maintenance and soft-update config end to end | Restore drill, runbook v1 | Admin bug queue | S10 follow sheet, S15 competition order/hide, S12 feeds (if O8 keeps them), maintenance + soft-update UI |
@@ -300,7 +300,7 @@ Madar Sat constitution
 | A1–A4 | Play account type · VPSs · Blaze · test bar | D0 | As assumed in §1 |
 | O5 | Apple enrollment type | D0 (to start it) | Individual |
 | O10 | Default satellites when the user skips | D1 | Nilesat + Badr |
-| O7 | Live data source (minute, events, lineups) | **D4** (before spec 005 is planned) | D5's live work shrinks to manual live entry; the clock estimate stays |
+| O7 | Live data source (minute, events, lineups) | **Decided 2026-11-04, pending the live capture** (SD §3.3, §6.7): FilGoal main, YallaKora cross-check | If the capture fails: API-Football Pro, about $19/month, or the clock estimate alone. Manual live entry is rejected |
 | O8 | Keep Feeds | D7 | Drop from the app; keep the table |
 | O9 | Interstitial placement | D8 | On return from match detail |
 | O4 | Buy a domain | D13 | Stay on sslip.io |
@@ -319,7 +319,7 @@ Madar Sat constitution
 | Carry-over snowballs | Medium | The quarter-day rule in §5.3; hardening days absorb overflow |
 | Agents drift from the design | Medium | Constitution rule 7; components built once on D1 with golden tests; PNG comparison in the definition of done |
 | Contract churn breaks the admin and app lanes | Medium | Contract frozen D1 13:00; changes through B1 only; generated clients checked in CI |
-| No affordable live data source (O7) | Medium | Live center behind a flag; the clock estimate stays honest ("تقديري") |
+| The scraped live sources break, disagree or object (O7) | Medium | Two sources cross-checked; validation stops a changed format; automatic fallback to the clock estimate ("تقديري"); Telegram alerts; live center behind a flag |
 | Play 14-day test or review delays | Certain under A1 | The PWA is the public channel until Android clears |
 | iPhone push fails in the PWA | Medium | Test on a real iPhone (iOS ≥ 16.4) on D3, not D4 |
 | Apple enrollment is slow | Medium for organizations | Start on D0; A7 fallback swaps the iOS days for V3 work |
@@ -358,7 +358,7 @@ A lane row that says **none** still gets a `## Lane X` section with the single t
 | **002** | `002-d02-core-flows` | An admin logs in over WireGuard and edits a match, and the change appears in the app; ysscores (or the bridge) imports tomorrow's fixtures; S2–S5 work on a real Android phone; closed-test build uploaded |
 | **003** | `003-d03-follow-push-sources` | A kickoff reminder arrives on Android and on an installed iPhone PWA; LiveSoccerTV adds channels to upcoming matches; all MVP admin entities editable; one nightly backup completed; onboarding → follow → favorites works |
 | **004** | `004-d04-mvp-launch` | **MVP gate:** importers cover today to +3; admin edit visible in ≤ 60 s; reminders on both platforms; bug-bash script without crashes; no CRITICAL security findings; PWA first load < 5 s on 4G and < 1.5 s afterwards; PWA public |
-| **005** | `005-d05-live-and-discovery` | A real live match updates status and score (or manual live entry, if O7 is still open); YallaKora imports; unresolved names visible in the admin; S6, S7, S8 on a device |
+| **005** | `005-d05-live-and-discovery` | A real live match updates status and score from FilGoal, cross-checked with YallaKora (O7); YallaKora imports; unresolved names visible in the admin; S6, S7, S8 on a device |
 | **006** | `006-d06-notifications-and-live-center` | A goal push arrives with the correct score; the live center shows events; a frequency change pushes to followers; the admin composer sends a test push; audit diff visible |
 | **007** | `007-d07-sync-search-sources` | A second channel sync downloads < 5 KB; search matches Arabic letter variants; sporteventz and API-Football import; the bridge is retired (or the reason it can't be is logged); S11, S13, S14 on a device |
 | **008** | `008-d08-preferences-and-ops` | Restore drill passed; maintenance and soft-update switch from Remote Config on a device; per-type preferences respected by the dispatcher; merge tools work |
@@ -461,19 +461,19 @@ Rules for every brief:
 | M | As a fan, I can install the public PWA and the Android test build without hitting a crash | PB §17 launch gate; SD §5.2 | Bug-bash script run on Android + iPhone PWA + desktop; release builds; PWA deployed to the live Firebase channel; first load < 5 s on 4G, < 1.5 s afterwards; install guide reachable from More |
 
 **Flags:** none.
-**Done check:** 004 in Appendix A. **Decide O7 today** (§9).
+**Done check:** 004 in Appendix A. **Decide O7 today** (§9). Decided 2026-11-04.
 
 ### Phase 2: V1
 
 #### D5 · 005-d05-live-and-discovery
 
 **Goal:** real live scores replace the clock estimate, and a fan can open a channel, a team and a competition.
-**Starts from:** MVP public; O7 decided (if not, B1 does manual live entry instead of the poller).
-**Contract:** `0003`: `match_events`, `match_lineups`, alias tables (`team_aliases`, `competition_aliases`, `channel_aliases`), `unresolved_names`. `MatchDetail.events/lineups`; `GET /v1/channels/{id}`, `/v1/teams/{id}`, `/v1/competitions/{id}` complete. Admin: unresolved-names queue endpoints, rights-holder CRUD.
+**Starts from:** MVP public; O7 decided (SD §3.3); samples captured from real live matches, which the parsers are written and tested against.
+**Contract:** `0003`: `match_events`, `match_lineups`, match stats where YallaKora fills them in (spec 005 designs the storage), alias tables (`team_aliases`, `competition_aliases`, `channel_aliases`), `unresolved_names`. `MatchDetail.events/lineups`; `GET /v1/channels/{id}`, `/v1/teams/{id}`, `/v1/competitions/{id}` complete. Admin: unresolved-names queue endpoints, rights-holder CRUD.
 
 | Lane | Story | Read | Acceptance |
 |---|---|---|---|
-| B1 | As a fan, the score and minute I see come from a real feed, never from a guess | SD §6.2.3, §6.7 | `live_scheduler` every 60 s, no polling on quiet days; `poll_live` updates status, minute, score and diffs events, each write bumping the `live` version; manual status still wins; `/v1/live` rebuilt at most every 15 s |
+| B1 | As a fan, the score and minute I see come from a real feed, never from a guess | SD §6.2.3, §6.7 | `live_scheduler` every 60 s, no polling on quiet days; `poll_live` reads FilGoal and cross-checks YallaKora (SD §6.7), updates status, minute, score and diffs events, each write bumping the `live` version; a goal needs both sources, or two polls when one is down; a format change stops that source; both down falls back to the clock estimate; one Telegram alert per problem; manual status still wins; `/v1/live` rebuilt at most every 15 s |
 | B2 | As an editor, names the importers can't match wait in a queue instead of creating duplicates | SD §6.6 entity resolution, YallaKora row | `yallakora` adapter daily + every 6 h for today, with the Egyptian broadcaster; unmatched names written to `unresolved_names` with match context; existing aliases used first |
 | A | As an editor, I clear unmatched names and maintain broadcast rights | PB §10 A9, A13; admin: A13 Sources + unresolved names, A13 Run detail, A9 Rights holders | Unresolved queue: map to existing, create new, ignore; run detail with log, counts, errors and raw page; A9 editor with competitions, carriages and a primary frequency |
 | M | As a fan, I open a channel, a team or a competition and see what's on | PB S6, S7, S8; app: S6 Channel sheet, S7 Team, S8 Competition | S6 as a sheet (pane later on desktop) with other carriages, upcoming matches, frequency history; S7 upcoming / results tabs and follow; S8 matches by date and rights section; all reachable from S2 / S3 taps |

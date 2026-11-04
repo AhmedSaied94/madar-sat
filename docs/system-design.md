@@ -129,7 +129,7 @@ Web: satair-6983b.web.app shows a "get it on Google Play" page; ?app=1 opens a p
 | O4 | A domain (about $10/year) for the API and media hosts | Not urgent: hosts come from Remote Config, and the PWA lives on `web.app`. It removes the dependence on sslip.io (R6) |
 | O5 | Apple enrollment as an individual (fast; personal name shown as seller) or an organization (needs a D-U-N-S number, takes weeks) | iOS native timeline |
 | O6 | **Decided 2026-11-03: stay on Spark with the mirror design** (spec 004 Clarifications). Blaze was the alternative (costs cents, no cap) | §5.2: the mirror and service worker ship on D4 |
-| O7 | Which source supplies live minute, events and lineups within free limits | Live match center (§6.7) |
+| O7 | **Decided 2026-11-04, pending a live capture: scrape FilGoal as the main source, with YallaKora as the cross-check**, at $0 (§6.7). Manual live entry was rejected, because there are no operators. A paid feed (API-Football Pro, about $19/month) stays the alternative if the capture fails. The owner accepts the risk of terms not yet read (R1). No live match has been captured from either site yet, so spec 005 starts with that capture | Live match center (§6.7) |
 
 ---
 
@@ -450,8 +450,8 @@ Pipeline: fetch (`scrape` queue) → parse → normalize → resolve entities �
 | LiveSoccerTV | Channels per match, by country | Every 2 h for the next 48 h; again at T−60 min | Uses `livesoccertv_teams` |
 | sporteventz | Basketball, handball, volleyball and tennis events with broadcasters | Every 6 h | Writes `match_custom_broadcasts` |
 | YallaKora | Egyptian and Arab fixtures; the Egyptian broadcaster | Daily, plus every 6 h for today | |
-| API-Football (free, about 100 requests/day) | Fill-in fixtures and IDs; lineups for followed top matches | Budgeted by a daily counter | |
-| Live poller | Status, minute, score, events | §6.7 | Source per O7 |
+| API-Football (free, about 100 requests/day) | Fill-in fixtures and IDs | Budgeted by a daily counter | Lineups come from the live poller (O7) |
+| Live poller | Status, minute, score, events, lineups; stats where filled in | §6.7 | FilGoal main, YallaKora cross-check (O7) |
 
 **Safety:**
 - per-host token-bucket rate limits in Redis;
@@ -473,10 +473,33 @@ Importers never touch fields listed in `locked_fields`. They remove only the `ma
 
 ### 6.7 Live scores
 
-1. Every 60 s, beat runs `live_scheduler`. It selects matches with `kickoff_at` between now − 150 min and now + 10 min that aren't in a final state. If it finds any, it queues `poll_live(batch)`; otherwise it does nothing, so there's no polling on quiet days.
+1. Every 60 s, beat runs `live_scheduler`. It selects matches with `kickoff_at` between now − 150 min and now + 10 min that aren't in a final state, plus matches already on `feed` that haven't reached a final state, up to kickoff + 210 min (extra time and penalties). `/v1/live` serves the same set. If it finds any, it queues `poll_live(batch)`; otherwise it does nothing, so there's no polling on quiet days.
 2. `poll_live` fetches every 30–60 s, within the source's rate limit. It updates status, minute and score, diffs the events, and writes outbox rows for kickoff, goal and full time, each with a dedupe key.
 3. Every write bumps the `live` dataset version. `/v1/live` is rebuilt at most every 15 s and served to all clients from Redis.
 4. If an admin sets a manual status, it wins until cleared.
+
+**Sources (O7).** Both were checked from VPS-2 on finished matches only. A capture of real live matches must confirm the fields, status codes and update delay before the parsers are written.
+
+| Source | Reads | Used for |
+|---|---|---|
+| FilGoal (main) | The JSON model in the coverage page (`/matches/{id}/coverage/`): score, status, minute, typed events, lineups | Status, minute, score, events, lineups |
+| YallaKora (cross-check) | The list page and the match page (`/{competition}/{id}/match/{id}/`) | Confirming goals; stats where filled in |
+
+- **Requests:** poll a list page every 60 s for every linked match, and open a match's page only while it's live or when it has changed, for at most N matches per cycle per host, chosen by competition priority (a setting; the capture sets N). A FilGoal coverage page is about 450 KB. A match without a page takes status and score from the list pages under the same cross-check, and has no events or lineups.
+- **Off limits:** paths in each site's `robots.txt`, such as YallaKora's `*/Match/EuroMatchStats2` and `*MatchMinByMinPaging*`. Requests aren't disguised, and blocks aren't evaded with proxies. Store structured facts only, never FilGoal's written commentary.
+- **Cross-check:** a new score goes out only when both sources show it.
+
+| Situation | What happens |
+|---|---|
+| Both agree on a new score | Update it and write the goal outbox row |
+| Only one has updated | Change nothing yet and wait for the other. The capture sets the wait |
+| Still different after that wait | Hold the goal notification, keep the last confirmed score and alert the owner |
+| One source is down or fails validation | Use the other, and require the new score in two polls in a row |
+| Both are down or fail validation | Fall back to the clock estimate (`estimated: true`, §6.2.3) and alert the owner |
+
+- **Validation:** every response is checked for expected fields and known status values. A failure stops that source being used, so a changed format can't publish a wrong score.
+- **Alerts:** format changes, source failures, disagreements, both sources down and recovery go to Telegram through `app/adapters/alerts.py`, with a reference to the saved raw page. Send one alert per problem, then stay quiet until it recovers.
+- **No operator is needed during a match.** The owner fixes a parser when free, while users stay on the other source or the clock estimate.
 
 ### 6.8 Notifications
 
@@ -630,7 +653,7 @@ madar_sat/                    (git repository)
 | Cold start to cached content | < 1.5 s on a mid-range Android (4 GB RAM) |
 | Home network payload | ≤ 60 KB gzipped; a `304` revalidation ≤ 1 KB |
 | API latency | p95 < 150 ms from cache, < 400 ms uncached |
-| Freshness | Admin edit → client ≤ 60 s. Live score → client ≤ 45 s (source poll + 15 s cache) |
+| Freshness | Admin edit → client ≤ 60 s. Confirmed live score → client ≤ 45 s, from the moment the cross-check confirms it (15 s cache + the client's poll). The wait for confirmation isn't counted; spec 005's capture measures it |
 | PWA | First load ≈ 2–3 MB (CanvasKit from Google's CDN plus app files); later opens come from the SW cache |
 | Availability | Single-box best effort. Cached app keeps working offline |
 | Crash-free sessions | ≥ 99.5 % |
@@ -659,7 +682,7 @@ Each day is exactly one Spec Kit spec, and its scope is the day's brief in deliv
 
 | # | Risk | Impact | Mitigation |
 |---|---|---|---|
-| R1 | Sources block us or change layout. Their terms likely forbid commercial reuse | Fixtures or channels stop | Adapters + circuit breaker + zero-items alarm. Home-box worker. Curated channel and frequency data is our own asset. Budget for a licensed fixtures API once revenue allows |
+| R1 | Sources block us or change layout. Their terms likely forbid commercial reuse. FilGoal's and YallaKora's terms are still unread, and the owner accepts that for live data (O7) | Fixtures or channels stop; live scores fall back to the clock estimate | Adapters + circuit breaker + zero-items alarm. Home-box worker. Live data is cross-checked and validated, and alerts go to Telegram (§6.7). Curated channel and frequency data is our own asset. Budget for a licensed fixtures API once revenue allows |
 | R2 | VPS-1 outage | App shows cached or offline data | Backups, restore drills, Kuma alerts, the PWA mirror failover design |
 | R3 | **Card-sharing labels** (`Mega Share`, `Apollo`, `VIP`, `ليست مكسورة` = "not cracked") and BISS keys in feeds | Store removal under IP-infringement policies; rights-holder action | O3: don't migrate these labels; expose only `access` (free/encrypted) + official provider/package; no BISS keys |
 | R4 | The Firebase Spark quota | New PWA installs fail | Mirror design (§5.2), shipped on D4 (O6 decided: Spark) |
