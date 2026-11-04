@@ -37,6 +37,7 @@ const board = {
       items_24h: [1, 2],
       error_rate_24h: null,
       running: false,
+      live: null,
     },
     {
       name: 'livesoccertv',
@@ -51,6 +52,7 @@ const board = {
       items_24h: [],
       error_rate_24h: 1,
       running: false,
+      live: null,
     },
   ],
   recent_changes: [

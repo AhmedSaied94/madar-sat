@@ -200,33 +200,33 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 
 ### Setup (A)
 
-- [ ] T063 [US4] After B1's T017, run `pnpm orval`, commit the output, and add every new endpoint to `responseSchemas` in `admin/src/api/http.ts` (a request without one fails). Add the copy to `admin/src/i18n/ar.ts`, and the `alias_conflict` and `source_not_runnable` codes to `errorCopy`.
-- [ ] T064 [US4] Read the boards and their HTML in `madar-design/admin-react/SCREENS.md`: A13 Sources + unresolved names, A13 Run detail, A9 Rights holders. Add the routes in `admin/src/app/App.tsx`: `/rights-holders` replaces its placeholder (`navigation.ts` already links it).
+- [X] T063 [US4] After B1's T017, run `pnpm orval`, commit the output, and add every new endpoint to `responseSchemas` in `admin/src/api/http.ts` (a request without one fails). Add the copy to `admin/src/i18n/ar.ts`, and the `alias_conflict` and `source_not_runnable` codes to `errorCopy`.
+- [X] T064 [US4] Read the boards and their HTML in `madar-design/admin-react/SCREENS.md`: A13 Sources + unresolved names, A13 Run detail, A9 Rights holders. Add the routes in `admin/src/app/App.tsx`: `/rights-holders` replaces its placeholder (`navigation.ts` already links it).
 
 ### Unresolved queue: tests first, then code (A)
 
-- [ ] T065 [P] [US4] In `admin/src/features/unresolved/UnresolvedQueue.test.tsx`, test: rows show name (a Latin name as an LTR island), kind, source, match context, suggestion and confidence with Western digits; the source filter; the count; loading, empty and error states; map with a suggestion pre-filled and nothing written before save; the picker for several `exact` candidates, which sends `scope_to_competition: true`; `alias_conflict` and a stale `If-Match` showing their copy; ignore; keyboard focus.
-- [ ] T066 [US4] Build `admin/src/features/unresolved/UnresolvedQueue.tsx` and `queries.ts`, rebuilt from the board with the existing `DataTable`, `Field` and `StatusChip`, placed under A13 in `admin/src/features/sources/SourcesPage.tsx`. T065 passes.
-- [ ] T067 [P] [US4] In `admin/src/features/unresolved/CreateFromName.test.tsx`, test: create new opens the existing team, competition or channel form pre-filled, then calls `map` with `created: true`; a failed `map` leaves the row open and says so.
-- [ ] T068 [US4] Build `CreateFromName.tsx`, reusing `TeamEditor`, `CompetitionEditor` and the channel drawer. T067 passes.
+- [X] T065 [P] [US4] In `admin/src/features/unresolved/UnresolvedQueue.test.tsx`, test: rows show name (a Latin name as an LTR island), kind, source, match context, suggestion and confidence with Western digits; the source filter; the count; loading, empty and error states; map with a suggestion pre-filled and nothing written before save; the picker for several `exact` candidates, which sends `scope_to_competition: true`; `alias_conflict` and a stale `If-Match` showing their copy; ignore; keyboard focus.
+- [X] T066 [US4] Build `admin/src/features/unresolved/UnresolvedQueue.tsx` and `queries.ts`, rebuilt from the board with the existing `DataTable`, `Field` and `StatusChip`, placed under A13 in `admin/src/features/sources/SourcesPage.tsx`. T065 passes.
+- [X] T067 [P] [US4] In `admin/src/features/unresolved/CreateFromName.test.tsx`, test: create new opens the existing team, competition or channel form pre-filled, then calls `map` with `created: true`; a failed `map` leaves the row open and says so.
+- [X] T068 [US4] Build `CreateFromName.tsx`, reusing `TeamEditor`, `CompetitionEditor` and the channel drawer. T067 passes.
 
 ### Sources and run detail (A)
 
-- [ ] T069 [P] [US4] In `admin/src/features/sources/SourcesPage.test.tsx`, test the Live poller card: matches live, each source's state, error share, "run now" absent, pause and resume. In `SourceRunPage.test.tsx`, test: the fetch-to-upsert rows from the log, with «لم يبدأ» for a stage it doesn't record; the raw page polling `pending` for up to 10 s, then `ready`, `gone` and a timeout; `truncated` shown; a fixture with `<script>` and `onerror` rendering as text and running nothing; `url` as an LTR island, not a link.
-- [ ] T070 [US4] Add the card to `SourcesPage.tsx`.
-- [ ] T071 [US4] Complete `admin/src/features/sources/SourceRunPage.tsx` to match the board. Raw text goes in a `<pre>` as a React child, never `dangerouslySetInnerHTML`. T069 passes.
+- [X] T069 [P] [US4] In `admin/src/features/sources/SourcesPage.test.tsx`, test the Live poller card: matches live, each source's state, error share, "run now" absent, pause and resume. In `SourceRunPage.test.tsx`, test: the fetch-to-upsert rows from the log, with «لم يبدأ» for a stage it doesn't record; the raw page polling `pending` for up to 10 s, then `ready`, `gone` and a timeout; `truncated` shown; a fixture with `<script>` and `onerror` rendering as text and running nothing; `url` as an LTR island, not a link.
+- [X] T070 [US4] Add the card to `SourcesPage.tsx`.
+- [X] T071 [US4] Complete `admin/src/features/sources/SourceRunPage.tsx` to match the board. Raw text goes in a `<pre>` as a React child, never `dangerouslySetInnerHTML`. T069 passes.
 
 ### A9 Rights holders: tests first, then code (A)
 
-- [ ] T072 [P] [US4] In `admin/src/features/rights/RightsHoldersPage.test.tsx`, test: list and drag order with keyboard support; create and edit with competitions, carriages, satellites, a frequency list, access and package; the Zod schema refusing zero or two primaries in a carriage; the frequency shown LTR; a stale `If-Match`; delete for an admin only; all list states.
-- [ ] T073 [US4] Build `admin/src/features/rights/RightsHoldersPage.tsx` and `queries.ts`, with the existing drag-order pattern from `CompetitionsPage.tsx`.
-- [ ] T074 [US4] Build `admin/src/features/rights/RightsHolderEditor.tsx` with React Hook Form and the generated Zod schemas. T072 passes.
+- [X] T072 [P] [US4] In `admin/src/features/rights/RightsHoldersPage.test.tsx`, test: list and drag order with keyboard support; create and edit with competitions, carriages, satellites, a frequency list, access and package; the Zod schema refusing zero or two primaries in a carriage; the frequency shown LTR; a stale `If-Match`; delete for an admin only; all list states.
+- [X] T073 [US4] Build `admin/src/features/rights/RightsHoldersPage.tsx` and `queries.ts`, with the existing drag-order pattern from `CompetitionsPage.tsx`.
+- [X] T074 [US4] Build `admin/src/features/rights/RightsHolderEditor.tsx` with React Hook Form and the generated Zod schemas. T072 passes.
 
 ### Validation (A)
 
-- [ ] T075 [US4] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh && pnpm e2e`. Extend `admin/e2e/smoke.spec.ts` only if a new shell route breaks it.
+- [X] T075 [US4] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh && pnpm e2e`. Extend `admin/e2e/smoke.spec.ts` only if a new shell route breaks it.
 - [ ] T076 [US4] Compare with the boards at 1440 and 1024 in both themes and attach the screenshots to the PR. Walk [quickstart A](quickstart.md#lane-a) over WireGuard after deploy, including SC-007's timing.
-- [ ] T077 [US4] Add Lane A's items to `docs/owner-actions.md`, and the queue's use to `docs/runbooks/imports-and-sources.md`, where its section already exists.
+- [X] T077 [US4] Add Lane A's items to `docs/owner-actions.md`, and the queue's use to `docs/runbooks/imports-and-sources.md`, where its section already exists.
 
 ---
 

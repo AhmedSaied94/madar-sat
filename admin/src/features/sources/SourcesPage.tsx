@@ -13,6 +13,7 @@ import { focusRing } from '../../components/focus';
 import { formatCairoTime } from '../../lib/cairoTime';
 import { copyForErrorCode, sources as copy } from '../../i18n/ar';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
+import { UnresolvedQueue } from '../unresolved/UnresolvedQueue';
 import { useSources, useSourceRuns } from './queries';
 
 // A13 (admin board "Sources"): one card per source with its health, the last 24 hours as a sparkline,
@@ -60,6 +61,7 @@ function SourceCard({
   onResume: () => void;
 }): ReactElement {
   const tone = healthTone(source);
+  const live = source.live ?? null;
   return (
     <li
       data-testid={`source-${source.name}`}
@@ -71,40 +73,74 @@ function SourceCard({
     >
       <div className="flex items-start gap-2">
         <bdi dir="ltr" className="text-label min-w-0 flex-1 truncate font-mono font-semibold text-text-primary">
-          {source.name}
+          {live === null ? source.name : copy.live.name}
         </bdi>
         <HealthChip health={tone}>
           {tone === 'open' ? copy.breakerOpen : tone === 'near_limit' ? copy.runStatus.partial : copy.healthy}
         </HealthChip>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-caption text-text-secondary">
-          {source.last_success_at ? copy.lastSuccess(formatCairoTime(source.last_success_at)) : copy.neverSucceeded}
-        </span>
-        <Sparkline values={source.items_24h} />
-      </div>
+      {live === null ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-caption text-text-secondary">
+              {source.last_success_at ? copy.lastSuccess(formatCairoTime(source.last_success_at)) : copy.neverSucceeded}
+            </span>
+            <Sparkline values={source.items_24h} />
+          </div>
 
-      <p className="text-caption text-text-tertiary">
-        {source.error_rate_24h === null
-          ? copy.noErrorRate
-          : copy.errorRate(Math.round(source.error_rate_24h * 100))}
-        {source.paused ? ` · ${copy.paused}` : null}
-      </p>
+          <p className="text-caption text-text-tertiary">
+            {source.error_rate_24h === null
+              ? copy.noErrorRate
+              : copy.errorRate(Math.round(source.error_rate_24h * 100))}
+            {source.paused ? ` · ${copy.paused}` : null}
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <LiveStat label={copy.live.matchesLabel} value={copy.live.matchesLive(live.matches_live)} />
+            <LiveStat label={copy.live.shareLabel} value={copy.live.errorShare(Math.round(live.error_share * 100))} />
+            <LiveStat label={copy.live.readersLabel} value={String(live.sources.length)} />
+          </div>
+          <ul className="flex flex-wrap gap-2">
+            {live.sources.map((reader) => (
+              <li key={reader.name} className="text-caption flex items-center gap-1 text-text-secondary">
+                <bdi dir="ltr" className="font-mono">
+                  {reader.name}
+                </bdi>
+                <span
+                  data-state={reader.state}
+                  className={clsx(
+                    'text-micro rounded-xs px-2 py-1',
+                    reader.state === 'ok' ? 'bg-free-container text-free' : 'bg-error-container text-error',
+                  )}
+                >
+                  {copy.live.readerState[reader.state] ?? reader.state}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={source.running || busy}
-          onClick={onRun}
-          className={clsx(
-            'text-caption inline-flex h-8 items-center gap-2 rounded-md bg-accent px-3 font-semibold text-on-accent disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-text-disabled',
-            focusRing,
-          )}
-        >
-          <Icon name="refresh" size="sm" />
-          {source.running ? copy.running : copy.runNow}
-        </button>
+        {live === null ? (
+          <button
+            type="button"
+            disabled={source.running || busy}
+            onClick={onRun}
+            className={clsx(
+              'text-caption inline-flex h-8 items-center gap-2 rounded-md bg-accent px-3 font-semibold text-on-accent disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-text-disabled',
+              focusRing,
+            )}
+          >
+            <Icon name="refresh" size="sm" />
+            {source.running ? copy.running : copy.runNow}
+          </button>
+        ) : (
+          <span className="text-caption text-text-tertiary">{copy.live.noRun}</span>
+        )}
         <button
           type="button"
           disabled={busy}
@@ -130,6 +166,16 @@ function SourceCard({
         </button>
       </div>
     </li>
+  );
+}
+
+/** One figure of the Live poller card, in the board's mini form. */
+function LiveStat({ label, value }: { label: string; value: string }): ReactElement {
+  return (
+    <div className="flex flex-col gap-1 rounded-md bg-surface-2 px-2 py-1">
+      <b className="text-label tabular-nums text-text-primary">{value}</b>
+      <span className="text-micro text-text-tertiary">{label}</span>
+    </div>
   );
 }
 
@@ -208,6 +254,8 @@ export function SourcesPage(): ReactElement {
           ))}
         </ul>
       )}
+
+      <UnresolvedQueue />
 
       {selected === null ? null : (
         <section className="flex min-w-0 flex-col gap-3 rounded-xl bg-surface-1 p-4 ring-1 ring-inset ring-divider">
