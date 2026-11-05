@@ -160,6 +160,12 @@ for stamped in flutter_bootstrap.js sw.js drift_worker.js; do
   grep -q "$hash" "$out/$stamped" || die "$stamped does not carry the release hash after stamping"
 done
 
+# 6b. The splash in index.html draws its copy before Flutter loads, with the bundled fonts.
+#     Those moved into the release folder above, and index.html stays a shell file.
+grep -q 'url(assets/assets/fonts/' "$out/index.html" \
+  || die "index.html no longer names the splash fonts: update this step"
+sed -i "s#url(assets/assets/fonts/#url(r/$hash/assets/assets/fonts/#g" "$out/index.html"
+
 # 7. Precompress every release file: Caddy serves `precompressed br gzip`, so 1 OCPU never
 #    compresses a megabyte of wasm per request.
 (

@@ -46,6 +46,16 @@ void main() {
     await goldenVariants(tester, 'logo', states);
   });
 
+  testWidgets('the mark paints its planet from the theme-independent dark text token', (tester) async {
+    await tester.pumpWidget(testApp(const BrandMark()));
+    final painter = tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((paint) => paint.painter)
+        .whereType<MadarMarkPainter>()
+        .single;
+    expect(painter.body, MadarColors.dark.textPrimary);
+  });
+
   testWidgets('a logo sits in the same neutral frame, from an image not the network', (tester) async {
     final image = MemoryImage(_transparentPng);
     await tester.pumpWidget(

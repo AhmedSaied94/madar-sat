@@ -248,7 +248,7 @@ Native builds use the same paths after `‹scheme›://`. Push notifications ope
 
 | Screen | Trigger | Content |
 |---|---|---|
-| Splash | Cold start | Brand mark on the brand background (Android 12 splash API: icon on a solid color) |
+| Splash | Cold start | Native: brand mark on the brand background (Android 12 splash API: icon on a solid color). Then the app's own splash, always dark, for one orbit (about 2 s) while the first screen loads underneath: the satellite circles the planet, with «مدار سات» and «أي قناة تنقل المباراة؟ والتردد جاهز.» under the mark. With reduced motion the mark stays still. |
 | Forced update | Build < `min_supported_build` | Title "تحديث مطلوب", body "يوجد إصدار جديد من التطبيق. يرجى التحديث للاستمرار.", CTA "تحديث الآن" (Play Store; on the PWA, reload) |
 | Soft update [V1] | Build < `latest_build` | Dismissible banner: "يتوفر إصدار جديد" + "تحديث" |
 | Maintenance [V1] | Remote Config flag | Full screen with the admin's message; cached content stays browsable |

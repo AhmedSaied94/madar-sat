@@ -16,6 +16,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get brandMark => 'مدار';
 
   @override
+  String get splashQuestion => 'أي قناة تنقل المباراة؟';
+
+  @override
+  String get splashAnswer => 'والتردد جاهز.';
+
+  @override
   String get navMatches => 'المباريات';
 
   @override

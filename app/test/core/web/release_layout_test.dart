@@ -56,7 +56,11 @@ void main() {
       // The two files the script stamps carry its placeholders, as web/ does.
       final content = const ['flutter_bootstrap.js', 'sw.js'].contains(path)
           ? 'const RELEASE = { hash: "__RELEASE_HASH__", mirror: "__MIRROR_BASE__" };'
-          : overrides[path] ?? 'content of $path';
+          : overrides[path] ??
+              // The splash in web/index.html names its fonts before Flutter loads.
+              (path == 'index.html'
+                  ? 'src: url(assets/assets/fonts/Changa-ExtraBold.ttf);'
+                  : 'content of $path');
       file.writeAsStringSync(content);
     }
     File('${tmp.path}/env.json').writeAsStringSync(
@@ -217,6 +221,25 @@ void main() {
       );
       expect(text, isNot(contains('__RELEASE_HASH__')), reason: '$path lost the placeholder');
     }
+  });
+
+  test('the splash fonts in index.html point into the release folder', () async {
+    final result = await stage(fixture());
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+
+    final out = '${tmp.path}/release';
+    final releaseHash = readRelease(out)['hash']! as String;
+    expect(
+      File('$out/index.html').readAsStringSync(),
+      contains('url(r/$releaseHash/assets/assets/fonts/Changa-ExtraBold.ttf)'),
+    );
+  });
+
+  test('an index.html that no longer names the splash fonts fails the staging', () async {
+    final result = await stage(fixture(overrides: {'index.html': 'no fonts here'}));
+
+    expect(result.exitCode, isNot(0));
+    expect('${result.stderr}', contains('splash fonts'));
   });
 
   test('a shell file that is missing fails the staging', () async {

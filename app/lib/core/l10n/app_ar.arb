@@ -2,6 +2,8 @@
   "@@locale": "ar",
   "appName": "مدار سات",
   "brandMark": "مدار",
+  "splashQuestion": "أي قناة تنقل المباراة؟",
+  "splashAnswer": "والتردد جاهز.",
   "navMatches": "المباريات",
   "navSatellites": "أقماري",
   "navFrequencies": "الترددات",

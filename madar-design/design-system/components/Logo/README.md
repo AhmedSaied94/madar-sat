@@ -1,11 +1,11 @@
 # Logo
 
-The placeholder brand mark and wordmark, and the neutral frames every third-party logo sits in.
+The brand mark and wordmark, and the neutral frames every third-party logo sits in.
 
 ## Brand mark
-An ink tile (`on-accent` ground, `radius-md`) with a volt orbit ring around a small satellite. Sizes 28, 40 and 64. On busy or volt grounds use the bare ring (`.mk.bare`) or the single-ink version (`.mk-mono`). The wordmark sets «مدار» in Changa 800 beside the mark, with an optional Latin `ADMIN` tag in mono for the admin.
+A light planet inside a volt orbit ring, with a three-part satellite on the ring's upper end. The ring passes behind the planet on its far half and across it on its near half, with a clear band around the crossing. The vector is `mark.svg` (a 32-unit grid). Tile, sizes 28, 40 and 64: `on-accent` ground, `radius-md`. The bare mark (`.mk.bare`) is for dark wells; use the single-ink version (`.mk-mono`) on busy or volt grounds. The wordmark sets «مدار» in Changa 800 beside the mark, with an optional Latin `ADMIN` tag in mono for the admin.
 
-These are placeholders until the product name is decided: keep the clear space (half the mark's width) and the sizes, swap the artwork.
+Keep the clear space (half the mark's width). The splash and the store assets set the product name «مدار سات» instead of the wordmark.
 
 ## Entity placeholders
 | Entity | Missing-logo fallback |

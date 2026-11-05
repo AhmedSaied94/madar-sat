@@ -106,6 +106,18 @@ abstract class AppLocalizations {
   /// **'مدار'**
   String get brandMark;
 
+  /// No description provided for @splashQuestion.
+  ///
+  /// In ar, this message translates to:
+  /// **'أي قناة تنقل المباراة؟'**
+  String get splashQuestion;
+
+  /// No description provided for @splashAnswer.
+  ///
+  /// In ar, this message translates to:
+  /// **'والتردد جاهز.'**
+  String get splashAnswer;
+
   /// No description provided for @navMatches.
   ///
   /// In ar, this message translates to:
