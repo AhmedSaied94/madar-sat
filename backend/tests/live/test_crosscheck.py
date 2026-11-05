@@ -784,6 +784,51 @@ def test_extra_time_stops_a_lone_full_time_and_clears_the_hold(later):
     assert (decision.fulltime_source, decision.fulltime_since, decision.finish_wait_since) == (None, None, None)
 
 
+def test_a_status_no_parser_knows_stops_another_sources_lone_full_time():
+    # FilGoal on full time at 1-1 while Goal.com has moved on to a stage no map holds (B1-R2-1): it may be extra time.
+    before = second_half(fulltime_source="filgoal", fulltime_since=NOW - FULLTIME_HOLD, finish_wait_since=NOW)
+    sides = {
+        "filgoal": side("filgoal", Score(1, 1), **FT),
+        "goal": side("goal", Score(1, 1), unknown="LIVE/EXTRA_TIME_FIRST_HALF"),
+    }
+
+    decision = decided(before, sides)
+
+    assert decision.status == "live"
+    assert (decision.fulltime_source, decision.fulltime_since, decision.finish_wait_since) == (None, None, None)
+
+
+def test_a_status_no_parser_knows_keeps_a_lone_full_time_from_starting():
+    sides = {
+        "filgoal": side("filgoal", Score(1, 1), **FT),
+        "goal": side("goal", Score(1, 1), unknown="LIVE/EXTRA_TIME_FIRST_HALF"),
+    }
+
+    decision = decided(second_half(), sides)
+
+    assert decision.status == "live"
+    assert (decision.fulltime_source, decision.fulltime_since) == (None, None)
+
+
+def test_a_status_no_parser_knows_restarts_the_wait_when_the_held_source_has_no_reading():
+    before = second_half(fulltime_source="filgoal", fulltime_since=NOW - timedelta(minutes=9))
+    sides = {"filgoal": ABSENT, "goal": side("goal", Score(1, 1), unknown="LIVE/EXTRA_TIME_FIRST_HALF")}
+
+    decision = decided(before, sides)
+
+    assert (decision.fulltime_source, decision.fulltime_since) == (None, None)
+
+
+def test_two_full_times_finish_even_if_a_third_shows_a_status_no_parser_knows():
+    sides = {
+        "filgoal": side("filgoal", Score(1, 1), **FT),
+        "yallakora": side("yallakora", Score(1, 1), **FT),
+        "goal": side("goal", Score(1, 1), unknown="LIVE/EXTRA_TIME_FIRST_HALF"),
+    }
+
+    assert decided(second_half(), sides).status == "finished"
+
+
 def test_a_lone_full_time_blocks_a_backward_move():
     before = second_half(status_drop_since=NOW - DROP_HOLD)
     sides = {

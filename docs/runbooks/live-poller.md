@@ -34,11 +34,11 @@ One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the 
 
 `finished` ends polling, and only a person can undo it, so one source isn't enough:
 
-- Two usable sources showing it meet the condition, even if a third still shows extra time or penalties.
-- One source alone must hold it for `LIVE_FULLTIME_HOLD_S`. If that source reads anything else, or any source shows extra time or penalties, the wait starts again.
+- Two usable sources showing it meet the condition, even if a third still shows extra time, penalties or a status nobody has seen.
+- One source alone must hold it for `LIVE_FULLTIME_HOLD_S`. If that source reads anything else, or any source shows extra time, penalties or a status nobody has seen, the wait starts again. No parser maps extra time yet, so an unknown status counts as possibly extra time.
 - A source that merely failed a request keeps the wait going, with nothing cleared.
 
-**So a match can stay live for up to 10 minutes after one source's full time.** That's on purpose: a level match may be going to extra time. While it waits it shows no minute, and that isn't a fault.
+**So a match can stay live for up to 10 minutes after one source's full time.** That's on purpose: a level match may be going to extra time. While it waits it shows no minute, and that isn't a fault. If a source stays on an unknown status and no second source shows full time, the match can stay live until the kickoff + 210 limit.
 
 Once the condition is met, a drop still open or scores that differ hold it until they agree or for `LIVE_DROP_HOLD_S`. Then it finishes on the accepted score, with a `disagree:` alert if they still differ. An editor can correct the result in A3.
 
