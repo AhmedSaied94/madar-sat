@@ -15,6 +15,7 @@ from pathlib import Path
 
 FILGOAL_HOST = "www.filgoal.com"
 YALLAKORA_HOST = "www.yallakora.com"
+GOAL_HOST = "www.goal.com"
 
 DENY_RULES: dict[str, tuple[str, ...]] = {
     FILGOAL_HOST: (
@@ -62,6 +63,7 @@ DENY_RULES: dict[str, tuple[str, ...]] = {
         "*insertPollVote*",
         "*Article/GetNewsDetailsByIds*",
     ),
+    GOAL_HOST: (),
 }
 
 _NON_ASCII = r"[^\x00-\x7F]"
@@ -76,7 +78,11 @@ def _compile(rule: str) -> re.Pattern[str]:
 _COMPILED = {host: tuple(_compile(rule) for rule in rules) for host, rules in DENY_RULES.items()}
 
 ROBOTS_DIR = Path(__file__).with_name("robots")
-ROBOTS_COPIES = {FILGOAL_HOST: ROBOTS_DIR / "filgoal.txt", YALLAKORA_HOST: ROBOTS_DIR / "yallakora.txt"}
+ROBOTS_COPIES = {
+    FILGOAL_HOST: ROBOTS_DIR / "filgoal.txt",
+    YALLAKORA_HOST: ROBOTS_DIR / "yallakora.txt",
+    GOAL_HOST: ROBOTS_DIR / "goal.txt",
+}
 
 
 def is_allowed(host: str, path: str) -> bool:

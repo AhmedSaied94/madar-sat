@@ -96,7 +96,7 @@ def live_scheduler(self: Any) -> dict[str, Any]:
         with redis_lock("lock:live:scheduler", SHORT_LOCK_TTL_S, client=client) as acquired:
             if not acquired:
                 return {"skipped": "lock_held"}
-            if not has_work_in(SyncSession, _now()):
+            if not has_work_in(SyncSession, _now(), stuck_after=get_live_settings().stuck_after):
                 return {"queued": False}
         live_poll.apply_async(queue=LIVE_QUEUE)
         return {"queued": True}
@@ -124,8 +124,9 @@ def live_poll(self: Any) -> dict[str, Any]:
 
 @task(name="live.watchdog", queue="maintenance")
 def live_watchdog(self: Any) -> dict[str, Any]:
-    """Every 2 min, on a queue that survives ``worker-live`` dying (research R6)."""
+    """Every 2 min, on a queue that survives ``worker-live`` dying, or a capture dying (research R6, R12)."""
     from app.db.session import SyncSession
+    from app.live.capture import check_heartbeat
     from app.live.watchdog import run_watchdog
 
     client = _redis()
@@ -135,6 +136,7 @@ def live_watchdog(self: Any) -> dict[str, Any]:
                 return {"skipped": "lock_held"}
             with SyncSession() as session, session.begin():
                 alerts = run_watchdog(session, _now(), get_live_settings())
+            check_heartbeat(client, _now(), send_alert)
     finally:
         client.close()
     for text in alerts:
@@ -172,7 +174,7 @@ def live_check_robots(self: Any) -> dict[str, Any]:
             with _fetcher(client) as fetcher:
                 fetch = _fetch_with(fetcher)
                 with SyncSession() as session, session.begin():
-                    alerts = check_robots(session, fetch, _now())
+                    alerts = check_robots(session, fetch, _now(), goal_enabled=get_live_settings().goal_enabled)
     finally:
         client.close()
     for text in alerts:

@@ -12,16 +12,20 @@ from sqlalchemy.orm import Session
 
 from app.adapters.fetcher import FetchError
 from app.live.problems import close_problem, open_problem
-from app.live.robots import ROBOTS_COPIES, committed_copy, normalized
+from app.live.robots import GOAL_HOST, ROBOTS_COPIES, committed_copy, normalized
 from app.workers.base import Retryable
 
 log = logging.getLogger(__name__)
 
 
-def check_robots(session: Session, fetch: Callable[[str, str], Any], now: datetime) -> list[str]:
+def check_robots(
+    session: Session, fetch: Callable[[str, str], Any], now: datetime, *, goal_enabled: bool = True
+) -> list[str]:
     """The alerts to send after commit. A failed fetch says nothing about the rules: no change."""
     alerts: list[str | None] = []
     for host in ROBOTS_COPIES:
+        if host == GOAL_HOST and not goal_enabled:
+            continue  # switched off means no request at all (FR-014)
         try:
             page = fetch(f"https://{host}/robots.txt", host)
         except (Retryable, FetchError, httpx.HTTPError) as exc:

@@ -35,7 +35,7 @@ async def _run(session, now, raw_path: str | None = "live_poller/2026-11-04/run.
     return run
 
 
-@pytest.mark.parametrize("name", ["live_poller", "filgoal"])
+@pytest.mark.parametrize("name", ["live_poller", "filgoal", "goal"])
 async def test_the_live_sources_are_refused_a_manual_run_by_name(admin_client, name):
     response = await admin_client.post(f"/admin/api/sources/{name}/run")
 
@@ -80,6 +80,7 @@ async def test_the_live_card_is_listed_and_the_reader_is_hidden(editor_client, s
     sources = await _sources(editor_client)
 
     assert "filgoal" not in sources
+    assert "goal" not in sources
     live = sources["live_poller"]["live"]
     assert live["matches_live"] == 1
     assert live["error_share"] == 0.5
@@ -88,7 +89,7 @@ async def test_the_live_card_is_listed_and_the_reader_is_hidden(editor_client, s
     assert sources["yallakora"]["kind"] == "scraper"
 
 
-@pytest.mark.parametrize("name", ["live_poller", "filgoal"])
+@pytest.mark.parametrize("name", ["live_poller", "filgoal", "goal"])
 async def test_a_live_source_cannot_be_run(editor_client, name):
     response = await editor_client.post(f"/admin/api/sources/{name}/run")
 

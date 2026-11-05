@@ -20,10 +20,16 @@ async def _feed_match(make_match, session, now, **fields):
 
 
 def _event(
-    match_id: int, ext: str, type_: str, minute: str, side: str = "home", player: str | None = "لاعب"
+    match_id: int,
+    ext: str,
+    type_: str,
+    minute: str,
+    side: str = "home",
+    player: str | None = "لاعب",
+    source: str = "filgoal",
 ) -> MatchEvent:
     return MatchEvent(
-        match_id=match_id, side=side, type=type_, minute=minute, player_name=player, source="filgoal", external_id=ext
+        match_id=match_id, side=side, type=type_, minute=minute, player_name=player, source=source, external_id=ext
     )
 
 
@@ -87,7 +93,8 @@ async def test_an_estimated_match_shows_neither(public_client, session, make_mat
     assert data["lineups"] is None
 
 
-async def test_goal_events_are_absent_while_a_score_is_pending(public_client, session, make_match, frozen_now):
+async def test_goal_events_stay_during_a_drop_and_with_an_old_candidate(public_client, session, make_match, frozen_now):
+    """A rise has no pending state now, and a false score's goal goes with the score, not before it."""
     match = await _feed_match(make_match, session, frozen_now)
     session.add_all(
         [
@@ -96,14 +103,46 @@ async def test_goal_events_are_absent_while_a_score_is_pending(public_client, se
             _event(match.id, "c", "penalty", "11"),
             _event(match.id, "d", "missed_penalty", "12"),
             _event(match.id, "e", "red_card", "13"),
-            MatchLiveState(match_id=match.id, candidate={"home": 2, "away": 0, "source": "filgoal", "polls": 1}),
+            MatchLiveState(
+                match_id=match.id,
+                candidate={"home": 2, "away": 0, "source": "filgoal", "polls": 1},
+                drop_since=frozen_now,
+            ),
         ]
     )
     await session.flush()
 
     data = (await public_client.get(f"/v1/matches/{match.id}")).json()["data"]
 
-    assert [event["type"] for event in data["events"]] == ["missed_penalty", "red_card"]
+    assert [event["type"] for event in data["events"]] == ["goal", "own_goal", "penalty", "missed_penalty", "red_card"]
+
+
+async def test_events_come_from_filgoal_when_it_has_any_and_never_from_both(
+    public_client, session, make_match, frozen_now
+):
+    match = await _feed_match(make_match, session, frozen_now)
+    session.add_all(
+        [
+            _event(match.id, "a", "goal", "9", player="من فيلجول"),
+            _event(match.id, "x", "goal", "9", player="من جول", source="goal"),
+            _event(match.id, "y", "red_card", "40", source="goal"),
+        ]
+    )
+    await session.flush()
+
+    data = (await public_client.get(f"/v1/matches/{match.id}")).json()["data"]
+
+    assert data["events"] == [{"type": "goal", "side": "home", "minute": "9", "player": "من فيلجول"}]
+
+
+async def test_events_come_from_goal_com_when_filgoal_has_none(public_client, session, make_match, frozen_now):
+    match = await _feed_match(make_match, session, frozen_now)
+    session.add(_event(match.id, "x", "goal", "9", player="من جول", source="goal"))
+    await session.flush()
+
+    data = (await public_client.get(f"/v1/matches/{match.id}")).json()["data"]
+
+    assert data["events"] == [{"type": "goal", "side": "home", "minute": "9", "player": "من جول"}]
 
 
 async def test_local_broadcaster_is_returned_when_stored(public_client, session, make_match, frozen_now):

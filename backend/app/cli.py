@@ -107,26 +107,32 @@ def _run_admin_command(args: argparse.Namespace) -> int:
 
 
 def cmd_capture_live(args: argparse.Namespace) -> int:
-    """Save live pages for the capture report (research R1). Never runs without a user agent."""
+    """Save live pages for the capture report (research R12). Never runs without a user agent."""
     import redis
 
+    from app.adapters.alerts import send_alert
     from app.adapters.config import get_adapter_settings
     from app.adapters.fetcher import HttpFetcher
     from app.adapters.ratelimit import RateLimiter
-    from app.live.capture import run_capture, targets
+    from app.live.capture import enabled_lists, run_capture
+    from app.live.config import get_live_settings
     from app.workers.config import get_worker_settings
+    from app.workers.logs import setup_logging
 
+    setup_logging()  # Celery's signal never fires here, and the report needs each failure's page and reason
     settings = get_adapter_settings()
     user_agent = settings.require_user_agent()
-    items = targets(args.filgoal, args.yallakora)
     client = redis.Redis.from_url(get_worker_settings().broker_url)
     try:
         with HttpFetcher(RateLimiter(client), user_agent) as fetcher:
             saved = run_capture(
-                items,
+                enabled_lists(goal_enabled=get_live_settings().goal_enabled),
                 lambda url, host: fetcher.get(url, allowed_hosts=frozenset({host})),
                 Path(settings.raw_root),
                 args.minutes,
+                alert=send_alert,
+                client=client,
+                page_cap=args.page_cap,
             )
     finally:
         client.close()
@@ -162,9 +168,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--report-dir", required=True)
 
     p = sub.add_parser("capture-live", help="Save live list and match pages for the capture report")
-    p.add_argument("--filgoal", action="append", default=[], metavar="MATCH_ID", help="A FilGoal match id")
-    p.add_argument("--yallakora", action="append", default=[], metavar="PATH", help="A YallaKora match path")
-    p.add_argument("--minutes", type=int, default=150, help="How long to record, one round a minute")
+    p.add_argument("--minutes", type=int, default=240, help="How long to record, about one round a minute")
+    p.add_argument("--page-cap", type=int, default=12, help="Most match pages per source per round")
 
     return parser
 

@@ -1,0 +1,50 @@
+{
+ "Id": 378947,
+ "HomeTeamId": 1742,
+ "HomeTeamName": "لايبزج",
+ "AwayTeamId": 94,
+ "AwayTeamName": "مانشستر سيتي",
+ "HomeScore": 0,
+ "AwayScore": 1,
+ "HomePenaltyScore": null,
+ "AwayPenaltyScore": null,
+ "ChampionshipName": "دوري أبطال أوروبا",
+ "Date": "2026-11-04T22:00:00",
+ "CurrentMatchStatus": {
+  "Id": 934665,
+  "MatchId": 378947,
+  "MatchStatusId": 3,
+  "IsCounterEnabled": true,
+  "MatchStatusName": "الشوط الاول",
+  "MatchStatusMaxTime": 45,
+  "StartAt": "2026-11-05T00:01:22.77",
+  "MatchStatusIndicatorId": 2,
+  "Status": 3,
+  "StatusIndicator": 2,
+  "TimeElapsedBeforeStatus": 0,
+  "TimeElapsed": {
+   "Minutes": -79,
+   "Seconds": -45
+  }
+ },
+ "Events": [
+  {
+   "Id": 971683,
+   "TeamId": 1742,
+   "MatchEventTypeId": 20,
+   "MatchEventTypeName": "هدف عكسي",
+   "PlayerAName": "كاستيلو لوكيبا",
+   "CalculatedTime": 37,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971674,
+   "TeamId": 1742,
+   "MatchEventTypeId": 3,
+   "MatchEventTypeName": "بطاقة صفراء",
+   "PlayerAName": "كريستوف بومجارتنر",
+   "CalculatedTime": 17,
+   "CalculatedAdditionalTime": 0
+  }
+ ]
+}

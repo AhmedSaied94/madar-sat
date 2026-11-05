@@ -1,4 +1,4 @@
-"""What both parsers share: text clean-up, Western digits and the state a status string means."""
+"""What the parsers share: text clean-up, Western digits and the state a status string means."""
 
 from __future__ import annotations
 
@@ -15,7 +15,10 @@ from app.live.types import LayoutChanged, Score
 _WS = re.compile(r"\s+")
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 _CLOCK = re.compile(r"^(\d{1,2}):(\d{2})$")
+_MINUTE = re.compile(r"^(\d{1,3})(?:\+(\d{1,2}))?$")
 
+# How much of a status nobody has seen is kept: it goes into an alert and a log line.
+UNKNOWN_LABEL_CHARS = 40
 # A status that needs a score: anything from kickoff on.
 SCORED_STATUSES = frozenset({"live", "halftime", "extra_time", "penalties", "finished"})
 
@@ -74,6 +77,14 @@ def require_name(value: str, what: str) -> str:
     if not value:
         raise LayoutChanged(f"missing {what}")
     return value
+
+
+def minute_value(minute: str | None) -> int | None:
+    """A shown minute as a number, so minutes compare: ``90+3`` is 93. ``None`` when there isn't one."""
+    found = _MINUTE.match(minute or "")
+    if found is None:
+        return None
+    return int(found.group(1)) + int(found.group(2) or 0)
 
 
 def cairo_kickoff(day: date, clock: str) -> datetime | None:

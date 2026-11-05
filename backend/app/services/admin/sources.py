@@ -33,8 +33,8 @@ SPARKLINE_POINTS = 24
 RUNS_MAX_LIMIT = 50
 # Named, not told apart by ``kind``: the release before 0007 loads every row's kind into its own list.
 LIVE_POLLER = "live_poller"
-LIVE_READER = "filgoal"
-LIVE_SOURCES = frozenset({LIVE_POLLER, LIVE_READER})
+LIVE_READERS = frozenset({"filgoal", "goal"})
+LIVE_SOURCES = frozenset({LIVE_POLLER}) | LIVE_READERS
 IN_PLAY_STATUSES = ("live", "halftime", "extra_time", "penalties")
 RAW_REQUEST_TTL_S = 10
 
@@ -108,7 +108,7 @@ async def health(session: AsyncSession, now: datetime, name: str | None = None) 
         query = query.where(Source.name == name)
     else:
         # A live reader is a part of the Live poller's card, not a card of its own.
-        query = query.where(Source.name != LIVE_READER)
+        query = query.where(Source.name.not_in(LIVE_READERS))
     sources = list((await session.scalars(query)).all())
     if not sources:
         return []

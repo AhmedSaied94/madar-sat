@@ -37,16 +37,19 @@ Run on a night with live matches, starting before the first kickoff:
 
 ```bash
 ssh madar-vps2
-cd /srv/madar
-docker compose -f infra/compose/vps2.yml run --rm worker-live \
-  python -m app.cli capture-live --minutes 240
+sudo -iu deploy
+cd /srv/madar/infra
+export IMAGE_TAG=$(cat /srv/madar/current_tag)
+dc() { docker compose --env-file /srv/madar/.env -f compose/vps2.yml "$@"; }
+dc run -d --name madar-capture worker-live python -m app.cli capture-live --minutes 240
+docker logs -f madar-capture
 ```
 
-The exact file path and service follow `docs/runbooks/live-poller.md`, which T023 updates from B2's T033.
+This is the command in [`docs/runbooks/live-poller.md`](../../docs/runbooks/live-poller.md#the-capture), from B2's T033. The container stays after the capture ends, so its log can feed the report. Run `docker rm madar-capture` after the report and before a new capture.
 
 **Expected:** gzipped list and match pages for all three sources under `/srv/raw/capture/<date>/`. Telegram gets one message when the capture starts, naming its expected end, and one when it ends. A source failing 5 rounds in a row or going quiet sends one alert. If the capture stops early, `live.watchdog` sends one alert within about 7 minutes.
 
-**If a source blocks VPS-2:** that's a result. Don't get around it. Stop using it and tell the owner, with the report.
+**If a source blocks VPS-2:** that's a result. Don't get around it. A 403 or 429 ends that source's round and sends an alert at once, and a second refused round in a row stops it until a restart. Tell the owner, with the report.
 
 Then commit a trimmed set of its pages as fixtures (T027), and write `capture-report.md` (T028).
 

@@ -49,7 +49,7 @@ Stages run in this order: `scheduled`, first half, halftime, second half, extra 
 | A usable reading shows a stage later than the stored one | Write the latest stage shown, from the first source in `ORDER` on a tie. Clear `status_drop_since` |
 | No reading is later, and at least one shows the stored stage | Keep the stage. The label comes from the first source in `ORDER` showing it. Clear `status_drop_since` |
 | All usable readings show an earlier stage | Set `status_drop_since`, keep the status. At `drop_hold`, write the latest stage shown |
-| `live` with no period, as on a YallaKora match page | It says nothing about the half. It moves a `scheduled` row to `live`, and counts as showing the stored stage for any of first half, halftime and second half |
+| `live` with no period, as on a YallaKora match page | It says nothing about the half. It moves a `scheduled` row to `live`, and counts as showing the stored stage at any later one, extra time and penalties included. The cycle fills in the stage from the page's list row first, when that row has one |
 | A reading has `unknown_status` | It's left out of this table |
 | A stored status is `finished` | The match has left the window, and only a person changes it |
 | `cancelled`, `abandoned`, `postponed` | Only from the first usable source, as in spec 005. A postponed match stays as stored, unpolled |
@@ -109,9 +109,12 @@ One alert per problem, and one on recovery.
 status = live, period = 2H, status_source = feed,
 kickoff < now − LIVE_STUCK_AFTER_MIN,
 score_changed_at < now − LIVE_STUCK_QUIET_MIN (or null),
-no usable source has peak_minute < 90
+no usable source has peak_minute < 90,
+no usable source's reading has no period and a status of NULL or live
    → finished, keeping the score, open stuck:<match_id>
 ```
+
+The last line is for extra time and penalties that no parser maps yet. Those rows come in as `unknown_status`, or as a match page saying only `live`, and `decide` keeps the stored `live`, `2H`. Such a reading says the match may still be on, so the row waits for the hard limit. An ordinary second-half reading has a period, so it doesn't hold the row.
 
 "Usable" here means the source's `live_source_state` is `ok` or `failing`, and its `match_source_readings` row was read within `LIVE_STALE_AFTER_S`. A source with no `peak_minute` has no say.
 

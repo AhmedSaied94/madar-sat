@@ -99,7 +99,7 @@ ADMIN_JWT_SECRET=$(openssl rand -hex 32) uv run uvicorn app.admin:app --port 800
 - `app/workers/` — the Celery app (queues, retry base task, Redis locks). It merges the `BEAT_SCHEDULE` of
   every module in `SCHEDULE_MODULES` (`app.adapters.schedule`, `app.notifications.schedule`, `app.live.schedule`) and raises on
   a duplicate entry name. Importing `app.workers` still loads neither `app.settings` nor `app.db`.
-- `app/live/` — the live poller (005 contracts/live-pipeline.md). Pure: `sources/` (parsers), `crosscheck.py`
+- `app/live/` — the live poller (005 contracts/live-pipeline.md, 031 contracts/live-rules.md). Pure: `sources/` (parsers), `crosscheck.py`
   (`decide`), `pick.py`, `robots.py`. Database: `links.py`, `apply.py`, `problems.py`, `watchdog.py`. `cycle.py` is
   one Celery-free poll, and `tasks.py` and `schedule.py` wrap it. `capture.py` backs `capture-live`.
 - `app/etl/` — snapshot loader, media rehoster, load report.
@@ -109,7 +109,8 @@ ADMIN_JWT_SECRET=$(openssl rand -hex 32) uv run uvicorn app.admin:app --port 800
 
 - B1 owns **migrations** and the **contract** (`backend/openapi/*.json`).
 - Revisions `0001` to `0006` are applied and **never edited**; a change is a new revision. `0007` is D5's
-  expand-only revision (the live tables, aliases, the unresolved-names queue), unmerged until its PR. `0005` is D3's expand-only revision (device satellites, the outbox cursor, source health,
+  expand-only revision (the live tables, aliases, the unresolved-names queue), and `0008` is spec 031's (the rules'
+  memory, the peak minute, `match_stats`, the `goal` source), unmerged until its PR. `0005` is D3's expand-only revision (device satellites, the outbox cursor, source health,
   `import_runs.log`, `channels.placeholder_source`).
   `0001` is `alembic/sql/0001_base_schema.sql`, a byte-for-byte copy of `../old_app/migration/schema.sql`.
 - `backend/openapi/public.json` and `admin.json` are exported from code, committed,

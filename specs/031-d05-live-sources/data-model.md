@@ -29,7 +29,7 @@ A row with an unknown status writes `status` and `minute` as null, which this ta
 
 | Column | Type | Rules |
 |---|---|---|
-| `missing_since` | timestamptz, null | Set when a stored event is absent from its source's reading, cleared when it returns. The row is deleted after 5 minutes, and a goal type waits until the score no longer needs it |
+| `missing_since` | timestamptz, null | Set when a stored event is absent from its source's reading, cleared when it returns. The row is deleted after 5 minutes, and a goal type waits until the score no longer needs it or the goals the source still lists for that side cover the score. While a goal is inside those 5 minutes, new goals on its side wait, as one may be the same goal under a new ID |
 
 `side` is the side the goal counts for ([R7](research.md#r7-own-goals-and-event-sides)). No row has been written in production yet, so nothing needs correcting.
 

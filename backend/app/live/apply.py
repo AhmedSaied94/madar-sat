@@ -8,65 +8,84 @@ outbox row is written on D5 (FR-014).
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from collections.abc import Sequence
-from datetime import datetime
+from dataclasses import replace
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters.health import bump_datasets
-from app.db.models import Match, MatchEvent, MatchLineup, MatchLiveState, MatchSourceReading
+from app.db.models import Match, MatchEvent, MatchLineup, MatchLiveState, MatchSourceReading, MatchStats
 from app.domain.lockable import STATUS_COLUMNS
 from app.domain.status import STATUS_POSTPONED
-from app.live.types import GOAL_TYPES, SOURCES, Candidate, Decision, Event, LineupSide, LiveState, Score, SourceReading
+from app.live.crosscheck import next_peak
+from app.live.types import GOAL_TYPES, SOURCES, Decision, Event, LineupSide, LiveState, Peak, Score, SourceReading
 
 log = logging.getLogger(__name__)
 
 LIVE_DATASET = "live"
-
-
-def _last_primary(session: Session, match_id: int) -> MatchSourceReading | None:
-    """The reading status came from in the last poll: every source read in one poll shares its ``read_at``."""
-    rows = {
-        row.source: row
-        for row in session.scalars(select(MatchSourceReading).where(MatchSourceReading.match_id == match_id))
-    }
-    if not rows:
-        return None
-    latest = max(row.read_at for row in rows.values())
-    return next(rows[source] for source in SOURCES if source in rows and rows[source].read_at == latest)
+_SECOND_HALF_ON = frozenset({"extra_time", "penalties"})
 
 
 def load_state(session: Session, match: Match) -> LiveState:
-    """What ``decide`` needs to remember, from ``match_live_state`` and the last poll's primary reading."""
+    """What ``decide`` needs to remember, from the row, ``match_live_state`` and each source's peak."""
+    peaks = {
+        row.source: Peak(row.peak_minute, row.peak_period)
+        for row in session.scalars(
+            select(MatchSourceReading).where(
+                MatchSourceReading.match_id == match.id, MatchSourceReading.peak_minute.is_not(None)
+            )
+        )
+        if row.peak_minute is not None
+    }
     row = session.get(MatchLiveState, match.id)
-    previous = _last_primary(session, match.id)
-    confirmed = None
-    if row is not None and row.confirmed_home is not None and row.confirmed_away is not None:
-        confirmed = Score(row.confirmed_home, row.confirmed_away, row.confirmed_home_pen, row.confirmed_away_pen)
-    return LiveState(
+    stored = LiveState(
         match_id=match.id,
         status=match.status,
         period=match.period,
-        confirmed=confirmed,
-        candidate=Candidate.from_json(row.candidate) if row is not None and row.candidate else None,
-        disagreement_since=row.disagreement_since if row is not None else None,
-        previous_status=(previous.status, previous.period) if previous is not None else None,
-        previous_primary=previous.source if previous is not None else None,
+        minute=match.minute,
+        status_label=match.status_label,
+        peaks=peaks,
+    )
+    if row is None:
+        return stored
+    return replace(
+        stored,
+        confirmed=_confirmed(row),
+        drop_since=row.drop_since,
+        status_drop_since=row.status_drop_since,
+        score_first_source=row.score_first_source,
+        score_changed_at=row.score_changed_at,
+        fulltime_source=row.fulltime_source,
+        fulltime_since=row.fulltime_since,
+        finish_wait_since=row.finish_wait_since,
+        disagreement_since=row.disagreement_since,
     )
 
 
-def to_clock(match: Match, now: datetime) -> bool:
+def reached_second_half(match: Match) -> bool:
+    """Second half, extra time or penalties. ``live`` with no period says nothing about the half."""
+    return match.status in _SECOND_HALF_ON or (match.status == "live" and match.period == "2H")
+
+
+def to_clock(match: Match, now: datetime, *, stuck_after: timedelta) -> bool:
     """Back to the clock estimate, leaving ``match_live_state`` with the score. ``True`` when it moved.
 
     Only a ``feed`` row moves. A locked status or score stays too: a person answered for it, and
     ``ck_matches_clock_no_score`` couldn't hold while keeping it. A postponed match stays as stored:
-    the clock would show a match that never kicked off as live, then finished.
+    the clock would show a match that never kicked off as live, then finished. Past the stuck limit, a
+    match that reached its second half is finished by the watchdog instead (FR-010): it must not lose its
+    score or go back to scheduled.
     """
     if match.status_source != "feed" or match.status == STATUS_POSTPONED:
         return False
     if STATUS_COLUMNS & set(match.locked_fields or ()):
         log.info("live_fallback_skipped", extra={"match_id": match.id, "why": "locked"})
+        return False
+    if match.kickoff_at is not None and match.kickoff_at < now - stuck_after and reached_second_half(match):
+        log.info("live_fallback_skipped", extra={"match_id": match.id, "why": "past_stuck_limit"})
         return False
     match.status_source = "clock"
     match.status = "scheduled"
@@ -82,7 +101,14 @@ def _write_memory(row: MatchLiveState, decision: Decision, now: datetime) -> Non
         row.confirmed_away = decision.confirm.away
         row.confirmed_home_pen = decision.confirm.home_pen
         row.confirmed_away_pen = decision.confirm.away_pen
-    row.candidate = decision.candidate.as_json() if decision.candidate is not None else None
+    row.candidate = None  # the column stays for rollback (0008)
+    row.drop_since = decision.drop_since
+    row.status_drop_since = decision.status_drop_since
+    row.score_first_source = decision.score_first_source
+    row.score_changed_at = decision.score_changed_at
+    row.fulltime_source = decision.fulltime_source
+    row.fulltime_since = decision.fulltime_since
+    row.finish_wait_since = decision.finish_wait_since
     row.disagreement_since = decision.disagreement_since
     row.updated_at = now
 
@@ -101,11 +127,23 @@ def _store_readings(session: Session, match_id: int, readings: Sequence[SourceRe
         }
         row = session.get(MatchSourceReading, (match_id, reading.source))
         if row is None:
+            peak = next_peak(None, reading)
             session.add(
-                MatchSourceReading(match_id=match_id, source=reading.source, read_at=now, changed_at=now, **values)
+                MatchSourceReading(
+                    match_id=match_id,
+                    source=reading.source,
+                    read_at=now,
+                    changed_at=now,
+                    peak_minute=peak.minute if peak is not None else None,
+                    peak_period=peak.period if peak is not None else None,
+                    **values,
+                )
             )
             continue
         row.read_at = now
+        peak = next_peak(Peak(row.peak_minute, row.peak_period) if row.peak_minute is not None else None, reading)
+        if peak is not None:
+            row.peak_minute, row.peak_period = peak.minute, peak.period
         if any(getattr(row, name) != value for name, value in values.items()):
             row.changed_at = now
             for name, value in values.items():
@@ -158,26 +196,57 @@ def _write_score(match: Match, score: Score | None) -> bool:
     return goals or pens
 
 
-def _write_events(session: Session, match_id: int, reading: SourceReading, hold_goals: bool) -> bool:
-    """Diff by the source's event id: idempotent. A held goal neither appears nor disappears."""
+def _score_side(score: Score, side: str) -> int:
+    return score.home if side == "home" else score.away
+
+
+def _event_gone(row: MatchEvent, stored: Counter[str], listed: Counter[str], accepted: Score | None) -> bool:
+    """A goal stays while the score needs it and nothing the source lists can stand in for it (FR-011)."""
+    if row.type not in GOAL_TYPES or accepted is None:
+        return True
+    score = _score_side(accepted, row.side)
+    return stored[row.side] > score or listed[row.side] >= score
+
+
+def _write_events(
+    session: Session, match_id: int, reading: SourceReading, accepted: Score | None, now: datetime, hold: timedelta
+) -> bool:
+    """Diff by the source's event id: idempotent. A missing event goes after ``hold``, a goal with the score.
+
+    A source can give a goal a new ID, as Goal.com does when a scorer is filled in. So while a side has a goal
+    inside its hold, that side's new goals wait: the two may be one goal, and must never show together.
+    """
     if reading.events is None:
         return False
-    existing = {
-        row.external_id: row
-        for row in session.scalars(
-            select(MatchEvent).where(MatchEvent.match_id == match_id, MatchEvent.source == reading.source)
-        )
-    }
+    rows = session.scalars(
+        select(MatchEvent).where(MatchEvent.match_id == match_id, MatchEvent.source == reading.source)
+    ).all()
+    existing = {row.external_id: row for row in rows}
     wanted = {event.external_id: event for event in reading.events}
+    stored = Counter(row.side for row in rows if row.type in GOAL_TYPES)
+    listed = Counter(event.side for event in wanted.values() if event.type in GOAL_TYPES)
+    held_sides: set[str] = set()
     changed = False
     for external_id, row in existing.items():
-        if external_id not in wanted and not (hold_goals and row.type in GOAL_TYPES):
+        if external_id in wanted:
+            row.missing_since = None
+            continue
+        row.missing_since = row.missing_since or now
+        if now - row.missing_since < hold:
+            if row.type in GOAL_TYPES:
+                held_sides.add(row.side)
+        elif _event_gone(row, stored, listed, accepted):
+            if row.type in GOAL_TYPES:
+                stored[row.side] -= 1
             session.delete(row)
             changed = True
     for external_id, event in wanted.items():
-        if hold_goals and event.type in GOAL_TYPES:
-            continue
-        changed |= _write_event(session, match_id, reading.source, existing.get(external_id), event)
+        row_for_event = existing.get(external_id)
+        if row_for_event is None and event.type in GOAL_TYPES:
+            if accepted is None or event.side in held_sides or stored[event.side] >= _score_side(accepted, event.side):
+                continue  # the score hasn't got this far, or this may be the goal being held
+            stored[event.side] += 1
+        changed |= _write_event(session, match_id, reading.source, row_for_event, event)
     return changed
 
 
@@ -201,6 +270,10 @@ def _write_event(session: Session, match_id: int, source: str, row: MatchEvent |
     return True
 
 
+def _rank(source: str) -> int:
+    return SOURCES.index(source) if source in SOURCES else len(SOURCES)
+
+
 def _write_side(
     session: Session, match_id: int, side: str, value: LineupSide | None, source: str, now: datetime
 ) -> bool:
@@ -215,18 +288,40 @@ def _write_side(
             )
         )
         return True
+    if _rank(row.source) < _rank(source):
+        return False  # stored by a source earlier in the order, which keeps it even when its request failed
     if (row.formation, row.players, row.source) == (value.formation, players, source):
         return False
     row.formation, row.players, row.source, row.updated_at = value.formation, players, source, now
     return True
 
 
-def _write_lineups(session: Session, match_id: int, reading: SourceReading, now: datetime) -> bool:
-    if reading.lineups is None:
+def _write_lineups(session: Session, match_id: int, readings: Sequence[SourceReading], now: datetime) -> bool:
+    """From the first source in order that has any, so two sources don't overwrite each other each poll (R9)."""
+    with_lineups = [
+        reading
+        for reading in readings
+        if reading.lineups is not None and (reading.lineups.home is not None or reading.lineups.away is not None)
+    ]
+    if not with_lineups:
         return False
+    reading = min(with_lineups, key=lambda item: _rank(item.source))
+    assert reading.lineups is not None  # filtered above
     home = _write_side(session, match_id, "home", reading.lineups.home, reading.source, now)
     away = _write_side(session, match_id, "away", reading.lineups.away, reading.source, now)
     return home or away
+
+
+def _write_stats(session: Session, match_id: int, reading: SourceReading, now: datetime) -> None:
+    """Only on change, and no client reads them, so no dataset moves (R10)."""
+    if reading.stats is None:
+        return
+    stats = list(reading.stats)
+    row = session.get(MatchStats, (match_id, reading.source))
+    if row is None:
+        session.add(MatchStats(match_id=match_id, source=reading.source, stats=stats, updated_at=now))
+    elif row.stats != stats:
+        row.stats, row.updated_at = stats, now
 
 
 def _confirmed(row: MatchLiveState) -> Score | None:
@@ -242,12 +337,14 @@ def apply_decision(
     *,
     readings: Sequence[SourceReading],
     now: datetime,
+    drop_hold: timedelta,
+    stuck_after: timedelta,
     has_page_slot: bool = False,
 ) -> bool:
-    """Store the readings and the memory, then write the row, events and lineups.
+    """Store the readings and the memory, then write the row, events, lineups and stats.
 
-    A fallback leaves the memory alone: the confirmed score must be there on recovery, and a pending
-    goal stays pending. Returns ``True`` when the ``live`` version moved.
+    A fallback leaves the memory alone: the accepted score must be there on recovery. Returns ``True``
+    when the ``live`` version moved.
     """
     row = session.get(MatchLiveState, match.id)
     if row is None:
@@ -263,13 +360,15 @@ def apply_decision(
     changed = False
     if match.status_source != "manual":
         if decision.fallback:
-            changed = to_clock(match, now)
+            changed = to_clock(match, now, stuck_after=stuck_after)
         else:
             changed = _write_status(match, decision, now)
             changed = _write_score(match, _confirmed(row)) or changed
+    accepted = _confirmed(row)
     for reading in readings:
-        changed = _write_events(session, match.id, reading, decision.hold_goal_events) or changed
-        changed = _write_lineups(session, match.id, reading, now) or changed
+        changed = _write_events(session, match.id, reading, accepted, now, drop_hold) or changed
+        _write_stats(session, match.id, reading, now)
+    changed = _write_lineups(session, match.id, readings, now) or changed
     if changed:
         bump_datasets(session, [LIVE_DATASET])
     return changed
