@@ -178,6 +178,67 @@ COMMENTATOR: dict[str, Any] = {
 
 BROADCAST_PRESET: dict[str, Any] = {"id": 1, "name": "ON Sport 1", "logo_asset_id": 88, "logo": LOGO}
 HIDDEN_CHANNEL_NAME: dict[str, Any] = {"name": "قناة مخفية"}
+UNRESOLVED_NAME: dict[str, Any] = {
+    "id": 91,
+    "source": "yallakora",
+    "kind": "team",
+    "name": "Al Ahli",
+    "context": {
+        "match_id": 48213,
+        "home": "Al Ahli",
+        "away": "الزمالك",
+        "competition": "الدوري المصري الممتاز",
+        "kickoff_at": "2026-11-04T18:00:00Z",
+    },
+    "seen_count": 4,
+    "last_seen_at": "2026-11-04T16:30:00Z",
+    "state": "open",
+    "etag": '"3f9a0c1d5b7e2a64c8d01f93be5a7d20"',
+    "suggestions": [{"id": 101, "name": "الأهلي", "detail": "الدوري المصري الممتاز", "confidence": 100, "exact": True}],
+}
+UNRESOLVED_MAP: dict[str, Any] = {"target_id": 101, "scope_to_competition": True, "created": False}
+
+RIGHTS_HOLDER_BODY: dict[str, Any] = {
+    "name": "Eleven Sports",
+    "logo_asset_id": 77,
+    "competition_ids": [12, 14],
+    "carriages": [
+        {
+            "access": "encrypted",
+            "beam": "wide",
+            "package": "الباقة الرياضية",
+            "satellite_ids": [2],
+            "frequencies": [{"frequency_mhz": 11013, "polarization": "H", "symbol_rate": 27500, "is_primary": True}],
+        }
+    ],
+}
+RIGHTS_HOLDER: dict[str, Any] = {
+    "id": 3,
+    **RIGHTS_HOLDER_BODY,
+    "logo": LOGO,
+    "sort_order": 1,
+    "etag": '"7c1e5a09d3b84f26a0e9c5d71b3f8a42"',
+}
+RIGHTS_HOLDER_ROW: dict[str, Any] = {
+    "id": 3,
+    "name": "Eleven Sports",
+    "logo": LOGO,
+    "sort_order": 1,
+    "competitions": ["الدوري المصري الممتاز"],
+    "satellites": ["نايل سات"],
+    "etag": '"7c1e5a09d3b84f26a0e9c5d71b3f8a42"',
+}
+
+RAW_PAGE: dict[str, Any] = {
+    "state": "ready",
+    "page": 0,
+    "pages": 3,
+    "url": "https://www.filgoal.com/matches/",
+    "content_type": "text/html",
+    "text": "<!doctype html>",
+    "truncated": False,
+}
+
 SOURCE: dict[str, Any] = {"name": "ysscores", "kind": "scraper", "is_enabled": True}
 
 IMPORT_RUN_ROW: dict[str, Any] = {
@@ -196,6 +257,8 @@ IMPORT_RUN_DETAIL: dict[str, Any] = {
     "raw_path": "livesoccertv/2026-11-01/run.json",
     "log": {"unmatched_matches": [], "placeholders_created": [], "skipped_channels": 7, "errors": []},
     "log_available": True,
+    "pages": 3,
+    "worker": "worker-imports@vps2",
 }
 
 SOURCE_HEALTH: dict[str, Any] = {
@@ -209,6 +272,7 @@ SOURCE_HEALTH: dict[str, Any] = {
     "items_24h": [41, 64, 58],
     "error_rate_24h": 0.25,
     "running": False,
+    "live": {"matches_live": 6, "error_share": 0.01, "sources": [{"name": "filgoal", "state": "ok"}]},
 }
 
 DASHBOARD: dict[str, Any] = {

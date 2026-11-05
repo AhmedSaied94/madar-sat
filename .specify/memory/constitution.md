@@ -178,9 +178,11 @@ without a publish step.
 Ingestion, live polling and push run unattended, so every task MUST be safe to retry and loud
 when it fails (G3).
 
-- Every source adapter MUST implement `SourceAdapter` (`name`, `allowed_hosts`, `fetch`, `parse`,
-  `normalize`; system-design §6.6). `parse` MUST be pure and tested against saved raw pages.
-  Raw pages are kept gzipped for 5 days.
+- Every fixture importer MUST implement `SourceAdapter` (`name`, `allowed_hosts`, `fetch`, `parse`,
+  `normalize`; system-design §6.6). The live poller's readers (system-design §6.7) MAY use their
+  own interface, because they run one short cycle with per-match state. Every other rule in this
+  principle applies to them. `parse` MUST be pure and tested against saved raw pages. Raw pages
+  are kept gzipped for 5 days.
 - Records MUST be upserted by `(source, external_id)`. Importers MUST NOT write any field listed
   in `locked_fields`, and they remove only the `match_channels` links they added themselves.
 - Each source MUST have:
@@ -199,8 +201,9 @@ when it fails (G3).
     so each device gets one push per event;
   - collapses by tag `match_<id>`;
   - deletes `UNREGISTERED` tokens.
-- The live poller runs only when a match falls in the window (now − 150 min … now + 10 min).
-  Quiet days cost nothing.
+- The live poller starts on a match only when it falls in the window (now − 150 min … now + 10
+  min). A match already on `feed` keeps being polled until it reaches a final state or kickoff
+  + 210 min, so extra time and penalties aren't cut off. Quiet days cost nothing.
 
 Rationale: the sources block, throttle and change layout (R1). Retries without idempotency
 double-send goals, and failures without alarms leave stale fixtures nobody notices.
@@ -225,7 +228,8 @@ Clients show cached content first and stay within explicit budgets (G5, system-d
   - cached first screen < 1.5 s on a 4 GB Android;
   - home payload ≤ 60 KB gzipped, and a 304 ≤ 1 KB;
   - API p95 < 150 ms cached and < 400 ms uncached;
-  - admin edit → client ≤ 60 s, and live score → client ≤ 45 s;
+  - admin edit → client ≤ 60 s, and a confirmed live score → client ≤ 45 s, counted from the
+    moment the cross-check confirms it (system-design §6.7, §11);
   - crash-free sessions ≥ 99.5 %.
 - API and media hosts, forced/soft update builds, maintenance, ad pacing, feature flags and the
   live poll interval MUST come from Firebase Remote Config, with bundled defaults. Unfinished
@@ -388,4 +392,4 @@ constitution is re-read at each delivery-phase boundary (system-design §12).
 **Runtime guidance.** `CLAUDE.md`, `madar-design/README.md` and the component READMEs give the
 day-to-day detail. They MUST stay consistent with this document.
 
-**Version**: 1.2.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-11-03
+**Version**: 1.3.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-11-04

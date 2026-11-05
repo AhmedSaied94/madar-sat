@@ -4,7 +4,8 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'named_ref.dart';
+import 'match_summary.dart';
+import 'rights_holder_ref.dart';
 import 'sport.dart';
 
 part 'competition_detail.freezed.dart';
@@ -17,9 +18,11 @@ abstract class CompetitionDetail with _$CompetitionDetail {
     required String? logo,
     required String name,
     required int? priority,
+    required List<MatchSummary> recent,
     @JsonKey(name: 'rights_holders')
-    required List<NamedRef> rightsHolders,
+    required List<RightsHolderRef> rightsHolders,
     required Sport sport,
+    required List<MatchSummary> upcoming,
   }) = _CompetitionDetail;
   
   factory CompetitionDetail.fromJson(Map<String, Object?> json) => _$CompetitionDetailFromJson(json);

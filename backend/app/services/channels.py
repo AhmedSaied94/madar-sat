@@ -41,15 +41,14 @@ async def get_channel_detail(session: AsyncSession, channel_id: int, now: dateti
     )
     other_carriages = [_carriage(o_ch, o_sat, o_logo) for o_ch, o_sat, o_logo in other_rows]
 
-    # Upcoming matches (≤ 20): kickoff at or after now − 150 min, channel visible.
+    # Upcoming matches (≤ 20): kickoff from now − 150 min to now + 7 days, channel visible.
     match_id_rows = await session.execute(
         select(MatchChannel.match_id)
         .join(Match, Match.id == MatchChannel.match_id)
         .where(
             MatchChannel.channel_id == channel_id,
             MatchChannel.is_hidden.is_(False),
-            Match.kickoff_at.is_not(None),
-            Match.kickoff_at >= now - timedelta(minutes=150),
+            Match.kickoff_at.between(now - timedelta(minutes=150), now + timedelta(days=7)),
         )
         .order_by(Match.kickoff_at.asc())
         .limit(20)

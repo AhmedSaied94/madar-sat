@@ -19,12 +19,27 @@ import '../../../core/config/media_image.dart';
 /// on the right), and the kickoff date in words.
 ///
 /// [match] is already merged with the live state (`detailWithLiveState`), so what it says
-/// is what may be shown. The whole hero reads as one Arabic label.
+/// is what may be shown. The whole hero reads as one Arabic label (§13.8), and the taps to S7
+/// and S8 are button nodes of their own inside it: everything else is excluded, so nothing is
+/// read twice.
 class MatchHero extends StatelessWidget {
-  const MatchHero({super.key, required this.match, this.now});
+  const MatchHero({
+    super.key,
+    required this.match,
+    this.now,
+    this.onOpenTeam,
+    this.onOpenCompetition,
+  });
 
   final MatchDetail match;
   final DateTime? now;
+
+  /// Opens S7 for the team that was tapped (its crest or its name). Null draws the hero
+  /// without that action.
+  final ValueChanged<int>? onOpenTeam;
+
+  /// Opens S8 for the competition named above the teams. Null draws it as plain text.
+  final ValueChanged<int>? onOpenCompetition;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +50,6 @@ class MatchHero extends StatelessWidget {
     return Semantics(
       container: true,
       label: _semantics(context, l),
-      excludeSemantics: true,
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(
           MadarSpace.s4,
@@ -50,74 +64,99 @@ class MatchHero extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _CompetitionLine(competition: match.competition),
+            _CompetitionLine(
+              competition: match.competition,
+              onTap: onOpenCompetition == null || match.competition.id == null
+                  ? null
+                  : () => onOpenCompetition!(match.competition.id!),
+            ),
             const SizedBox(height: MadarSpace.s4),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _Team(name: match.home.name, logo: match.home.logo, individual: individual),
+                  child: _Team(
+                    name: match.home.name,
+                    logo: match.home.logo,
+                    individual: individual,
+                    onTap: onOpenTeam == null || match.home.id == null
+                        ? null
+                        : () => onOpenTeam!(match.home.id!),
+                  ),
                 ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s2),
-                  child: SizedBox(
-                    width: MadarSpace.s12 + MadarSpace.s8,
-                    child: Center(
-                      child: StatusBlock(
-                        status: match.status,
-                        kickoff: match.kickoffAt,
-                        score: match.score,
-                        minute: match.minute,
-                        estimated: match.estimated,
-                        timeTbd: match.timeTbd,
-                        now: now,
+                ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s2),
+                    child: SizedBox(
+                      width: MadarSpace.s12 + MadarSpace.s8,
+                      child: Center(
+                        child: StatusBlock(
+                          status: match.status,
+                          kickoff: match.kickoffAt,
+                          score: match.score,
+                          minute: match.minute,
+                          estimated: match.estimated,
+                          timeTbd: match.timeTbd,
+                          now: now,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 Expanded(
-                  child: _Team(name: match.away.name, logo: match.away.logo, individual: individual),
+                  child: _Team(
+                    name: match.away.name,
+                    logo: match.away.logo,
+                    individual: individual,
+                    onTap: onOpenTeam == null || match.away.id == null
+                        ? null
+                        : () => onOpenTeam!(match.away.id!),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: MadarSpace.s4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: MadarText.textCaption.fontSize,
-                  color: colors.textTertiary,
-                ),
-                const SizedBox(width: MadarSpace.s2),
-                Flexible(
-                  child: Text(
-                    _dateAndTime(context, l),
-                    style: MadarText.textCaption.copyWith(color: colors.textSecondary),
+            ExcludeSemantics(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: MadarText.textCaption.fontSize,
+                    color: colors.textTertiary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: MadarSpace.s2),
+                  Flexible(
+                    child: Text(
+                      _dateAndTime(context, l),
+                      style: MadarText.textCaption.copyWith(color: colors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
             ),
             // Before the last hour the status block only shows the time, so the hero says
             // how long the wait is; inside the hour the block's «بعد 25 د» takes over.
             if (_countdown(l) case final countdown?) ...[
               const SizedBox(height: MadarSpace.s2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.schedule,
-                    size: MadarText.textCaption.fontSize,
-                    color: colors.accentText,
-                  ),
-                  const SizedBox(width: MadarSpace.s2),
-                  Flexible(
-                    child: Text(
-                      countdown,
-                      style: MadarText.textCaption.copyWith(color: colors.accentText),
+              ExcludeSemantics(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: MadarText.textCaption.fontSize,
+                      color: colors.accentText,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: MadarSpace.s2),
+                    Flexible(
+                      child: Text(
+                        countdown,
+                        style: MadarText.textCaption.copyWith(color: colors.accentText),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -204,15 +243,18 @@ class MatchHero extends StatelessWidget {
 }
 
 class _CompetitionLine extends StatelessWidget {
-  const _CompetitionLine({required this.competition});
+  const _CompetitionLine({required this.competition, this.onTap});
 
   final CompetitionRef competition;
+
+  /// Opens S8 for this competition (T086).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.madarColors;
     final stage = competition.stage;
-    return Wrap(
+    final line = Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: MadarSpace.s2,
@@ -241,20 +283,41 @@ class _CompetitionLine extends StatelessWidget {
           ),
       ],
     );
+    if (onTap == null) return ExcludeSemantics(child: line);
+    return Semantics(
+      container: true,
+      button: true,
+      label: competition.name,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(MadarRadii.lg),
+        child: line,
+      ),
+    );
   }
 }
 
 class _Team extends StatelessWidget {
-  const _Team({required this.name, required this.logo, required this.individual});
+  const _Team({
+    required this.name,
+    required this.logo,
+    required this.individual,
+    this.onTap,
+  });
 
   final String name;
   final String? logo;
   final bool individual;
 
+  /// Opens S7 for this team (T086). The crest and the name are the target.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.madarColors;
-    return Column(
+    final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (!individual) ...[
@@ -273,6 +336,22 @@ class _Team extends StatelessWidget {
           style: MadarText.heading2.copyWith(color: colors.textPrimary),
         ),
       ],
+    );
+    if (onTap == null) return ExcludeSemantics(child: content);
+    return Semantics(
+      container: true,
+      button: true,
+      label: name,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(MadarRadii.lg),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
+          child: content,
+        ),
+      ),
     );
   }
 }

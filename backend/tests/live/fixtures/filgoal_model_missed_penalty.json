@@ -1,0 +1,113 @@
+{
+ "Id": 378949,
+ "HomeTeamId": 1769,
+ "HomeTeamName": "فايكينج",
+ "AwayTeamId": 14488,
+ "AwayTeamName": "صباح باكو",
+ "HomeScore": 2,
+ "AwayScore": 1,
+ "HomePenaltyScore": null,
+ "AwayPenaltyScore": null,
+ "ChampionshipName": "دوري أبطال أوروبا",
+ "Date": "2026-11-04T22:00:00",
+ "CurrentMatchStatus": {
+  "Id": 934687,
+  "MatchId": 378949,
+  "MatchStatusId": 5,
+  "IsCounterEnabled": true,
+  "MatchStatusName": "الشوط الثاني",
+  "MatchStatusMaxTime": 45,
+  "StartAt": "2026-11-04T23:04:33.473",
+  "MatchStatusIndicatorId": 2,
+  "Status": 5,
+  "StatusIndicator": 2,
+  "TimeElapsedBeforeStatus": 45,
+  "TimeElapsed": {
+   "Minutes": 24,
+   "Seconds": 13
+  }
+ },
+ "Events": [
+  {
+   "Id": 971716,
+   "TeamId": 1769,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "زلاتكو تريبيتش",
+   "CalculatedTime": 69,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971717,
+   "TeamId": 1769,
+   "MatchEventTypeId": 9,
+   "MatchEventTypeName": "إهدار ركلة جزاء",
+   "PlayerAName": "زلاتكو تريبيتش",
+   "CalculatedTime": 69,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971680,
+   "TeamId": 14488,
+   "MatchEventTypeId": 3,
+   "MatchEventTypeName": "بطاقة صفراء",
+   "PlayerAName": "أمارالي راخموناليف",
+   "CalculatedTime": 36,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971677,
+   "TeamId": 1769,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "اريك بوثيم",
+   "CalculatedTime": 27,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971678,
+   "TeamId": 1769,
+   "MatchEventTypeId": 2,
+   "MatchEventTypeName": "مساعدة",
+   "PlayerAName": "كريستوفر هاوجين",
+   "CalculatedTime": 27,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971672,
+   "TeamId": 1769,
+   "MatchEventTypeId": 3,
+   "MatchEventTypeName": "بطاقة صفراء",
+   "PlayerAName": "جياني ستينسينس",
+   "CalculatedTime": 18,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971668,
+   "TeamId": 14488,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "أورفي مبينا",
+   "CalculatedTime": 12,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971669,
+   "TeamId": 14488,
+   "MatchEventTypeId": 2,
+   "MatchEventTypeName": "مساعدة",
+   "PlayerAName": "أمارالي راخموناليف",
+   "CalculatedTime": 12,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971665,
+   "TeamId": 1769,
+   "MatchEventTypeId": 3,
+   "MatchEventTypeName": "بطاقة صفراء",
+   "PlayerAName": "كريستوفر هاوجين",
+   "CalculatedTime": 3,
+   "CalculatedAdditionalTime": 0
+  }
+ ]
+}

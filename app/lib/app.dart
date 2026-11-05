@@ -10,6 +10,7 @@ import 'core/config/remote_config.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/settings_providers.dart';
 import 'core/theme/madar_theme.dart';
+import 'design/components/brand_splash.dart';
 import 'design/components/display_scope.dart';
 import 'features/devices/data/device_sync.dart';
 import 'features/devices/data/push_token_sync.dart';
@@ -137,7 +138,7 @@ class _MadarAppState extends ConsumerState<MadarApp> {
                 router: _router,
                 child: Directionality(
                   textDirection: TextDirection.rtl,
-                  child: child ?? const SizedBox.shrink(),
+                  child: BrandSplashGate(child: child ?? const SizedBox.shrink()),
                 ),
               ),
             ),

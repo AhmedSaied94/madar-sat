@@ -44,9 +44,13 @@ interface CompetitionEditorProps {
   competitionId: number | null;
   open: boolean;
   onClose: () => void;
+  /** Prefills the name of a new competition, for A13's «جديد». */
+  initialName?: string;
+  /** Hands the new competition's id back, so A13 can bind the queued name to it. */
+  onCreated?: (competitionId: number) => void;
 }
 
-export function CompetitionEditor({ competitionId, open, onClose }: CompetitionEditorProps): ReactElement {
+export function CompetitionEditor({ competitionId, open, onClose, initialName, onCreated }: CompetitionEditorProps): ReactElement {
   const detail = useGetCompetition(competitionId ?? 0, {
     query: { enabled: open && competitionId !== null, structuralSharing: false },
   });
@@ -89,7 +93,7 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
     if (competitionId === null) {
       if (seeded.current === 'new') return;
       seeded.current = 'new';
-      adopt(emptyDraft(), null);
+      adopt({ ...emptyDraft(), name: initialName ?? '' }, null);
       setSaveError(null);
       return;
     }
@@ -97,7 +101,7 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
     seeded.current = `competition-${competitionId}`;
     adopt(fromCompetition(server), etagOf(detail.data));
     setSaveError(null);
-  }, [open, competitionId, server, detail.data, adopt]);
+  }, [open, competitionId, server, detail.data, adopt, initialName]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
 
@@ -133,7 +137,8 @@ export function CompetitionEditor({ competitionId, open, onClose }: CompetitionE
       if (competitionId === null) {
         const body: CompetitionCreate = { name: parsed.name };
         if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
-        await createCompetition(body);
+        const created = await createCompetition(body);
+        if (created.data) onCreated?.(created.data.id);
       } else {
         const body: CompetitionPatch = {};
         if (parsed.name !== baseline.name) body.name = parsed.name;

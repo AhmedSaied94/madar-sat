@@ -12,11 +12,12 @@ The Celery processes of SD §6.1, the one `beat`, and the deploy that keeps them
 | VPS-2 | `worker-scrape` | `-Q scrape` | `celery inspect ping` |
 | VPS-2 | `worker-maintenance` | `-Q maintenance` | `celery inspect ping` |
 | VPS-2 | `worker-notify` | `-Q notifications`, `-c 2`, `/srv/secrets` read-only (FCM only) | `celery inspect ping` |
+| VPS-2 | `worker-live` | `-Q live`, `-c 1`, `/srv/raw` read-write (the live poller and `capture-live`, D5) | `celery inspect ping` |
 | VPS-2 | `beat` | `celery beat` with a fixed `container_name` | `kill -0 $(cat /tmp/celerybeat.pid)` |
 | VPS-2 | `uptime-kuma` | `louislam/uptime-kuma:1`, `/srv/kuma`, the VCN address `:3001` | `extra/healthcheck` |
 | VPS-1 | `worker-media` | `-Q media`, `-c 1`, 256 MB, `/srv/media` read-write | `celery inspect ping` |
 
-`worker-live` and `flower` are defined in `compose/vps2.yml` and are **not** started. Exactly one
+`flower` is defined in `compose/vps2.yml` and is **not** started. Exactly one
 `beat` runs: the fixed `container_name: madar-beat` makes a second one fail instead of
 double-scheduling everything.
 

@@ -20,11 +20,13 @@ import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
 import 'package:madar_sat/design/components/carriage_row.dart';
 import 'package:madar_sat/design/components/empty_state.dart';
+import 'package:madar_sat/design/components/logo.dart';
 import 'package:madar_sat/design/components/search_field.dart';
 import 'package:madar_sat/design/components/skeleton.dart';
 import 'package:madar_sat/design/components/stale_hint.dart';
 import 'package:madar_sat/features/live/live_poller.dart';
 import 'package:madar_sat/features/match_detail/presentation/match_detail_page.dart';
+import 'package:madar_sat/features/match_detail/presentation/match_hero.dart';
 import 'package:madar_sat/features/my_satellites/data/my_satellites_provider.dart';
 import 'package:madar_sat/l10n/app_localizations.dart';
 
@@ -126,6 +128,12 @@ void main() {
           builder: (context, state) =>
               MatchDetailPage(matchId: int.parse(state.pathParameters['id']!)),
         ),
+        for (final screen in const ['channel', 'team', 'competition'])
+          GoRoute(
+            path: '/$screen/:id',
+            builder: (context, state) =>
+                Scaffold(body: Text('$screen-${state.pathParameters['id']}')),
+          ),
       ],
     );
     await tester.pumpWidget(
@@ -378,6 +386,57 @@ void main() {
       expect(find.text('مباشر'), findsOneWidget);
       expect(find.text('12′'), findsNothing);
       expect(find.byType(ScoreParts), findsNothing);
+    });
+  });
+
+  group('entry points (T086, M-R1-2)', () {
+    testWidgets('a carriage row, expanded, opens S6 from «عرض القناة»', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+
+      await tapChannel(tester, 'ON Sport HD');
+      await tester.tap(find.text('عرض القناة'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('channel-1'), findsOneWidget);
+    });
+
+    testWidgets("the home team's crest opens S7", (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+
+      await tester.tap(
+        find.descendant(of: find.byType(MatchHero), matching: find.byType(TeamCrest)).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('team-1'), findsOneWidget);
+    });
+
+    testWidgets("the away team's name opens S7", (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+
+      await tester.tap(find.text('الزمالك'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('team-2'), findsOneWidget);
+    });
+
+    testWidgets('the competition line opens S8', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+
+      await tester.tap(
+        find.descendant(of: find.byType(MatchHero), matching: find.text('الدوري المصري الممتاز')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('competition-12'), findsOneWidget);
     });
   });
 

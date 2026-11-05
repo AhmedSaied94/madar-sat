@@ -4,7 +4,8 @@ One fixture per savepoint, so a single bad item marks the run ``partial`` instea
 
 1. find the row: ``(source, external_id)``, the bridge's ``matches.legacy_id``, or the duplicate
    probe (the same resolved teams within 45 minutes, or the same normalized names on the same
-   ``match_date`` when a team id is missing);
+   ``match_date`` when a team id is missing). YallaKora's id reaches the live poller, so it links
+   more strictly: see ``_yallakora_probe``;
 2. lock it with ``SELECT … FOR UPDATE`` and re-read ``locked_fields`` under the lock, so an admin
    save that commits just before the import is never overwritten;
 3. write only unlocked fields whose value differs, and record the external id;
@@ -24,11 +25,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, timedelta
 from typing import Any, cast
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.adapters.base import NormalizedFixture, ParsedFixture
+from app.adapters.health import bump_datasets
 from app.adapters.resolve import ResolveResult, resolve_competition, resolve_team
+from app.adapters.unresolved import Kind, record_unresolved
 from app.db.models import (
     AuditLog,
     Competition,
@@ -42,11 +45,19 @@ from app.db.models import (
 log = logging.getLogger(__name__)
 
 KICKOFF_TOLERANCE = timedelta(minutes=45)
-SOURCES = ("ysscores", "legacy", "manual")
+SOURCES = ("ysscores", "legacy", "manual", "yallakora")
 
 
 class SkipItem(Exception):
     """The item cannot be imported; the run records it and moves on."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class WaitForEditor(Exception):
+    """No row may take this card's id yet, and a new row would duplicate one (FR-022a, US3)."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
@@ -72,6 +83,8 @@ class RunOutcome:
     kickoff_changed: bool = False
     skipped: list[dict[str, str]] = field(default_factory=list)
     unresolved: list[dict[str, str | None]] = field(default_factory=list)
+    names_queued: int = 0
+    waiting: list[dict[str, str]] = field(default_factory=list)
     postponed: list[dict[str, str]] = field(default_factory=list)
     logo_jobs: list[LogoJob] = field(default_factory=list)
 
@@ -111,7 +124,7 @@ class UpsertPipeline:
             try:
                 with self.session.begin_nested():
                     item = normalize(raw) if normalize is not None else cast(NormalizedFixture, raw)
-                    created, changed, kickoff_changed = self._apply(item, outcome)
+                    applied = self._apply(item, outcome)
             except SkipItem as exc:
                 outcome.skipped.append(_skipped(raw, exc.reason))
                 continue
@@ -123,6 +136,9 @@ class UpsertPipeline:
                 )
                 outcome.skipped.append(_skipped(raw, "error"))
                 continue
+            if applied is None:
+                continue
+            created, changed, kickoff_changed = applied
             if item.postponed:
                 outcome.postponed.append({"ref": _ref(item)})
             if created:
@@ -135,6 +151,8 @@ class UpsertPipeline:
 
         if outcome.changed:
             self._bump(outcome.kickoff_changed)
+        if outcome.names_queued:
+            bump_datasets(self.session, ["unresolved_names"])
         return outcome
 
     def _bump(self, kickoff_changed: bool) -> None:
@@ -148,7 +166,8 @@ class UpsertPipeline:
 
     # --- one fixture --------------------------------------------------------------------
 
-    def _apply(self, item: NormalizedFixture, outcome: RunOutcome) -> tuple[bool, bool, bool]:
+    def _apply(self, item: NormalizedFixture, outcome: RunOutcome) -> tuple[bool, bool, bool] | None:
+        """``(created, changed, kickoff_changed)``, or ``None`` for a card waiting on an editor."""
         home, away = item.home, item.away
         if not home or not away:
             raise SkipItem("missing_teams")
@@ -180,10 +199,20 @@ class UpsertPipeline:
                     {"name": result.name, "competition": item.competition, "match_ref": _ref(item)}
                 )
 
-        match_id, created = self._find_or_create(item, competition, home_team, away_team)
+        try:
+            match_id, created = self._find_or_create(item, competition, home_team, away_team)
+        except WaitForEditor as exc:
+            self._queue_unresolved(None, item, competition, home_team, away_team, outcome)
+            outcome.waiting.append(_skipped(item, exc.reason))
+            log.info("item_waiting", extra={"ref": _ref(item), "source": self.source, "why": exc.reason})
+            return None
+        self._queue_unresolved(match_id, item, competition, home_team, away_team, outcome)
         locked, changed_fields, kickoff_changed = self._write_fields(
             match_id, item, competition, home_team, away_team, created=created
         )
+        broadcaster = self._write_broadcaster(match_id, item, locked)
+        if broadcaster:
+            changed_fields = {**changed_fields, "local_broadcaster_eg": broadcaster}
         # Only an adapter that supplied a link set may reconcile them (B2-R1-2, FR-022).
         link_changes: dict[str, Any] = {}
         if item.links is not None:
@@ -209,6 +238,61 @@ class UpsertPipeline:
         _ = locked  # read under the lock; kept for the caller's logs
         return created, changed, kickoff_changed
 
+    def _queue_unresolved(
+        self,
+        match_id: int | None,
+        item: NormalizedFixture,
+        competition: ResolveResult,
+        home_team: ResolveResult,
+        away_team: ResolveResult,
+        outcome: RunOutcome,
+    ) -> None:
+        """What the run couldn't match waits for an editor; the match keeps its text names (FR-022)."""
+        context = {
+            "match_id": match_id,
+            "home": item.home,
+            "away": item.away,
+            "competition": item.competition,
+            "kickoff_at": item.kickoff_at,
+        }
+        unmatched: list[tuple[Kind, ResolveResult]] = [
+            ("competition", competition),
+            ("team", home_team),
+            ("team", away_team),
+        ]
+        for kind, result in unmatched:
+            if result.entity_id is not None or not result.name:
+                continue
+            if record_unresolved(
+                self.session,
+                source=self.source,
+                kind=kind,
+                name=result.name,
+                competition=item.competition if kind == "team" else None,
+                context=context,
+            ):
+                outcome.names_queued += 1
+
+    def _write_broadcaster(self, match_id: int, item: NormalizedFixture, locked: frozenset[str]) -> list[Any] | None:
+        """Write the Egyptian broadcaster unless locked: ``[before, after]``, or ``None`` unchanged.
+
+        Revision ``0007`` (Lane B1) adds the column. A card with no channel says nothing about it,
+        so it never clears a stored value.
+        """
+        wanted = item.local_broadcaster_eg
+        if wanted is None or "local_broadcaster_eg" in locked:
+            return None
+        before = self.session.execute(
+            text("SELECT local_broadcaster_eg FROM matches WHERE id = :id"), {"id": match_id}
+        ).scalar_one()
+        if before == wanted:
+            return None
+        self.session.execute(
+            text("UPDATE matches SET local_broadcaster_eg = :value, updated_at = now() WHERE id = :id"),
+            {"value": wanted, "id": match_id},
+        )
+        return [before, wanted]
+
     def _find_or_create(
         self,
         item: NormalizedFixture,
@@ -216,7 +300,7 @@ class UpsertPipeline:
         home_team: ResolveResult,
         away_team: ResolveResult,
     ) -> tuple[int, bool]:
-        found = self._find_match(item)
+        found = self._find_match(item, home_team.entity_id, away_team.entity_id)
         if found is not None:
             return found, False
         match = Match(
@@ -238,7 +322,7 @@ class UpsertPipeline:
         self.session.flush()
         return match.id, True
 
-    def _find_match(self, item: NormalizedFixture) -> int | None:
+    def _find_match(self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None) -> int | None:
         if self.source == "legacy" and item.legacy_id:
             found = self.session.execute(select(Match.id).where(Match.legacy_id == item.legacy_id)).scalar_one_or_none()
             if found is not None:
@@ -254,26 +338,66 @@ class UpsertPipeline:
             ).scalar_one_or_none()
             if found is not None:
                 return found
-        return self._duplicate_probe(item)
+        if self.source == "yallakora":
+            return self._yallakora_probe(item, home_team_id, away_team_id)
+        return self._duplicate_probe(item, home_team_id, away_team_id)
 
-    def _duplicate_probe(self, item: NormalizedFixture) -> int | None:
+    def _yallakora_probe(
+        self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None
+    ) -> int | None:
+        """Link only on both teams, in order, and one kickoff within 45 minutes (FR-022a, R7).
+
+        ``app/live/links.py`` trusts a stored id, so a wrong link publishes another match's score.
+        ``None`` means no row holds this fixture, so the card gets its own. A card that might be a
+        row we can't prove it is waits: linking could be wrong, and a new row could be a duplicate.
+        """
+        if home_team_id is None or away_team_id is None:
+            if self._same_names_held_elsewhere(item):
+                raise WaitForEditor("unresolved_names_match_a_row")
+            return None
+        if item.kickoff_at is None:
+            return None
+        found = (
+            self.session.execute(
+                select(Match.id)
+                .where(
+                    Match.home_team_id == home_team_id,
+                    Match.away_team_id == away_team_id,
+                    Match.kickoff_at.between(item.kickoff_at - KICKOFF_TOLERANCE, item.kickoff_at + KICKOFF_TOLERANCE),
+                )
+                .order_by(Match.id)
+                .limit(2)
+            )
+            .scalars()
+            .all()
+        )
+        if len(found) > 1:
+            raise WaitForEditor("more_than_one_match")
+        return found[0] if found else None
+
+    def _same_names_held_elsewhere(self, item: NormalizedFixture) -> bool:
+        """A row with these names that day and no YallaKora id: one with an id is another of its cards."""
+        has_yallakora_id = (
+            select(MatchExternalId.match_id)
+            .where(MatchExternalId.match_id == Match.id, MatchExternalId.source == "yallakora")
+            .exists()
+        )
+        found = self.session.execute(
+            select(Match.id)
+            .where(
+                Match.match_date == item.match_date,
+                func.ar_normalize(Match.home_team_name) == func.ar_normalize(item.home or ""),
+                func.ar_normalize(Match.away_team_name) == func.ar_normalize(item.away or ""),
+                ~has_yallakora_id,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        return found is not None
+
+    def _duplicate_probe(
+        self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None
+    ) -> int | None:
         """A fixture another source already holds: the same teams within 45 min, or the same names."""
-        home_team_id = resolve_team(
-            self.session,
-            external_id=item.home_external_id,
-            name=item.home,
-            sport=item.sport,
-            competition_name=item.competition,
-            source=self.source,
-        ).entity_id
-        away_team_id = resolve_team(
-            self.session,
-            external_id=item.away_external_id,
-            name=item.away,
-            sport=item.sport,
-            competition_name=item.competition,
-            source=self.source,
-        ).entity_id
         if home_team_id is not None and away_team_id is not None and item.kickoff_at is not None:
             window = timedelta(minutes=KICKOFF_TOLERANCE.total_seconds() // 60)
             return self.session.execute(
@@ -366,6 +490,10 @@ class UpsertPipeline:
         return locked, diff, kickoff_changed
 
     def _fields_are_frozen(self, match: Match) -> bool:
+        if self.source == "yallakora":
+            # It adds the broadcaster and its id to a row another source holds, and leaves the rest:
+            # two importers rewriting each other's spelling would stale every open editor (D5).
+            return match.source != "yallakora"
         if self.source != "legacy":
             return False
         if match.source == "ysscores":

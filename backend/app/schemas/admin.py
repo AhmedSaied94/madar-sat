@@ -693,7 +693,7 @@ class SourceItem(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [ex.SOURCE]})
 
     name: str
-    kind: Literal["scraper", "api", "internal"]
+    kind: Literal["scraper", "api", "internal", "fixtures", "live_reader", "live"]
     is_enabled: bool
 
 
@@ -719,6 +719,33 @@ class ImportRunDetail(ImportRunRow):
     raw_path: str | None
     log: dict[str, Any] | None
     log_available: bool
+    pages: Int32
+    worker: str | None
+
+
+class RawPage(BaseModel):
+    """A saved page as inert text, never a link (005 research R13). ``pending``: poll again, up to 10 s."""
+
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.RAW_PAGE]})
+
+    state: Literal["pending", "ready", "gone"]
+    page: Int32
+    pages: Int32
+    url: str | None
+    content_type: str | None
+    text: str | None
+    truncated: bool
+
+
+class LiveSourceCard(BaseModel):
+    name: str
+    state: Literal["ok", "failing", "down", "invalid"]
+
+
+class LiveCard(BaseModel):
+    matches_live: Int32
+    error_share: Annotated[float, Field(ge=0, le=1)]
+    sources: list[LiveSourceCard]
 
 
 class SourceHealth(SourceItem):
@@ -735,6 +762,7 @@ class SourceHealth(SourceItem):
     items_24h: list[Int32]
     error_rate_24h: Annotated[float, Field(ge=0, le=1)] | None
     running: bool
+    live: LiveCard | None
 
 
 class SourceRunQueued(BaseModel):

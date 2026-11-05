@@ -8,10 +8,11 @@ existing ``ETag("admin_sources", ("sources",))`` changes. The runs list and run 
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import redis.asyncio as aioredis
 from sqlalchemy import func, select
@@ -19,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import EntityNotFound, run_in_progress, source_not_runnable
 from app.auth.roles import AuthedAdmin
-from app.db.models import ImportRun, Source
+from app.db.models import ImportRun, LiveSourceState, Match, Source
 from app.schemas import admin as a
 from app.services.admin import lists, writer
 from app.settings import get_settings
@@ -30,6 +31,12 @@ ENTITY = "source"
 WINDOW = timedelta(hours=24)
 SPARKLINE_POINTS = 24
 RUNS_MAX_LIMIT = 50
+# Named, not told apart by ``kind``: the release before 0007 loads every row's kind into its own list.
+LIVE_POLLER = "live_poller"
+LIVE_READERS = frozenset({"filgoal", "goal"})
+LIVE_SOURCES = frozenset({LIVE_POLLER}) | LIVE_READERS
+IN_PLAY_STATUSES = ("live", "halftime", "extra_time", "penalties")
+RAW_REQUEST_TTL_S = 10
 
 
 def _redis() -> aioredis.Redis:
@@ -49,6 +56,16 @@ def run_row(run: ImportRun) -> a.ImportRunRow:
     )
 
 
+def _pages(run: ImportRun) -> int:
+    """How many pages the run saved: the log's count when it has one, else what ``raw_path`` implies."""
+    pages = (run.log or {}).get("pages")
+    if isinstance(pages, int) and not isinstance(pages, bool):
+        return pages
+    if isinstance(pages, list):
+        return len(pages)
+    return 1 if run.raw_path is not None else 0
+
+
 def _paused(source: Source, now: datetime) -> bool:
     return (
         not source.is_enabled
@@ -63,10 +80,12 @@ def _health(
     last_run: ImportRun | None,
     window_runs: list[ImportRun],
     running: bool,
+    live: a.LiveCard | None,
 ) -> a.SourceHealth:
     failures = sum(1 for run in window_runs if run.status == "failed")
     rate = (failures / len(window_runs)) if window_runs else None
     return a.SourceHealth(
+        live=live.model_copy(update={"error_share": rate or 0.0}) if live is not None else None,
         name=source.name,
         kind=source.kind,
         is_enabled=source.is_enabled,
@@ -87,6 +106,9 @@ async def health(session: AsyncSession, now: datetime, name: str | None = None) 
     query = select(Source).order_by(Source.name)
     if name is not None:
         query = query.where(Source.name == name)
+    else:
+        # A live reader is a part of the Live poller's card, not a card of its own.
+        query = query.where(Source.name.not_in(LIVE_READERS))
     sources = list((await session.scalars(query)).all())
     if not sources:
         return []
@@ -111,21 +133,46 @@ async def health(session: AsyncSession, now: datetime, name: str | None = None) 
         by_source[run.source].append(run)
 
     running = await _running(names)
+    live = await _live_card(session) if LIVE_POLLER in names else None
     return [
-        _health(source, now, latest.get(source.name), by_source[source.name], source.name in running)
+        _health(
+            source,
+            now,
+            latest.get(source.name),
+            by_source[source.name],
+            source.name in running,
+            live if source.name == LIVE_POLLER else None,
+        )
         for source in sources
     ]
 
 
+async def _live_card(session: AsyncSession) -> a.LiveCard:
+    """The readers' states and how many matches the feed is driving; ``_health`` adds the error share."""
+    matches_live = await session.scalar(
+        select(func.count()).select_from(Match).where(Match.status_source == "feed", Match.status.in_(IN_PLAY_STATUSES))
+    )
+    states = await session.scalars(select(LiveSourceState).order_by(LiveSourceState.source))
+    return a.LiveCard(
+        matches_live=int(matches_live or 0),
+        error_share=0.0,
+        sources=[a.LiveSourceCard(name=row.source, state=row.state) for row in states],
+    )
+
+
+def _lock_keys(name: str) -> tuple[str, ...]:
+    return ("lock:live:poll",) if name == LIVE_POLLER else (f"lock:fetch:{name}", f"lock:ingest:{name}")
+
+
 async def _running(names: list[str]) -> set[str]:
-    """``EXISTS lock:fetch:<name> OR lock:ingest:<name>``; a Redis outage reports nothing running."""
+    """Whether a source's job locks are held; a Redis outage reports nothing running."""
     if not names:
         return set()
     client = _redis()
     try:
         async with client.pipeline(transaction=False) as pipe:
             for name in names:
-                pipe.exists(f"lock:fetch:{name}", f"lock:ingest:{name}")
+                pipe.exists(*_lock_keys(name))
             answers = await pipe.execute()
         return {name for name, held in zip(names, answers, strict=True) if held}
     except Exception:  # noqa: BLE001
@@ -150,6 +197,8 @@ def _bridge_configured() -> bool:
 async def check_runnable(session: AsyncSession, name: str) -> Source:
     """The source, if a run makes sense now: runnable kind, and its lock is free."""
     source = await get(session, name)
+    if source.name in LIVE_SOURCES:
+        raise source_not_runnable()
     if source.kind == "internal" and not (source.name == "legacy" and _bridge_configured()):
         raise source_not_runnable()
     if await _lock_held(source.name):
@@ -239,7 +288,60 @@ async def run_detail(session: AsyncSession, run_id: int) -> a.ImportRunDetail:
         raw_path=run.raw_path,
         log=run.log,
         log_available=run.log is not None,
+        pages=_pages(run),
+        worker=(run.log or {}).get("worker"),
     )
+
+
+def send_read_raw_page(run_id: int, page: int) -> None:
+    """Queue ``adapters.read_raw_page`` by name, so ``api-admin`` imports no adapter code (R13).
+
+    Only the run's id and the page number travel: the path comes from ``import_runs.raw_path``.
+    """
+    from app.workers import app as celery_app
+
+    celery_app.send_task("adapters.read_raw_page", args=[run_id, page], queue="maintenance")
+
+
+def _raw_page(state: Literal["pending", "gone"], page: int, pages: int) -> a.RawPage:
+    return a.RawPage(state=state, page=page, pages=pages, url=None, content_type=None, text=None, truncated=False)
+
+
+async def _cached_raw_page(run_id: int, page: int) -> a.RawPage | None:
+    """The page the worker left in Redis; with nothing there yet, queue one read per ``RAW_REQUEST_TTL_S``.
+
+    The worker writes ``{pages, url, content_type, text, truncated}``, or ``{gone: true}`` for a pruned file.
+    """
+    client = _redis()
+    try:
+        stored = await client.get(f"rawview:{run_id}:{page}")
+        if stored is None:
+            if await client.set(f"rawview:{run_id}:{page}:requested", "1", nx=True, ex=RAW_REQUEST_TTL_S):
+                send_read_raw_page(run_id, page)
+            return None
+    except Exception:  # noqa: BLE001 - run detail still answers; the client stops polling after 10 s
+        log.warning("raw_page_unavailable", extra={"run_id": run_id})
+        return None
+    finally:
+        await client.aclose()
+    try:
+        payload = json.loads(stored)
+        if payload.get("gone"):
+            return _raw_page("gone", page, 0)
+        return a.RawPage(state="ready", page=page, **payload)
+    except (ValueError, TypeError, AttributeError):
+        log.warning("raw_page_unreadable", extra={"run_id": run_id})
+        return _raw_page("gone", page, 0)
+
+
+async def raw_page(session: AsyncSession, run_id: int, page: int) -> a.RawPage:
+    """``GET /import-runs/{id}/raw``: read over Redis, because the pages live on VPS-2 (research R13)."""
+    run = await session.get(ImportRun, run_id)
+    if run is None:
+        raise EntityNotFound("import_run_not_found")
+    if run.raw_path is None:
+        return _raw_page("gone", page, 0)
+    return await _cached_raw_page(run_id, page) or _raw_page("pending", page, _pages(run))
 
 
 async def count_placeholders(session: AsyncSession) -> int:

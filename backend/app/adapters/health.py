@@ -49,6 +49,11 @@ UPDATE sources
  WHERE name = :name
 RETURNING last_success_at
 """
+LIVE_POLLER = "live_poller"
+LIVE_FAILURE_SQL = """
+UPDATE sources SET consecutive_failures = consecutive_failures + 1, updated_at = now()
+ WHERE name = 'live_poller'
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +151,20 @@ def record_run(
     if bump:
         bump_datasets(session, ["sources"])
     return outcome
+
+
+def record_live_cycle(session: Any, *, status: str, items_found: int, finished_at: datetime) -> None:
+    """Record one live poller cycle on the ``live_poller`` row, with no breaker (D5 contract).
+
+    The poller has its own failure handling per source (``live_source_state``, the watchdog), and an
+    open breaker would stop a live match's polling, so this never sets ``breaker_opened_at``.
+    It doesn't bump ``sources`` either: a cycle runs every minute, and the caller bumps what changed.
+    An idle cycle (not failed, no items) leaves the row as it is.
+    """
+    if status == "failed":
+        session.execute(text(LIVE_FAILURE_SQL))
+    elif items_found > 0:
+        session.execute(text(SUCCESS_SQL), {"name": LIVE_POLLER, "finished_at": finished_at})
 
 
 def source_is_paused(session: Any, source: str, *, now: datetime | None = None) -> bool:

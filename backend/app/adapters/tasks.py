@@ -39,6 +39,7 @@ from app.adapters.livesoccertv import (
 from app.adapters.messages import KIND_BROADCASTS, KIND_FIXTURES, Kind, MessageTooLarge, ScrapeResult
 from app.adapters.ratelimit import RateLimiter
 from app.adapters.satair_bridge import BridgeNotConfigured, SatairBridgeAdapter
+from app.adapters.yallakora import YallakoraAdapter
 from app.adapters.ysscores import YsscoresAdapter
 from app.domain.time import CAIRO
 from app.workers import app as celery_app
@@ -56,10 +57,13 @@ LOGO_QUEUE = "media"
 INGEST_QUEUE = "imports"
 IMPORT_SCHEDULE_QUEUE = "imports"
 PRUNE_QUEUE = "maintenance"
-HEARTBEAT_QUEUES = ("maintenance", "imports", "notifications")
+HEARTBEAT_QUEUES = ("maintenance", "imports", "notifications", "live")
 # The compact run log A13 reads from VPS-1; ``import_runs.log`` is 0005's column (R12, T060).
 MAX_LOG_BYTES = 64 * 1024
 MAX_LOG_ITEMS = 20
+# Run detail reads a raw page over Redis, so the admin API needs no way into VPS-2's disk (D5 R13).
+MAX_RAW_VIEW_BYTES = 512 * 1024
+RAW_VIEW_TTL = 5 * 60
 
 
 class IngestionRouter:
@@ -82,7 +86,7 @@ class IngestionRouter:
     ) -> dict[str, str] | None:
         if name == "adapters.fetch":
             source = (args[0] if args else (kwargs or {}).get("source")) or ""
-            if source == "legacy":
+            if source in {"legacy", "yallakora"}:
                 return {"queue": "scrape"}
             if source == "ysscores":
                 return {"queue": get_adapter_settings().ysscores_fetch_queue}
@@ -96,6 +100,7 @@ class IngestionRouter:
             "adapters.schedule_fetch": IMPORT_SCHEDULE_QUEUE,
             "adapters.ingest": INGEST_QUEUE,
             "adapters.prune_raw_pages": PRUNE_QUEUE,
+            "adapters.read_raw_page": PRUNE_QUEUE,
             "adapters.rehost_logo": LOGO_QUEUE,
             "ops.scrape_home_backlog": IMPORT_SCHEDULE_QUEUE,
         }
@@ -134,6 +139,8 @@ def adapter_for(source: str, fetcher: HttpFetcher | None = None) -> SourceAdapte
         return SatairBridgeAdapter(fetcher=fetcher)
     if source == LIVESOCCERTV:
         return LivesoccertvAdapter(fetcher=fetcher)
+    if source == "yallakora":
+        return YallakoraAdapter(fetcher=fetcher)
     raise ValueError(f"unknown source {source!r}")
 
 
@@ -143,12 +150,17 @@ def send_ingest(result: ScrapeResult) -> None:
 
 @task(name="adapters.fetch", expires=FETCH_EXPIRES)
 def fetch(
-    self: Any, source: str, start: str | None = None, targets: list[dict[str, Any]] | None = None
+    self: Any,
+    source: str,
+    start: str | None = None,
+    targets: list[dict[str, Any]] | None = None,
+    days: int | None = None,
 ) -> dict[str, Any]:
     """Fetch and parse one source, then hand a ``ScrapeResult`` to ``ingest`` (R15, R16, R19).
 
     LiveSoccerTV gets its targets from ``adapters.schedule_fetch``: the home box has no database to
-    plan with, so a fetch without targets is a no-op (R14).
+    plan with, so a fetch without targets is a no-op (R14). ``days`` narrows the window, which
+    ``yallakora-today`` uses.
     """
     started = now_utc()
     with redis_lock(f"lock:fetch:{source}", FETCH_LOCK_TTL, client=redis_client()) as acquired:
@@ -172,7 +184,7 @@ def fetch(
             today = date.fromisoformat(start) if start else datetime.now(CAIRO).date()
             fetcher = http_fetcher()
             adapter = adapter_for(source, fetcher)
-            window = DateWindow.next_days(today=today)
+            window = DateWindow.next_days(today=today, span=days) if days else DateWindow.next_days(today=today)
             if source == LIVESOCCERTV:
                 assert isinstance(adapter, LivesoccertvAdapter)
                 pages = list(adapter.fetch(window, targets=planned))
@@ -521,11 +533,13 @@ def _write_run_json(
         },
         "skipped": (outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []),
         "unresolved": outcome.unresolved if outcome is not None else [],
+        "waiting": outcome.waiting if outcome is not None else [],
         "postponed": outcome.postponed if outcome is not None else [],
         "unmatched": [item.model_dump() for item in data.unmatched],
         "placeholders_created": list(links.placeholders_created) if links is not None else [],
         "health": health_outcome.as_log() if health_outcome is not None else {},
         "error": data.error,
+        "page_urls": [page.url for page in data.pages],  # read back by adapters.read_raw_page
     }
     (run_dir / "run.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -617,6 +631,29 @@ def prune_raw_pages(self: Any) -> dict[str, Any]:
     return {"removed": removed}
 
 
+@task(name="adapters.read_raw_page")
+def read_raw_page(self: Any, run_id: int, page: int = 0) -> dict[str, Any]:
+    """Copy one saved page of a run to ``rawview:<run>:<page>`` for the admin API (D5 R13).
+
+    The path comes only from the run row, and must lie under the raw root. A page that can't be read
+    is written as ``{"gone": true}``, so the admin stops polling.
+    """
+    import json
+
+    from sqlalchemy import select
+
+    from app.adapters.raw_store import read_page
+    from app.db.models import ImportRun
+    from app.db.session import SyncSession
+
+    with SyncSession() as session:
+        raw_path = session.execute(select(ImportRun.raw_path).where(ImportRun.id == run_id)).scalar_one_or_none()
+    view = read_page(get_adapter_settings().raw_root, raw_path, page, max_bytes=MAX_RAW_VIEW_BYTES)
+    redis_client().set(f"rawview:{run_id}:{page}", json.dumps(view, ensure_ascii=False), ex=RAW_VIEW_TTL)
+    log.info("raw_page_read", extra={"run": run_id, "page": page, "gone": "gone" in view})
+    return {"run": run_id, "page": page, "gone": "gone" in view}
+
+
 @task(name="adapters.schedule_fetch")
 def schedule_fetch(self: Any, source: str, manual: bool = False, window: str = "default") -> dict[str, Any]:
     """Apply the pause and the breaker, plan LiveSoccerTV, then send one fetch (R14, R17).
@@ -654,10 +691,14 @@ def schedule_fetch(self: Any, source: str, manual: bool = False, window: str = "
     source_queue: str | None = {
         "ysscores": get_adapter_settings().ysscores_fetch_queue,
         "legacy": "scrape",
+        "yallakora": "scrape",
     }.get(source)
     if source_queue is None:
         raise ValueError(f"unknown source {source!r}")
-    fetch.apply_async(args=[source], queue=source_queue)
+    if window == "today":
+        fetch.apply_async(args=[source], kwargs={"days": 1}, queue=source_queue)
+    else:
+        fetch.apply_async(args=[source], queue=source_queue)
     log.info("scheduled", extra={"source": source, "queue": source_queue})
     return {"source": source, "queue": source_queue}
 

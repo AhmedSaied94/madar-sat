@@ -121,6 +121,7 @@ function serveMatches(role: 'admin' | 'editor' = 'editor', list: readonly unknow
             items_24h: [],
             error_rate_24h: null,
             running: false,
+            live: null,
           },
           {
             name: 'legacy',
@@ -135,6 +136,7 @@ function serveMatches(role: 'admin' | 'editor' = 'editor', list: readonly unknow
             items_24h: [],
             error_rate_24h: null,
             running: false,
+            live: null,
           },
         ]),
       ),

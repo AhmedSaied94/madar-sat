@@ -14,7 +14,20 @@ Code: `app/lib/core/config/remote_config.dart` (the keys, the validation and the
 | `latest_build` | `0` | The newest published build. Read now; the soft-update banner that shows it arrives on D8 | a whole number |
 | `live_poll_interval_s` | `30` | How often `/v1/live` is polled while a live or imminent match is on screen | 10–600 seconds; anything else keeps 30 |
 
-`maintenance`, `ads` and `features` are read but nothing renders them until D8–D9 (plan.md Complexity Tracking).
+`maintenance` and `ads` are read but nothing renders them until D8–D9 (plan.md Complexity Tracking).
+
+## `features`, the dark-ship switches
+
+One JSON object of on/off switches, so an unfinished screen can ship behind a value instead of behind a branch. Its value from D5 until D6:
+
+```json
+{ "live_center": false }
+```
+
+- `live_center` is D6's live centre. **No code reads it yet** (`grep -r live_center app/lib` is empty on D5, as the D5 contract requires), so the value changes nothing on screen today; keep it `false` until D6's lane adds the reader and says otherwise.
+- Ship a switch as `false` and turn it on when the screen is done, never the other way round: a phone that has never reached Firebase, or one started in flight mode, runs whatever the build bundled, and a switch that defaults to on ships the unfinished screen to it.
+
+**Owner step (T089):** in the Firebase console, add `features` with exactly the object above and **Publish changes**. A release build picks it up within an hour of its next start.
 
 ## Set the parameters
 

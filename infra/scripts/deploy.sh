@@ -33,7 +33,7 @@
 #   2. verify the D3 folders and backup-db.timer;
 #   3. pull with the token from stdin (nothing to migrate: migrations run on VPS-1);
 #   4. `compose --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify
-#      uptime-kuma beat`;
+#      worker-live uptime-kuma beat`;
 #   5. wait up to 90 s for all of them to report healthy (each worker answers `celery inspect ping`;
 #      beat is healthy when its pid file's process lives);
 #   6. on failure, restore the previous tag and exit non-zero.
@@ -64,7 +64,7 @@ api_services=(api-public api-admin)
 media_service=worker-media
 vps1_stateful=(postgres redis caddy)
 # `worker-notify` holds the outbox dispatcher and `uptime-kuma` watches every host (D3, R20).
-vps2_services=(worker-imports worker-scrape worker-maintenance worker-notify uptime-kuma beat)
+vps2_services=(worker-imports worker-scrape worker-maintenance worker-notify worker-live uptime-kuma beat)
 vps1_timers=(backup-media.timer backup-media-weekly.timer)
 vps2_timers=(backup-db.timer)
 

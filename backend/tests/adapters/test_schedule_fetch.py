@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from itertools import combinations
 from typing import Any
 
 import pytest
@@ -150,16 +151,35 @@ def test_the_bridge_goes_to_vps2(sync_session, sent) -> None:
     assert sent == [{"args": ["legacy"], "queue": "scrape"}]
 
 
+def test_yallakora_goes_to_vps2_for_the_whole_window_by_default(sync_session, sent) -> None:
+    schedule_fetch.apply(args=("yallakora",)).get()
+    assert sent == [{"args": ["yallakora"], "queue": "scrape"}]
+
+
+def test_the_today_window_asks_for_one_day(sync_session, sent) -> None:
+    schedule_fetch.apply(args=("yallakora",), kwargs={"window": "today"}).get()
+    assert sent == [{"args": ["yallakora"], "kwargs": {"days": 1}, "queue": "scrape"}]
+
+
+def test_a_paused_yallakora_is_skipped(sync_session, sent) -> None:
+    _pause(sync_session, "yallakora")
+    assert schedule_fetch.apply(args=("yallakora",), kwargs={"window": "today"}).get()["why"] == "paused"
+    assert sent == []
+
+
 def test_the_beat_schedule_has_every_entry_and_calls_no_fetch_directly() -> None:
     assert set(BEAT_SCHEDULE) == {
         "ysscores-fixtures",
         "satair-bridge",
         "livesoccertv-48h",
         "livesoccertv-t60",
+        "yallakora-daily",
+        "yallakora-today",
         "prune-raw-pages",
         "heartbeat-maintenance",
         "heartbeat-imports",
         "heartbeat-notifications",
+        "heartbeat-live",
         "scrape-home-backlog",
     }
 
@@ -179,16 +199,19 @@ def test_the_t60_entry_asks_for_the_narrow_window() -> None:
     assert str(BEAT_SCHEDULE["livesoccertv-48h"]["schedule"]) == "<crontab: 45 */2 * * * (m/h/dM/MY/d)>"
 
 
-def test_the_worker_app_merges_both_schedule_modules_without_clashing() -> None:
-    """``app.workers`` loads the adapters' and the notifications' entries in one schedule (T070)."""
+def test_the_worker_app_merges_every_schedule_module_without_clashing() -> None:
+    """``app.workers`` loads the adapters', notifications' and live entries in one schedule (T070, D5)."""
+    from app.live.schedule import BEAT_SCHEDULE as LIVE_SCHEDULE
     from app.notifications.schedule import BEAT_SCHEDULE as NOTIFY_SCHEDULE
     from app.workers import app
 
     loaded = app.conf.beat_schedule
-    assert set(BEAT_SCHEDULE) <= set(loaded)
-    assert set(NOTIFY_SCHEDULE) <= set(loaded)
-    assert not set(BEAT_SCHEDULE) & set(NOTIFY_SCHEDULE)
-    assert len(loaded) == len(BEAT_SCHEDULE) + len(NOTIFY_SCHEDULE)
+    schedules = (BEAT_SCHEDULE, NOTIFY_SCHEDULE, LIVE_SCHEDULE)
+    for schedule in schedules:
+        assert set(schedule) <= set(loaded)
+    for first, second in combinations(schedules, 2):
+        assert not set(first) & set(second)
+    assert len(loaded) == sum(len(schedule) for schedule in schedules)
     assert loaded["livesoccertv-t60"]["task"] == "adapters.schedule_fetch"
     assert loaded["notify-dispatch"]["task"] == "notifications.dispatch_due"
 

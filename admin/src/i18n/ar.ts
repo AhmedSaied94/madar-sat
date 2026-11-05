@@ -640,6 +640,49 @@ export const sources = {
     errors: 'أخطاء',
     empty: '—',
   },
+  /** A13's Live poller card: the readers' states and what the feed is driving. */
+  live: {
+    name: 'Live poller',
+    matchesLive: (count: number): string => `${count} مباشرة`,
+    errorShare: (share: number): string => `${share}%`,
+    readers: 'المصادر',
+    readerState: {
+      ok: 'سليم',
+      failing: 'متعثر',
+      down: 'متوقف',
+      invalid: 'مخرجات غير صالحة',
+    } as Record<string, string>,
+    noRun: 'لا تشغيل يدوي · يعمل من المجدول',
+    matchesLabel: 'مباريات مباشرة',
+    shareLabel: 'أخطاء',
+    readersLabel: 'المصادر',
+  },
+  /** A13's run detail: the pipeline stages and the saved page (research R13). */
+  stages: {
+    fetch: 'fetch',
+    parse: 'parse',
+    normalize: 'normalize',
+    resolve: 'resolve',
+    upsert: 'upsert',
+    notStarted: 'لم يبدأ',
+    done: 'تم',
+    failed: 'فشل',
+    pages: (count: number): string => `${count} صفحات مطلوبة`,
+    items: (count: number): string => `${count} عنصر`,
+    saved: (count: number): string => `${count} محفوظ`,
+    unresolved: (count: number): string => `${count} غير محلول`,
+  },
+  raw: {
+    open: 'الصفحة الخام',
+    close: 'إخفاء الصفحة',
+    pending: 'جارٍ تحضير الصفحة…',
+    gone: 'لم تُحفظ هذه الصفحة أو حُذفت',
+    timeout: 'تعذّر تحميل الصفحة الخام. حاول مرة أخرى',
+    page: (page: number, pages: number): string => `صفحة ${page + 1} من ${pages}`,
+    truncated: 'مختصرة',
+    url: 'العنوان',
+    inert: 'نص خامل: لا يُنفَّذ أي شيء بداخله',
+  },
 } as const;
 
 /** A2 (admin board "Main"): today's work, the sources' health and the last changes. */
@@ -679,6 +722,112 @@ export const dashboard = {
   loading: 'جارٍ تحميل لوحة المتابعة',
 } as const;
 
+/** D5's A13 queue: the names the importers couldn't match, and the three ways an editor clears one. */
+export const unresolved = {
+  title: 'أسماء غير محلولة',
+  hint: 'تبقى المباراة بالاسم النصي حتى تُربط',
+  count: (total: number): string => `${total}`,
+  sourceFilter: 'المصدر',
+  allSources: 'الكل',
+  columns: {
+    name: 'الاسم من المصدر',
+    kind: 'النوع',
+    source: 'المصدر',
+    context: 'سياق المباراة',
+    suggestion: 'اقتراح',
+    actions: 'الإجراء',
+  },
+  kinds: {
+    team: 'فريق',
+    competition: 'بطولة',
+    channel: 'قناة',
+  } as Record<string, string>,
+  link: 'ربط',
+  create: 'جديد',
+  ignore: 'تجاهل',
+  pick: 'اختر الفريق',
+  candidates: (count: number): string => `${count} مرشحين بنفس الاسم`,
+  confidence: (value: number): string => `${value}%`,
+  seen: (count: number): string => `تكرر ${count} مرة`,
+  noContext: 'بلا سياق',
+  loading: 'جارٍ تحميل الأسماء غير المحلولة',
+  empty: 'لا أسماء غير محلولة الآن',
+  error: 'تعذّر تحميل الأسماء غير المحلولة',
+  loadMore: 'المزيد',
+  mapTitle: (name: string): string => `ربط «${name}»`,
+  mapHint: 'اختر الهدف ثم احفظ. لا يُكتب شيء قبل الحفظ.',
+  target: 'الهدف',
+  noSuggestions: 'لا اقتراحات. أنشئ عنصراً جديداً أو تجاهل الاسم.',
+  scopeToCompetition: 'حصر الربط على البطولة',
+  scopeHint: 'أكثر من فريق يحمل هذا الاسم، فيُربط باسم البطولة الظاهرة في السياق.',
+  mapped: 'تم الربط',
+  ignored: 'تم التجاهل',
+  created: 'أُنشئ العنصر ورُبط الاسم',
+  createLeftOpen: 'أُنشئ العنصر لكن لم يُربط الاسم. الصف ما زال مفتوحاً',
+  mapFailed: 'تعذّر ربط الاسم',
+  ignoreFailed: 'تعذّر تجاهل الاسم',
+  createTitle: (name: string): string => `إنشاء عنصر من «${name}»`,
+  createKind: 'نوع العنصر الجديد',
+} as const;
+
+/** D5's A9: broadcast rights, their competitions and their carriages. */
+export const rights = {
+  title: 'حقوق البث',
+  subtitle: (total: number): string => `${total} جهة · الترتيب يحدد العرض في التطبيق`,
+  add: 'جهة جديدة',
+  list: 'الجهات',
+  search: 'بحث في الجهات',
+  loading: 'جارٍ تحميل الجهات',
+  empty: 'لا جهات بعد',
+  noResults: 'لا جهات تطابق البحث',
+  error: 'تعذّر تحميل الجهات',
+  competitions: 'البطولات',
+  addCompetition: 'أضف بطولة',
+  carriages: 'الأقمار والترددات',
+  addSatellite: 'قمر آخر',
+  addFrequency: 'تردد',
+  primary: 'أساسي',
+  primaryLabel: 'تردد أساسي',
+  access: {
+    free: 'مفتوحة',
+    encrypted: 'مشفرة',
+  } as Record<string, string>,
+  beam: {
+    wide: 'حزمة واسعة',
+    narrow: 'حزمة ضيقة',
+  } as Record<string, string>,
+  beamLabel: 'الحزمة',
+  accessLabel: 'الوصول',
+  packageLabel: 'الباقة',
+  satellites: 'الأقمار',
+  edit: 'تعديل',
+  frequency: 'التردد',
+  removeCarriage: 'حذف القمر',
+  removeFrequency: 'حذف التردد',
+  onePrimary: 'لكل قمر تردد أساسي واحد: اختر واحداً فقط',
+  primaryRequired: 'اختر تردداً أساسياً في كل قمر',
+  nameRequired: 'اسم الجهة مطلوب',
+  editTitle: (name: string): string => `تعديل «${name}»`,
+  createTitle: 'جهة جديدة',
+  deleteTitle: 'حذف الجهة',
+  deleteBody: (name: string, satellites: number): string =>
+    `ستُحذف «${name}» و${satellites} من مجموعات التردد. لا يمكن التراجع.`,
+  deleteConfirm: 'حذف',
+  deleted: 'حُذفت الجهة',
+  deleteFailed: 'تعذّر حذف الجهة',
+  saveFailed: 'تعذّر حفظ الجهة',
+  onlyAdmin: 'حذف الجهات للمدير فقط',
+  moreCompetitions: (count: number): string => `+${count}`,
+  competitionCount: (count: number): string => `${count} بطولة`,
+  satelliteCount: (count: number): string => `${count} قمر`,
+  noCarriages: 'لا أقمار بعد',
+  logo: 'الشعار',
+  logoUpload: 'رفع شعار',
+  logoRemove: 'إزالة الشعار',
+  name: 'اسم الجهة',
+  unsavedBody: 'إذا غادرت الآن ستفقد تعديلات الجهة.',
+} as const;
+
 export type ErrorCode =
   | 'invalid_credentials'
   | 'account_locked'
@@ -709,7 +858,8 @@ export type ErrorCode =
   | 'run_in_progress'
   | 'source_not_runnable'
   | 'source_not_found'
-  | 'import_run_not_found';
+  | 'import_run_not_found'
+  | 'alias_conflict';
 
 export const errorCopy: Record<ErrorCode, string> = {
   invalid_credentials: 'إيميل أو باسوورد غلط',
@@ -742,6 +892,7 @@ export const errorCopy: Record<ErrorCode, string> = {
   source_not_runnable: 'لا يمكن تشغيل هذا المصدر يدوياً',
   source_not_found: 'هذا المصدر غير موجود',
   import_run_not_found: 'سجل هذه التشغيلة غير موجود. ربما حُذف بعد خمسة أيام',
+  alias_conflict: 'هذا الاسم مرتبط بجهة أخرى. حدّث الصفحة ثم حاول مرة أخرى',
 };
 
 const unknownErrorCopy = 'حدث خطأ غير متوقع. حاول مرة أخرى';

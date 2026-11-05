@@ -169,7 +169,7 @@ The PWA has no ads at launch. AdMob doesn't run there, and web ads in a Flutter 
 | Onboarding | [P] | Multi-satellite; notification priming; iOS install guide |
 | **Follow** teams, competitions, matches, channels → **My matches** + push | [V1] | Server push on every platform |
 | **My satellites** (dish setup) filtering every channel list, free first | [V1] | Uses existing data |
-| **Live match center**: score, minute, goals; lineups where available | [V1] | Lineups depend on the source (O7) |
+| **Live match center**: score, minute, goals; lineups where available | [V1] | Lineups come from FilGoal, or Goal.com where FilGoal has none (O7) |
 | **Frequency-change alerts** + "changed recently" badges | [V1] | |
 | Team, competition and channel pages; global search | [V1] | Needed for following |
 | Other sports through a sport switcher on Matches | [V1] | Basketball, handball, volleyball, tennis |
@@ -248,7 +248,7 @@ Native builds use the same paths after `‹scheme›://`. Push notifications ope
 
 | Screen | Trigger | Content |
 |---|---|---|
-| Splash | Cold start | Brand mark on the brand background (Android 12 splash API: icon on a solid color) |
+| Splash | Cold start | Native: brand mark on the brand background (Android 12 splash API: icon on a solid color). Then the app's own splash, always dark, for one orbit (about 2 s) while the first screen loads underneath: the satellite circles the planet, with «مدار سات» and «أي قناة تنقل المباراة؟ والتردد جاهز.» under the mark. With reduced motion the mark stays still. |
 | Forced update | Build < `min_supported_build` | Title "تحديث مطلوب", body "يوجد إصدار جديد من التطبيق. يرجى التحديث للاستمرار.", CTA "تحديث الآن" (Play Store; on the PWA, reload) |
 | Soft update [V1] | Build < `latest_build` | Dismissible banner: "يتوفر إصدار جديد" + "تحديث" |
 | Maintenance [V1] | Remote Config flag | Full screen with the admin's message; cached content stays browsable |
@@ -780,7 +780,7 @@ O1–O3 and O7 are the same items as in system-design §3.2. O8–O10 are produc
 | O1 | Package ID (the name is set: Madar Sat / مدار سات) | Trademark and store-name checks for "Madar Sat", then the ID |
 | O2 | v1 scope (§6) | Confirm or trim [V1] items |
 | O3 | Card-sharing labels and BISS keys: drop (recommended) or keep | Yes/no. The designs assume drop |
-| O7 | Live data source for minute, events and lineups | Affects how rich S3's live center can be |
+| O7 | Live data source for minute, events and lineups | **Decided 2026-11-04, changed 2026-11-05:** FilGoal, Goal.com and YallaKora (system-design §3.3, spec 031). A goal shows as soon as one source has it, so a source's false goal can show for minutes. Coverage varies by match, so S3's live center must cope with missing events or lineups |
 | O8 | Keep Feeds in v1? | The collection is empty today |
 | O9 | Interstitial placement (§5) | Confirm "on return from detail" |
 | O10 | Default "My satellites" when the user skips: Nilesat + Badr (old rule) or regional by time zone | Confirm |

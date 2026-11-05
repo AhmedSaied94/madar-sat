@@ -15,10 +15,10 @@ enum BrandMarkSize {
   final double value;
 }
 
-/// Filled ink tile (default), bare orbit ring, or a single-ink mark on busy grounds.
+/// Filled ink tile (default), the bare mark for dark wells, or a single-ink mark.
 enum BrandMarkTone { filled, bare, mono }
 
-/// The placeholder brand mark: an ink tile with a volt orbit ring and a satellite dot.
+/// The brand mark: a planet inside a volt orbit ring, with a satellite on the ring's upper end.
 class BrandMark extends StatelessWidget {
   const BrandMark({
     super.key,
@@ -38,11 +38,7 @@ class BrandMark extends StatelessWidget {
       BrandMarkTone.bare => null,
       BrandMarkTone.mono => colors.textPrimary,
     };
-    final ring = switch (tone) {
-      BrandMarkTone.filled => colors.accent,
-      BrandMarkTone.bare => colors.accent,
-      BrandMarkTone.mono => colors.bg,
-    };
+    final mono = tone == BrandMarkTone.mono;
     return ExcludeSemantics(
       child: Container(
         width: side,
@@ -52,61 +48,164 @@ class BrandMark extends StatelessWidget {
           borderRadius: BorderRadius.circular(MadarRadii.md),
         ),
         child: CustomPaint(
-          painter: _OrbitMarkPainter(ring: ring, dot: ring, tone: tone),
+          painter: MadarMarkPainter(
+            ring: mono ? colors.bg : colors.accent,
+            // The filled tile and the bare mark always sit on ink, whatever the theme.
+            body: mono ? colors.bg : MadarColors.dark.textPrimary,
+          ),
         ),
       ),
     );
   }
 }
 
-class _OrbitMarkPainter extends CustomPainter {
-  const _OrbitMarkPainter({required this.ring, required this.dot, required this.tone});
+/// Paints the mark, `madar-design/design-system/components/Logo/mark.svg`, on its 32-unit grid.
+///
+/// [orbit] runs the satellite once around the ring, from 0 (its resting place) to 1 (back
+/// there), behind the planet on the far half and in front of it on the near half.
+class MadarMarkPainter extends CustomPainter {
+  const MadarMarkPainter({required this.ring, required this.body, this.orbit})
+    : super(repaint: orbit);
 
   final Color ring;
-  final Color dot;
-  final BrandMarkTone tone;
+  final Color body;
+  final Animation<double>? orbit;
 
-  /// The design package's SVG (`components.css` `.mk`) on its 32-unit grid: a planet at the
-  /// centre, an orbit tilted −28° around it, and a satellite on the orbit's upper end.
   static const double _grid = 32;
-  static const double _orbitTilt = -28 * math.pi / 180;
-  static const double _orbitStroke = 1.8;
-  static const double _orbitStrokeMono = 2.2;
-  static const double _satellite = 2.1;
-  static const double _satelliteMono = 2.3;
+  static const Offset _ringCenter = Offset(16.07, 15.96);
+  static const double _ringRx = 11.84;
+  static const double _ringRy = 2.86;
+  static const double _ringStroke = 1.66;
+  static const double _tilt = -28 * math.pi / 180;
+
+  /// The ring's stroke plus the clear band on each side, where its near half crosses the planet.
+  static const double _bandStroke = 3.08;
+  static const Offset _planetCenter = Offset(16, 16);
+  static const double _planetRadius = 5.69;
+
+  /// The satellite's resting place, in the ring's own tilted frame.
+  static const Offset _satelliteRest = Offset(13.19, -2.65);
+  static const double _satelliteBody = 2.14;
+  static const double _satelliteBodyRadius = 0.5;
+  static const Size _panel = Size(1.9, 1.18);
+  static const double _panelRadius = 0.2;
+  static const double _panelReach = 2.61;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final unit = size.shortestSide / _grid;
-    final center = size.center(Offset.zero);
-    final mono = tone == BrandMarkTone.mono;
+    final progress = orbit?.value ?? 0;
+    final angle = _restAngle - 2 * math.pi * progress;
+    final behindPlanet = math.sin(angle) < 0;
+    final bodyPaint = Paint()..color = body;
+    final ringRect = Rect.fromCenter(
+      center: Offset.zero,
+      width: _ringRx * 2,
+      height: _ringRy * 2,
+    );
 
     canvas
       ..save()
-      ..translate(center.dx, center.dy)
-      ..rotate(_orbitTilt)
+      ..scale(size.shortestSide / _grid);
+
+    canvas
+      ..save()
+      ..translate(_ringCenter.dx, _ringCenter.dy)
+      ..rotate(_tilt)
       ..drawOval(
-        Rect.fromCenter(center: Offset.zero, width: 24 * unit, height: 10 * unit),
+        ringRect,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = (mono ? _orbitStrokeMono : _orbitStroke) * unit
+          ..strokeWidth = _ringStroke
           ..color = ring,
       )
       ..restore();
 
-    final fill = Paint()..color = dot;
-    canvas
-      ..drawCircle(center, 5.2 * unit, fill)
-      ..drawCircle(
-        center + Offset(10.6 * unit, -5.6 * unit),
-        (mono ? _satelliteMono : _satellite) * unit,
-        fill,
-      );
+    if (behindPlanet) _paintSatellite(canvas, angle, progress, bodyPaint);
+    _paintPlanet(canvas, ringRect, bodyPaint);
+    if (!behindPlanet) _paintSatellite(canvas, angle, progress, bodyPaint);
+
+    canvas.restore();
   }
 
+  /// The planet, with the near half of the ring's band cut out of it.
+  void _paintPlanet(Canvas canvas, Rect ringRect, Paint bodyPaint) {
+    canvas
+      ..saveLayer(
+        Rect.fromCircle(center: _planetCenter, radius: _planetRadius),
+        Paint(),
+      )
+      ..drawCircle(_planetCenter, _planetRadius, bodyPaint)
+      ..translate(_ringCenter.dx, _ringCenter.dy)
+      ..rotate(_tilt)
+      ..drawArc(
+        ringRect,
+        0,
+        math.pi,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _bandStroke
+          ..blendMode = BlendMode.clear,
+      )
+      ..restore();
+  }
+
+  void _paintSatellite(
+    Canvas canvas,
+    double angle,
+    double progress,
+    Paint bodyPaint,
+  ) {
+    // It rides the ring mid-orbit, and lifts to its resting place at both ends.
+    final lift = (math.cos(2 * math.pi * progress) + 1) / 2;
+    final onRing = Offset(_ringRx * math.cos(angle), _ringRy * math.sin(angle));
+    final position = onRing + (_satelliteRest - _restOnRing) * lift;
+    canvas
+      ..save()
+      ..translate(_ringCenter.dx, _ringCenter.dy)
+      ..rotate(_tilt)
+      ..translate(position.dx, position.dy)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: _satelliteBody,
+            height: _satelliteBody,
+          ),
+          const Radius.circular(_satelliteBodyRadius),
+        ),
+        bodyPaint,
+      );
+    for (final side in const [-_panelReach, _panelReach]) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(side, 0),
+            width: _panel.width,
+            height: _panel.height,
+          ),
+          const Radius.circular(_panelRadius),
+        ),
+        bodyPaint,
+      );
+    }
+    canvas.restore();
+  }
+
+  static final double _restAngle = math.atan2(
+    _satelliteRest.dy / _ringRy,
+    _satelliteRest.dx / _ringRx,
+  );
+  static final Offset _restOnRing = Offset(
+    _ringRx * math.cos(_restAngle),
+    _ringRy * math.sin(_restAngle),
+  );
+
   @override
-  bool shouldRepaint(_OrbitMarkPainter oldDelegate) =>
-      oldDelegate.ring != ring || oldDelegate.dot != dot || oldDelegate.tone != tone;
+  bool shouldRepaint(MadarMarkPainter oldDelegate) =>
+      oldDelegate.ring != ring ||
+      oldDelegate.body != body ||
+      oldDelegate.orbit != orbit;
 }
 
 /// The orbit mark with the «مدار» wordmark beside it (Changa 800).

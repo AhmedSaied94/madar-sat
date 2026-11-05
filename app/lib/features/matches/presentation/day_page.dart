@@ -104,6 +104,7 @@ class DayPage extends ConsumerWidget {
                   group: groups.competitions[index],
                   now: now,
                   onOpen: open,
+                  onOpenCompetition: (id) => context.push('/competition/$id'),
                 );
               }
               return TbdSection(matches: groups.tbd, now: now, onOpen: open);

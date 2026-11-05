@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/db/database_provider.dart';
 import '../../../core/format/clock.dart';
+import '../../../core/network/generated/models/competition_detail.dart';
 import '../../../core/network/generated/models/match_summary.dart';
 import '../../../core/network/generated/models/team_detail.dart';
 import '../../../core/network/swr_providers.dart';
@@ -56,3 +57,24 @@ Future<List<TeamDetail>> favoriteTeams(Ref ref) async {
   return [for (final detail in details) ?detail];
 }
 
+/// The followed competitions with their names and logos, from `/v1/competitions/{id}` through
+/// the SWR cache: S9 lists a competition the cached matches know nothing about, and its row
+/// opens S8 (T086).
+///
+/// One request per followed competition the first time, then a conditional `If-None-Match`; a
+/// competition that cannot be read is left out rather than drawn with a guessed name.
+@riverpod
+Future<List<CompetitionDetail>> favoriteCompetitions(Ref ref) async {
+  final follows = ref.watch(followSetValueProvider);
+  if (follows.competitions.isEmpty) return const [];
+  final repository = ref.watch(swrRepositoryProvider);
+  final details = await Future.wait([
+    for (final id in follows.competitions)
+      repository
+          .watchCompetitionDetail(id)
+          .firstWhere((snapshot) => snapshot.data != null)
+          .then<CompetitionDetail?>((snapshot) => snapshot.data)
+          .catchError((Object _) => null),
+  ]);
+  return [for (final detail in details) ?detail];
+}

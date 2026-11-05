@@ -60,7 +60,8 @@ def test_every_route_but_auth_and_healthz_has_the_role_dependency():
 
 
 def test_every_contract_route_asks_for_the_editor_role():
-    # `admin` covers `editor`; the one admin-only action (bulk remove_channels) is checked in its handler.
+    # `admin` covers `editor`; the admin-only actions (bulk remove_channels, deleting a rights holder) are
+    # checked in their handlers.
     wrong = [f"{method} {path}: {roles}" for method, path, roles in _protected() if roles != {"editor"}]
 
     assert wrong == []

@@ -11,7 +11,7 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 | Path | What it is |
 | --- | --- |
 | `compose/vps1.yml` | VPS-1: `caddy`, `api-public`, `api-admin`, `worker-media`, `postgres`, `redis` (ACL file), plus `migrate` and `cli` (profile `tools`) and the one-shot `backup-media` / `backup-media-weekly` (profile `backup`) |
-| `compose/vps2.yml` | VPS-2: `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify` (the only service that mounts `/srv/secrets`), the single `beat` and `uptime-kuma`, all under profile `workers`; `flower` stays down, and `backup-db` is a one-shot (profile `backup`) |
+| `compose/vps2.yml` | VPS-2: `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify` (the only service that mounts `/srv/secrets`), `worker-live`, the single `beat` and `uptime-kuma`, all under profile `workers`; `flower` stays down, and `backup-db` is a one-shot (profile `backup`) |
 | `compose/home-box.yml` | The owner's x86-64 box: one `worker-scrape` on `scrape_home`, from `madar-backend-amd64:stable`, with no database credentials |
 | `compose/dev.yml` | Local development: PostgreSQL 16, Redis 7 and a `tls internal` Caddy at `https://localhost:8443` |
 | `compose/example.env` | Every variable name the Compose files, Caddyfile and scripts use, with fake values |
@@ -38,7 +38,7 @@ $0/month (constitution IX). Every VPS image is `linux/arm64`; only the home box 
 
 | | VPS-1 "app" (public) | VPS-2 "workers" | Home box (x86-64) |
 | --- | --- | --- | --- |
-| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `beat` (exactly one), Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home`, and a 10-minute systemd timer that updates it |
+| Runs | Caddy, `api-public`, `api-admin`, `worker-media`, PostgreSQL 16, Redis 7, the media backup timer | `worker-imports`, `worker-scrape`, `worker-maintenance`, `worker-notify`, `worker-live`, `beat` (exactly one), Uptime Kuma, the database backup timer; Flower off | `worker-scrape -Q scrape_home`, and a 10-minute systemd timer that updates it |
 | Memory | PostgreSQL ≈ 2 GB (`shared_buffers` 1.5 GB), Redis 512 MB, APIs 0.5 GB, `worker-media` ≤ 256 MB | Workers ≈ 1.2 GB, Flower 0.1 GB | The owner's machine; one worker process |
 | Disk | Database, `/srv/media`, `/srv/app-mirror` | Raw pages `/srv/raw` (5 days), backup staging | None; it holds no data |
 | Reaches | The internet, both VCN peers, `wg0` peers | VPS-1's VCN addresses only | `10.8.0.1:6379` only, as the `homebox` Redis user |
@@ -97,8 +97,9 @@ Names only; the values are in `compose/example.env` as fakes. Use URL-safe passw
 | Backend (`backend/app/settings.py`) | `DATABASE_URL`, `DATABASE_URL_SYNC`, `REDIS_URL`, `MEDIA_BASE_URL`, `MEDIA_ROOT`, `MEDIA_REHOST_ALLOWED_HOSTS`, `CORS_ORIGINS`, `CONTRACT_VERSION`, `ADMIN_JWT_SECRET` |
 | VPS-2 | `CELERY_BROKER_URL`, `FLOWER_BASIC_AUTH`; `DATABASE_URL`, `DATABASE_URL_SYNC` and `REDIS_URL` point at VPS-1's VCN IP |
 | Lane B2's adapters (`backend/app/adapters/config.py`) | `SATAIR_FIREBASE_PROJECT_ID`, `SATAIR_FIREBASE_API_KEY`, `SCRAPE_USER_AGENT`, `YSSCORES_FETCH_QUEUE`, `LIVESOCCERTV_FETCH_QUEUE`, `LIVESOCCERTV_COUNTRIES`, `SOURCE_BREAKER_THRESHOLD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `RAW_ROOT` |
+| The live poller on VPS-2 (`backend/app/live/config.py`), all optional | `LIVE_GOAL_ENABLED`, `LIVE_PAGE_CAP_GOAL`, `LIVE_PAGE_CAP_FILGOAL`, `LIVE_PAGE_CAP_YALLAKORA`, `LIVE_DROP_HOLD_S`, `LIVE_DISAGREE_AFTER_S`, `LIVE_FULLTIME_HOLD_S`, `LIVE_STUCK_AFTER_MIN`, `LIVE_STUCK_QUIET_MIN`, `LIVE_DOWN_AFTER_FAILURES`, `LIVE_STALE_AFTER_S`, `LIVE_HARD_LIMIT_MIN`. `worker-live` and `worker-maintenance` both need them, and both get the whole `.env` through `env_file`: the watchdog on `maintenance` reads the stuck settings |
 | D3 notifications (VPS-2) | `FCM_CREDENTIALS_FILE`, `FCM_DRY_RUN`, `PWA_ORIGIN` |
-| D3 backups and Kuma | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY`, `BACKUP_STAGING`, `RCLONE_CONFIG_OCI_*`, `RCLONE_BUCKET` (VPS-1), the six `KUMA_PUSH_URL_*` (VPS-2 keeps `_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`; VPS-1 keeps `_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) |
+| D3 backups and Kuma | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY`, `BACKUP_STAGING`, `RCLONE_CONFIG_OCI_*`, `RCLONE_BUCKET` (VPS-1), the `KUMA_PUSH_URL_*` values (VPS-2 keeps `_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_LIVE`, `_SCRAPE_HOME`, `_BACKUP_DB`; VPS-1 keeps `_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) |
 | Home box only | `GHCR_OWNER`, `REDIS_URL=redis://homebox:<password>@10.8.0.1:6379/0`, `SCRAPE_USER_AGENT`, `GHCR_READ_TOKEN` (a read-only packages token). **No database URL** |
 
 `MADAR_ENV_FILE` exists only in `example.env`, so CI and the scripts can validate the Compose files without a host. Never set it on a host.

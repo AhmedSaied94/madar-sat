@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/format/bidi.dart';
 import '../../../core/format/digits.dart';
@@ -543,6 +544,7 @@ class _CarriageItem extends StatelessWidget {
           carriage: carriageOf(entry),
           expanded: expanded,
           onTap: onToggle,
+          onOpenChannel: () => context.push('/channel/${entry.id}'),
           onWatchReception: onWatchReception,
         ),
         if (entry.commentators.isNotEmpty) _Commentators(commentators: entry.commentators, expanded: expanded),

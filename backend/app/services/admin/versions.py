@@ -27,12 +27,22 @@ from app.db.models import (
     Match,
     MatchChannel,
     MatchCustomBroadcast,
+    RightsHolder,
+    RightsHolderCarriage,
+    RightsHolderCarriageSatellite,
+    RightsHolderCompetition,
+    RightsHolderFrequency,
     Satellite,
     Team,
     TeamCompetition,
+    UnresolvedName,
 )
 
 NOT_HASHED = frozenset({"created_at", "updated_at"})
+# The poller writes these every minute; hashing them would fail any open editor's save (research R14).
+MATCH_CLOCK_COLUMNS = frozenset({"minute", "period", "status_updated_at"})
+# An unresolved name is seen again on every run; only a decision about it makes a copy stale.
+UNRESOLVED_DECISION_COLUMNS = ("id", "kind", "name_norm", "competition_norm", "state", "target_id")
 # Order is not meaningful in these array columns, so they are compared as sets.
 SET_COLUMNS = frozenset({"locked_fields"})
 LINK_COLUMNS = ("channel_id", "source", "imported_by", "is_hidden", "commentator_id", "commentator2_id")
@@ -67,8 +77,9 @@ def row_state(row: Base) -> dict[str, Any]:
 
 
 def match_state(match: Match, links: Iterable[MatchChannel], slots: Iterable[MatchCustomBroadcast]) -> dict[str, Any]:
+    own = {key: value for key, value in row_state(match).items() if key not in MATCH_CLOCK_COLUMNS}
     return {
-        "match": row_state(match),
+        "match": own,
         "links": sorted(
             ({column: getattr(link, column) for column in LINK_COLUMNS} for link in links),
             key=lambda link: link["channel_id"],
@@ -122,12 +133,112 @@ def row_version(row: Competition | Satellite | Channel | Commentator) -> str:
     return etag_of(row_state(row))
 
 
+def unresolved_version(row: UnresolvedName) -> str:
+    return etag_of({column: getattr(row, column) for column in UNRESOLVED_DECISION_COLUMNS})
+
+
+def rights_holder_state(
+    holder: RightsHolder,
+    competition_ids: Iterable[int],
+    carriages: Iterable[RightsHolderCarriage],
+    satellite_ids: Mapping[int, Iterable[int]],
+    frequencies: Mapping[int, Iterable[RightsHolderFrequency]],
+) -> dict[str, Any]:
+    return {
+        "holder": row_state(holder),
+        "competition_ids": sorted(set(competition_ids)),
+        "carriages": rights_holder_carriages_state(carriages, satellite_ids, frequencies),
+    }
+
+
+def rights_holder_carriages_state(
+    carriages: Iterable[RightsHolderCarriage],
+    satellite_ids: Mapping[int, Iterable[int]],
+    frequencies: Mapping[int, Iterable[RightsHolderFrequency]],
+) -> list[dict[str, Any]]:
+    """The carriages by position, without their generated ids: replacing a list with itself changes nothing."""
+    return [
+        {
+            "access": carriage.access,
+            "beam": carriage.beam,
+            "package": carriage.package,
+            "satellite_ids": sorted(set(satellite_ids.get(carriage.id, ()))),
+            "frequencies": sorted(
+                (
+                    {
+                        "frequency_mhz": item.frequency_mhz,
+                        "polarization": item.polarization,
+                        "symbol_rate": item.symbol_rate,
+                        "is_primary": bool(item.is_primary),
+                    }
+                    for item in frequencies.get(carriage.id, ())
+                ),
+                key=lambda item: (item["frequency_mhz"], item["polarization"], item["symbol_rate"]),
+            ),
+        }
+        for carriage in sorted(carriages, key=lambda carriage: carriage.position)
+    ]
+
+
+async def rights_holder_states(session: AsyncSession, holders: Iterable[RightsHolder]) -> dict[int, dict[str, Any]]:
+    """Each holder's state, in four queries: the A9 list shows a version per row."""
+    rows = list(holders)
+    ids = [holder.id for holder in rows]
+    if not ids:
+        return {}
+    competition_ids: dict[int, list[int]] = {holder_id: [] for holder_id in ids}
+    link_rows = await session.execute(
+        select(RightsHolderCompetition.rights_holder_id, RightsHolderCompetition.competition_id).where(
+            RightsHolderCompetition.rights_holder_id.in_(ids)
+        )
+    )
+    for holder_id, competition_id in link_rows:
+        competition_ids[holder_id].append(competition_id)
+    # populate_existing: a replaced list is re-read, never served from what the session already holds.
+    carriage_rows = await session.scalars(
+        select(RightsHolderCarriage)
+        .where(RightsHolderCarriage.rights_holder_id.in_(ids))
+        .execution_options(populate_existing=True)
+    )
+    carriages: dict[int, list[RightsHolderCarriage]] = {holder_id: [] for holder_id in ids}
+    for carriage in carriage_rows:
+        carriages[carriage.rights_holder_id].append(carriage)
+    carriage_ids = [carriage.id for rows_of in carriages.values() for carriage in rows_of]
+    satellite_ids: dict[int, list[int]] = {}
+    frequencies: dict[int, list[RightsHolderFrequency]] = {}
+    if carriage_ids:
+        satellite_rows = await session.execute(
+            select(RightsHolderCarriageSatellite.carriage_id, RightsHolderCarriageSatellite.satellite_id).where(
+                RightsHolderCarriageSatellite.carriage_id.in_(carriage_ids)
+            )
+        )
+        for carriage_id, satellite_id in satellite_rows:
+            satellite_ids.setdefault(carriage_id, []).append(satellite_id)
+        frequency_rows = await session.scalars(
+            select(RightsHolderFrequency)
+            .where(RightsHolderFrequency.carriage_id.in_(carriage_ids))
+            .execution_options(populate_existing=True)
+        )
+        for item in frequency_rows:
+            frequencies.setdefault(item.carriage_id, []).append(item)
+    return {
+        holder.id: rights_holder_state(
+            holder, competition_ids[holder.id], carriages[holder.id], satellite_ids, frequencies
+        )
+        for holder in rows
+    }
+
+
 async def version_of(session: AsyncSession, row: Base) -> str:
     """The current version of any admin entity."""
     if isinstance(row, Match):
         return await match_version(session, row)
     if isinstance(row, Team):
         return await team_version(session, row)
+    if isinstance(row, UnresolvedName):
+        return unresolved_version(row)
+    if isinstance(row, RightsHolder):
+        return etag_of((await rights_holder_states(session, [row]))[row.id])
     return etag_of(row_state(row))
 
 
@@ -142,9 +253,13 @@ __all__ = [
     "match_version",
     "match_versions",
     "matches_etag",
+    "rights_holder_carriages_state",
+    "rights_holder_state",
+    "rights_holder_states",
     "row_state",
     "row_version",
     "team_state",
     "team_version",
+    "unresolved_version",
     "version_of",
 ]

@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 import redis
 
-from app.adapters.ratelimit import FIREBASE_BUCKET, YSSCORES_BUCKET, Bucket, RateLimiter
+from app.adapters.ratelimit import DEFAULT_LIMITS, FIREBASE_BUCKET, YSSCORES_BUCKET, Bucket, RateLimiter
 
 
 @pytest.fixture
@@ -46,6 +46,43 @@ def test_firestore_allows_five_requests_per_second(limiter: RateLimiter) -> None
     assert allowed == 5
     assert limiter.take("firestore.googleapis.com", now=2_000.2) is False
     assert limiter.take("firestore.googleapis.com", now=2_001.0) is True
+
+
+@pytest.mark.parametrize("host", ["www.filgoal.com", "www.yallakora.com"])
+def test_the_live_hosts_allow_one_request_per_four_seconds_with_a_burst_of_two(limiter: RateLimiter, host: str) -> None:
+    """D5 R3. The poller and the importer build the same limiter, so they spend the same bucket."""
+    assert DEFAULT_LIMITS[host] == Bucket(capacity=2, refill_seconds=4.0)
+    assert limiter.take(host, now=7_000.0) is True
+    assert limiter.take(host, now=7_000.0) is True
+    assert limiter.take(host, now=7_000.0) is False
+    assert limiter.take(host, now=7_004.0) is True
+
+
+def test_goal_com_has_its_own_bucket_sized_for_a_poll_with_room_for_retries(limiter: RateLimiter) -> None:
+    """Spec 031 T030. One list page and four match pages a minute, under the other live hosts' rate."""
+    bucket = DEFAULT_LIMITS["www.goal.com"]
+    assert bucket == Bucket(capacity=2, refill_seconds=4.0)
+    assert 60 / bucket.refill_seconds >= 2 * (1 + 4)
+    assert limiter.take("www.goal.com", now=9_500.0) is True
+    assert limiter.take("www.goal.com", now=9_500.0) is True
+    assert limiter.take("www.goal.com", now=9_500.0) is False
+
+
+@pytest.mark.parametrize("other", ["www.filgoal.com", "www.yallakora.com", "www.ysscores.com"])
+def test_goal_com_shares_no_bucket_with_the_other_hosts(limiter: RateLimiter, other: str) -> None:
+    assert limiter.take("www.goal.com", now=9_600.0) is True
+    assert limiter.take("www.goal.com", now=9_600.0) is True
+    assert limiter.take("www.goal.com", now=9_600.0) is False
+    assert limiter.take(other, now=9_600.0) is True
+
+
+def test_the_poller_and_the_importer_share_one_key(client: redis.Redis) -> None:
+    poller = RateLimiter(client=client)
+    importer = RateLimiter(client=client)
+    assert poller.take("www.yallakora.com", now=8_000.0) is True
+    assert importer.take("www.yallakora.com", now=8_000.0) is True
+    assert poller.take("www.yallakora.com", now=8_000.0) is False
+    assert client.exists("ratelimit:www.yallakora.com") == 1
 
 
 def test_each_host_has_its_own_bucket(limiter: RateLimiter) -> None:

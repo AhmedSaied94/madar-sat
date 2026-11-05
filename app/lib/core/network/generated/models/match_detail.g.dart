@@ -22,14 +22,18 @@ _MatchDetail _$MatchDetailFromJson(Map<String, dynamic> json) => _MatchDetail(
     json['competition'] as Map<String, dynamic>,
   ),
   estimated: json['estimated'] as bool,
-  events: json['events'] as List<dynamic>,
+  events: (json['events'] as List<dynamic>)
+      .map((e) => MatchEvent.fromJson(e as Map<String, dynamic>))
+      .toList(),
   feedId: (json['feed_id'] as num?)?.toInt(),
   home: TeamRef.fromJson(json['home'] as Map<String, dynamic>),
   id: (json['id'] as num).toInt(),
   kickoffAt: json['kickoff_at'] == null
       ? null
       : DateTime.parse(json['kickoff_at'] as String),
-  lineups: json['lineups'],
+  lineups: json['lineups'] == null
+      ? null
+      : MatchLineups.fromJson(json['lineups'] as Map<String, dynamic>),
   localBroadcasterEg: json['local_broadcaster_eg'] as String?,
   matchDate: DateTime.parse(json['match_date'] as String),
   minute: json['minute'] as String?,

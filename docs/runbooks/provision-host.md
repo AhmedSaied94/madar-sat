@@ -404,6 +404,40 @@ sudo wg show wg0                                # VPS-1 only: your peer, with a 
 
 `check-firewall.sh` exits 1 and prints a diff if the live rules differ from the persisted ones. See [firewall-changes.md](firewall-changes.md#if-it-fails).
 
+## Resize an instance
+
+For VPS-1 when the load test fails on CPU (D5 FR-060). Run it only once step 1 confirms the shape stays free.
+
+**1. Check the allowance.** In the console, open Governance & Administration → Tenancy Management → Limits, Quotas and Usage, with service **Compute** and your availability domain. Read **Cores for Standard.A1 based VM instances** and **Memory for Standard.A1 based VM instances**: the limit and how much is used. Also check the Always Free page in Oracle's documentation for the A1 allowance on the day you do this. SD §2 assumes 2 OCPU in total, so a larger number here is what changes the plan.
+
+Go on only if both say the total stays inside the allowance. VPS-2 keeps 1 OCPU, so a 4 OCPU allowance leaves VPS-1 at most 3. If the limit or the free label is unclear, stop and tell B2 to build the Caddy cache instead (D5 T062).
+
+**2. Resize.** Compute → Instances → `madar-vps1` → Edit → Edit shape. Keep `VM.Standard.A1.Flex`, set **Number of OCPUs** to 2 or 3, and keep 6 GB: the load test ran out of CPU, not memory. Before saving, check that the page still shows the shape as Always Free-eligible and the estimate shows no charge. Saving reboots the VM.
+
+**What restarts:** VPS-1 is down for a few minutes, so the public API, the admin and the WireGuard hub are all unreachable, and VPS-2 can't be reached through it. Do this away from a live match. Docker brings its services back by themselves. VPS-2's workers lose PostgreSQL and Redis until then, and retry.
+
+**3. Give the API the cores.** Set the workers to the core count plus one, in `/srv/madar/.env` on VPS-1, and recreate the service. That means 3 at 2 OCPU and 4 at 3 OCPU, at about 100 MB each, which the memory plan in SD §7.1 can hold:
+
+```bash
+ssh madar-vps1
+sudoedit /srv/madar/.env    # API_PUBLIC_WORKERS=3
+sudo -u deploy sh -c 'cd /srv/madar/infra && IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f compose/vps1.yml up -d api-public'
+```
+
+**4. Check afterwards.**
+
+```bash
+ssh madar-vps1 'nproc; free -h | head -2'                                    # the new core count, 6 GB
+ssh madar-vps1 'sudo -iu deploy docker compose -p madar ps --format "{{.Service}} {{.Status}}"'   # all healthy
+ssh madar-vps1 'curl -fsS http://127.0.0.1:8000/healthz'
+ssh madar-vps1 'sudo -iu deploy docker compose -p madar top api-public | grep -c "gunicorn"'     # the workers plus the master
+ssh madar-vps2 'sudo -iu deploy docker compose -p madar ps --format "{{.Service}} {{.Status}}"'   # the workers came back
+```
+
+The next day, open Billing → Cost Analysis and confirm the instance cost nothing. Then tell B1 to re-run the [load test](load-testing.md), and update SD §2 and §7.1 with the allowance and the shape.
+
+**To go back:** edit the shape again, which reboots again, and set `API_PUBLIC_WORKERS=2`.
+
 ## 10. Record
 
 For each VM:

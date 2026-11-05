@@ -15,7 +15,7 @@ from app.services.admin import versions
 
 ETAG_FORMAT = re.compile(r'^"[0-9a-f]{32}"$')
 KICKOFF = datetime(2026, 10, 28, 19, 0, tzinfo=UTC)
-EXCLUDED = {"created_at", "updated_at"}
+EXCLUDED = {"created_at", "updated_at", "minute", "period", "status_updated_at"}
 
 
 def _match(**overrides) -> Match:
@@ -108,7 +108,6 @@ class TestMatchColumns:
             ("status", "live"),
             ("status_source", "manual"),
             ("home_score", 2),
-            ("minute", "45+2"),
             ("locked_fields", ["stadium"]),
             ("match_date", date(2026, 10, 29)),
             ("source", "ysscores"),

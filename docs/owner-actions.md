@@ -16,6 +16,8 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** none (done 2026-10-31) · **Lane B2:** none left that can run before the merge (the home box's worker and its dry run follow the first deploy) · **Lane A:** 2 items (the editors' devices, and the walk-through over WireGuard with its screenshots) · **Lane M:** 2 items (the screens against the design, and the merge) | **Lane B1:** 5 items (the deploy check, the first admin, one account per editor, the `404` from the internet, and the token-leak drill) · **Lane B2:** 5 items (the first unattended run, the bridge, a logo, the firewall proof, and the queue decision; hosts up, the home box's worker and `/srv/raw` are done) · **Lane A:** 1 item (the first editor walk-through; `admin.yml` is green) · **Lane M:** 5 items (tag `app-v0.2.0`, Play App Signing and the closed-track upload, the testers list, the phone walk-through, and the PWA preview) | **All code lanes are done; the hosts, the first admin, the first run, the first release and the phone walk-through are yours.** Lane B2 builds on B1's `app.workers`, `app.media` and revisions `0003`–`0004`; Lane A is rebased on B1's T015 commit, so it carries the D2 admin client. Lane A's round-1, round-2 and round-3 fixes are closed (A-R1-1 … A-R1-24, A-R2-1 … A-R2-13 and A-R3-1, 176 tests); A-F1 (React Hook Form), A-F2 (`DataTable`) and T107's browser steps are open. Lane M's screens read the `/v1` API on VPS-1; its zones script (T133) and the two `app.yml` checks wait on you and B2. Its round-1, round-2 and round-3 review fixes are in `d02-features` (M-R1-1 to M-R1-17, M-R2-1 to M-R2-10 and M-R3-1 to M-R3-2, 480 tests). |
 | [003 D3 follow, push and sources](#003-d3-follow-push-and-sources) | **Lane B1:** 5 items (the contract diff, revisions `0005` and `0006`, the audience query, the rate-limit values) · **Lane B2:** 8 items (the matching, backup and Kuma reviews, the Telegram bot, the B2 and OCI buckets, the FCM key with B1, and the bootstrap re-run for the backup timers) · **Lane A:** 2 items (the WireGuard walk and the screenshots; B1's two contract additions are done) · **Lane M:** the Firebase identifiers, the VAPID key, the privacy and share links, the merge | **Lane B1:** 2 items (the deploy with `0005`, the FCM key and the first real reminder, which also covers T045's step 4) · **Lane B2:** 6 items (the deploy check, the Kuma monitors, the first LiveSoccerTV run, the breaker drill, the first backups, the stopped-worker drill) · **Lane A:** 1 item (the deployed editor walk-through) · **Lane M:** the Android and iPhone walks, the closed-test build, the Remote Config parameters | **Round 2 (2026-11-01/02), all lanes merged on `003-d03-follow-push-sources`:** the 10 open review fixes are done (B1-R2-1/2, B2-R2-1/2, A-R1-1/5, M-R2-1 … 4), with backend 95.21% coverage, 240 admin tests and the app suite green; T045 passes steps 1–3 and 5–8 locally, its step 4 moves to T047; the bare-form `KUMA_PUSH_URL_*` values (T086) are yours. Earlier: **Lane B1 is merged into `003-d03`** (PR #16) and its round-1 review fixes (B1-R1-1 to B1-R1-6) are on `d03-b1`, with revision `0006`; **Lane B2 is written on `d03-b2` and rebased onto it, with `0005` applied and the whole backend suite green** (PR #17, merged); its round-1 review fixes (B2-R1-1 to B2-R1-8) are on `d03-b2`, CI-proven and awaiting review. **Lane A** is written on `d03-a` and merged up: T088–T105 done, and its round-1 fixes are in the main checkout (236 admin tests) except the two that need B1 — per-row `etag` on the competition and satellite lists (A-R1-1) and `kind` in `ChannelPatch` (A-R1-5) — with aliases a third recorded gap (PR #18). Nothing is deployed or run on a host yet. **Lane M is written on `d03-m` in `../madar-d03-M`** and its round-1 review fixes (M-R1-1 … M-R1-12, including the T133 device registration and follow sync) are on that branch (605 app tests green on the test box). |
 | [004 D4 MVP launch](#004-d4-mvp-launch) | **Lane B1:** 4 items (the `TRUSTED_PROXIES` and `RATE_LIMIT_EXEMPT_IPS` reads, the load-testing runbook, and the whole-repository security review which needs the `security-reviewer` agent) · **Lane B2:** 7 items (re-run the VPS-1 bootstrap first, the media backup's rclone remote, Kuma's Telegram notification (the home box is back, and its Kuma monitor exists), the one-time network recreation, `TRUSTED_PROXIES_PUBLIC` only if the default is wrong, `MIRROR_BASE_URL` in `APP_ENV_PROD`, Kuma's `pwa-mirror` URL) · **Lane A:** 1 item (the admin polish list — the owner writes it; «none» is an answer) · **Lane M:** 3 items (the phone check of the carry-over, `MIRROR_BASE_URL`, the merge) | **Lane B1:** 4 items (two networks for `SR-1`, the load test and its report, the host review with gitleaks, and any HIGH you must accept) · **Lane B2:** 7 items (the backup heartbeat, the mirror headers, the admin deploy, the `web-v0.1.0` tag, the report re-run, LiveSoccerTV after its fix, the home box healing itself) · **Lane A:** 3 items (the test account and match, the live smoke runs three times, and the screenshots carried from 002 and 003) · **Lane M:** 5 items (the preview channel, tag `app-v0.3.0`, the bug bash, the live timings, the public link) | **Lane B1 is written on `d04-b1`** in `../madar-b1`, cut from `master` (`acbfece`): the client-IP fix, the allowlist, the k6 script and the runbook; `ruff`, `mypy --strict` and the backend suite are green (1374 passed; the 4 `test_homebox_acl.py` failures are this machine's Redis password, as in D3), and the contract is unchanged. Nothing is deployed and nothing ran on a host. **Lane B2 is written on `d04-b2` in `../madar-b2`**, with the report CLI, the Compose subnet and trust list, the mirror and release rules, the admin deploy job and three new `infra.yml` checks. Its import report already found the day's real problem: the home box is offline, so `ysscores` and `livesoccertv` have not ingested since 2026-11-02. Nothing is deployed yet. **Lane A is written on `d04-a`** in `../madar-a`, rebased on this branch: the Playwright smoke test passes against Prism, `pnpm build` loads under the CSP with no console violations, and the Vitest suite is green (241 tests). The live run, the screenshots and FR-023 wait on the owner's list and on B2's admin deploy (T040). Lane M has not started. **Lane M is written on `d04-m`** in `../madar-m`, rebased on this branch: the three D3 fixes, the hashed release (stage script, service worker, bootstrap, the drift wasm URL) and the S16 install row; 657 app tests green on the test box, 90.6 % line coverage excluding generated code, and the staged layout built from a real `flutter build web`. Nothing has run on a host, a console or a device yet. **Round-1 review fixes (2026-11-03) are in on `004-d04-mvp-launch`, uncommitted:** the k6 `matches` query and per-scenario thresholds, the runbook's real allowlist checks, the release job's mirror read, every VPS-1 job in `deploy-vps1` without the `infra/` rsync, the admin symlink check (B2 adds **re-run the bootstrap on VPS-1** first under "Before merge"), the smoke test's live finder and mock isolation, a classic `sw.js` and the bootstrap's mirror fallback. Nothing new is deployed. **Launch checks (2026-11-03, after the merge):** T008 and T012 pass, and the security review has no CRITICAL or HIGH ([security-review.md](../specs/004-d04-mvp-launch/security-review.md)). **The load test failed** ([report](load-tests/2026-11-03-mvp.md): p95 ≈ 5 s, VPS-1's one core saturated), so the fix (more OCPU, or the Caddy `/v1/live` cache) and SR-2 are your decisions. |
+| [005 D5 live and discovery](#005-d5-live-and-discovery) | **Lane B1:** 3 items (the `0007` and contract review, merge order, the capture's match) · **Lane B2:** 2 items (T001, the shared-parts PR; VPS-1 can't be resized, so T048 is closed) · **Lane A:** 1 item (the screenshots against the boards) · **Lane M:** the device walk, the merge | **Lane B1:** 3 items (the live checks, the done-check match, the load re-run after B2's Caddy cache, T062) · **Lane B2:** 5 items (`worker-live` healthy, Telegram on VPS-2, the `celery-live` monitor, the YallaKora run on the live host, the disk check) · **Lane A:** 2 items (the WireGuard walk with SC-007's timing, on rows the importers have filled) · **Lane M:** the `features` switch, tags `app-v0.4.0` and `web-v0.2.0` | **All four lanes and their round 1 review fixes are merged on the spec branch**, which goes to `master` as one PR; nothing is deployed. The combined backend suite and 802 app tests are green locally. The capture waits on a deploy and a live match. |
+| [031 D5 follow-up: live sources](#031-d5-follow-up-live-sources) | **Before lanes:** bring #39 or `master` into `d05-b1` and `d05-b2` | **Lane B1:** the `0008` review, the capture night, the watched match. **Lane B2:** T033's host check, before the capture | Lanes B1 and B2 are merged into `005-d05-live-and-discovery`. Parsers, rules, Goal.com and the capture tool pass their tests. B1's round 1 fixes hold. Its round 2 fix, B1-R2-1, is in and needs a round 3 review. B2's round 1 review approved with notes. The capture and the watched match wait for a deploy and a match night |
 
 ## Every month
 
@@ -530,6 +532,149 @@ release build and the iPhone PWA — every item below needs a host, a console or
   (DC7 in [tasks.md](../specs/004-d04-mvp-launch/tasks.md#done-check)).
   → [firebase-hosting](runbooks/firebase-hosting.md)
 
+## 005 D5 live and discovery
+
+Planned on 2026-11-04 in `specs/005-d05-live-and-discovery/`; each lane works on `d05-<lane>` in `../madar-<lane>` ([tasks.md](../specs/005-d05-live-and-discovery/tasks.md), [quickstart](../specs/005-d05-live-and-discovery/quickstart.md)).
+
+### Lane B1: live data, contract, poller
+
+Code on `d05-b1`, rebased on B2's merge to the spec branch `005-d05-live-and-discovery` (`d42c7de`). It must be rebased again after T001 lands. What is in: revision `0007`, the widened public and admin contracts and both regenerated clients, the unresolved-names and rights-holder admin APIs, and the poller in `backend/app/live/` with [its runbook](runbooks/live-poller.md). The parsers work from saved finished and scheduled pages only, so a live status they don't know fails validation until the capture adds it.
+
+Round 1 of the review ([b1-round-1](../specs/005-d05-live-and-discovery/reviews/b1-round-1.md)) is fixed on `d05-b1`, uncommitted: B1-R1-1 to R1-5, R1-7 and R1-8. `backend/app/live/crosscheck.py` changed its rules, so it's worth reading: a final status now waits for the sources to agree, or the match goes to the clock at kickoff + 210 min with no score ([A held final score](runbooks/live-poller.md#a-held-final-score)). B1-R1-6 and T035 wait on B2's fix to `test_schedule_fetch.py`.
+
+#### Before merge, in this order
+
+- [ ] **T017 The migration and contract.** Read `backend/alembic/versions/0007_live_and_aliases.py` and the diffs in `backend/openapi/`. `matches` rows are never deleted, so the new tables have no cascade. The new `sources` rows keep kinds the previous release accepts, so its `GET /admin/api/sources` keeps working during a deploy and after a rollback (B1-R1-8).
+- [x] **T017 The `lineups` finding.** Decided by you on 2026-11-05: `oasdiff` reports one `response-property-any-of-added` ERR on `MatchDetail.lineups`, which research R15 predicted and clients already handle, and it gets a one-rule oasdiff exception, made by B2 as B2-R1-12. `contract-v1` doesn't move ([ci-workflows](runbooks/ci-workflows.md)).
+- [ ] **Merge order.** B2's T043 (`worker-live`) must be deployed with or before this lane: beat queues `live.scheduler` every minute, and those messages wait unread without a consumer. `backend/tests/adapters/test_schedule_fetch.py` also needs one line from B2: its exact entry count must add `app.live.schedule`'s four entries, or `backend.yml` fails on the merged result (T035).
+- [ ] **T020 The capture's match.** Pick the day's first match both lists carry, as early as possible, so a later kickoff is left for T038. Claude runs the capture on VPS-2 ([the capture](runbooks/live-poller.md#the-capture)) and then writes T021's report. A source that turns out to be unusable stops here and comes to you.
+
+#### After merge
+
+- [ ] **T037 The live checks.** `/v1/live` during a match; stop `worker-live` and see the watchdog trip within 7 min; pause and resume in A13 ([live-poller](runbooks/live-poller.md)).
+- [ ] **T038 The done-check match.** Watch one real match, later than the capture's, from kickoff to full time against the broadcast on the deployed parsers (SC-001). If no later kickoff fits, it moves to the next match day.
+- [ ] **T040 The load re-run.** VPS-1 can't be resized (T048), so once B2's Caddy cache (T062) is deployed, open the window for a re-run by [load-testing](runbooks/load-testing.md).
+
+### Lane B2: YallaKora, the queue, the live worker
+
+Merged on the spec branch (PR #35). The round-1 review fixes are on `d05-b2` in `../madar-b2`, **uncommitted**, on top of the spec branch. Nothing is deployed.
+
+#### Before merge, in this order
+
+- [ ] **T001: merge the d05 docs to `master`.** Planning's task, listed here because both lanes were cut from the spec branch until it's done.
+- [ ] **T045: approve the shared-parts PR.** T042–T045 (`live` heartbeat, both rate buckets, `worker-live`, the stubs) are ready to go to `master` on their own, so B1 can rebase. Ask Claude to open it.
+- [x] **T046: merge B1's contract PR** (`0007`). Merged (PR #36), and `tests/adapters` passes against it.
+- [x] **B1-R1-7: accept the `lineups` finding.** Your decision of 2026-11-05 is in as a one-rule `oasdiff` exception. → [ci-workflows](runbooks/ci-workflows.md#the-breaking-change-exception)
+- [x] **T048: check the OCI limits and resize VPS-1.** Closed on 2026-11-05 from your report: VPS-1 can't be resized, so it stays at 1 OCPU and T062 (the Caddy `/v1/live` cache) is next, as FR-062 says. `API_PUBLIC_WORKERS` doesn't change.
+
+#### After merge
+
+- [ ] **T043: check `worker-live` is healthy on VPS-2.** The deploy starts it. Needed before B1's capture (T020). → [workers](runbooks/workers.md#what-runs-where)
+- [ ] **T061: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` on VPS-2,** if missing. → [source-alerts](runbooks/source-alerts.md#the-two-settings)
+- [ ] **T061: create the `celery-live` push monitor** and set `KUMA_PUSH_URL_LIVE` on VPS-2, then restart `worker-live`. It's optional: empty leaves the queue unmonitored. → [uptime-kuma](runbooks/uptime-kuma.md#4-push-monitors-eight)
+- [ ] **T060: run `yallakora` on the live host** and put the evidence in the PR: the `import_runs` row, broadcasters on matches, queue rows, 0 new teams, competitions or channels, and `seen_count` rising with no duplicate on a second run. `run.json`'s `waiting` lists cards that wait on a name you can map in A13. Claude can run it if VPS-2 is reachable. Check `report coverage` for duplicate fixtures from the first run. → [imports-and-sources](runbooks/imports-and-sources.md#yallakora)
+- [ ] **T061: check the disk on VPS-2 after a busy day.** `ssh madar-vps2 'df -h /srv/raw'`. Research R12 expects well under 1 GB a day from the poller, on top of the importers, with a 5-day prune.
+
+### Lane A: the queue, run detail and rights holders
+
+Code on `d05-a` in `../madar-a`, merged up from the spec branch with B1's and B2's work (`2be5f31`), because T063 generates from B1's contract. All of admin's gates are green: `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test` (272 tests), `pnpm build`, both copy checks and `pnpm e2e` against Prism.
+
+What is in: A13's unresolved-names queue with map/create/ignore, the Live poller card, the run detail's five stages and the raw page, and A9 (list, drag order, editor, delete). Two D4 test fixtures needed the new `SourceHealth.live` field; nothing else outside `admin/` changed.
+
+Round-1 review fixes (A-R1-1 to A-R1-3) are on `d05-a`, uncommitted, with 285 admin tests: A9's editor now has the logo field (upload and remove), a satellites multi-select on each carriage, and `ConflictDialog` on a stale save and a stale reorder.
+
+#### Before merge
+
+- [ ] **T076 The screenshots.** Compare A13 Sources, A13 Run detail and A9 with their boards at 1440 and 1024 in both themes and attach the screenshots to the PR. The code is done; the comparison is a pair of eyes on the built app (`pnpm dev`, Prism, `?mock=`) — never on the mockup HTML.
+
+#### After merge
+
+- [ ] **T076 The WireGuard walk, with SC-007's timing.** With the admin deployed, open A13 and A9 at `https://10.8.0.1` over `wg0` ([admin-access](runbooks/admin-access.md)) and walk [quickstart A](../specs/005-d05-live-and-discovery/quickstart.md#lane-a): map, create and ignore a queued name; read a failed run's raw page; create a rights holder and see it in `/v1/competitions/{id}`. On A9, also set and remove a logo, save a carriage with two satellites and with none, and try a two-browser stale save and stale reorder (A-R1-1 to A-R1-3). Record how long a map takes (SC-007).
+- [ ] **T060's rows in the queue.** The queue fills from B2's YallaKora run and B1's poller, so the walk above is real data only after their first runs on the host.
+
+### Lane M: app
+
+Lane M replaces the `/channel/:id`, `/team/:id` and `/competition/:id` stubs with S6 (the
+channel sheet), S7 (the team page) and S8 (the competition page) on `d05-m` in `../madar-m`,
+rebased on `005-d05-live-and-discovery` after B1's contract (PR #36), and it wires the entry
+points from S2, S3, S5 and S9. The whole lane's task list in
+[tasks.md](../specs/005-d05-live-and-discovery/tasks.md#lane-m) is ticked.
+
+Checked without a device, in `app/`: `flutter analyze` clean, `./tool/check_literals.sh`,
+`./tool/check_token_copy.sh`, and the whole suite on the test box — 802 tests, 1 skipped
+(`env/example.json` is not in a checkout). All three screens have their goldens in
+`app/test/goldens/` (`s6_channel_*`, `s7_team_*`, `s8_competition_*`), RTL × {light, dark} ×
+{1.0, 1.3}. Two board details are deliberately not drawn, and the review should know why: S8's
+«اليوم ·» prefix on today's group (S7's board has none, and both screens share one day header)
+and S8's hide/show and share actions (hide/show is D8; the contract keeps S8 to follow and the
+rights section).
+
+#### Before merge, in this order
+
+- [ ] **T090 the device walk.** The three screens were compared with
+  `madar-design/app-flutter/screens/04-satellites-frequencies/Channel.png`,
+  `05-follow-and-search/Team.png` and `05-follow-and-search/Competition.png` in both themes;
+  what is left is your walk on a real Android phone: S6 opens from an S3 carriage row and from
+  an S5 channel row (expand the row, then «عرض القناة»: two taps, your decision of 2026-11-05)
+  with the frequency readable with no tap, S7 opens from S3's crest and from
+  S9's teams, S8 opens from S2's section header, S3's competition line and S9's «البطولات»,
+  follows survive a restart, and every offline and empty state shows. With TalkBack on, follow,
+  «حقوق البث», share and S3's team and competition buttons can each be reached and activated
+  (M-R1-1)
+  ([quickstart Lane M](../specs/005-d05-live-and-discovery/quickstart.md#lane-m)).
+- [ ] **Merge the PR** once its checks are green.
+
+#### After merge
+
+- [ ] **T089 the `features` switch.** In the Firebase console, add `features` with
+  `{"live_center": false}` and publish. No code reads it on D5, so nothing changes on screen;
+  D6 turns it on when its live centre exists
+  (→ [remote-config](runbooks/remote-config.md#features-the-dark-ship-switches)).
+- [ ] **T091 the next tags.** Tag `app-v0.4.0` for the D5 build and `web-v0.2.0` for the PWA once
+  the day's done check passes, and install the closed-track build for the walk
+  (→ [store-releases](runbooks/store-releases.md#2-tag-the-release)).
+
+
+## 031 D5 follow-up: live sources
+
+Spec: [031](../specs/031-d05-live-sources/spec.md). It acts on the 2026-11-04 capture, adds Goal.com and runs before D6. It replaces spec 005's T020, T021, T022, T038 and T039, so their items above are done here.
+
+### Before lanes start
+
+- [ ] **T001 Start the lanes.** The docs and spec are in PR #39. Bring that branch, or `master` once #39 is merged, into `d05-b1` and `d05-b2`.
+- [x] **T002 FootballCo's approval.** Recorded 2026-11-05 from the owner's report: approved that day for scraping, covering scores, match stats and everything else spec 031 plans, with no conditions or exceptions. Keep the written approval somewhere safe, because the repo doesn't hold a copy. To stop reading Goal.com, see [live-poller](runbooks/live-poller.md).
+
+### Lane B1
+
+- [ ] **T017 Review `0008`** before merge: new columns and `match_stats`, expand-only.
+- [ ] **T026 Capture night.** Pick a night with live matches, after the lanes are merged and deployed. B1 runs it on VPS-2, and Telegram tells you if a source stops. A source that refuses two rounds in a row (403 or 429) stays stopped until a restart, and whether to restart it is your call. → [the capture](runbooks/live-poller.md#the-capture)
+- [ ] **T028 Unresolved names.** Clear the capture's team names in A13 before the watched match.
+- [ ] **T029 Watched match.** A later match, against the broadcast, with all three sources.
+- [ ] **T035 Extra-time check.** On the first deployed match or capture that reaches extra time or penalties. An `unknown_status:<source>` alert may be the first sign, and its saved pages last 5 days. B1 does the work; it needs you to say when one happens. This doesn't block the Done check, because nobody can schedule such a match.
+- [ ] **DC1 Done check** in [tasks.md](../specs/031-d05-live-sources/tasks.md#done-check).
+
+### Other things worth knowing
+
+- The first capture's raw data and scripts are on your laptop in `~/madar-capture/2026-11-04/`, outside the repo.
+- `LIVE_CONFIRM_WAIT_S` is removed by this spec. If you set it on VPS-2, delete it after merge.
+
+### Lane B2
+
+Nothing here blocks the merge. These run after the deploy that carries the capture, before T026.
+
+- [ ] **T033 The host check.** Lane B2 confirmed what it can from outside: `worker-live` and `worker-maintenance` render with the live settings, `/srv/raw` is mounted and owned by the image's user (uid 10001), and VPS-2 had 37 GB free on 2026-11-05. The SSH user can't read `.env` or reach Docker, so these three are yours, as in [live-poller](runbooks/live-poller.md#the-capture):
+
+  ```bash
+  ssh madar-vps2
+  sudo -iu deploy
+  cd /srv/madar/infra
+  export IMAGE_TAG=$(cat /srv/madar/current_tag)
+  dc() { docker compose --env-file /srv/madar/.env -f compose/vps2.yml "$@"; }
+  grep -cE '^(SCRAPE_USER_AGENT|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID)=.' /srv/madar/.env   # 3
+  dc run --rm worker-live python -c "import os, redis; print(redis.Redis.from_url(os.environ['CELERY_BROKER_URL']).ping())"   # True
+  dc run --rm worker-live sh -c 'mkdir -p /srv/raw/capture && test -w /srv/raw/capture && echo writable'
+  ```
+
 ## Known for later features
 
 ### Day 0 leftovers
@@ -574,7 +719,7 @@ From delivery-plan §9 and system-design §3.
 | A3 / O6 | Blaze with a budget alert, or Spark with the mirror design | D0 | Blaze | **Decided 2026-11-03: Spark** (spec 004) |
 | O5 | Apple enrollment as an individual or an organization | D0, to start it | Individual | Unconfirmed |
 | O10 | Default satellites when the user skips | D1 | Nilesat + Badr | Default in use; confirm |
-| O7 | Live data source for minute, events and lineups | **D4**, before spec 005 is planned | Manual live entry on D5 | Open |
+| O7 | Live data source for minute, events and lineups | **D4**, before spec 005 is planned | Rejected: manual live entry. If the capture fails: API-Football Pro or the clock estimate alone | **Decided 2026-11-04, changed 2026-11-05: FilGoal, Goal.com and YallaKora** (spec 031). The owner accepts the risk of FilGoal's and YallaKora's terms not yet read (system-design §3.3, §6.7). **Goal.com: FootballCo approved on 2026-11-05, as the owner reports: scraping for scores, match stats and everything else spec 031 plans, with no conditions or exceptions** ([031](#031-d5-follow-up-live-sources)) |
 | O8 | Keep Feeds | D7 | Drop from the app, keep the table | Open |
 | O9 | Interstitial placement (P5) | D8 | On return from match detail | Open |
 | O4 | Buy a domain (about $10/year) | D13 | Stay on sslip.io | Open |
@@ -606,8 +751,10 @@ Each day gets its full section when it's implemented. These lines come from the 
   - read the load-test report and the security-review results (no CRITICAL may stay open);
   - run the bug-bash on Android, the iPhone PWA and desktop;
   - approve making the PWA public (Gaps 13);
-  - **decide O7**.
-- **D5:** start the AdMob app and consent setup.
+  - **decide O7** (decided 2026-11-04; see the table above).
+- **D5:**
+  - start the AdMob app and consent setup;
+  - set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` on VPS-2 if they aren't there yet, since the live poller's alerts use them.
 - **D6:**
   - an API-Football account and key on the host (Gaps 9);
   - review the audience queries for every push type;

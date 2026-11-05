@@ -73,6 +73,7 @@ describe('adminHttp', () => {
             items_24h: [],
             error_rate_24h: null,
             running: false,
+            live: null,
           }]));
       }),
     );
@@ -180,6 +181,7 @@ describe('adminHttp', () => {
             items_24h: [],
             error_rate_24h: null,
             running: false,
+            live: null,
           }]), {
           headers: { ETag: '"v7"' },
         }),

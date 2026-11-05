@@ -21,8 +21,8 @@ from app.workers.base import BaseTask
 from app.workers.config import get_worker_settings
 
 QUEUE_NAMES = ("scrape", "scrape_home", "imports", "maintenance", "media", "live", "notifications")
-TASK_MODULES = ("app.adapters.tasks", "app.adapters.media_tasks", "app.notifications.tasks")
-SCHEDULE_MODULES = ("app.adapters.schedule", "app.notifications.schedule")
+TASK_MODULES = ("app.adapters.tasks", "app.adapters.media_tasks", "app.notifications.tasks", "app.live.tasks")
+SCHEDULE_MODULES = ("app.adapters.schedule", "app.notifications.schedule", "app.live.schedule")
 ROUTER_MODULE = "app.adapters.tasks"
 
 

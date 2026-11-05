@@ -104,6 +104,7 @@ class AdapterSettings(BaseSettings):
     kuma_push_url_maintenance: str | None = Field(default=None, alias="KUMA_PUSH_URL_MAINTENANCE")
     kuma_push_url_imports: str | None = Field(default=None, alias="KUMA_PUSH_URL_IMPORTS")
     kuma_push_url_notifications: str | None = Field(default=None, alias="KUMA_PUSH_URL_NOTIFICATIONS")
+    kuma_push_url_live: str | None = Field(default=None, alias="KUMA_PUSH_URL_LIVE")
     # The home box reaches only Redis, so VPS-2 reports its queue instead: ``down`` once more than
     # ``SCRAPE_HOME_BACKLOG_MAX`` fetches wait (six T−60 slots, an hour of a stuck worker).
     kuma_push_url_scrape_home: str | None = Field(default=None, alias="KUMA_PUSH_URL_SCRAPE_HOME")
@@ -146,6 +147,7 @@ class AdapterSettings(BaseSettings):
             "maintenance": self.kuma_push_url_maintenance,
             "imports": self.kuma_push_url_imports,
             "notifications": self.kuma_push_url_notifications,
+            "live": self.kuma_push_url_live,
         }.get(queue)
 
 

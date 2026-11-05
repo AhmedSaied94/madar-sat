@@ -82,9 +82,13 @@ interface TeamEditorProps {
   teamId: number | null;
   open: boolean;
   onClose: () => void;
+  /** Prefills the name of a new team, for A13's «جديد». */
+  initialName?: string;
+  /** Hands the new team's id back, so A13 can bind the queued name to it. */
+  onCreated?: (teamId: number) => void;
 }
 
-export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactElement {
+export function TeamEditor({ teamId, open, onClose, initialName, onCreated }: TeamEditorProps): ReactElement {
   const detail = useGetTeam(teamId ?? 0, {
     query: { enabled: open && teamId !== null, structuralSharing: false },
   });
@@ -128,7 +132,7 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
     if (teamId === null) {
       if (seeded.current === 'new') return;
       seeded.current = 'new';
-      adopt(emptyDraft(), null);
+      adopt({ ...emptyDraft(), name: initialName ?? '' }, null);
       setSaveError(null);
       return;
     }
@@ -136,7 +140,7 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
     seeded.current = `team-${teamId}`;
     adopt(fromTeam(serverTeam), etagOf(detail.data));
     setSaveError(null);
-  }, [open, teamId, serverTeam, detail.data, adopt]);
+  }, [open, teamId, serverTeam, detail.data, adopt, initialName]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(baseline), [baseline, draft]);
   const competitionName = (id: string | number): string =>
@@ -201,7 +205,8 @@ export function TeamEditor({ teamId, open, onClose }: TeamEditorProps): ReactEle
         if (parsed.stadium.trim() !== '') body.stadium = parsed.stadium.trim();
         if (parsed.country.trim() !== '') body.country = parsed.country.trim();
         if (parsed.logoAssetId !== null) body.logo_asset_id = parsed.logoAssetId;
-        await createTeam(body);
+        const created = await createTeam(body);
+        if (created.data) onCreated?.(created.data.id);
       } else {
         const body = buildTeamPatch(parsed, baseline);
         if (Object.keys(body).length === 0) {

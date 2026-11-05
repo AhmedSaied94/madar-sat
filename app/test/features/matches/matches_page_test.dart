@@ -187,6 +187,10 @@ class _Harness {
           path: '/match/:id',
           builder: (context, state) => _Marker('/match/${state.pathParameters['id']}'),
         ),
+        GoRoute(
+          path: '/competition/:id',
+          builder: (context, state) => _Marker('/competition/${state.pathParameters['id']}'),
+        ),
       ],
     );
   }
@@ -574,6 +578,16 @@ void main() {
       expect(find.text('الجولة 9'), findsOneWidget);
       expect(find.text(_asia.name), findsOneWidget);
       expect(find.text('الجولة 3'), findsOneWidget);
+    });
+
+    testWidgets('a section header opens S8 (T086, M-R1-2)', (tester) async {
+      h.serve([_match(1), _match(2, competition: _asia)]);
+      await h.pump(tester);
+
+      await tester.tap(find.text(_asia.name));
+      await tester.pumpAndSettle();
+
+      expect(find.text('/competition/${_asia.id}'), findsOneWidget);
     });
 
     testWidgets('group by the device local day of the kickoff, never by match_date',

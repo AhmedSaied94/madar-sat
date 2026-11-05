@@ -315,6 +315,7 @@ async def test_broadcast_presets_and_sources_are_read_only_lists(editor_client):
         "items_24h",
         "error_rate_24h",
         "running",
+        "live",
     }
     assert (await editor_client.post(f"{ADMIN}/sources", json={})).status_code == 405
 

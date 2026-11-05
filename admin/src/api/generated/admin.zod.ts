@@ -813,6 +813,12 @@ export const getDashboardResponseDataSourcesItemLastRunItemsFoundMax = 214748364
 export const getDashboardResponseDataSourcesItemLastRunItemsUpsertedMin = 0;
 export const getDashboardResponseDataSourcesItemLastRunItemsUpsertedMax = 2147483647;
 
+export const getDashboardResponseDataSourcesItemLiveErrorShareMin = 0;
+export const getDashboardResponseDataSourcesItemLiveErrorShareMax = 1;
+
+export const getDashboardResponseDataSourcesItemLiveMatchesLiveMin = 0;
+export const getDashboardResponseDataSourcesItemLiveMatchesLiveMax = 2147483647;
+
 
 
 export const getDashboardResponse = zod.object({
@@ -849,7 +855,7 @@ export const getDashboardResponse = zod.object({
   "error_rate_24h": zod.union([zod.number().min(getDashboardResponseDataSourcesItemErrorRate24hMinOne).max(getDashboardResponseDataSourcesItemErrorRate24hMaxOne),zod.null()]),
   "is_enabled": zod.boolean(),
   "items_24h": zod.array(zod.number().min(getDashboardResponseDataSourcesItemItems24hItemMin).max(getDashboardResponseDataSourcesItemItems24hItemMax)),
-  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "kind": zod.enum(['scraper', 'api', 'internal', 'fixtures', 'live_reader', 'live']),
   "last_run": zod.union([zod.object({
   "error": zod.union([zod.string(),zod.null()]),
   "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
@@ -861,6 +867,14 @@ export const getDashboardResponse = zod.object({
   "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "live": zod.union([zod.object({
+  "error_share": zod.number().min(getDashboardResponseDataSourcesItemLiveErrorShareMin).max(getDashboardResponseDataSourcesItemLiveErrorShareMax),
+  "matches_live": zod.number().min(getDashboardResponseDataSourcesItemLiveMatchesLiveMin).max(getDashboardResponseDataSourcesItemLiveMatchesLiveMax),
+  "sources": zod.array(zod.object({
+  "name": zod.string(),
+  "state": zod.enum(['ok', 'failing', 'down', 'invalid'])
+}))
+}),zod.null()]),
   "name": zod.string(),
   "paused": zod.boolean(),
   "running": zod.boolean()
@@ -978,6 +992,9 @@ export const getImportRunResponseDataItemsFoundMax = 2147483647;
 export const getImportRunResponseDataItemsUpsertedMin = 0;
 export const getImportRunResponseDataItemsUpsertedMax = 2147483647;
 
+export const getImportRunResponseDataPagesMin = 0;
+export const getImportRunResponseDataPagesMax = 2147483647;
+
 
 
 export const getImportRunResponse = zod.object({
@@ -990,10 +1007,60 @@ export const getImportRunResponse = zod.object({
   "items_upserted": zod.number().min(getImportRunResponseDataItemsUpsertedMin).max(getImportRunResponseDataItemsUpsertedMax),
   "log": zod.union([zod.record(zod.string(), zod.unknown()),zod.null()]),
   "log_available": zod.boolean(),
+  "pages": zod.number().min(getImportRunResponseDataPagesMin).max(getImportRunResponseDataPagesMax),
   "raw_path": zod.union([zod.string(),zod.null()]),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed']),
+  "worker": zod.union([zod.string(),zod.null()])
 }),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A13: a run's saved page as inert text; the path comes from the run, never the request
+ */
+export const getImportRunRawPathRunIdMax = 9223372036854776000;
+
+
+
+export const getImportRunRawParams = zod.object({
+  "run_id": zod.number().min(1).max(getImportRunRawPathRunIdMax)
+})
+
+export const getImportRunRawQueryPageDefault = 0;
+export const getImportRunRawQueryPageMin = 0;
+export const getImportRunRawQueryPageMax = 999;
+
+
+
+export const getImportRunRawQueryParams = zod.object({
+  "page": zod.number().min(getImportRunRawQueryPageMin).max(getImportRunRawQueryPageMax).optional()
+})
+
+export const getImportRunRawResponseDataPageMin = 0;
+export const getImportRunRawResponseDataPageMax = 2147483647;
+
+export const getImportRunRawResponseDataPagesMin = 0;
+export const getImportRunRawResponseDataPagesMax = 2147483647;
+
+
+
+export const getImportRunRawResponse = zod.object({
+  "data": zod.union([zod.object({
+  "content_type": zod.union([zod.string(),zod.null()]),
+  "page": zod.number().min(getImportRunRawResponseDataPageMin).max(getImportRunRawResponseDataPageMax),
+  "pages": zod.number().min(getImportRunRawResponseDataPagesMin).max(getImportRunRawResponseDataPagesMax),
+  "state": zod.enum(['pending', 'ready', 'gone']),
+  "text": zod.union([zod.string(),zod.null()]),
+  "truncated": zod.boolean(),
+  "url": zod.union([zod.string(),zod.null()])
+}).describe('A saved page as inert text, never a link (005 research R13). ``pending``: poll again, up to 10 s.'),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
   "message": zod.string()
@@ -1548,6 +1615,278 @@ export const uploadMediaResponse = zod.object({
 
 
 /**
+ * @summary A9: every rights holder, by `sort_order` (nulls last), then name
+ */
+export const listRightsHoldersResponseDataItemEtagMin = 3;
+export const listRightsHoldersResponseDataItemEtagMax = 80;
+
+
+
+export const listRightsHoldersResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "competitions": zod.array(zod.string()),
+  "etag": zod.string().min(listRightsHoldersResponseDataItemEtagMin).max(listRightsHoldersResponseDataItemEtagMax),
+  "id": zod.number(),
+  "logo": zod.union([zod.string(),zod.null()]),
+  "name": zod.string(),
+  "satellites": zod.array(zod.string()),
+  "sort_order": zod.union([zod.number(),zod.null()])
+})),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Create a rights holder (takes no `If-Match`)
+ */
+export const createRightsHolderBodyCarriagesItemFrequenciesItemIsPrimaryDefault = false;export const createRightsHolderBodyCarriagesItemFrequenciesDefault = [];
+export const createRightsHolderBodyCarriagesItemFrequenciesMax = 32;
+
+export const createRightsHolderBodyCarriagesItemPackageMaxOne = 80;
+
+export const createRightsHolderBodyCarriagesItemSatelliteIdsItemMax = 9223372036854776000;
+
+export const createRightsHolderBodyCarriagesItemSatelliteIdsDefault = [];
+export const createRightsHolderBodyCarriagesItemSatelliteIdsMax = 32;
+
+export const createRightsHolderBodyCarriagesDefault = [];
+export const createRightsHolderBodyCarriagesMax = 32;
+
+export const createRightsHolderBodyCompetitionIdsItemMax = 9223372036854776000;
+
+export const createRightsHolderBodyCompetitionIdsDefault = [];
+export const createRightsHolderBodyCompetitionIdsMax = 200;
+
+export const createRightsHolderBodyLogoAssetIdMaxOne = 9223372036854776000;
+
+export const createRightsHolderBodyNameMax = 120;
+
+
+
+export const createRightsHolderBody = zod.object({
+  "carriages": zod.array(zod.object({
+  "access": zod.enum(['free', 'encrypted']),
+  "beam": zod.union([zod.enum(['wide', 'narrow']),zod.null()]).optional(),
+  "frequencies": zod.array(zod.object({
+  "frequency_mhz": zod.number(),
+  "is_primary": zod.boolean().optional(),
+  "polarization": zod.enum(['H', 'V', 'L', 'R']),
+  "symbol_rate": zod.number()
+})).max(createRightsHolderBodyCarriagesItemFrequenciesMax).default(createRightsHolderBodyCarriagesItemFrequenciesDefault),
+  "package": zod.union([zod.string().min(1).max(createRightsHolderBodyCarriagesItemPackageMaxOne),zod.null()]).optional(),
+  "satellite_ids": zod.array(zod.number().min(1).max(createRightsHolderBodyCarriagesItemSatelliteIdsItemMax)).max(createRightsHolderBodyCarriagesItemSatelliteIdsMax).default(createRightsHolderBodyCarriagesItemSatelliteIdsDefault)
+})).max(createRightsHolderBodyCarriagesMax).default(createRightsHolderBodyCarriagesDefault),
+  "competition_ids": zod.array(zod.number().min(1).max(createRightsHolderBodyCompetitionIdsItemMax)).max(createRightsHolderBodyCompetitionIdsMax).default(createRightsHolderBodyCompetitionIdsDefault),
+  "logo_asset_id": zod.union([zod.number().min(1).max(createRightsHolderBodyLogoAssetIdMaxOne),zod.null()]).optional(),
+  "name": zod.string().min(1).max(createRightsHolderBodyNameMax)
+})
+
+
+/**
+ * @summary A9: set the order (each row carries its version)
+ */
+export const reorderRightsHoldersBodyItemsItemIdMax = 9223372036854776000;
+
+export const reorderRightsHoldersBodyItemsItemIfMatchMinOne = 3;
+export const reorderRightsHoldersBodyItemsItemIfMatchMaxOne = 80;
+
+export const reorderRightsHoldersBodyItemsMax = 200;
+
+
+
+export const reorderRightsHoldersBody = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().min(1).max(reorderRightsHoldersBodyItemsItemIdMax),
+  "if_match": zod.union([zod.string().min(reorderRightsHoldersBodyItemsItemIfMatchMinOne).max(reorderRightsHoldersBodyItemsItemIfMatchMaxOne),zod.null()]).optional().describe('The row\'s current ETag. Required.')
+})).min(1).max(reorderRightsHoldersBodyItemsMax)
+}).describe('The full new order of the rows being moved, top first; each carries its version.')
+
+export const reorderRightsHoldersResponse = zod.object({
+  "data": zod.union([zod.object({
+  "updated": zod.array(zod.object({
+  "etag": zod.string(),
+  "id": zod.number()
+}))
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Delete a rights holder and its carriages (admin role)
+ */
+export const deleteRightsHolderPathHolderIdMax = 9223372036854776000;
+
+
+
+export const deleteRightsHolderParams = zod.object({
+  "holder_id": zod.number().min(1).max(deleteRightsHolderPathHolderIdMax)
+})
+
+export const deleteRightsHolderHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const deleteRightsHolderResponse = zod.object({
+  "data": zod.null(),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary One rights holder
+ */
+export const getRightsHolderPathHolderIdMax = 9223372036854776000;
+
+
+
+export const getRightsHolderParams = zod.object({
+  "holder_id": zod.number().min(1).max(getRightsHolderPathHolderIdMax)
+})
+
+export const getRightsHolderResponseDataEtagMin = 3;
+export const getRightsHolderResponseDataEtagMax = 80;
+
+
+
+export const getRightsHolderResponse = zod.object({
+  "data": zod.union([zod.object({
+  "carriages": zod.array(zod.object({
+  "access": zod.enum(['free', 'encrypted']),
+  "beam": zod.union([zod.enum(['wide', 'narrow']),zod.null()]),
+  "frequencies": zod.array(zod.object({
+  "frequency_mhz": zod.number(),
+  "is_primary": zod.boolean(),
+  "polarization": zod.enum(['H', 'V', 'L', 'R']),
+  "symbol_rate": zod.number()
+})),
+  "package": zod.union([zod.string(),zod.null()]),
+  "satellite_ids": zod.array(zod.number())
+})),
+  "competition_ids": zod.array(zod.number()),
+  "etag": zod.string().min(getRightsHolderResponseDataEtagMin).max(getRightsHolderResponseDataEtagMax),
+  "id": zod.number(),
+  "logo": zod.union([zod.string(),zod.null()]),
+  "logo_asset_id": zod.union([zod.number(),zod.null()]),
+  "name": zod.string(),
+  "sort_order": zod.union([zod.number(),zod.null()])
+}).describe('The full editor shape.'),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Update a rights holder; `competition_ids` and `carriages`, if sent, replace the whole list
+ */
+export const patchRightsHolderPathHolderIdMax = 9223372036854776000;
+
+
+
+export const patchRightsHolderParams = zod.object({
+  "holder_id": zod.number().min(1).max(patchRightsHolderPathHolderIdMax)
+})
+
+export const patchRightsHolderHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const patchRightsHolderBodyCarriagesItemFrequenciesItemIsPrimaryDefault = false;export const patchRightsHolderBodyCarriagesItemFrequenciesDefault = [];
+export const patchRightsHolderBodyCarriagesItemFrequenciesMax = 32;
+
+export const patchRightsHolderBodyCarriagesItemPackageMaxOne = 80;
+
+export const patchRightsHolderBodyCarriagesItemSatelliteIdsItemMax = 9223372036854776000;
+
+export const patchRightsHolderBodyCarriagesItemSatelliteIdsDefault = [];
+export const patchRightsHolderBodyCarriagesItemSatelliteIdsMax = 32;
+
+export const patchRightsHolderBodyCarriagesMaxOne = 32;
+
+export const patchRightsHolderBodyCompetitionIdsItemMax = 9223372036854776000;
+
+export const patchRightsHolderBodyCompetitionIdsMaxOne = 200;
+
+export const patchRightsHolderBodyLogoAssetIdMaxOne = 9223372036854776000;
+
+export const patchRightsHolderBodyNameMaxOne = 120;
+
+
+
+export const patchRightsHolderBody = zod.object({
+  "carriages": zod.union([zod.array(zod.object({
+  "access": zod.enum(['free', 'encrypted']),
+  "beam": zod.union([zod.enum(['wide', 'narrow']),zod.null()]).optional(),
+  "frequencies": zod.array(zod.object({
+  "frequency_mhz": zod.number(),
+  "is_primary": zod.boolean().optional(),
+  "polarization": zod.enum(['H', 'V', 'L', 'R']),
+  "symbol_rate": zod.number()
+})).max(patchRightsHolderBodyCarriagesItemFrequenciesMax).default(patchRightsHolderBodyCarriagesItemFrequenciesDefault),
+  "package": zod.union([zod.string().min(1).max(patchRightsHolderBodyCarriagesItemPackageMaxOne),zod.null()]).optional(),
+  "satellite_ids": zod.array(zod.number().min(1).max(patchRightsHolderBodyCarriagesItemSatelliteIdsItemMax)).max(patchRightsHolderBodyCarriagesItemSatelliteIdsMax).default(patchRightsHolderBodyCarriagesItemSatelliteIdsDefault)
+})).max(patchRightsHolderBodyCarriagesMaxOne),zod.null()]).optional(),
+  "competition_ids": zod.union([zod.array(zod.number().min(1).max(patchRightsHolderBodyCompetitionIdsItemMax)).max(patchRightsHolderBodyCompetitionIdsMaxOne),zod.null()]).optional(),
+  "logo_asset_id": zod.union([zod.number().min(1).max(patchRightsHolderBodyLogoAssetIdMaxOne),zod.null()]).optional(),
+  "name": zod.union([zod.string().min(1).max(patchRightsHolderBodyNameMaxOne),zod.null()]).optional()
+}).describe('An omitted field stays as it is; ``competition_ids`` and ``carriages`` replace the whole list.')
+
+export const patchRightsHolderResponseDataEtagMin = 3;
+export const patchRightsHolderResponseDataEtagMax = 80;
+
+
+
+export const patchRightsHolderResponse = zod.object({
+  "data": zod.union([zod.object({
+  "carriages": zod.array(zod.object({
+  "access": zod.enum(['free', 'encrypted']),
+  "beam": zod.union([zod.enum(['wide', 'narrow']),zod.null()]),
+  "frequencies": zod.array(zod.object({
+  "frequency_mhz": zod.number(),
+  "is_primary": zod.boolean(),
+  "polarization": zod.enum(['H', 'V', 'L', 'R']),
+  "symbol_rate": zod.number()
+})),
+  "package": zod.union([zod.string(),zod.null()]),
+  "satellite_ids": zod.array(zod.number())
+})),
+  "competition_ids": zod.array(zod.number()),
+  "etag": zod.string().min(patchRightsHolderResponseDataEtagMin).max(patchRightsHolderResponseDataEtagMax),
+  "id": zod.number(),
+  "logo": zod.union([zod.string(),zod.null()]),
+  "logo_asset_id": zod.union([zod.number(),zod.null()]),
+  "name": zod.string(),
+  "sort_order": zod.union([zod.number(),zod.null()])
+}).describe('The full editor shape.'),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary Every satellite, by priority
  */
 export const listSatellitesResponseDataItemEtagMin = 3;
@@ -1863,6 +2202,12 @@ export const listSourcesResponseDataItemLastRunItemsFoundMax = 2147483647;
 export const listSourcesResponseDataItemLastRunItemsUpsertedMin = 0;
 export const listSourcesResponseDataItemLastRunItemsUpsertedMax = 2147483647;
 
+export const listSourcesResponseDataItemLiveErrorShareMin = 0;
+export const listSourcesResponseDataItemLiveErrorShareMax = 1;
+
+export const listSourcesResponseDataItemLiveMatchesLiveMin = 0;
+export const listSourcesResponseDataItemLiveMatchesLiveMax = 2147483647;
+
 
 
 export const listSourcesResponse = zod.object({
@@ -1873,7 +2218,7 @@ export const listSourcesResponse = zod.object({
   "error_rate_24h": zod.union([zod.number().min(listSourcesResponseDataItemErrorRate24hMinOne).max(listSourcesResponseDataItemErrorRate24hMaxOne),zod.null()]),
   "is_enabled": zod.boolean(),
   "items_24h": zod.array(zod.number().min(listSourcesResponseDataItemItems24hItemMin).max(listSourcesResponseDataItemItems24hItemMax)),
-  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "kind": zod.enum(['scraper', 'api', 'internal', 'fixtures', 'live_reader', 'live']),
   "last_run": zod.union([zod.object({
   "error": zod.union([zod.string(),zod.null()]),
   "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
@@ -1885,6 +2230,14 @@ export const listSourcesResponse = zod.object({
   "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "live": zod.union([zod.object({
+  "error_share": zod.number().min(listSourcesResponseDataItemLiveErrorShareMin).max(listSourcesResponseDataItemLiveErrorShareMax),
+  "matches_live": zod.number().min(listSourcesResponseDataItemLiveMatchesLiveMin).max(listSourcesResponseDataItemLiveMatchesLiveMax),
+  "sources": zod.array(zod.object({
+  "name": zod.string(),
+  "state": zod.enum(['ok', 'failing', 'down', 'invalid'])
+}))
+}),zod.null()]),
   "name": zod.string(),
   "paused": zod.boolean(),
   "running": zod.boolean()
@@ -1931,6 +2284,12 @@ export const pauseSourceResponseDataLastRunItemsFoundMax = 2147483647;
 export const pauseSourceResponseDataLastRunItemsUpsertedMin = 0;
 export const pauseSourceResponseDataLastRunItemsUpsertedMax = 2147483647;
 
+export const pauseSourceResponseDataLiveErrorShareMin = 0;
+export const pauseSourceResponseDataLiveErrorShareMax = 1;
+
+export const pauseSourceResponseDataLiveMatchesLiveMin = 0;
+export const pauseSourceResponseDataLiveMatchesLiveMax = 2147483647;
+
 
 
 export const pauseSourceResponse = zod.object({
@@ -1941,7 +2300,7 @@ export const pauseSourceResponse = zod.object({
   "error_rate_24h": zod.union([zod.number().min(pauseSourceResponseDataErrorRate24hMinOne).max(pauseSourceResponseDataErrorRate24hMaxOne),zod.null()]),
   "is_enabled": zod.boolean(),
   "items_24h": zod.array(zod.number().min(pauseSourceResponseDataItems24hItemMin).max(pauseSourceResponseDataItems24hItemMax)),
-  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "kind": zod.enum(['scraper', 'api', 'internal', 'fixtures', 'live_reader', 'live']),
   "last_run": zod.union([zod.object({
   "error": zod.union([zod.string(),zod.null()]),
   "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
@@ -1953,6 +2312,14 @@ export const pauseSourceResponse = zod.object({
   "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "live": zod.union([zod.object({
+  "error_share": zod.number().min(pauseSourceResponseDataLiveErrorShareMin).max(pauseSourceResponseDataLiveErrorShareMax),
+  "matches_live": zod.number().min(pauseSourceResponseDataLiveMatchesLiveMin).max(pauseSourceResponseDataLiveMatchesLiveMax),
+  "sources": zod.array(zod.object({
+  "name": zod.string(),
+  "state": zod.enum(['ok', 'failing', 'down', 'invalid'])
+}))
+}),zod.null()]),
   "name": zod.string(),
   "paused": zod.boolean(),
   "running": zod.boolean()
@@ -1999,6 +2366,12 @@ export const resumeSourceResponseDataLastRunItemsFoundMax = 2147483647;
 export const resumeSourceResponseDataLastRunItemsUpsertedMin = 0;
 export const resumeSourceResponseDataLastRunItemsUpsertedMax = 2147483647;
 
+export const resumeSourceResponseDataLiveErrorShareMin = 0;
+export const resumeSourceResponseDataLiveErrorShareMax = 1;
+
+export const resumeSourceResponseDataLiveMatchesLiveMin = 0;
+export const resumeSourceResponseDataLiveMatchesLiveMax = 2147483647;
+
 
 
 export const resumeSourceResponse = zod.object({
@@ -2009,7 +2382,7 @@ export const resumeSourceResponse = zod.object({
   "error_rate_24h": zod.union([zod.number().min(resumeSourceResponseDataErrorRate24hMinOne).max(resumeSourceResponseDataErrorRate24hMaxOne),zod.null()]),
   "is_enabled": zod.boolean(),
   "items_24h": zod.array(zod.number().min(resumeSourceResponseDataItems24hItemMin).max(resumeSourceResponseDataItems24hItemMax)),
-  "kind": zod.enum(['scraper', 'api', 'internal']),
+  "kind": zod.enum(['scraper', 'api', 'internal', 'fixtures', 'live_reader', 'live']),
   "last_run": zod.union([zod.object({
   "error": zod.union([zod.string(),zod.null()]),
   "finished_at": zod.union([zod.string().datetime({}),zod.null()]),
@@ -2021,6 +2394,14 @@ export const resumeSourceResponse = zod.object({
   "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "live": zod.union([zod.object({
+  "error_share": zod.number().min(resumeSourceResponseDataLiveErrorShareMin).max(resumeSourceResponseDataLiveErrorShareMax),
+  "matches_live": zod.number().min(resumeSourceResponseDataLiveMatchesLiveMin).max(resumeSourceResponseDataLiveMatchesLiveMax),
+  "sources": zod.array(zod.object({
+  "name": zod.string(),
+  "state": zod.enum(['ok', 'failing', 'down', 'invalid'])
+}))
+}),zod.null()]),
   "name": zod.string(),
   "paused": zod.boolean(),
   "running": zod.boolean()
@@ -2301,6 +2682,203 @@ export const patchTeamResponse = zod.object({
   "primary_competition_id": zod.union([zod.number(),zod.null()]),
   "sport": zod.enum(['football', 'basketball', 'handball', 'volleyball', 'tennis']),
   "stadium": zod.union([zod.string(),zod.null()])
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A13: the names the importers couldn't match
+ */
+export const listNamesQuerySourceMaxOne = 64;
+
+
+export const listNamesQuerySourceRegExpOne = new RegExp('^[a-z][a-z0-9_]{0,63}$');
+export const listNamesQueryStateDefault = "open";export const listNamesQueryCursorMaxOne = 400;
+
+export const listNamesQueryLimitDefault = 50;
+export const listNamesQueryLimitMax = 100;
+
+
+
+export const listNamesQueryParams = zod.object({
+  "source": zod.union([zod.string().max(listNamesQuerySourceMaxOne).regex(listNamesQuerySourceRegExpOne),zod.null()]).optional(),
+  "kind": zod.union([zod.enum(['team', 'competition', 'channel']),zod.null()]).optional(),
+  "state": zod.enum(['open', 'mapped', 'created', 'ignored']).default(listNamesQueryStateDefault),
+  "cursor": zod.union([zod.string().max(listNamesQueryCursorMaxOne),zod.null()]).optional(),
+  "limit": zod.number().min(1).max(listNamesQueryLimitMax).default(listNamesQueryLimitDefault)
+})
+
+export const listNamesResponseDataItemEtagMin = 3;
+export const listNamesResponseDataItemEtagMax = 80;
+
+export const listNamesResponseDataItemSeenCountMin = 0;
+export const listNamesResponseDataItemSeenCountMax = 2147483647;
+
+export const listNamesResponseDataItemSuggestionsItemConfidenceMin = 0;
+export const listNamesResponseDataItemSuggestionsItemConfidenceMax = 100;
+
+
+
+export const listNamesResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "context": zod.object({
+  "away": zod.union([zod.string(),zod.null()]).optional(),
+  "competition": zod.union([zod.string(),zod.null()]).optional(),
+  "home": zod.union([zod.string(),zod.null()]).optional(),
+  "kickoff_at": zod.union([zod.string().datetime({}),zod.null()]).optional(),
+  "match_id": zod.union([zod.number(),zod.null()]).optional()
+}).describe('Where the source last showed the name. Written by the importers, so each part may be absent.'),
+  "etag": zod.string().min(listNamesResponseDataItemEtagMin).max(listNamesResponseDataItemEtagMax),
+  "id": zod.number(),
+  "kind": zod.enum(['team', 'competition', 'channel']),
+  "last_seen_at": zod.string().datetime({}),
+  "name": zod.string(),
+  "seen_count": zod.number().min(listNamesResponseDataItemSeenCountMin).max(listNamesResponseDataItemSeenCountMax),
+  "source": zod.string(),
+  "state": zod.enum(['open', 'mapped', 'created', 'ignored']),
+  "suggestions": zod.array(zod.object({
+  "confidence": zod.number().min(listNamesResponseDataItemSuggestionsItemConfidenceMin).max(listNamesResponseDataItemSuggestionsItemConfidenceMax),
+  "detail": zod.union([zod.string(),zod.null()]),
+  "exact": zod.boolean(),
+  "id": zod.number(),
+  "name": zod.string()
+}))
+})),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Ignore a name; later runs don't reopen it
+ */
+export const ignoreNamePathNameIdMax = 9223372036854776000;
+
+
+
+export const ignoreNameParams = zod.object({
+  "name_id": zod.number().min(1).max(ignoreNamePathNameIdMax)
+})
+
+export const ignoreNameHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const ignoreNameResponseDataEtagMin = 3;
+export const ignoreNameResponseDataEtagMax = 80;
+
+export const ignoreNameResponseDataSeenCountMin = 0;
+export const ignoreNameResponseDataSeenCountMax = 2147483647;
+
+export const ignoreNameResponseDataSuggestionsItemConfidenceMin = 0;
+export const ignoreNameResponseDataSuggestionsItemConfidenceMax = 100;
+
+
+
+export const ignoreNameResponse = zod.object({
+  "data": zod.union([zod.object({
+  "context": zod.object({
+  "away": zod.union([zod.string(),zod.null()]).optional(),
+  "competition": zod.union([zod.string(),zod.null()]).optional(),
+  "home": zod.union([zod.string(),zod.null()]).optional(),
+  "kickoff_at": zod.union([zod.string().datetime({}),zod.null()]).optional(),
+  "match_id": zod.union([zod.number(),zod.null()]).optional()
+}).describe('Where the source last showed the name. Written by the importers, so each part may be absent.'),
+  "etag": zod.string().min(ignoreNameResponseDataEtagMin).max(ignoreNameResponseDataEtagMax),
+  "id": zod.number(),
+  "kind": zod.enum(['team', 'competition', 'channel']),
+  "last_seen_at": zod.string().datetime({}),
+  "name": zod.string(),
+  "seen_count": zod.number().min(ignoreNameResponseDataSeenCountMin).max(ignoreNameResponseDataSeenCountMax),
+  "source": zod.string(),
+  "state": zod.enum(['open', 'mapped', 'created', 'ignored']),
+  "suggestions": zod.array(zod.object({
+  "confidence": zod.number().min(ignoreNameResponseDataSuggestionsItemConfidenceMin).max(ignoreNameResponseDataSuggestionsItemConfidenceMax),
+  "detail": zod.union([zod.string(),zod.null()]),
+  "exact": zod.boolean(),
+  "id": zod.number(),
+  "name": zod.string()
+}))
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Map a name to an entity: writes the alias, used from the next run
+ */
+export const mapNamePathNameIdMax = 9223372036854776000;
+
+
+
+export const mapNameParams = zod.object({
+  "name_id": zod.number().min(1).max(mapNamePathNameIdMax)
+})
+
+export const mapNameHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const mapNameBodyCreatedDefault = false;export const mapNameBodyScopeToCompetitionDefault = false;export const mapNameBodyTargetIdMax = 9223372036854776000;
+
+
+
+export const mapNameBody = zod.object({
+  "created": zod.boolean().optional(),
+  "scope_to_competition": zod.boolean().optional(),
+  "target_id": zod.number().min(1).max(mapNameBodyTargetIdMax)
+})
+
+export const mapNameResponseDataEtagMin = 3;
+export const mapNameResponseDataEtagMax = 80;
+
+export const mapNameResponseDataSeenCountMin = 0;
+export const mapNameResponseDataSeenCountMax = 2147483647;
+
+export const mapNameResponseDataSuggestionsItemConfidenceMin = 0;
+export const mapNameResponseDataSuggestionsItemConfidenceMax = 100;
+
+
+
+export const mapNameResponse = zod.object({
+  "data": zod.union([zod.object({
+  "context": zod.object({
+  "away": zod.union([zod.string(),zod.null()]).optional(),
+  "competition": zod.union([zod.string(),zod.null()]).optional(),
+  "home": zod.union([zod.string(),zod.null()]).optional(),
+  "kickoff_at": zod.union([zod.string().datetime({}),zod.null()]).optional(),
+  "match_id": zod.union([zod.number(),zod.null()]).optional()
+}).describe('Where the source last showed the name. Written by the importers, so each part may be absent.'),
+  "etag": zod.string().min(mapNameResponseDataEtagMin).max(mapNameResponseDataEtagMax),
+  "id": zod.number(),
+  "kind": zod.enum(['team', 'competition', 'channel']),
+  "last_seen_at": zod.string().datetime({}),
+  "name": zod.string(),
+  "seen_count": zod.number().min(mapNameResponseDataSeenCountMin).max(mapNameResponseDataSeenCountMax),
+  "source": zod.string(),
+  "state": zod.enum(['open', 'mapped', 'created', 'ignored']),
+  "suggestions": zod.array(zod.object({
+  "confidence": zod.number().min(mapNameResponseDataSuggestionsItemConfidenceMin).max(mapNameResponseDataSuggestionsItemConfidenceMax),
+  "detail": zod.union([zod.string(),zod.null()]),
+  "exact": zod.boolean(),
+  "id": zod.number(),
+  "name": zod.string()
+}))
 }),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),

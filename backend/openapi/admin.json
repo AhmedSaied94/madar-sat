@@ -1143,6 +1143,274 @@
         "title": "AdminMatchTeam",
         "type": "object"
       },
+      "AdminRightsHolder": {
+        "description": "The full editor shape.",
+        "examples": [
+          {
+            "carriages": [
+              {
+                "access": "encrypted",
+                "beam": "wide",
+                "frequencies": [
+                  {
+                    "frequency_mhz": 11013,
+                    "is_primary": true,
+                    "polarization": "H",
+                    "symbol_rate": 27500
+                  }
+                ],
+                "package": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+                "satellite_ids": [
+                  2
+                ]
+              }
+            ],
+            "competition_ids": [
+              12,
+              14
+            ],
+            "etag": "\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"",
+            "id": 3,
+            "logo": "https://media.example/logo/ab/ab12cd.webp",
+            "logo_asset_id": 77,
+            "name": "Eleven Sports",
+            "sort_order": 1
+          }
+        ],
+        "properties": {
+          "carriages": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRightsHolderCarriage"
+            },
+            "title": "Carriages",
+            "type": "array"
+          },
+          "competition_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Competition Ids",
+            "type": "array"
+          },
+          "etag": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "logo_asset_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Asset Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo_asset_id",
+          "logo",
+          "sort_order",
+          "competition_ids",
+          "carriages",
+          "etag"
+        ],
+        "title": "AdminRightsHolder",
+        "type": "object"
+      },
+      "AdminRightsHolderCarriage": {
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/Access"
+          },
+          "beam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Beam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequencies": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRightsHolderFrequency"
+            },
+            "title": "Frequencies",
+            "type": "array"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "satellite_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Satellite Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "access",
+          "beam",
+          "package",
+          "satellite_ids",
+          "frequencies"
+        ],
+        "title": "AdminRightsHolderCarriage",
+        "type": "object"
+      },
+      "AdminRightsHolderFrequency": {
+        "properties": {
+          "frequency_mhz": {
+            "title": "Frequency Mhz",
+            "type": "integer"
+          },
+          "is_primary": {
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "polarization": {
+            "$ref": "#/components/schemas/Polarization"
+          },
+          "symbol_rate": {
+            "title": "Symbol Rate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frequency_mhz",
+          "polarization",
+          "symbol_rate",
+          "is_primary"
+        ],
+        "title": "AdminRightsHolderFrequency",
+        "type": "object"
+      },
+      "AdminRightsHolderRow": {
+        "examples": [
+          {
+            "competitions": [
+              "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632"
+            ],
+            "etag": "\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"",
+            "id": 3,
+            "logo": "https://media.example/logo/ab/ab12cd.webp",
+            "name": "Eleven Sports",
+            "satellites": [
+              "\u0646\u0627\u064a\u0644 \u0633\u0627\u062a"
+            ],
+            "sort_order": 1
+          }
+        ],
+        "properties": {
+          "competitions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Competitions",
+            "type": "array"
+          },
+          "etag": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "satellites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Satellites",
+            "type": "array"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo",
+          "sort_order",
+          "competitions",
+          "satellites",
+          "etag"
+        ],
+        "title": "AdminRightsHolderRow",
+        "type": "object"
+      },
       "AdminRole": {
         "enum": [
           "editor",
@@ -2750,6 +3018,16 @@
                   "status": "succeeded"
                 },
                 "last_success_at": "2026-11-01T08:00:41Z",
+                "live": {
+                  "error_share": 0.01,
+                  "matches_live": 6,
+                  "sources": [
+                    {
+                      "name": "filgoal",
+                      "state": "ok"
+                    }
+                  ]
+                },
                 "name": "ysscores",
                 "paused": false,
                 "running": false
@@ -3057,6 +3335,47 @@
           "meta"
         ],
         "title": "Envelope[AdminMatch]",
+        "type": "object"
+      },
+      "Envelope_AdminRightsHolder_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminRightsHolder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[AdminRightsHolder]",
         "type": "object"
       },
       "Envelope_AdminSatellite_": {
@@ -3463,6 +3782,47 @@
         "title": "Envelope[NoneType]",
         "type": "object"
       },
+      "Envelope_RawPage_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RawPage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[RawPage]",
+        "type": "object"
+      },
       "Envelope_Session_": {
         "properties": {
           "data": {
@@ -3584,6 +3944,47 @@
           "meta"
         ],
         "title": "Envelope[SourceRunQueued]",
+        "type": "object"
+      },
+      "Envelope_UnresolvedNameRow_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnresolvedNameRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[UnresolvedNameRow]",
         "type": "object"
       },
       "Envelope_list_AdminCommentator__": {
@@ -3719,6 +4120,51 @@
           "meta"
         ],
         "title": "Envelope[list[AdminMatchRow]]",
+        "type": "object"
+      },
+      "Envelope_list_AdminRightsHolderRow__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AdminRightsHolderRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[AdminRightsHolderRow]]",
         "type": "object"
       },
       "Envelope_list_AdminSatellite__": {
@@ -4036,6 +4482,51 @@
         "title": "Envelope[list[TeamItem]]",
         "type": "object"
       },
+      "Envelope_list_UnresolvedNameRow__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/UnresolvedNameRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[UnresolvedNameRow]]",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "code": {
@@ -4211,9 +4702,11 @@
               "unmatched_matches": []
             },
             "log_available": true,
+            "pages": 3,
             "raw_path": "livesoccertv/2026-11-01/run.json",
             "started_at": "2026-11-01T07:58:00Z",
-            "status": "succeeded"
+            "status": "succeeded",
+            "worker": "worker-imports@vps2"
           }
         ],
         "properties": {
@@ -4280,6 +4773,12 @@
             "title": "Log Available",
             "type": "boolean"
           },
+          "pages": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Pages",
+            "type": "integer"
+          },
           "raw_path": {
             "anyOf": [
               {
@@ -4305,6 +4804,17 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "worker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker"
           }
         },
         "required": [
@@ -4318,7 +4828,9 @@
           "error",
           "raw_path",
           "log",
-          "log_available"
+          "log_available",
+          "pages",
+          "worker"
         ],
         "title": "ImportRunDetail",
         "type": "object"
@@ -4447,6 +4959,60 @@
           "at"
         ],
         "title": "LastChange",
+        "type": "object"
+      },
+      "LiveCard": {
+        "properties": {
+          "error_share": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Error Share",
+            "type": "number"
+          },
+          "matches_live": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Matches Live",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/LiveSourceCard"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "matches_live",
+          "error_share",
+          "sources"
+        ],
+        "title": "LiveCard",
+        "type": "object"
+      },
+      "LiveSourceCard": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "failing",
+              "down",
+              "invalid"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state"
+        ],
+        "title": "LiveSourceCard",
         "type": "object"
       },
       "LoginRequest": {
@@ -4971,6 +5537,91 @@
         "title": "Polarization",
         "type": "string"
       },
+      "RawPage": {
+        "description": "A saved page as inert text, never a link (005 research R13). ``pending``: poll again, up to 10 s.",
+        "examples": [
+          {
+            "content_type": "text/html",
+            "page": 0,
+            "pages": 3,
+            "state": "ready",
+            "text": "<!doctype html>",
+            "truncated": false,
+            "url": "https://www.filgoal.com/matches/"
+          }
+        ],
+        "properties": {
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
+          "page": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "ready",
+              "gone"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "state",
+          "page",
+          "pages",
+          "url",
+          "content_type",
+          "text",
+          "truncated"
+        ],
+        "title": "RawPage",
+        "type": "object"
+      },
       "RecentChange": {
         "properties": {
           "action": {
@@ -5011,6 +5662,261 @@
           "action"
         ],
         "title": "RecentChange",
+        "type": "object"
+      },
+      "RightsHolderCarriageInput": {
+        "additionalProperties": false,
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/Access"
+          },
+          "beam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Beam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frequencies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RightsHolderFrequencyInput"
+            },
+            "maxItems": 32,
+            "title": "Frequencies",
+            "type": "array"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "satellite_ids": {
+            "default": [],
+            "items": {
+              "maximum": 9.223372036854776e+18,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxItems": 32,
+            "title": "Satellite Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "access"
+        ],
+        "title": "RightsHolderCarriageInput",
+        "type": "object"
+      },
+      "RightsHolderCreate": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "carriages": [
+              {
+                "access": "encrypted",
+                "beam": "wide",
+                "frequencies": [
+                  {
+                    "frequency_mhz": 11013,
+                    "is_primary": true,
+                    "polarization": "H",
+                    "symbol_rate": 27500
+                  }
+                ],
+                "package": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+                "satellite_ids": [
+                  2
+                ]
+              }
+            ],
+            "competition_ids": [
+              12,
+              14
+            ],
+            "logo_asset_id": 77,
+            "name": "Eleven Sports"
+          }
+        ],
+        "properties": {
+          "carriages": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RightsHolderCarriageInput"
+            },
+            "maxItems": 32,
+            "title": "Carriages",
+            "type": "array"
+          },
+          "competition_ids": {
+            "default": [],
+            "items": {
+              "maximum": 9.223372036854776e+18,
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "title": "Competition Ids",
+            "type": "array"
+          },
+          "logo_asset_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Asset Id"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RightsHolderCreate",
+        "type": "object"
+      },
+      "RightsHolderFrequencyInput": {
+        "additionalProperties": false,
+        "properties": {
+          "frequency_mhz": {
+            "title": "Frequency Mhz",
+            "type": "integer"
+          },
+          "is_primary": {
+            "default": false,
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "polarization": {
+            "$ref": "#/components/schemas/Polarization"
+          },
+          "symbol_rate": {
+            "title": "Symbol Rate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frequency_mhz",
+          "polarization",
+          "symbol_rate"
+        ],
+        "title": "RightsHolderFrequencyInput",
+        "type": "object"
+      },
+      "RightsHolderPatch": {
+        "additionalProperties": false,
+        "description": "An omitted field stays as it is; ``competition_ids`` and ``carriages`` replace the whole list.",
+        "examples": [
+          {
+            "carriages": [
+              {
+                "access": "encrypted",
+                "beam": "wide",
+                "frequencies": [
+                  {
+                    "frequency_mhz": 11013,
+                    "is_primary": true,
+                    "polarization": "H",
+                    "symbol_rate": 27500
+                  }
+                ],
+                "package": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+                "satellite_ids": [
+                  2
+                ]
+              }
+            ],
+            "competition_ids": [
+              12,
+              14
+            ],
+            "logo_asset_id": 77,
+            "name": "Eleven Sports"
+          }
+        ],
+        "properties": {
+          "carriages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RightsHolderCarriageInput"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carriages"
+          },
+          "competition_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "maximum": 9.223372036854776e+18,
+                  "minimum": 1.0,
+                  "type": "integer"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competition Ids"
+          },
+          "logo_asset_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Asset Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "RightsHolderPatch",
         "type": "object"
       },
       "SatelliteCreate": {
@@ -5400,6 +6306,16 @@
               "status": "succeeded"
             },
             "last_success_at": "2026-11-01T08:00:41Z",
+            "live": {
+              "error_share": 0.01,
+              "matches_live": 6,
+              "sources": [
+                {
+                  "name": "filgoal",
+                  "state": "ok"
+                }
+              ]
+            },
             "name": "ysscores",
             "paused": false,
             "running": false
@@ -5462,7 +6378,10 @@
             "enum": [
               "scraper",
               "api",
-              "internal"
+              "internal",
+              "fixtures",
+              "live_reader",
+              "live"
             ],
             "title": "Kind",
             "type": "string"
@@ -5489,6 +6408,16 @@
             ],
             "title": "Last Success At"
           },
+          "live": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -5514,7 +6443,8 @@
           "last_run",
           "items_24h",
           "error_rate_24h",
-          "running"
+          "running",
+          "live"
         ],
         "title": "SourceHealth",
         "type": "object"
@@ -5969,6 +6899,248 @@
           "logo"
         ],
         "title": "TeamRef",
+        "type": "object"
+      },
+      "UnresolvedContext": {
+        "description": "Where the source last showed the name. Written by the importers, so each part may be absent.",
+        "properties": {
+          "away": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away"
+          },
+          "competition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competition"
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home"
+          },
+          "kickoff_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kickoff At"
+          },
+          "match_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Id"
+          }
+        },
+        "title": "UnresolvedContext",
+        "type": "object"
+      },
+      "UnresolvedMap": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "created": false,
+            "scope_to_competition": true,
+            "target_id": 101
+          }
+        ],
+        "properties": {
+          "created": {
+            "default": false,
+            "title": "Created",
+            "type": "boolean"
+          },
+          "scope_to_competition": {
+            "default": false,
+            "title": "Scope To Competition",
+            "type": "boolean"
+          },
+          "target_id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Target Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_id"
+        ],
+        "title": "UnresolvedMap",
+        "type": "object"
+      },
+      "UnresolvedNameRow": {
+        "examples": [
+          {
+            "context": {
+              "away": "\u0627\u0644\u0632\u0645\u0627\u0644\u0643",
+              "competition": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+              "home": "Al Ahli",
+              "kickoff_at": "2026-11-04T18:00:00Z",
+              "match_id": 48213
+            },
+            "etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"",
+            "id": 91,
+            "kind": "team",
+            "last_seen_at": "2026-11-04T16:30:00Z",
+            "name": "Al Ahli",
+            "seen_count": 4,
+            "source": "yallakora",
+            "state": "open",
+            "suggestions": [
+              {
+                "confidence": 100,
+                "detail": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                "exact": true,
+                "id": 101,
+                "name": "\u0627\u0644\u0623\u0647\u0644\u064a"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/UnresolvedContext"
+          },
+          "etag": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "team",
+              "competition",
+              "channel"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "seen_count": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Seen Count",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "mapped",
+              "created",
+              "ignored"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/UnresolvedSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "kind",
+          "name",
+          "context",
+          "seen_count",
+          "last_seen_at",
+          "state",
+          "etag",
+          "suggestions"
+        ],
+        "title": "UnresolvedNameRow",
+        "type": "object"
+      },
+      "UnresolvedSuggestion": {
+        "properties": {
+          "confidence": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "integer"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "exact": {
+            "title": "Exact",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "detail",
+          "confidence",
+          "exact"
+        ],
+        "title": "UnresolvedSuggestion",
         "type": "object"
       }
     }
@@ -10113,6 +11285,16 @@
                               "status": "succeeded"
                             },
                             "last_success_at": "2026-11-01T08:00:41Z",
+                            "live": {
+                              "error_share": 0.01,
+                              "matches_live": 6,
+                              "sources": [
+                                {
+                                  "name": "filgoal",
+                                  "state": "ok"
+                                }
+                              ]
+                            },
                             "name": "ysscores",
                             "paused": false,
                             "running": false
@@ -10668,9 +11850,11 @@
                           "unmatched_matches": []
                         },
                         "log_available": true,
+                        "pages": 3,
                         "raw_path": "livesoccertv/2026-11-01/run.json",
                         "started_at": "2026-11-01T07:58:00Z",
-                        "status": "succeeded"
+                        "status": "succeeded",
+                        "worker": "worker-imports@vps2"
                       },
                       "error": null,
                       "meta": {
@@ -10792,6 +11976,198 @@
           }
         },
         "summary": "A13: one run with the log written by ingest",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/admin/api/import-runs/{run_id}/raw": {
+      "get": {
+        "operationId": "get_import_run_raw_admin_api_import_runs__run_id__raw_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Run Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 999,
+              "minimum": 0,
+              "title": "Page",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "raw_page_ok": {
+                    "value": {
+                      "data": {
+                        "content_type": "text/html",
+                        "page": 0,
+                        "pages": 3,
+                        "state": "ready",
+                        "text": "<!doctype html>",
+                        "truncated": false,
+                        "url": "https://www.filgoal.com/matches/"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RawPage_"
+                }
+              }
+            },
+            "description": "`pending` (poll again, up to 10 s), `ready` or `gone` (pruned, or none was saved)",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "import_run_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "import_run_not_found",
+                        "message": "import run not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "A13: a run's saved page as inert text; the path comes from the run, never the request",
         "tags": [
           "sources"
         ]
@@ -12327,6 +13703,1201 @@
         ]
       }
     },
+    "/admin/api/rights-holders": {
+      "get": {
+        "operationId": "list_rights_holders_admin_api_rights_holders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holders_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "competitions": [
+                            "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632"
+                          ],
+                          "etag": "\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"",
+                          "id": 3,
+                          "logo": "https://media.example/logo/ab/ab12cd.webp",
+                          "name": "Eleven Sports",
+                          "satellites": [
+                            "\u0646\u0627\u064a\u0644 \u0633\u0627\u062a"
+                          ],
+                          "sort_order": 1
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AdminRightsHolderRow__"
+                }
+              }
+            },
+            "description": "Rights holders, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          }
+        },
+        "summary": "A9: every rights holder, by `sort_order` (nulls last), then name",
+        "tags": [
+          "rights-holders"
+        ]
+      },
+      "post": {
+        "operationId": "create_rights_holder_admin_api_rights_holders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightsHolderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holder_ok": {
+                    "value": {
+                      "data": {
+                        "carriages": [
+                          {
+                            "access": "encrypted",
+                            "beam": "wide",
+                            "frequencies": [
+                              {
+                                "frequency_mhz": 11013,
+                                "is_primary": true,
+                                "polarization": "H",
+                                "symbol_rate": 27500
+                              }
+                            ],
+                            "package": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+                            "satellite_ids": [
+                              2
+                            ]
+                          }
+                        ],
+                        "competition_ids": [
+                          12,
+                          14
+                        ],
+                        "etag": "\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"",
+                        "id": 3,
+                        "logo": "https://media.example/logo/ab/ab12cd.webp",
+                        "logo_asset_id": 77,
+                        "name": "Eleven Sports",
+                        "sort_order": 1
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminRightsHolder_"
+                }
+              }
+            },
+            "description": "Created",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create a rights holder (takes no `If-Match`)",
+        "tags": [
+          "rights-holders"
+        ]
+      }
+    },
+    "/admin/api/rights-holders/reorder": {
+      "post": {
+        "operationId": "reorder_rights_holders_admin_api_rights_holders_reorder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "order_ok": {
+                    "value": {
+                      "data": {
+                        "updated": [
+                          {
+                            "etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"",
+                            "id": 48213
+                          }
+                        ]
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BulkResult_"
+                }
+              }
+            },
+            "description": "The new order, with each row's new `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "A9: set the order (each row carries its version)",
+        "tags": [
+          "rights-holders"
+        ]
+      }
+    },
+    "/admin/api/rights-holders/{holder_id}": {
+      "delete": {
+        "operationId": "delete_rights_holder_admin_api_rights_holders__holder_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "holder_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Holder Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NoneType_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holder_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "rights_holder_not_found",
+                        "message": "rights holder not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "Delete a rights holder and its carriages (admin role)",
+        "tags": [
+          "rights-holders"
+        ]
+      },
+      "get": {
+        "operationId": "get_rights_holder_admin_api_rights_holders__holder_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "holder_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Holder Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holder_ok": {
+                    "value": {
+                      "data": {
+                        "carriages": [
+                          {
+                            "access": "encrypted",
+                            "beam": "wide",
+                            "frequencies": [
+                              {
+                                "frequency_mhz": 11013,
+                                "is_primary": true,
+                                "polarization": "H",
+                                "symbol_rate": 27500
+                              }
+                            ],
+                            "package": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+                            "satellite_ids": [
+                              2
+                            ]
+                          }
+                        ],
+                        "competition_ids": [
+                          12,
+                          14
+                        ],
+                        "etag": "\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"",
+                        "id": 3,
+                        "logo": "https://media.example/logo/ab/ab12cd.webp",
+                        "logo_asset_id": 77,
+                        "name": "Eleven Sports",
+                        "sort_order": 1
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminRightsHolder_"
+                }
+              }
+            },
+            "description": "The full editor shape, with its `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holder_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "rights_holder_not_found",
+                        "message": "rights holder not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One rights holder",
+        "tags": [
+          "rights-holders"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_rights_holder_admin_api_rights_holders__holder_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "holder_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Holder Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightsHolderPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holder_ok": {
+                    "value": {
+                      "data": {
+                        "carriages": [
+                          {
+                            "access": "encrypted",
+                            "beam": "wide",
+                            "frequencies": [
+                              {
+                                "frequency_mhz": 11013,
+                                "is_primary": true,
+                                "polarization": "H",
+                                "symbol_rate": 27500
+                              }
+                            ],
+                            "package": "\u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0631\u064a\u0627\u0636\u064a\u0629",
+                            "satellite_ids": [
+                              2
+                            ]
+                          }
+                        ],
+                        "competition_ids": [
+                          12,
+                          14
+                        ],
+                        "etag": "\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"",
+                        "id": 3,
+                        "logo": "https://media.example/logo/ab/ab12cd.webp",
+                        "logo_asset_id": 77,
+                        "name": "Eleven Sports",
+                        "sort_order": 1
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminRightsHolder_"
+                }
+              }
+            },
+            "description": "The saved holder, with its new `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rights_holder_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "rights_holder_not_found",
+                        "message": "rights holder not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "Update a rights holder; `competition_ids` and `carriages`, if sent, replace the whole list",
+        "tags": [
+          "rights-holders"
+        ]
+      }
+    },
     "/admin/api/satellites": {
       "get": {
         "operationId": "list_satellites_admin_api_satellites_get",
@@ -13596,6 +16167,16 @@
                             "status": "succeeded"
                           },
                           "last_success_at": "2026-11-01T08:00:41Z",
+                          "live": {
+                            "error_share": 0.01,
+                            "matches_live": 6,
+                            "sources": [
+                              {
+                                "name": "filgoal",
+                                "state": "ok"
+                              }
+                            ]
+                          },
                           "name": "ysscores",
                           "paused": false,
                           "running": false
@@ -13741,6 +16322,16 @@
                           "status": "succeeded"
                         },
                         "last_success_at": "2026-11-01T08:00:41Z",
+                        "live": {
+                          "error_share": 0.01,
+                          "matches_live": 6,
+                          "sources": [
+                            {
+                              "name": "filgoal",
+                              "state": "ok"
+                            }
+                          ]
+                        },
                         "name": "ysscores",
                         "paused": false,
                         "running": false
@@ -13906,6 +16497,16 @@
                           "status": "succeeded"
                         },
                         "last_success_at": "2026-11-01T08:00:41Z",
+                        "live": {
+                          "error_share": 0.01,
+                          "matches_live": 6,
+                          "sources": [
+                            {
+                              "name": "filgoal",
+                              "state": "ok"
+                            }
+                          ]
+                        },
                         "name": "ysscores",
                         "paused": false,
                         "running": false
@@ -15438,6 +18039,792 @@
         "summary": "Update a team",
         "tags": [
           "teams"
+        ]
+      }
+    },
+    "/admin/api/unresolved-names": {
+      "get": {
+        "operationId": "list_names_admin_api_unresolved_names_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "team",
+                    "competition",
+                    "channel"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "mapped",
+                "created",
+                "ignored"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 400,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "names_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "context": {
+                            "away": "\u0627\u0644\u0632\u0645\u0627\u0644\u0643",
+                            "competition": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                            "home": "Al Ahli",
+                            "kickoff_at": "2026-11-04T18:00:00Z",
+                            "match_id": 48213
+                          },
+                          "etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"",
+                          "id": 91,
+                          "kind": "team",
+                          "last_seen_at": "2026-11-04T16:30:00Z",
+                          "name": "Al Ahli",
+                          "seen_count": 4,
+                          "source": "yallakora",
+                          "state": "open",
+                          "suggestions": [
+                            {
+                              "confidence": 100,
+                              "detail": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                              "exact": true,
+                              "id": 101,
+                              "name": "\u0627\u0644\u0623\u0647\u0644\u064a"
+                            }
+                          ]
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z",
+                        "next_cursor": null,
+                        "open_count": 1
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_UnresolvedNameRow__"
+                }
+              }
+            },
+            "description": "Names, newest sighting first. `meta.open_count` is every open row, whatever the filters",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "A13: the names the importers couldn't match",
+        "tags": [
+          "unresolved-names"
+        ]
+      }
+    },
+    "/admin/api/unresolved-names/{name_id}/ignore": {
+      "post": {
+        "operationId": "ignore_name_admin_api_unresolved_names__name_id__ignore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Name Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "name_ok": {
+                    "value": {
+                      "data": {
+                        "context": {
+                          "away": "\u0627\u0644\u0632\u0645\u0627\u0644\u0643",
+                          "competition": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                          "home": "Al Ahli",
+                          "kickoff_at": "2026-11-04T18:00:00Z",
+                          "match_id": 48213
+                        },
+                        "etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"",
+                        "id": 91,
+                        "kind": "team",
+                        "last_seen_at": "2026-11-04T16:30:00Z",
+                        "name": "Al Ahli",
+                        "seen_count": 4,
+                        "source": "yallakora",
+                        "state": "open",
+                        "suggestions": [
+                          {
+                            "confidence": 100,
+                            "detail": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                            "exact": true,
+                            "id": 101,
+                            "name": "\u0627\u0644\u0623\u0647\u0644\u064a"
+                          }
+                        ]
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_UnresolvedNameRow_"
+                }
+              }
+            },
+            "description": "The decided row, with its new `etag`"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unresolved_name_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unresolved_name_not_found",
+                        "message": "unresolved name not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "Ignore a name; later runs don't reopen it",
+        "tags": [
+          "unresolved-names"
+        ]
+      }
+    },
+    "/admin/api/unresolved-names/{name_id}/map": {
+      "post": {
+        "operationId": "map_name_admin_api_unresolved_names__name_id__map_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Name Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnresolvedMap"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "name_ok": {
+                    "value": {
+                      "data": {
+                        "context": {
+                          "away": "\u0627\u0644\u0632\u0645\u0627\u0644\u0643",
+                          "competition": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                          "home": "Al Ahli",
+                          "kickoff_at": "2026-11-04T18:00:00Z",
+                          "match_id": 48213
+                        },
+                        "etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\"",
+                        "id": 91,
+                        "kind": "team",
+                        "last_seen_at": "2026-11-04T16:30:00Z",
+                        "name": "Al Ahli",
+                        "seen_count": 4,
+                        "source": "yallakora",
+                        "state": "open",
+                        "suggestions": [
+                          {
+                            "confidence": 100,
+                            "detail": "\u0627\u0644\u062f\u0648\u0631\u064a \u0627\u0644\u0645\u0635\u0631\u064a \u0627\u0644\u0645\u0645\u062a\u0627\u0632",
+                            "exact": true,
+                            "id": 101,
+                            "name": "\u0627\u0644\u0623\u0647\u0644\u064a"
+                          }
+                        ]
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_UnresolvedNameRow_"
+                }
+              }
+            },
+            "description": "The decided row, with its new `etag`"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "team_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "team_not_found",
+                        "message": "team not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unresolved_name_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unresolved_name_not_found",
+                        "message": "unresolved name not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown row or target"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "alias_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "alias_conflict",
+                        "message": "alias conflict"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale, the row isn't open, or the alias already points elsewhere"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "Map a name to an entity: writes the alias, used from the next run",
+        "tags": [
+          "unresolved-names"
         ]
       }
     }

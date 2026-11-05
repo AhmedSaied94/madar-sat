@@ -62,6 +62,10 @@ most once per source per Cairo day (`last_zero_alert_on`), so a quiet night does
 A zero-items run that had **no pages and no targets** is not an alert: LiveSoccerTV with nothing to
 plan is a quiet result, not a fault.
 
+**YallaKora on an empty day.** `yallakora-today` reads one day, so a day the site really has no
+matches («لا يوجد مباريات اليوم») counts as a failure on each of its three runs, and the third opens
+the breaker. That is rare, because the list covers many leagues. Check the page, then resume in A13.
+
 ## Moving a fetch to the other host
 
 If the site blocks the host, move the fetch rather than disabling the source:

@@ -32,7 +32,7 @@ TTL_S: Mapping[str, int] = {
     "teams": 300,
     "team_detail": 300,
     "competitions": 3600,
-    "competition_detail": 3600,
+    "competition_detail": 300,
     "rights_holders": 3600,
     "rights_holder_detail": 3600,
     "commentators": 300,

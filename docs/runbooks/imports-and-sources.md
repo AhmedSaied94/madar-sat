@@ -6,15 +6,18 @@ FR-020 to FR-028, research R14–R18). The code is in `backend/app/adapters/`; t
 [`specs/002-d02-core-flows/contracts/ingestion.md`](../../specs/002-d02-core-flows/contracts/ingestion.md)
 and [`specs/003-d03-follow-push-sources/contracts/pipelines-and-ops.md`](../../specs/003-d03-follow-push-sources/contracts/pipelines-and-ops.md).
 
-Three sources run after D3:
+Four sources run after D5:
 
 | Source | `sources.name` | Where it fetches | What it brings |
 | --- | --- | --- | --- |
 | ysscores | `ysscores` | `scrape_home` on the home box by default, `scrape` on VPS-2 when switched | Today … +3 Cairo days of fixtures: teams, logos, kickoff, competition, stage |
 | Sat Air, through Firestore | `legacy` | `scrape` on VPS-2 | The same days from the old app: channel links, hidden flags, per-channel commentators, a second name when ysscores misses one |
 | LiveSoccerTV | `livesoccertv` | `scrape_home` by default (`LIVESOCCERTV_FETCH_QUEUE`) | The broadcasters of the matches Madar already has in the next 48 h, and hidden placeholders for names Madar lacks |
+| YallaKora | `yallakora` | `scrape` on VPS-2 | Today … +3 Cairo days of Egyptian and Arab fixtures, and the Egyptian broadcaster (`matches.local_broadcaster_eg`). On a row another source holds it adds only the broadcaster and its id |
 
-Nothing writes a status or a score: importers bring fixtures and channels only (constitution II).
+Nothing writes a status or a score: importers bring fixtures and channels only (constitution II). The
+live poller writes those ([workers.md](workers.md)), and shares `www.yallakora.com`'s rate bucket with
+this importer.
 
 ## The schedule
 
@@ -29,8 +32,10 @@ them (R17).
 | `satair-bridge` | every 3 h, at :30, from 01:30 (`30 1-22/3 * * *`) | `adapters.schedule_fetch("legacy")` on `imports` |
 | `livesoccertv-48h` | every 2 h at :45 (`45 */2 * * *`) | `adapters.schedule_fetch("livesoccertv")` on `imports` |
 | `livesoccertv-t60` | every 10 min (`*/10 * * * *`) | `adapters.schedule_fetch("livesoccertv", window="t60")`: only kickoffs 55–70 minutes away |
+| `yallakora-daily` | daily at 02:20 (`20 2 * * *`) | `adapters.schedule_fetch("yallakora")` on `imports`: today to +3 |
+| `yallakora-today` | at 08:20, 14:20 and 20:20 (`20 8,14,20 * * *`) | `adapters.schedule_fetch("yallakora", window="today")`: today only |
 | `prune-raw-pages` | daily at 03:15 (`15 3 * * *`) | `adapters.prune_raw_pages()` on `maintenance` |
-| `heartbeat-maintenance`, `-imports`, `-notifications` | every 5 min (`*/5 * * * *`) | `ops.heartbeat(<queue>)` on that queue (R20, [uptime-kuma.md](uptime-kuma.md)) |
+| `heartbeat-maintenance`, `-imports`, `-notifications`, `-live` | every 5 min (`*/5 * * * *`) | `ops.heartbeat(<queue>)` on that queue (R20, [uptime-kuma.md](uptime-kuma.md)) |
 
 `schedule_fetch` then sends the fetch to the source's own queue. The pipeline is `adapters.fetch` →
 a `ScrapeResult` message on `imports` → `adapters.ingest`. A run that finds its lock held
@@ -116,7 +121,7 @@ points at the pages:
 ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'sudo -iu deploy cat /srv/raw/livesoccertv/2026-11-07/*/run.json'
 ```
 
-`run.json` holds `counts`, `skipped`, `unresolved`, `unmatched`, `placeholders_created` and
+`run.json` holds `counts`, `skipped`, `unresolved`, `waiting`, `unmatched`, `placeholders_created` and
 `health`. An unresolved team is not a bug: v0 never guesses (research R17). The alias tables and the
 queue that resolves names arrive on D5; until then the name keeps its text, so the app still shows
 it. Folders older than 5 days are deleted nightly.
@@ -153,13 +158,97 @@ fix worked. See [source-alerts.md](source-alerts.md) for what each alert means.
 1. On VPS-2, set the value in `/srv/madar/.env` (mode 600, owner `deploy`): `scrape` for VPS-2 or
    `scrape_home` for the home box.
 2. Restart the services that read it, so the new value is loaded:
-   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify uptime-kuma beat`
+   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers up -d worker-imports worker-scrape worker-maintenance worker-notify worker-live uptime-kuma beat`
 3. Check the next run's `import_runs.source` and which worker handled it
    (`docker compose exec -T worker-scrape celery -A app.workers inspect active`).
 
 Set ysscores back to `scrape_home` when it stops blocking VPS IPs (it answers `403` to a plain client
 and to datacenter addresses; the home box is why it exists). LiveSoccerTV has no such block, so it may
 run from either side; it is on the home box by default so the VPS keeps its CPU for the app.
+
+## YallaKora
+
+`/matches-center?date=YYYY-MM-DD`, one page per Cairo day, from `www.yallakora.com`'s shared bucket
+(one request per 4 s, a burst of 2). `robots.txt` allows that URL. It forbids `/*?*?*`, so never add a
+second `?`. The times on the page are a 24-hour Cairo clock.
+
+Run it by hand on VPS-2:
+
+```sh
+ssh madar-vps2 \
+  'sudo -iu deploy docker compose -p madar exec -T worker-imports celery -A app.workers call adapters.schedule_fetch --queue imports --args "[\"yallakora\"]" --kwargs "{\"manual\":true}"'
+```
+
+Then check it on VPS-1, which has the database:
+
+```sh
+dc exec postgres psql -U madar -d madar -c "
+  select id, status, items_found, items_upserted, error from import_runs
+   where source = 'yallakora' order by id desc limit 3"
+dc exec postgres psql -U madar -d madar -c "select count(*) from matches where local_broadcaster_eg is not null"
+```
+
+**What it may write.** On a row it created, every field that isn't locked. On a row another source
+holds, only `local_broadcaster_eg` and its own external id, so two importers don't rewrite each other's
+spelling. A card with no channel leaves the broadcaster alone.
+
+**When it links to another source's row.** Only when both teams resolve, in that order, and exactly
+one match has them with a kickoff within 45 min (FR-022a, research R7). The live poller trusts a stored
+id, so a wrong link would publish another match's score. Text is never enough. For a card it has no
+stored id for:
+
+| The card | What happens |
+| --- | --- |
+| Both teams resolve, one match within 45 min | Linked: the row gains the id and the broadcaster |
+| Both teams resolve, more than one match within 45 min | **Waits** (`more_than_one_match`): no id, no broadcaster, no new row |
+| Both teams resolve, no match within 45 min, or no kickoff | A new row |
+| A team is unresolved, and a row with no YallaKora id has the same names that day | **Waits** (`unresolved_names_match_a_row`): the names are queued, with no id, no broadcaster and no new row |
+| A team is unresolved, and no such row | A new row with the text names, and the names are queued |
+
+A waiting card is listed under `waiting` in `run.json` and leaves the run `succeeded`. There's nothing
+to clean up: once an editor maps the names in A13, the next run links it. `ysscores` and `legacy`
+still join on the same names on the same day.
+
+**A first run can add duplicates.** A team spelled differently from ysscores and with no alias yet has
+no row with the same names, so that card gets a row of its own, and the fixture appears twice until an
+editor maps the name in A13 and someone removes the extra row. The same happens after a mapping if the
+other source's row has no team ids yet, so map a name for both sources. Compare `report coverage`
+before and after the first run.
+
+## The unresolved queue
+
+Anything an importer can't match waits in `unresolved_names`, and nothing is created: the match keeps
+the text name. One row per `(source, kind, name_norm, competition_norm)`: a repeat raises `seen_count`
+and refreshes `context`. An editor works it in A13: map to an existing entity, create one, or ignore.
+
+- **Who writes it:** `ysscores`, `legacy`, `yallakora` (teams and competitions), `livesoccertv`
+  (channels, while keeping the hidden placeholder, D5 R11), and the live poller.
+- **Mapping takes effect on the next run.** Resolution goes external id → alias for this competition
+  → alias for any competition → the name rules, and an alias belongs to one source.
+- **A decided row stays decided.** `ignored`, `mapped` and `created` rows never reopen, and their count
+  stops rising. Ignoring is permanent until someone changes that row in SQL.
+
+```sh
+# what waits, most seen first (on VPS-1)
+dc exec postgres psql -U madar -d madar -c "
+  select source, kind, name, seen_count, last_seen_at from unresolved_names
+   where state = 'open' order by seen_count desc limit 30"
+```
+
+### Working the queue in A13
+
+The queue sits under the source cards at `/sources`. Its count is `meta.open_count`, and the source
+dropdown filters the list; rows are ordered by `last_seen_at`, newest first.
+
+- **ربط (map).** Opens the suggestions. Nothing is written until you press حفظ. With more than one
+  `exact` candidate the row shows «اختر الفريق» instead, and the alias is scoped to the competition in
+  the row's context — that is what «حصر الربط على البطولة» means, and it is locked on for that case.
+- **جديد (create).** Opens the team, competition or channel form filled with the source's name. Saving
+  it creates the entity and then maps the name to it. If that map fails, the row stays open and the
+  toast says so; map it again from ربط.
+- **تجاهل (ignore).** Permanent; the row leaves the open list.
+- Errors: `409 alias_conflict` means the same name is already bound to another entity — reload the row
+  before deciding; `409 edit_conflict` means someone else cleared or changed it first.
 
 ## LiveSoccerTV
 

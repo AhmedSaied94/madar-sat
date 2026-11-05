@@ -4,30 +4,38 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Match
-from app.domain.status import derive_status
+from app.domain.status import STATUS_POSTPONED, derive_status
 from app.schemas import public as s
 from app.services.matches import match_score
 
 WINDOW_BEFORE = timedelta(minutes=150)
 WINDOW_AFTER = timedelta(minutes=10)
+# Extra time and penalties can outlast the start window, so a feed match stays until this limit.
+FEED_WINDOW_BEFORE = timedelta(minutes=210)
 # Stored statuses no longer live; must match the predicate of matches_live_window_idx.
 SETTLED_STATUSES = ("finished", "cancelled", "abandoned")
 
 
 def live_window_query(now: datetime) -> Select[Match]:
-    """Matches with ``kickoff_at ∈ [now − 150 min, now + 10 min]`` that aren't settled."""
+    """Unsettled matches with ``kickoff_at ∈ [now − 150 min, now + 10 min]``, or back to now − 210 min on ``feed``."""
     return (
         select(Match)
         .where(
-            Match.kickoff_at.between(now - WINDOW_BEFORE, now + WINDOW_AFTER),
+            Match.kickoff_at.between(now - FEED_WINDOW_BEFORE, now + WINDOW_AFTER),
+            or_(Match.kickoff_at >= now - WINDOW_BEFORE, Match.status_source == "feed"),
             Match.status.not_in(SETTLED_STATUSES),
         )
         .order_by(Match.kickoff_at.asc(), Match.id.asc())
     )
+
+
+def poll_window_query(now: datetime) -> Select[Match]:
+    """What the poller reads. A postponed match stays on ``/v1/live`` as stored, but nothing more will come."""
+    return live_window_query(now).where(Match.status != STATUS_POSTPONED)
 
 
 async def list_live(session: AsyncSession, now: datetime) -> list[s.LiveState]:

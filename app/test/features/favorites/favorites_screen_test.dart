@@ -15,8 +15,9 @@ import 'package:madar_sat/l10n/app_localizations.dart';
 import '../../fixtures/sample_models.dart';
 
 /// S9 (US2 scenario 8, contract app-screens): «مبارياتي القادمة» shows the next three
-/// matches of the followed teams and matches, the Teams section lists them with a remove,
-/// and the sections whose follow actions do not exist yet stay hidden.
+/// matches of the followed teams and matches, the Teams and Competitions sections list them
+/// with a remove and open S7 and S8, and the sections whose follow actions do not exist yet
+/// stay hidden.
 void main() {
   final now = sampleNow();
   final today = DateTime(now.year, now.month, now.day);
@@ -47,6 +48,17 @@ void main() {
     );
   }
 
+  CompetitionDetail competition(int id, String name) => CompetitionDetail(
+        id: id,
+        sport: Sport.football,
+        name: name,
+        logo: null,
+        priority: 1,
+        upcoming: const [],
+        recent: const [],
+        rightsHolders: const [],
+      );
+
   TeamDetail team(int id, String name) => TeamDetail(
         competitions: const [],
         country: null,
@@ -72,7 +84,11 @@ void main() {
           path: '/onboarding/teams',
           builder: (context, state) => const Text('teams picker'),
         ),
-        GoRoute(path: '/team/:id', builder: (context, state) => const Text('team')),
+        GoRoute(path: '/team/:id', builder: (context, state) => Text('team ${state.pathParameters['id']}')),
+        GoRoute(
+          path: '/competition/:id',
+          builder: (context, state) => Text('competition ${state.pathParameters['id']}'),
+        ),
         GoRoute(path: '/more', builder: (context, state) => const Text('more')),
         GoRoute(path: '/settings', builder: (context, state) => const Text('settings')),
       ],
@@ -86,13 +102,18 @@ void main() {
     );
   }
 
-  Future<void> pump(WidgetTester tester, {List<TeamDetail> teams = const []}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    List<TeamDetail> teams = const [],
+    List<CompetitionDetail> competitions = const [],
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
           clockProvider.overrideWithValue(() => now),
           favoriteTeamsProvider.overrideWith((ref) async => teams),
+          favoriteCompetitionsProvider.overrideWith((ref) async => competitions),
         ],
         child: app(),
       ),
@@ -119,10 +140,47 @@ void main() {
     expect(find.text('الفرق'), findsOneWidget);
     expect(find.text('الأهلي'), findsOneWidget);
 
-    // Their follow actions arrive with S8 on D5.
+    // A competition is not followed, so its section stays absent (not an empty heading).
     expect(find.text('البطولات'), findsNothing);
     expect(find.text('القنوات'), findsNothing);
     expect(find.text('المعلّقون'), findsNothing);
+  });
+
+  testWidgets('a followed competition is listed and opens S8', (tester) async {
+    await database.setFollow(kind: 'competition', targetId: 12, on: true);
+    await pump(tester, competitions: [competition(12, 'الدوري المصري الممتاز')]);
+
+    expect(find.text('البطولات'), findsOneWidget);
+    expect(find.text('الدوري المصري الممتاز'), findsOneWidget);
+
+    await tester.tap(find.text('الدوري المصري الممتاز'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('competition 12'), findsOneWidget);
+  });
+
+  testWidgets('a followed team is listed and opens S7 (T086, M-R1-2)', (tester) async {
+    await database.setFollow(kind: 'team', targetId: 1, on: true);
+    await pump(tester, teams: [team(1, 'الأهلي')]);
+
+    await tester.tap(find.text('الأهلي'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('team 1'), findsOneWidget);
+  });
+
+  testWidgets('removing a competition unfollows it', (tester) async {
+    await database.setFollow(kind: 'competition', targetId: 12, on: true);
+    await pump(tester, competitions: [competition(12, 'الدوري المصري الممتاز')]);
+
+    await tester.tap(find.byTooltip('إزالة الدوري المصري الممتاز من المفضلة'));
+    await tester.pumpAndSettle();
+
+    expect(
+      (await database.readFollows()).where((row) => row.kind == 'competition'),
+      isEmpty,
+    );
+    expect(find.text('البطولات'), findsNothing);
   });
 
   testWidgets('a followed match is in the list too, even without a followed team',

@@ -174,9 +174,9 @@ per FR-002 target, and any fix and re-run.
 
 ## If a target fails
 
-1. **`/v1/live` misses p95 or CPU saturates.** Ask B2 to raise `api-public` to `-w 3` in
-   `infra/compose/vps1.yml` (memory allows it, `infra/README.md`); deploy, then re-run and keep both
-   runs in the report.
+1. **`/v1/live` misses p95 or CPU saturates.** Resize VPS-1 if the allowance permits, which also sets
+   `API_PUBLIC_WORKERS` ([provision-host.md](provision-host.md#resize-an-instance)), then re-run and
+   keep both runs in the report. More workers on the same core won't help: the D4 run saturated it.
 2. **`/v1/matches` misses on uncached reads.** The read path is Redis-cached with versioned keys; a
    miss there points at the database. Profile the by-day query with `EXPLAIN ANALYZE` before changing
    anything.
