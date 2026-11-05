@@ -334,6 +334,7 @@ scheduled ─▶ postponed | cancelled          live ─▶ abandoned
 
 - `status_source` is `feed`, `manual` (admin override) or `clock`.
 - The clock fallback applies only when no feed covers a match: from kickoff to kickoff + 120 min it's `live`, after that `finished`. These carry `estimated: true` in the API, and the UI shows "live" without a score or minute.
+- A `feed` match that no source closes can be finished at a limit (§6.7). It keeps its last accepted score and stays `feed`, with no `estimated`, and the owner gets an alert. That's an inference, recorded as an exception to Honest Data in spec 031's plan. Past kickoff + 150 min, a match that reached the second half doesn't go back to the clock.
 - `minute` is text (`"45+2"`). `status_label` carries a source label for unusual states, such as the reason for a postponement.
 
 **6.2.4 Search.** An immutable SQL function `ar_normalize(text)`, defined in the base schema, strips tashkeel and tatweel, maps أ/إ/آ/ٱ → ا, ى/ئ → ي, ؤ → و and ة → ه, turns punctuation into spaces and lowercases Latin text. It gives the same result as the old app's `normalizeArabic` on all 4,786 distinct names in the snapshot. Unique keys use it too: competitions per `(sport, name_norm)`, commentators per `name_norm`, channel carriages and platforms. Generated `name_norm` columns plus `pg_trgm` serve `/v1/search` and the admin pickers.
@@ -482,13 +483,13 @@ Importers never touch fields listed in `locked_fields`. They remove only the `ma
 
 | Source | Reads | Used for |
 |---|---|---|
-| FilGoal (first for status) | The JSON model in the coverage page (`/matches/{id}/coverage/`): score, status, minute, typed events, lineups. No stats | Status, minute, score, events, lineups |
-| Goal.com (equal third source; setting `LIVE_GOAL_ENABLED`) | The JSON in the list page (`/ar-eg/مباريات-جارية-حاليًا`) and the match page: score, status, period and minute, events, lineups, stats | Score; status, minute, events and lineups where FilGoal has none; the only source of stats. It can be switched off at any time |
-| YallaKora | The list page and the match page (`/{competition}/{id}/match/{id}/`). Its stats are incomplete and aren't stored | Score; status and minute only when the others have none |
+| FilGoal (first when sources show the same stage) | The JSON model in the coverage page (`/matches/{id}/coverage/`): score, status, minute, typed events, lineups. No stats | Status, minute, score, events, lineups |
+| Goal.com (equal third source; setting `LIVE_GOAL_ENABLED`) | The JSON in the list page (`/ar-eg/مباريات-جارية-حاليًا`) and the match page: score, status, period and minute, events, lineups, stats | Score and later status; minute, events and lineups where FilGoal has none; the only source of stats. It can be switched off at any time |
+| YallaKora | The list page and the match page (`/{competition}/{id}/match/{id}/`). Its stats are incomplete and aren't stored | Score and later status; minute only when the others have none |
 
 - **Requests:** poll a list page every 60 s for every linked match, and open a match's page only while it's live or when it has changed, for at most N matches per cycle per host, chosen by competition priority (a setting; the capture sets N). A FilGoal coverage page is about 450 KB. A match without a page takes status and score from the list pages under the same cross-check, and has no events or lineups.
 - **Off limits:** paths in each site's `robots.txt`, such as YallaKora's `*/Match/EuroMatchStats2` and `*MatchMinByMinPaging*`. Requests aren't disguised, and blocks aren't evaded with proxies. Store structured facts only, never FilGoal's written commentary.
-- **Score and status rules (decided 2026-11-05, built by spec 031):** a higher score goes out as soon as any source shows it. A lower score or earlier status needs 5 minutes in which no source shows the current one or higher. On the capture's data, waiting for both sources delayed goals by a median of 112 s and up to 428 s; the new rule took under 60 s and never went backward. The cost is that a source's false goal can show for minutes, which the owner accepted. Goal pushes (D6) use a stricter bar: a second source has it, or it has held for 3 minutes with no other source covering the match.
+- **Score and status rules (decided 2026-11-05, built by spec 031):** a higher score or later status goes out as soon as any source shows it. A lower score or earlier status needs 5 minutes in which no source shows the current one or higher. On the capture's data, waiting for both sources delayed goals by a median of 112 s and up to 428 s; the new rule took under 60 s and never went backward. The cost is that a source's false goal can show for minutes, which the owner accepted. Goal pushes (D6) use a stricter bar: a second source has it, or it has held for 3 minutes with no other source covering the match.
 
 | Situation | What happens |
 |---|---|
@@ -496,10 +497,12 @@ Importers never touch fields listed in `locked_fields`. They remove only the `ma
 | A source shows a lower score, and another still shows the current one or higher | Keep the current score |
 | No source shows the current score or higher for 5 minutes | Update to the highest score shown |
 | Sources still differ after 10 minutes, or on a finished match | Keep the rule above and alert the owner |
-| Any source shows full time | The match is finished |
-| No source closes a match by kickoff + 150 min, in its second half with no score change for 15 minutes | Mark it finished with its last score, and alert the owner |
-| A source is down or fails validation | Use the others, under the same rules. An unknown status on one row drops only that row |
-| All sources are down or fail validation | Fall back to the clock estimate (`estimated: true`, §6.2.3) and alert the owner |
+| A source shows a later status | Update it at once, except full time. When sources show the same stage, the order is FilGoal, Goal.com, YallaKora |
+| A second source also shows full time, or one has shown it for 10 minutes | The match is finished. A lone full time doesn't count while any source shows extra time or penalties, but two sources showing it do. If a drop is open or scores differ, it waits until they agree or 5 minutes pass. Until then it stays live and shows no minute |
+| No source closes a match by kickoff + 150 min, in its second half with no score change for 15 minutes and no source's highest minute below 90 | Mark it finished with its last score, and alert the owner. A second-half match that doesn't qualify finishes the same way at kickoff + 210 |
+| A source is down or fails validation | Use the others, under the same rules |
+| A row has a status nobody has seen | A higher score on it counts. Its status, minute and any lower score are ignored, and the owner gets one alert. With every source in this state, the match shows no minute |
+| All sources are down or fail validation | Fall back to the clock estimate (`estimated: true`, §6.2.3) and alert the owner. Past kickoff + 150 min, a match that reached the second half keeps its score instead |
 
 - **Validation:** every response is checked for expected fields and known status values. A failure stops that source being used, so a changed format can't publish a wrong score.
 - **Alerts:** format changes, source failures, disagreements, all sources down, stuck matches and recovery go to Telegram through `app/adapters/alerts.py`, with a reference to the saved raw page. Send one alert per problem, then stay quiet until it recovers.

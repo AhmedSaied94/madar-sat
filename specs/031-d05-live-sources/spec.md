@@ -24,9 +24,13 @@ Shorthand: **SD** = `docs/system-design.md`, **PB** = `docs/product-business.md`
 ### Session 2026-11-05
 
 - Q: When one source shows a higher score, when should fans see it? → A: In the first poll that shows it. The replay gives about 6 s after the first source and 40 s at worst, with 0 backward moves and all 11 final scores right. A false goal like Mouloudia's 2–0 shows for about 9 minutes, and D6's goal push uses a stricter bar (FR-019).
-- Q: What happens to a match no source ever closes? → A: If it was in the second half and nothing has changed by kickoff + 150 min, it's marked finished with its last score, and the owner gets one alert.
+- Q: What happens to a match no source ever closes? → A: If it's in the second half at kickoff + 150 min and meets the conditions in FR-009, it's marked finished with its last score, and the owner gets one alert.
 - Q: What does FootballCo's approval cover? → A: The owner reports approval dated 2026-11-05 for scraping, covering goals, match stats and everything else this spec plans, with no conditions or exceptions.
-- Q: What role does Goal.com take? → A: The owner asked to start with Goal.com enabled. It runs as an equal third source: its score counts under the same rule, it fills the minute, events and lineups where FilGoal has none, and it's the only stats source. FilGoal stays first for status.
+- Q: What role does Goal.com take? → A: The owner asked to start with Goal.com enabled. It runs as an equal third source: its score counts under the same rule, it fills the minute, events and lineups where FilGoal has none, and it's the only stats source. FilGoal stays first when sources show the same stage of the match.
+- Q: When a source says full time but the match may be going to extra time, should the poller finish it straight away or wait? → A: Wait. Finish when a second usable source also shows full time, or after one source has held full time for 10 minutes. If any source moves to extra time or penalties first, the match stays open, unless two sources show full time, so that one source stuck on extra time can't hold it until the + 210 limit. The capture saw no extra time or penalties, so this is a precaution, and the next capture with a cup match checks it (FR-025).
+- Q: Should a match be auto-finished at kickoff + 150 minutes if a source still shows it being played, with a minute below 90? → A: No. It's auto-finished at that point only if it's in the second half, its score hasn't changed for 15 minutes and no usable source's highest minute for the match is below 90. Otherwise it waits, up to the kickoff + 210 limit. Planning changed "shows a minute" to "highest minute": FilGoal's clock wraps past 60 minutes, so Bristol City v Wolves read minute 72 just after kickoff + 150, having reached 104, and the old wording passed or failed depending on which server answered.
+- Q: When a source shows a status we've never seen, such as its wording for extra time, should a higher score on that row still count? → A: Yes. A higher score from that row counts, but its status, minute and any lower score are ignored, and the owner gets one alert. A row showing a score also keeps the match from going stale. With every source in this state the match shows no minute, because a frozen one would look current.
+- Q: If FilGoal still shows an earlier stage of the match but another source has moved on, should fans see the later stage straight away? → A: Yes. A later status from any usable source goes out at once, except full time, which follows FR-008. The minute comes from whichever source supplied that status. When sources show the same stage, the order stays FilGoal, Goal.com, YallaKora.
 
 ## What the capture found
 
@@ -78,7 +82,7 @@ As a fan, after full time I see the final score, even when a source forgets to c
 
 **Acceptance Scenarios**:
 
-1. **Given** any usable source reports full time, no score drop is in progress and the sources show the same score, **Then** the match is finished, whichever source said it.
+1. **Given** a usable source reports full time, no score drop is in progress and the sources show the same score, **When** a second usable source also shows full time, or the first has shown it for 10 minutes in a row, **Then** the match is finished, whichever source said it first.
 2. **Given** FilGoal goes from finished back to second half, **Then** the match stays finished.
 3. **Given** no source ever closes a match, **Then** FR-009 applies, and the match never returns to scheduled and never loses its score.
 4. **Given** a FilGoal page with a red card, an own goal and a missed penalty, **Then** each is stored with its correct type, side and minute.
@@ -123,6 +127,11 @@ As the owner, I want proof from a production-like host that the sources answer i
 - **A source's false goal.** A rise can be wrong, as Mouloudia Alger's 2–0 probably was. It stays until the drop rule corrects it. No goal push exists yet, and FR-019 sets a stricter bar for D6.
 - **A flapping source and a lagging one agree on the old score.** That's not a real drop. Agreement alone never lowers a score; replay showed it would.
 - **A score that both rises and falls on different sides.** For example 1–1 to 0–2. It counts as a drop for the side that fell, so it needs the drop rule.
+- **A match kicks off late.** While any usable source's highest minute is below 90, it isn't auto-finished at kickoff + 150 (FR-009), so a later goal still reaches fans.
+- **A stuck match's clock wraps.** FilGoal's elapsed time keeps counting after the end, so its minute can fall back to the 70s. The highest minute doesn't fall, so the wrap can't hold the match open (FR-009), and a minute well below it counts as no minute (FR-017).
+- **Every source shows a status nobody has seen.** Goals still reach fans under FR-001, the match status stays as it was, it shows no minute, and the match doesn't drop to the clock estimate while a row shows a score.
+- **A source shows full time before extra time.** The match stays open under FR-008, so extra-time goals and the shoot-out aren't lost, including in a second leg where the score isn't level. While the 10 minutes run, it stays live and shows no minute.
+- **One source is stuck on extra time.** Two sources showing full time still finish the match (FR-008).
 - **Penalty shoot-outs.** Penalty scores follow the same rise and drop rules. They're compared only between sources that carry them, and a source without them never erases them (spec 005 review B1-R1-2).
 - **`مباشر` on a YallaKora match page has no half.** The half comes from its list row, or stays empty if it has none.
 - **A goal event before its score is accepted.** It's held until the score is accepted, as in spec 005.
@@ -137,7 +146,7 @@ As the owner, I want proof from a production-like host that the sources answer i
 
 #### Parsers (Lane B1)
 
-- **FR-001**: The YallaKora reader MUST map every live status from the capture on its list and match pages. A status nobody has seen fails validation for that row only: the match gets no reading from this source this poll, and the owner gets one alert. A page without the expected structure still stops the source.
+- **FR-001**: The YallaKora reader MUST map every live status from the capture on its list and match pages. On any source's row, a status nobody has seen MUST affect that row only: a higher score on it counts under FR-004, its status, minute and any lower score are ignored, a score on it keeps the match from going stale, and the owner gets one alert. A page without the expected structure still stops the source.
 - **FR-002**: The FilGoal reader MUST give the real match minute when its elapsed time is shifted by whole hours, in both forms the capture saw, and show no minute when it can't work one out. It MUST never show a negative minute.
 - **FR-003**: The FilGoal reader MUST store red cards, own goals and missed penalties with the right type. An event's side MUST be the side the goal counts for, so an own goal's side is the opposite of FilGoal's team, as the capture shows (Leipzig's own goal made it 0–1).
 
@@ -148,12 +157,12 @@ These rules are replayed on `replay-timelines-2026-11-04.json`, in this folder.
 - **FR-004**: A higher score from any usable source MUST go out in the first poll that shows it. This replaces "only when both sources show it" in SD §6.7 and spec 005.
 - **FR-005**: A lower score MUST go out only when no usable source shows the current score or higher for 5 minutes in a row. Two sources agreeing on a lower score MUST NOT be enough on its own.
 - **FR-006**: A disagreement alert MUST go out only when two usable sources still differ after 10 minutes, or differ on a finished match. Each problem gets one alert, and one more on recovery.
-- **FR-007**: A status MUST NOT move backward unless no usable source shows the later status for 5 minutes in a row. A finished match stays finished unless a person changes it.
-- **FR-008**: Any usable source reporting full time MUST finish a match, unless a score drop is in progress or usable sources show different scores. In those cases it MUST wait until they agree or 5 minutes pass, because polling ends at full time and a wrong score would stay for good (spec 005 review B1-R1-1). If they still differ, it finishes on the accepted score and alerts the owner.
-- **FR-009**: A match in its second half with no change in score or status by kickoff + 150 min, which no source has closed, MUST be marked finished. It MUST keep its last accepted score, MUST NOT return to scheduled, and MUST alert the owner once. A match in extra time or penalties isn't covered by this limit and keeps spec 005's kickoff + 210 min.
-- **FR-010**: The watchdog's clock fallback for a dead worker stays as in spec 005 up to kickoff + 150 min, so a stale score is never shown as live. Past that, a match that reached its second half MUST follow FR-009 and MUST NOT be sent back to the clock.
+- **FR-007**: A later status from any usable source MUST go out in the first poll that shows it, except full time, which follows FR-008. A status MUST NOT move backward unless no usable source shows the later status for 5 minutes in a row. A finished match stays finished unless a person changes it.
+- **FR-008**: A usable source reporting full time MUST finish a match only when a second usable source also shows full time, or when that source has shown it for 10 minutes in a row, including when it's the only source covering the match. While any source shows extra time or penalties, a lone full time MUST NOT count, and the 10 minutes start again, as they do if that source stops showing full time. Two usable sources showing full time MUST finish the match even if a third still shows extra time or penalties, so one stuck source can't hold it open until the + 210 limit. Once this is met, if a score drop is in progress or usable sources show different scores, it MUST wait until they agree or 5 minutes pass, because polling ends at full time and a wrong score would stay for good (spec 005 review B1-R1-1). If they still differ, it finishes on the accepted score and alerts the owner.
+- **FR-009**: At or after kickoff + 150 min, a match no source has closed MUST be marked finished if it's in its second half, its score hasn't changed for 15 minutes and no usable source's highest minute for the match is below 90. A source that has shown no minute has no say in this. A second-half match that doesn't meet these conditions MUST be marked finished at kickoff + 210 min. Either way it MUST keep its last accepted score, MUST NOT return to scheduled, and MUST alert the owner once. A match in extra time or penalties isn't covered by the + 150 limit and keeps spec 005's kickoff + 210 min.
+- **FR-010**: The clock fallback stays as in spec 005 up to kickoff + 150 min, so a stale score is never shown as live, whether it comes from a dead worker, a paused poller or every source being down. Past that, a match that reached its second half MUST follow FR-009 and MUST NOT be sent back to the clock by any of them.
 - **FR-011**: An event missing from a response MUST stay until it has been gone for 5 minutes in a row, with goal events following the score that holds them. Repeated polls MUST NOT add an event twice.
-- **FR-012**: These rules MUST stay one pure, table-tested function. The clock fallback MUST apply only when every enabled source is down or invalid, and with one usable source left it MUST use FR-004 and FR-005.
+- **FR-012**: These rules MUST stay one pure, table-tested function. Inside a poll, the clock fallback MUST apply only when every enabled source is down or invalid, and FR-010 limits it. With one usable source left, the poll MUST use FR-004 and FR-005.
 
 #### Goal.com (Lane B1)
 
@@ -161,7 +170,7 @@ These rules are replayed on `replay-timelines-2026-11-04.json`, in this folder.
 - **FR-014**: A setting, on by default, MUST control the reader. When it's off, the poller MUST send Goal.com no request and store nothing new from it. `docs/owner-actions.md` MUST hold the approval record: FootballCo's approval dated 2026-11-05, as the owner reports it, covering this spec's use with no conditions.
 - **FR-015**: Requests MUST identify us as the other sources do, MUST use their rate limit, backoff and block rules, and MUST NOT be disguised. It MUST read one list page a poll and a capped number of match pages. Its slow answers MUST NOT stop the other sources' reads in that cycle.
 - **FR-016**: Goal.com names MUST link through the same resolver and unresolved queue, under their own source.
-- **FR-017**: Goal.com MUST count as an equal third source for a higher score, a lower score and full time. Status and minute come from FilGoal when it's usable, and otherwise from Goal.com, then YallaKora. Goal.com MUST fill the minute when FilGoal has none, and supply events and lineups for a match where FilGoal has none. Events from different sources MUST NOT show the same goal twice.
+- **FR-017**: Goal.com MUST count as an equal third source for a higher score, a lower score and full time. Status follows FR-007, and when usable sources show the same stage it comes from FilGoal, then Goal.com, then YallaKora. The minute MUST come from the source that supplied the status, or the next source in that order showing the same stage if that source has none. A minute lower than the one already shown in that period MUST NOT replace it. A minute more than 5 below its source's highest, when that highest was reached in the same period, MUST count as no minute, because FilGoal's clock wraps. If a poll has readings but none shows the stored stage with a minute, the match MUST show no minute, so a frozen one never looks current. Goal.com MUST supply events and lineups for a match where FilGoal has none. Events from different sources MUST NOT show the same goal twice.
 - **FR-018**: Match stats from Goal.com MUST be stored per match, source and time, through an expand-only revision that leaves `/v1` unchanged. YallaKora's stats aren't stored, because the capture shows them to be incomplete.
 
 #### For D6 (Lane B1)
@@ -171,7 +180,7 @@ These rules are replayed on `replay-timelines-2026-11-04.json`, in this folder.
 #### Capture and proof (Lanes B1 and B2)
 
 - **FR-020**: `capture-live` MUST read all three sources, save list pages as well as match pages, keep one source's failure from stopping the others, and treat any read error as a logged result. It runs from VPS-2.
-- **FR-021**: B2 MUST add Goal.com's rate limit, pass any new settings through to the live worker and give B1 a way to run the capture on VPS-2. The owner MUST be told if a source stops or goes quiet during the capture.
+- **FR-021**: B2 MUST add Goal.com's rate limit, pass any new settings through to the live worker and give B1 a way to run the capture on VPS-2. The owner MUST be told during the capture if a source stops, if a source goes quiet, meaning its list reads fine but shows no live rows for 5 rounds in a row while another source shows some, or if the capture itself stops before its end.
 - **FR-022**: A trimmed set of captured pages MUST be committed as test fixtures, with no personal data and no commentary, covering each status and each mapped event type. Parser tests MUST run on real live rows from all three list pages.
 - **FR-023**: `specs/031-d05-live-sources/capture-report.md` MUST record what T021 of spec 005 asks for, plus Goal.com, the datacenter result and the values chosen for the page caps and any timer in this spec.
 - **FR-024**: The deployed poller MUST be watched against the broadcast on one real match, later than the capture's, with all three sources on (T038 of spec 005).
@@ -202,7 +211,7 @@ These rules are replayed on `replay-timelines-2026-11-04.json`, in this folder.
 - **SC-005**: Every match that reached full time in the capture ends finished with its right score, and none returns to scheduled or loses its score.
 - **SC-006**: With Goal.com's setting off, it receives 0 requests in a replayed match night, and the same replay gives the results in SC-001 to SC-005.
 - **SC-007**: A capture from VPS-2 covers a whole match from all three sources, or the report names the source that blocked it.
-- **SC-008**: On a watched match from the deployed hosts, status, minute and score match the broadcast from kickoff to full time, and an accepted score reaches the app within 45 s, as in spec 005's SC-005.
+- **SC-008**: On a watched match from the deployed hosts, status, minute and score match the broadcast from kickoff to full time, apart from FR-008's wait for full time, and an accepted score reaches the app within 45 s, as in spec 005's SC-005.
 
 ## Assumptions
 

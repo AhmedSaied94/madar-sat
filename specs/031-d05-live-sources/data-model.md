@@ -10,8 +10,20 @@ One expand-only revision, `backend/alembic/versions/0008_live_sources.py`, revis
 | `score_changed_at` | timestamptz, null | When the accepted score last changed. The stuck-match check reads it |
 | `drop_since` | timestamptz, null | When no usable source began to show the accepted score or higher |
 | `status_drop_since` | timestamptz, null | The same for a status moving backward |
+| `fulltime_source` | text, null | The one source whose full time is being held (spec FR-008) |
+| `fulltime_since` | timestamptz, null | When that source began to show full time. Cleared when it reads anything else, or when extra time or penalties appear |
+| `finish_wait_since` | timestamptz, null | When the full-time condition was met with a drop open or scores differing |
 
 `candidate` is no longer written, and stays for rollback. `disagreement_since` keeps its meaning: when usable sources began to differ. The goal-event filter in `match_detail.py` stops depending on `candidate`, because a rise has no pending state.
+
+## `match_source_readings`: new columns
+
+| Column | Type | Rules |
+|---|---|---|
+| `peak_minute` | smallint, null | The highest match minute this source has shown for the match, from `live` and `extra_time` readings, with `90+3` as 93. It never goes down. The stuck-match check and the minute rules read it (spec FR-009, FR-017, [R4](research.md#r4-filgoals-minute)) |
+| `peak_period` | text, null | The period of the reading that set `peak_minute`, and changes only with it. The minute rules read it, so a second-half minute is never compared with first-half stoppage |
+
+A row with an unknown status writes `status` and `minute` as null, which this table already allows, and leaves `peak_minute` and `peak_period` alone.
 
 ## `match_events`: new column
 
@@ -56,8 +68,11 @@ One row per source, created on first use, as today. A disabled source has no row
 | `LIVE_GOAL_ENABLED` | `true` | Whether Goal.com is read |
 | `LIVE_PAGE_CAP_GOAL` | 4 | Match pages a cycle on Goal.com. The capture checks it |
 | `LIVE_DROP_HOLD_S` | 300 | How long a lower score, an earlier status or a missing event must last |
+| `LIVE_FULLTIME_HOLD_S` | 600 | How long one source must show full time alone, for FR-008 |
 | `LIVE_DISAGREE_AFTER_S` | 600 | Replaces `LIVE_CONFIRM_WAIT_S`, which is removed from settings, the runbook and `example.env` if listed |
-| `LIVE_STUCK_AFTER_MIN` | 150 | Kickoff + this, for FR-009 |
+| `LIVE_STUCK_AFTER_MIN` | 150 | Kickoff + this, for FR-009 and FR-010 |
 | `LIVE_STUCK_QUIET_MIN` | 15 | No score change for this long, for FR-009 |
+
+FR-009's 90 is a constant in `watchdog.py`, not a setting: it's the length of a match, not something to tune. FR-017's 5 is a constant in `crosscheck.py`, chosen by measuring the capture ([R4](research.md#r4-filgoals-minute)).
 
 `LIVE_STALE_AFTER_S`, `LIVE_HARD_LIMIT_MIN`, `LIVE_DOWN_AFTER_FAILURES` and the other page caps are unchanged.
