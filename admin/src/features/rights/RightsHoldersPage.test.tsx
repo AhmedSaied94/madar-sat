@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http as mswHttp } from 'msw';
 import type { ReactElement, ReactNode } from 'react';
@@ -126,9 +126,34 @@ function Providers({ children }: { children: ReactNode }): ReactElement {
   return <ToastProvider>{children}</ToastProvider>;
 }
 
-function renderPage(): void {
+function renderPage(): ReturnType<typeof renderRtl> {
   serve();
-  renderRtl(<RightsHoldersPage />, { wrapper: Providers });
+  return renderRtl(<RightsHoldersPage />, { wrapper: Providers });
+}
+
+/** Records every PATCH: its body, and the version it went out under. */
+function servePatch(): { body: Record<string, unknown>; ifMatch: string | null }[] {
+  const seen: { body: Record<string, unknown>; ifMatch: string | null }[] = [];
+  server.use(
+    mswHttp.patch('*/admin/api/rights-holders/:id', async ({ request }) => {
+      seen.push({ body: (await request.json()) as Record<string, unknown>, ifMatch: request.headers.get('If-Match') });
+      return HttpResponse.json(envelope(detail), { headers: { ETag: '"detail-next"' } });
+    }),
+  );
+  return seen;
+}
+
+/** Opens the editor on holder 3, whose detail answers with an ETag no list row has. */
+async function openEditor(record: unknown = detail): Promise<HTMLElement> {
+  renderPage();
+  server.use(
+    mswHttp.get('*/admin/api/rights-holders/:id', () =>
+      HttpResponse.json(envelope(record), { headers: { ETag: '"detail-1"' } }),
+    ),
+  );
+  const row = await screen.findByTestId('rights-holder-3');
+  await userEvent.click(within(row).getByRole('button', { name: 'تعديل beIN SPORTS' }));
+  return screen.findByRole('dialog', { name: 'تعديل «beIN SPORTS»' });
 }
 
 describe('RightsHoldersPage (A9)', () => {
@@ -223,7 +248,7 @@ describe('RightsHoldersPage (A9)', () => {
     await userEvent.click(within(drawer).getByRole('checkbox', { name: 'الدوري الإسباني' }));
 
     await userEvent.click(within(drawer).getByRole('button', { name: 'قمر آخر' }));
-    await userEvent.selectOptions(within(drawer).getByLabelText('القمر'), '3');
+    await userEvent.click(within(drawer).getByRole('checkbox', { name: 'نايل سات' }));
     await userEvent.selectOptions(within(drawer).getByLabelText('الوصول'), 'encrypted');
     await userEvent.selectOptions(within(drawer).getByLabelText('الحزمة'), 'wide');
     await userEvent.type(within(drawer).getByLabelText('الباقة'), 'beIN');
@@ -268,7 +293,7 @@ describe('RightsHoldersPage (A9)', () => {
     const drawer = await screen.findByRole('dialog', { name: 'جهة جديدة' });
     await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), 'Eleven Sports');
     await userEvent.click(within(drawer).getByRole('button', { name: 'قمر آخر' }));
-    await userEvent.selectOptions(within(drawer).getByLabelText('القمر'), '3');
+    await userEvent.click(within(drawer).getByRole('checkbox', { name: 'نايل سات' }));
     await userEvent.click(within(drawer).getByRole('button', { name: 'تردد' }));
     await userEvent.type(within(drawer).getByLabelText('التردد · MHz'), '11054');
     await userEvent.type(within(drawer).getByLabelText('التردد · symbol rate'), '27500');
@@ -327,6 +352,284 @@ describe('RightsHoldersPage (A9)', () => {
     expect(
       await within(drawer).findByText('عُدّل هذا العنصر من شخص آخر. راجع التغييرات قبل الحفظ'),
     ).toBeInTheDocument();
+  });
+
+  describe('the logo (A-R1-1)', () => {
+    function serveUpload(): void {
+      server.use(
+        mswHttp.post('*/admin/api/media', () =>
+          HttpResponse.json(
+            envelope({
+              id: 88,
+              kind: 'image',
+              url: 'https://media.example/new.webp',
+              bytes: 10,
+              width: 64,
+              height: 64,
+              duration_ms: null,
+            }),
+            { status: 201 },
+          ),
+        ),
+      );
+    }
+
+    const logoFile = (): File => new File(['logo'], 'logo.png', { type: 'image/png' });
+
+    it('shows the current logo and saves a new upload as logo_asset_id', async () => {
+      const patches = servePatch();
+      serveUpload();
+      const drawer = await openEditor();
+
+      const tile = within(drawer).getByTestId('logo-tile-dark');
+      expect(tile.querySelector('img')?.getAttribute('src')).toBe('https://media.example/bein.svg');
+
+      await userEvent.upload(within(drawer).getByLabelText('رفع شعار'), logoFile());
+      await waitFor(() =>
+        expect(tile.querySelector('img')?.getAttribute('src')).toBe('https://media.example/new.webp'),
+      );
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(1));
+      expect(patches[0]?.body['logo_asset_id']).toBe(88);
+    });
+
+    it('clears the logo by sending null', async () => {
+      const patches = servePatch();
+      const drawer = await openEditor();
+
+      await userEvent.click(within(drawer).getByRole('button', { name: 'إزالة الشعار' }));
+      expect(within(drawer).getByTestId('logo-tile-dark').querySelector('img')).toBeNull();
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(1));
+      expect(patches[0]?.body).toHaveProperty('logo_asset_id', null);
+    });
+
+    it('leaves the logo out of a save that did not change it', async () => {
+      const patches = servePatch();
+      const drawer = await openEditor();
+
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MENA');
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(1));
+      expect(patches[0]?.body).not.toHaveProperty('logo_asset_id');
+    });
+
+    it('creates a holder with its logo', async () => {
+      let body: Record<string, unknown> | null = null;
+      renderPage();
+      await screen.findByTestId('rights-holder-3');
+      serveUpload();
+      server.use(
+        mswHttp.post('*/admin/api/rights-holders', async ({ request }) => {
+          body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(envelope({ ...detail, id: 9 }), { status: 201 });
+        }),
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'جهة جديدة' }));
+      const drawer = await screen.findByRole('dialog', { name: 'جهة جديدة' });
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), 'Eleven Sports');
+      await userEvent.upload(within(drawer).getByLabelText('رفع شعار'), logoFile());
+      await waitFor(() =>
+        expect(within(drawer).getByTestId('logo-tile-dark').querySelector('img')).not.toBeNull(),
+      );
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(body).not.toBeNull());
+      expect(body).toHaveProperty('logo_asset_id', 88);
+    });
+  });
+
+  describe('the satellites of a carriage (A-R1-2)', () => {
+    const twoSatellites = {
+      ...detail,
+      carriages: [{ ...detail.carriages[0], satellite_ids: [3, 4] }],
+    };
+
+    it('keeps both satellites of a carriage through an unrelated edit', async () => {
+      const patches = servePatch();
+      const drawer = await openEditor(twoSatellites);
+      const carriage = within(drawer).getByTestId('carriage-0');
+
+      expect(within(carriage).getByRole('checkbox', { name: 'نايل سات' })).toBeChecked();
+      expect(within(carriage).getByRole('checkbox', { name: 'بدر' })).toBeChecked();
+
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MENA');
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(1));
+      expect(patches[0]?.body['carriages']).toMatchObject([{ satellite_ids: [3, 4] }]);
+    });
+
+    it('saves a carriage with no satellite', async () => {
+      const patches = servePatch();
+      const drawer = await openEditor();
+      const carriage = within(drawer).getByTestId('carriage-0');
+
+      await userEvent.click(within(carriage).getByRole('checkbox', { name: 'نايل سات' }));
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(1));
+      expect(patches[0]?.body['carriages']).toMatchObject([{ satellite_ids: [] }]);
+    });
+
+    it('accepts any number of satellites at the schema', () => {
+      const body = (satelliteIds: number[]) => ({
+        name: 'Eleven Sports',
+        competition_ids: [],
+        carriages: [{ access: 'free' as const, satellite_ids: satelliteIds, frequencies: [] }],
+      });
+
+      expect(rightsHolderBodySchema.safeParse(body([])).success).toBe(true);
+      expect(rightsHolderBodySchema.safeParse(body([3, 4])).success).toBe(true);
+    });
+  });
+
+  describe('a stale version (A-R1-3)', () => {
+    const conflictResponse = (meta: Record<string, unknown>): Response =>
+      HttpResponse.json(
+        { success: false, data: null, error: { code: 'edit_conflict', message: 'moved' }, meta },
+        { status: 409 },
+      );
+    const changedBy = { changed_by: { kind: 'admin', name: 'سارة' }, changed_at: '2026-11-01T09:30:00Z' };
+
+    it('saves under the ETag of the detail it loaded', async () => {
+      const patches = servePatch();
+      const drawer = await openEditor();
+
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MENA');
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(1));
+      expect(patches[0]?.ifMatch).toBe('"detail-1"');
+    });
+
+    it('opens the conflict dialog on 409, and the save after a reload carries the new ETag', async () => {
+      const tags: (string | null)[] = [];
+      const drawer = await openEditor();
+      server.use(
+        mswHttp.get('*/admin/api/rights-holders/:id', () =>
+          HttpResponse.json(envelope({ ...detail, name: 'beIN MENA' }), { headers: { ETag: '"detail-2"' } }),
+        ),
+        mswHttp.patch('*/admin/api/rights-holders/:id', ({ request }) => {
+          const tag = request.headers.get('If-Match');
+          tags.push(tag);
+          return tag === '"detail-2"'
+            ? HttpResponse.json(envelope(detail), { headers: { ETag: '"detail-3"' } })
+            : conflictResponse(changedBy);
+        }),
+      );
+
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MINE');
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      const dialog = await screen.findByRole('alertdialog', { name: /عدّل سارة هذا العنصر/ });
+      await userEvent.click(within(dialog).getByRole('button', { name: 'اعرض التغييرات' }));
+      expect(within(dialog).getByText('beIN MENA')).toBeInTheDocument();
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'إعادة التحميل' }));
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(within(drawer).getByLabelText('اسم الجهة')).toHaveValue('beIN MENA');
+
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' 2');
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(tags).toEqual(['"detail-1"', '"detail-2"']));
+    });
+
+    it('seeds a reopened editor from a fresh read, not from the copy it saved over', async () => {
+      const patches = servePatch();
+      const drawer = await openEditor();
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MENA');
+      server.use(
+        mswHttp.get('*/admin/api/rights-holders/:id', () =>
+          HttpResponse.json(envelope({ ...detail, name: 'beIN SPORTS MENA' }), { headers: { ETag: '"detail-2"' } }),
+        ),
+      );
+      await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      const row = screen.getByTestId('rights-holder-3');
+      await userEvent.click(within(row).getByRole('button', { name: 'تعديل beIN SPORTS' }));
+      const again = await screen.findByRole('dialog', { name: 'تعديل «beIN SPORTS MENA»' });
+      await userEvent.type(within(again).getByLabelText('اسم الجهة'), ' 2');
+      await userEvent.click(within(again).getByRole('button', { name: 'حفظ' }));
+
+      await waitFor(() => expect(patches).toHaveLength(2));
+      expect(patches[1]?.ifMatch).toBe('"detail-2"');
+    });
+
+    it('keeps what is being typed when the detail refetches', async () => {
+      const { queryClient } = renderPage();
+      const row = await screen.findByTestId('rights-holder-3');
+      await userEvent.click(within(row).getByRole('button', { name: 'تعديل beIN SPORTS' }));
+      const drawer = await screen.findByRole('dialog', { name: 'تعديل «beIN SPORTS»' });
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MENA');
+
+      await act(async () => {
+        await queryClient.refetchQueries({ type: 'active' });
+        // Query's observers are told on the next tick; give the editor that tick to react.
+        await new Promise((done) => setTimeout(done, 0));
+      });
+
+      expect(within(drawer).getByLabelText('اسم الجهة')).toHaveValue('beIN SPORTS MENA');
+    });
+
+    it('asks before dropping unsaved edits', async () => {
+      const drawer = await openEditor();
+      await userEvent.type(within(drawer).getByLabelText('اسم الجهة'), ' MENA');
+
+      await userEvent.click(within(drawer).getByRole('button', { name: 'إغلاق' }));
+      const guard = await screen.findByRole('alertdialog', { name: 'لديك تغييرات غير محفوظة' });
+
+      await userEvent.click(within(guard).getByRole('button', { name: 'ابقَ' }));
+      expect(within(drawer).getByLabelText('اسم الجهة')).toHaveValue('beIN SPORTS MENA');
+    });
+
+    it('opens the conflict dialog on a stale reorder, and the next one carries the fresh versions', async () => {
+      const bodies: { items: { id: number; if_match: string }[] }[] = [];
+      renderPage();
+      await screen.findByTestId('rights-holder-3');
+      server.use(
+        mswHttp.post('*/admin/api/rights-holders/reorder', async ({ request }) => {
+          const body = (await request.json()) as { items: { id: number; if_match: string }[] };
+          bodies.push(body);
+          return bodies.length === 1
+            ? conflictResponse({ ...changedBy, stale_ids: [3] })
+            : HttpResponse.json(envelope({ updated: [] }));
+        }),
+        mswHttp.get('*/admin/api/rights-holders', () =>
+          HttpResponse.json(
+            envelope(rows.map((row) => (row.id === 3 ? { ...row, etag: '"r-3-new"' } : row))),
+            { headers: { ETag: '"r-2"' } },
+          ),
+        ),
+      );
+
+      const moveFirst = async (): Promise<void> => {
+        const handle = screen.getByRole('button', { name: 'اسحب beIN SPORTS لإعادة الترتيب' });
+        handle.focus();
+        await userEvent.keyboard(' ');
+        await userEvent.keyboard('{ArrowDown}');
+        await userEvent.keyboard(' ');
+      };
+
+      await moveFirst();
+      const dialog = await screen.findByRole('alertdialog', { name: /عدّل سارة هذا العنصر/ });
+      await userEvent.click(within(dialog).getByRole('button', { name: 'إعادة التحميل' }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'اسحب beIN SPORTS لإعادة الترتيب' })).toBeEnabled(),
+      );
+      await moveFirst();
+
+      await waitFor(() => expect(bodies).toHaveLength(2));
+      expect(bodies[1]?.items).toContainEqual({ id: 3, if_match: '"r-3-new"' });
+    });
   });
 
   it('offers delete to an admin only, under the row version', async () => {

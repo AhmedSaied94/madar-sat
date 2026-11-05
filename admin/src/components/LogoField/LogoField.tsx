@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 
+import { Button } from '../Button/Button';
 import { focusRing } from '../focus';
 
 // The admin's logo field (design-system Logo README): the current or freshly chosen logo on a dark
@@ -18,6 +19,9 @@ interface LogoFieldProps {
   /** The logo shown in both frames; the record's, or the one just uploaded. */
   url: string | null;
   onUpload: (file: File) => void;
+  /** «إزالة الشعار», with `onClear`: only an editor that can clear the logo passes them. */
+  clearLabel?: string;
+  onClear?: () => void;
   /** A round frame, for the commentator's portrait. */
   round?: boolean;
 }
@@ -29,6 +33,8 @@ export function LogoField({
   uploadLabel,
   url,
   onUpload,
+  clearLabel,
+  onClear,
   round = false,
 }: LogoFieldProps): ReactElement {
   const frame = round ? 'rounded-pill' : 'rounded-md';
@@ -73,6 +79,12 @@ export function LogoField({
           />
           {uploadLabel}
         </label>
+
+        {url && clearLabel && onClear ? (
+          <Button variant="ghost" size="sm" onClick={onClear}>
+            {clearLabel}
+          </Button>
+        ) : null}
       </div>
     </div>
   );

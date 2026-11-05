@@ -6,12 +6,14 @@ import type { AdminRightsHolderRow } from '../../api/generated/admin.schemas';
 import { ApiError, NETWORK_ERROR } from '../../api/http';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { ConflictDialog, type ConflictChange } from '../../components/ConfirmDialog/ConflictDialog';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { Icon } from '../../components/Icon/Icon';
 import { SortableList } from '../../components/SortableList/SortableList';
 import { useToast } from '../../components/Toast/Toast';
 import { focusRing } from '../../components/focus';
 import { copyForErrorCode, ordering, rights as copy } from '../../i18n/ar';
+import { conflictParty } from '../../lib/conflict';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
 import { useSession } from '../auth/session';
 import { RightsHolderEditor } from './RightsHolderEditor';
@@ -22,6 +24,11 @@ import { useRightsHolders } from './queries';
 // path, saves the whole order under the versions the list read (A-R1-1). Deleting is the admin's.
 
 const COMPETITIONS_SHOWN = 3;
+
+interface OrderConflict {
+  changedBy: ReturnType<typeof conflictParty>;
+  changes: ConflictChange[];
+}
 
 function competitionSummary(row: AdminRightsHolderRow): ReactElement {
   const shown = row.competitions.slice(0, COMPETITIONS_SHOWN);
@@ -43,6 +50,7 @@ export function RightsHoldersPage(): ReactElement {
   const [removing, setRemoving] = useState<AdminRightsHolderRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [orderConflict, setOrderConflict] = useState<OrderConflict | null>(null);
   const toast = useToast();
   const refresh = useRefreshAdmin();
   const { session } = useSession();
@@ -64,8 +72,21 @@ export function RightsHoldersPage(): ReactElement {
       toast.show({ kind: 'success', title: ordering.saved });
       await refetch();
     } catch (failure) {
-      const code = failure instanceof ApiError ? failure.code : NETWORK_ERROR;
-      toast.show({ kind: 'error', title: ordering.saveFailed, description: copyForErrorCode(code) });
+      const error = failure instanceof ApiError ? failure : new ApiError(NETWORK_ERROR, null);
+      if (error.code === 'edit_conflict') {
+        const stale = (error.meta as { stale_ids?: number[] }).stale_ids ?? [];
+        setOrderConflict({
+          changedBy: conflictParty(error.meta),
+          changes: stale.map((id) => ({
+            field: 'sort_order',
+            label: ordering.conflictLabel,
+            before: rows.find((row) => row.id === id)?.name ?? null,
+            after: ordering.serverNewer,
+          })),
+        });
+      } else {
+        toast.show({ kind: 'error', title: ordering.saveFailed, description: copyForErrorCode(error.code) });
+      }
       void refetch();
     } finally {
       setSaving(false);
@@ -183,6 +204,19 @@ export function RightsHoldersPage(): ReactElement {
 
       <RightsHolderEditor holderId={editing} open={editing !== null} onClose={() => setEditing(null)} />
       <RightsHolderEditor holderId={null} open={creating} onClose={() => setCreating(false)} />
+
+      <ConflictDialog
+        open={orderConflict !== null}
+        subject={copy.title}
+        changedBy={orderConflict?.changedBy ?? { kind: 'admin', name: '', at: '' }}
+        changes={orderConflict?.changes ?? []}
+        onReload={() => {
+          setOrderConflict(null);
+          void refetch();
+        }}
+        onDiscard={() => setOrderConflict(null)}
+        onDismiss={() => setOrderConflict(null)}
+      />
 
       <ConfirmDialog
         open={removing !== null}
