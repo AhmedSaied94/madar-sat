@@ -19,7 +19,9 @@ import '../../../core/config/media_image.dart';
 /// on the right), and the kickoff date in words.
 ///
 /// [match] is already merged with the live state (`detailWithLiveState`), so what it says
-/// is what may be shown. The whole hero reads as one Arabic label.
+/// is what may be shown. The whole hero reads as one Arabic label (§13.8), and the taps to S7
+/// and S8 are button nodes of their own inside it: everything else is excluded, so nothing is
+/// read twice.
 class MatchHero extends StatelessWidget {
   const MatchHero({
     super.key,
@@ -48,7 +50,6 @@ class MatchHero extends StatelessWidget {
     return Semantics(
       container: true,
       label: _semantics(context, l),
-      excludeSemantics: true,
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(
           MadarSpace.s4,
@@ -83,19 +84,21 @@ class MatchHero extends StatelessWidget {
                         : () => onOpenTeam!(match.home.id!),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s2),
-                  child: SizedBox(
-                    width: MadarSpace.s12 + MadarSpace.s8,
-                    child: Center(
-                      child: StatusBlock(
-                        status: match.status,
-                        kickoff: match.kickoffAt,
-                        score: match.score,
-                        minute: match.minute,
-                        estimated: match.estimated,
-                        timeTbd: match.timeTbd,
-                        now: now,
+                ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s2),
+                    child: SizedBox(
+                      width: MadarSpace.s12 + MadarSpace.s8,
+                      child: Center(
+                        child: StatusBlock(
+                          status: match.status,
+                          kickoff: match.kickoffAt,
+                          score: match.score,
+                          minute: match.minute,
+                          estimated: match.estimated,
+                          timeTbd: match.timeTbd,
+                          now: now,
+                        ),
                       ),
                     ),
                   ),
@@ -113,43 +116,47 @@ class MatchHero extends StatelessWidget {
               ],
             ),
             const SizedBox(height: MadarSpace.s4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: MadarText.textCaption.fontSize,
-                  color: colors.textTertiary,
-                ),
-                const SizedBox(width: MadarSpace.s2),
-                Flexible(
-                  child: Text(
-                    _dateAndTime(context, l),
-                    style: MadarText.textCaption.copyWith(color: colors.textSecondary),
+            ExcludeSemantics(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: MadarText.textCaption.fontSize,
+                    color: colors.textTertiary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: MadarSpace.s2),
+                  Flexible(
+                    child: Text(
+                      _dateAndTime(context, l),
+                      style: MadarText.textCaption.copyWith(color: colors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
             ),
             // Before the last hour the status block only shows the time, so the hero says
             // how long the wait is; inside the hour the block's «بعد 25 د» takes over.
             if (_countdown(l) case final countdown?) ...[
               const SizedBox(height: MadarSpace.s2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.schedule,
-                    size: MadarText.textCaption.fontSize,
-                    color: colors.accentText,
-                  ),
-                  const SizedBox(width: MadarSpace.s2),
-                  Flexible(
-                    child: Text(
-                      countdown,
-                      style: MadarText.textCaption.copyWith(color: colors.accentText),
+              ExcludeSemantics(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: MadarText.textCaption.fontSize,
+                      color: colors.accentText,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: MadarSpace.s2),
+                    Flexible(
+                      child: Text(
+                        countdown,
+                        style: MadarText.textCaption.copyWith(color: colors.accentText),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -276,11 +283,18 @@ class _CompetitionLine extends StatelessWidget {
           ),
       ],
     );
-    if (onTap == null) return line;
-    return InkWell(
+    if (onTap == null) return ExcludeSemantics(child: line);
+    return Semantics(
+      container: true,
+      button: true,
+      label: competition.name,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(MadarRadii.lg),
-      child: line,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(MadarRadii.lg),
+        child: line,
+      ),
     );
   }
 }
@@ -323,15 +337,20 @@ class _Team extends StatelessWidget {
         ),
       ],
     );
-    if (onTap == null) return content;
-    // The hero keeps its one merged label (constitution, §13.8), so this target is touch only:
-    // a screen reader reads the whole hero rather than two extra buttons.
-    return InkWell(
+    if (onTap == null) return ExcludeSemantics(child: content);
+    return Semantics(
+      container: true,
+      button: true,
+      label: name,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(MadarRadii.lg),
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
-        child: content,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(MadarRadii.lg),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
+          child: content,
+        ),
       ),
     );
   }

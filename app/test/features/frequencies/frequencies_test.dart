@@ -144,6 +144,10 @@ GoRouter _router(String initial) {
         builder: (_, state) =>
             SatelliteChannelsPage(satelliteId: int.parse(state.pathParameters['id']!)),
       ),
+      GoRoute(
+        path: '/channel/:id',
+        builder: (_, state) => stub('channel ${state.pathParameters['id']}'),
+      ),
       GoRoute(path: '/favorites', builder: (_, _) => stub('favorites')),
       GoRoute(path: '/settings', builder: (_, _) => stub('settings')),
       GoRoute(path: '/search', builder: (_, _) => stub('search')),
@@ -666,6 +670,18 @@ void main() {
       expect(find.text('نسخ التردد'), findsOneWidget, reason: 'the first row closed');
       expect(find.text('11977 MHz'), findsOneWidget);
       expect(find.text('11013 MHz'), findsNothing);
+    });
+
+    testWidgets('an opened row opens S6 from «عرض القناة» (T086, M-R1-2)', (tester) async {
+      final env = _Env()..serve();
+      await _pumpDetail(tester, env);
+
+      await tester.tap(find.text('beIN SPORTS 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('عرض القناة'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('channel 2'), findsOneWidget);
     });
 
     testWidgets('an opened row copies its frequency and plays the reception video', (tester) async {

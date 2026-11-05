@@ -84,7 +84,7 @@ void main() {
           path: '/onboarding/teams',
           builder: (context, state) => const Text('teams picker'),
         ),
-        GoRoute(path: '/team/:id', builder: (context, state) => const Text('team')),
+        GoRoute(path: '/team/:id', builder: (context, state) => Text('team ${state.pathParameters['id']}')),
         GoRoute(
           path: '/competition/:id',
           builder: (context, state) => Text('competition ${state.pathParameters['id']}'),
@@ -157,6 +157,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('competition 12'), findsOneWidget);
+  });
+
+  testWidgets('a followed team is listed and opens S7 (T086, M-R1-2)', (tester) async {
+    await database.setFollow(kind: 'team', targetId: 1, on: true);
+    await pump(tester, teams: [team(1, 'الأهلي')]);
+
+    await tester.tap(find.text('الأهلي'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('team 1'), findsOneWidget);
   });
 
   testWidgets('removing a competition unfollows it', (tester) async {

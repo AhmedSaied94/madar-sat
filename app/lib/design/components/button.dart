@@ -97,6 +97,8 @@ class MadarButton extends StatelessWidget {
       button: true,
       enabled: !disabled,
       label: label,
+      // `excludeSemantics` drops the InkWell's tap, so the node carries its own.
+      onTap: busy ? null : onPressed,
       excludeSemantics: true,
       child: Material(
         color: disabled ? colors.surface2 : (background ?? colors.surface1),

@@ -28,6 +28,7 @@ import '../../fixtures/fake_http_adapter.dart';
 import '../../fixtures/sample_details.dart';
 import '../../fixtures/sample_match_detail.dart';
 import '../../fixtures/sample_models.dart';
+import '../../fixtures/semantics_actions.dart';
 
 const int _competitionId = 12;
 final String _competitionPath = '/v1/competitions/$_competitionId';
@@ -169,6 +170,25 @@ void main() {
 
       expect(find.text('الدوري المصري الممتاز'), findsWidgets);
       expect(find.text('تابع البطولة'), findsOneWidget);
+    });
+
+    testWidgets('a screen reader can reach follow and the rights shortcut (M-R1-1)',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      answerCompetition(standard());
+      await open(tester, height: 480);
+
+      expect(semanticAction('تابع البطولة'), findsOne);
+      expect(semanticAction('حقوق البث'), findsOne);
+
+      tapSemanticAction(tester, 'تابع البطولة');
+      await tester.pumpAndSettle();
+      expect(find.text('تتابع البطولة'), findsOneWidget);
+
+      tapSemanticAction(tester, 'حقوق البث');
+      await tester.pumpAndSettle();
+      expect(scrollOffset(tester), greaterThan(0));
+      handle.dispose();
     });
 
     testWidgets('a followed competition opens as followed', (tester) async {

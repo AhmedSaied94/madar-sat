@@ -86,7 +86,7 @@ flutter analyze && ./tool/check_literals.sh && ./tool/check_token_copy.sh
 
 On a real Android phone, in both themes (SC-008):
 
-1. From S3, tap a channel: S6 opens as a sheet with the frequency showing and no tap needed, other carriages, 7 days of matches, and no history section. Copy works, and follow survives a restart.
+1. From S3, expand a carriage row (its frequency is already showing) and tap «عرض القناة»: S6 opens as a sheet with the frequency showing and no tap needed, other carriages, 7 days of matches, and no history section. Copy works, and follow survives a restart.
 2. From S3's hero or S9, open S7: both tabs, follow, and the empty state on a team with no fixtures.
 3. From S2, open S8: both tabs grouped by local date, and rights rows with no chevron.
 4. Airplane mode: a cached screen shows its age, and an uncached one shows the no-connection state.

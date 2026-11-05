@@ -13,8 +13,8 @@ import '../../../l10n/app_localizations.dart';
 /// S8's header: the competition's logo and name, then the follow toggle and the shortcut that
 /// scrolls to the rights section (§S8).
 ///
-/// No hide/show: that arrives with S15's competition controls on D8. The whole block reads as
-/// one Arabic label.
+/// No hide/show: that arrives with S15's competition controls on D8. The logo and name read as
+/// one Arabic label, and each button stays outside it as its own node.
 class CompetitionHeader extends StatelessWidget {
   const CompetitionHeader({
     super.key,
@@ -40,21 +40,21 @@ class CompetitionHeader extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final colors = context.madarColors;
 
-    return Semantics(
-      container: true,
-      label: detail.name,
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(
-          MadarSpace.s4,
-          MadarSpace.s4,
-          MadarSpace.s4,
-          MadarSpace.s4,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        MadarSpace.s4,
+        MadarSpace.s4,
+        MadarSpace.s4,
+        MadarSpace.s4,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            container: true,
+            label: detail.name,
+            excludeSemantics: true,
+            child: Row(
               children: [
                 LogoTile(
                   kind: LogoTileKind.competition,
@@ -73,31 +73,31 @@ class CompetitionHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: MadarSpace.s4),
-            Row(
-              children: [
-                Expanded(
-                  child: MadarButton(
-                    label: following ? l.s8FollowingCompetition : l.s8FollowCompetition,
-                    icon: following ? Icons.star : Icons.star_border,
-                    variant: following ? MadarButtonVariant.secondary : MadarButtonVariant.outline,
-                    expanded: true,
-                    onPressed: onFollow,
-                  ),
+          ),
+          const SizedBox(height: MadarSpace.s4),
+          Row(
+            children: [
+              Expanded(
+                child: MadarButton(
+                  label: following ? l.s8FollowingCompetition : l.s8FollowCompetition,
+                  icon: following ? Icons.star : Icons.star_border,
+                  variant: following ? MadarButtonVariant.secondary : MadarButtonVariant.outline,
+                  expanded: true,
+                  onPressed: onFollow,
                 ),
-                if (showRightsShortcut) ...[
-                  const SizedBox(width: MadarSpace.s2),
-                  MadarButton(
-                    label: l.s8Rights,
-                    icon: Icons.verified_outlined,
-                    variant: MadarButtonVariant.secondary,
-                    onPressed: onOpenRights,
-                  ),
-                ],
+              ),
+              if (showRightsShortcut) ...[
+                const SizedBox(width: MadarSpace.s2),
+                MadarButton(
+                  label: l.s8Rights,
+                  icon: Icons.verified_outlined,
+                  variant: MadarButtonVariant.secondary,
+                  onPressed: onOpenRights,
+                ),
               ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
