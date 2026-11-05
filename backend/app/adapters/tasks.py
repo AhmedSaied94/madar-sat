@@ -533,6 +533,7 @@ def _write_run_json(
         },
         "skipped": (outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []),
         "unresolved": outcome.unresolved if outcome is not None else [],
+        "waiting": outcome.waiting if outcome is not None else [],
         "postponed": outcome.postponed if outcome is not None else [],
         "unmatched": [item.model_dump() for item in data.unmatched],
         "placeholders_created": list(links.placeholders_created) if links is not None else [],

@@ -34,7 +34,8 @@ if TYPE_CHECKING:  # the fetch path's HTTP client; importing it here would drag 
 BASE_URL = "https://www.yallakora.com"
 LIST_URL = f"{BASE_URL}/matches-center"
 ALLOWED_HOSTS = frozenset({"www.yallakora.com"})
-# The page's own text on a day with no fixtures; anything else with no cards is a layout change.
+# A day with no fixtures shows this text in `.noStats`, and anything else with no cards is a layout
+# change. Pages with matches hold the same text in a hidden `#noLiveMatch`, so the text alone proves nothing.
 NO_MATCHES_TEXT = "لا يوجد مباريات"
 POSTPONED_TEXT = "تأجيل"
 
@@ -132,7 +133,7 @@ class YallakoraAdapter:
         doc = lxml_html.fromstring(page.body.decode("utf-8", errors="replace"))
         lists = [el for el in _with_class(doc, "matchCard") if _has_class(el, "matchesList")]
         if not lists:
-            if NO_MATCHES_TEXT in doc.text_content():
+            if any(NO_MATCHES_TEXT in _text(el) for el in _with_class(doc, "noStats")):
                 return []
             raise LayoutChanged("the page has no .matchCard.matchesList")
         day = day_of(page.url)

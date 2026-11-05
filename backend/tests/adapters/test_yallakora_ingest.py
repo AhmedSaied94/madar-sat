@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -105,3 +106,45 @@ def test_a_second_run_raises_the_counts_and_duplicates_nothing(sync_session, loa
     again = sync_session.execute(text("SELECT count(*), sum(seen_count) FROM unresolved_names")).one()
     assert again[0] == rows[0]
     assert again[1] > rows[1]
+
+
+def test_a_card_that_waits_on_an_editor_is_listed_and_the_run_still_succeeds(
+    sync_session, loaded_snapshot, tmp_path: Path
+) -> None:
+    """Waiting isn't a failed item, so the run isn't ``partial`` and ``run.json`` says who waits (B2-R1-1)."""
+    from app.adapters.resolve import resolve_team
+
+    adapter = YallakoraAdapter(fetcher=None)
+    day = "2026-11-04"
+    page = RawPage(url=f"{LIST_URL}?date={day}", status=200, body=(FIXTURES / f"{day}.html").read_bytes())
+    card = next(
+        item
+        for item in adapter.parse(page)
+        if resolve_team(
+            sync_session, external_id=None, name=item.home, competition_name=item.competition, source="yallakora"
+        ).entity_id
+        is None
+    )
+    held = Match(
+        source="ysscores",
+        match_date=card.match_date,
+        kickoff_at=None,
+        time_tbd=True,
+        competition_name="أخرى",
+        home_team_name=card.home,
+        away_team_name=card.away,
+    )
+    sync_session.add(held)
+    sync_session.flush()
+
+    outcome = _run()
+
+    assert outcome["status"] == "succeeded"
+    assert outcome["items_upserted"] == 15
+    run = sync_session.execute(select(ImportRun).where(ImportRun.source == "yallakora")).scalar_one()
+    info = json.loads((tmp_path / run.raw_path / "run.json").read_text(encoding="utf-8"))
+    assert info["waiting"] == [{"ref": card.external_id, "reason": "unresolved_names_match_a_row"}]
+    linked = sync_session.execute(
+        select(MatchExternalId).where(MatchExternalId.source == "yallakora", MatchExternalId.match_id == held.id)
+    ).first()
+    assert linked is None

@@ -6,7 +6,7 @@ One workflow per folder, each filtered to its own paths, plus `gitleaks` on ever
 
 | Workflow | Runs on | Jobs | Secrets |
 | --- | --- | --- | --- |
-| `backend.yml` | Pushes to `master` and PRs that change `backend/**` or the workflow; PRs that also change `infra/compose/**`, so the api-admin command check runs without making an infra-only push deploy a release (B2-R3-4); by hand, with `break_healthcheck` | `test`, `openapi`, `clients`; on `master` also `build`, `build-amd64`, `deploy`, `deploy-vps2`, `stable`, `retention` | `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, and the `VPS2_VCN_IP` variable |
+| `backend.yml` | Pushes to `master` and PRs that change `backend/**` or the workflow; PRs that also change `infra/compose/**` or `.github/oasdiff/**`, so those checks run without making such a push deploy a release (B2-R3-4); by hand, with `break_healthcheck` | `test`, `openapi`, `clients`; on `master` also `build`, `build-amd64`, `deploy`, `deploy-vps2`, `stable`, `retention` | `WG_CI_CONFIG`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, and the `VPS2_VCN_IP` variable |
 | `infra.yml` | Pushes to `master` and PRs that change `infra/**`, `.github/workflows/**` or `.github/actions/**` | `check`: `docker compose config` for the four Compose files, `systemd-analyze verify` on the home-box units, the Redis ACL placeholder check, `caddy validate`, shellcheck, actionlint. On a `master` push also `sync`. | The same three, for `sync` |
 | `gitleaks.yml` | Every push to any branch, and every PR | `scan`: the full history, redacted | None |
 | `app.yml` | Pushes to `master` and PRs that change `app/**`, `backend/openapi/public.json`, `madar-design/**` or the workflow | `check`: `flutter analyze`, the token-copy and literal checks, `flutter test` (goldens), the `prod` debug APK as the artifact `app-prod-debug.apk` | `APP_ENV_PROD`, written to `env/prod.json`; a run without secrets (Dependabot, a fork) builds from `env/example.json` with a warning, and its APK has no host |
@@ -34,7 +34,7 @@ Some failures are expected while the lanes merge for the first time:
 | --- | --- | --- |
 | `backend` `test` | ruff, mypy or pytest | Run the same locally ([local-dev.md](local-dev.md)): `cd backend && uv run ruff check . && uv run mypy --strict app && uv run pytest` |
 | `backend` `openapi` | "The committed OpenAPI documents are current" shows a diff | Re-export and commit `backend/openapi/`: export the same placeholder settings as the job's `env:` block, then `cd backend && uv run python -m app.cli export-openapi` |
-| `backend` `openapi` | "No breaking change against contract-v1" fails | The change breaks the frozen contract (FR-014). Make it additive. |
+| `backend` `openapi` | "No breaking change against contract-v1" fails | The change breaks the frozen contract (FR-014). Make it additive. Don't add to the [exception](#the-breaking-change-exception) without the owner's decision. |
 | `backend` `clients` | "The generated clients are stale" | Regenerate both and commit them in the contract-change PR (D14): `cd admin && pnpm install && pnpm orval`, then `cd app && flutter pub get && dart run swagger_parser && dart run build_runner build -d` |
 | `backend` `build` | Very slow, or Actions minutes run out | QEMU arm64 builds: [deploy-and-rollback.md "One-time setup"](deploy-and-rollback.md#one-time-setup) step 2 |
 | `backend` `build-amd64` | Fails where `build` passes | It builds natively on `ubuntu-24.04`; read the build log, not the QEMU path. The home box then pulls `madar-backend-amd64:stable` ([home-box.md](home-box.md#updates)) |
@@ -51,6 +51,24 @@ Some failures are expected while the lanes merge for the first time:
 | `app` | Goldens differ | Regenerate them only with the Flutter version in `app/.flutter-version`, on Linux x64. If only the runner differs, take them from the runner: see "Goldens and the Flutter pin" below (research R18). |
 | `admin` | `pnpm install --frozen-lockfile` fails | Run `pnpm install` in `admin/` and commit `pnpm-lock.yaml` |
 | `pwa` | Anything | [firebase-hosting.md "If it fails"](firebase-hosting.md#if-it-fails) |
+
+## The breaking-change exception
+
+`openapi`'s check runs `oasdiff breaking` against the frozen `contract-v1` with `--err-ignore /ignore/err-ignore.txt`. That file is `.github/oasdiff/err-ignore.txt`, and the job mounts `.github/oasdiff` read-only at `/ignore`. It isn't in `backend/openapi/`, because that folder holds exported documents.
+
+**What it covers:** one finding. The `response-property-any-of-added` rule on `data/anyOf[subschema #1: MatchDetail]/lineups` of `GET /v1/matches/{match_id}`, where D5 widened `lineups` from `null` to `MatchLineups | null`. oasdiff matches on the method, the path and the whole message, so that rule on any other property or path still fails, as does any other change to `lineups`.
+
+**Why:** the owner accepted this finding on 2026-11-05 (B1-R1-7). Old builds are safe: `app-v0.3.0` and `web-v0.1.0` declare `lineups` as `required dynamic`, so they parse a real value and ignore it ([research R15](../../specs/005-d05-live-and-discovery/research.md#r15-old-app-builds-are-safe)). `contract-v1` doesn't move.
+
+**When it can go:** when `contract-v1` is replaced by a tag that already has this `lineups`, since the finding no longer exists then. Delete the file's line, and the flag and mount with it if the file is empty. Until then, the line must stay: without it the job fails. If an unrelated contract change renumbers the `anyOf` and the message changes, the job fails too; treat that as a new finding to review, not a line to update on sight.
+
+Run it by hand from the repo root. The `docker run` should exit 0, and exit 1 without `--err-ignore`:
+
+```bash
+tmp=$(mktemp -d) && git show contract-v1:backend/openapi/public.json > "$tmp/public-v1.json"
+docker run --rm -v "$tmp:/base:ro" -v "$PWD/backend/openapi:/head:ro" -v "$PWD/.github/oasdiff:/ignore:ro" \
+  tufin/oasdiff:v1.35.0 breaking /base/public-v1.json /head/public.json --fail-on ERR --err-ignore /ignore/err-ignore.txt
+```
 
 ## Goldens and the Flutter pin
 

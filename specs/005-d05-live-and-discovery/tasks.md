@@ -153,7 +153,7 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 - [ ] T043 [US3] Start `worker-live` on VPS-2: give it `RAW_ROOT: ${RAW_ROOT:-/srv/raw}` and the `/srv/raw:/srv/raw` volume in `infra/compose/vps2.yml`, as `worker-imports` has, add it to the service list in `infra/scripts/deploy.sh` and any `infra.yml` expectation, and update `docs/runbooks/workers.md` (it says `worker-live` isn't started) and `docs/runbooks/uptime-kuma.md` (the `live` push monitor). Deploy so the capture can run.
 - [X] T044 [P] [US3] In `backend/tests/adapters/test_ratelimit.py`, test that `www.filgoal.com` and `www.yallakora.com` have `Bucket(capacity=2, refill_seconds=4.0)`, and that the poller and importer share the key. Then add them to `DEFAULT_LIMITS` in `backend/app/adapters/ratelimit.py`.
 - [ ] T045 [US3] By the morning, merge the signatures in [live-pipeline](contracts/live-pipeline.md#shared-code-b2-owns) to `master` in a small PR, as stubs that need no new table, and tell B1 to rebase: `record_unresolved(session, *, source, kind, name, competition, context)` in `backend/app/adapters/unresolved.py` (logs only for now), `resolve_channel` in `backend/app/adapters/resolve.py` (always unresolved for now), and, complete with a test in `backend/tests/adapters/test_health.py`, `record_live_cycle(session, *, status, items_found, finished_at)` in `backend/app/adapters/health.py`, which never sets `breaker_opened_at`. T054 and T053 fill them in.
-- [ ] T046 [US3] Rebase `d05-b2` on B1's merged contract PR before writing to the new tables from `backend/app/adapters/`.
+- [X] T046 [US3] Rebase `d05-b2` on B1's merged contract PR before writing to the new tables from `backend/app/adapters/`.
 
 ### Load-test carry-over (B2)
 
@@ -189,6 +189,15 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 - **T049's pages came from the owner's laptop,** not VPS-2, which wasn't reachable. Re-save one page from VPS-2 during T060 and check it parses the same.
 - **Still open, and why:** T043 needs the deploy; T045 needs the PR opened and merged; T047 needs T048's result for SD §2 and §7.1; T060 needs the deploy and a reachable host; T062 runs only if B1's T040 asks.
 - **Decided while building:** YallaKora writes only the broadcaster and its id on a row another source holds. `API_PUBLIC_WORKERS` makes the worker count a setting, so the resize needs no release.
+
+### Review fixes (round 1)
+
+From `reviews/b2-round-1.md`.
+
+- [X] B2-R1-1 Stop linking on text alone in `backend/app/adapters/upsert.py` (`_duplicate_probe`, the unresolved-team branch) for `yallakora`: it matches normalized names and `match_date` with no kickoff check and takes the first row, then writes `liveScoreMatchId` to it, and `backend/app/live/links.py` trusts that id. «الأهلي» v «الاتحاد» on one date in two countries gets the wrong broadcaster and, through the poller, the wrong score. After the fix, YallaKora links only with both teams resolved, kickoffs within 45 min and exactly one candidate, and otherwise writes no external id; other importers keep their behaviour. Add the same-name, same-date test that fails before the fix. (HIGH, per FR-022a and R7)
+- [X] B2-R1-2 Fix empty-day detection in `backend/app/adapters/yallakora.py:135`: `NO_MATCHES_TEXT` also sits in a hidden `#noLiveMatch` div on pages with matches, so renaming `matchesList` on a real page returns `[]` rather than raising `LayoutChanged`. After the fix, only the real empty-day element (`.noStats`, see `tests/fixtures/yallakora/2027-07-21.html`) returns `[]`. Add a test that renames the class in `2026-11-04.html` and fails before the fix. (HIGH, per T049, US3 scenario 6, constitution VII)
+- [X] B2-R1-3 Rebase on the spec branch (T046) and fix `backend/tests/adapters/test_schedule_fetch.py:210`: `assert len(loaded) == len(BEAT_SCHEDULE) + len(NOTIFY_SCHEDULE)` fails 19 against 15 now that `app.live.schedule` exists. Include it in the count and the disjointness check, then re-run `tests/adapters` and tick T046. (HIGH, per Quality Gates)
+- [X] B2-R1-12 Add a one-rule `oasdiff` exception to the `openapi` job in `.github/workflows/backend.yml` for the `response-property-any-of-added` finding on `MatchDetail.lineups` of `GET /v1/matches/{match_id}`, per the owner's decision on B1-R1-7 (2026-11-05; research R15 shows old builds are safe). The rule stays an error for every other path and property, and `contract-v1` doesn't move. Document the exception in `docs/runbooks/ci-workflows.md`, and show the job passes on this contract and still fails on a different breaking change. (HIGH, per FR-015, T017)
 
 ---
 

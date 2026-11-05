@@ -4,7 +4,8 @@ One fixture per savepoint, so a single bad item marks the run ``partial`` instea
 
 1. find the row: ``(source, external_id)``, the bridge's ``matches.legacy_id``, or the duplicate
    probe (the same resolved teams within 45 minutes, or the same normalized names on the same
-   ``match_date`` when a team id is missing);
+   ``match_date`` when a team id is missing). YallaKora's id reaches the live poller, so it links
+   more strictly: see ``_yallakora_probe``;
 2. lock it with ``SELECT … FOR UPDATE`` and re-read ``locked_fields`` under the lock, so an admin
    save that commits just before the import is never overwritten;
 3. write only unlocked fields whose value differs, and record the external id;
@@ -55,6 +56,14 @@ class SkipItem(Exception):
         self.reason = reason
 
 
+class WaitForEditor(Exception):
+    """No row may take this card's id yet, and a new row would duplicate one (FR-022a, US3)."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 @dataclass(frozen=True, slots=True)
 class LogoJob:
     """One logo to rehost: the table it belongs to, the row, the URL and who found it."""
@@ -75,6 +84,7 @@ class RunOutcome:
     skipped: list[dict[str, str]] = field(default_factory=list)
     unresolved: list[dict[str, str | None]] = field(default_factory=list)
     names_queued: int = 0
+    waiting: list[dict[str, str]] = field(default_factory=list)
     postponed: list[dict[str, str]] = field(default_factory=list)
     logo_jobs: list[LogoJob] = field(default_factory=list)
 
@@ -114,7 +124,7 @@ class UpsertPipeline:
             try:
                 with self.session.begin_nested():
                     item = normalize(raw) if normalize is not None else cast(NormalizedFixture, raw)
-                    created, changed, kickoff_changed = self._apply(item, outcome)
+                    applied = self._apply(item, outcome)
             except SkipItem as exc:
                 outcome.skipped.append(_skipped(raw, exc.reason))
                 continue
@@ -126,6 +136,9 @@ class UpsertPipeline:
                 )
                 outcome.skipped.append(_skipped(raw, "error"))
                 continue
+            if applied is None:
+                continue
+            created, changed, kickoff_changed = applied
             if item.postponed:
                 outcome.postponed.append({"ref": _ref(item)})
             if created:
@@ -153,7 +166,8 @@ class UpsertPipeline:
 
     # --- one fixture --------------------------------------------------------------------
 
-    def _apply(self, item: NormalizedFixture, outcome: RunOutcome) -> tuple[bool, bool, bool]:
+    def _apply(self, item: NormalizedFixture, outcome: RunOutcome) -> tuple[bool, bool, bool] | None:
+        """``(created, changed, kickoff_changed)``, or ``None`` for a card waiting on an editor."""
         home, away = item.home, item.away
         if not home or not away:
             raise SkipItem("missing_teams")
@@ -185,7 +199,13 @@ class UpsertPipeline:
                     {"name": result.name, "competition": item.competition, "match_ref": _ref(item)}
                 )
 
-        match_id, created = self._find_or_create(item, competition, home_team, away_team)
+        try:
+            match_id, created = self._find_or_create(item, competition, home_team, away_team)
+        except WaitForEditor as exc:
+            self._queue_unresolved(None, item, competition, home_team, away_team, outcome)
+            outcome.waiting.append(_skipped(item, exc.reason))
+            log.info("item_waiting", extra={"ref": _ref(item), "source": self.source, "why": exc.reason})
+            return None
         self._queue_unresolved(match_id, item, competition, home_team, away_team, outcome)
         locked, changed_fields, kickoff_changed = self._write_fields(
             match_id, item, competition, home_team, away_team, created=created
@@ -220,7 +240,7 @@ class UpsertPipeline:
 
     def _queue_unresolved(
         self,
-        match_id: int,
+        match_id: int | None,
         item: NormalizedFixture,
         competition: ResolveResult,
         home_team: ResolveResult,
@@ -280,7 +300,7 @@ class UpsertPipeline:
         home_team: ResolveResult,
         away_team: ResolveResult,
     ) -> tuple[int, bool]:
-        found = self._find_match(item)
+        found = self._find_match(item, home_team.entity_id, away_team.entity_id)
         if found is not None:
             return found, False
         match = Match(
@@ -302,7 +322,7 @@ class UpsertPipeline:
         self.session.flush()
         return match.id, True
 
-    def _find_match(self, item: NormalizedFixture) -> int | None:
+    def _find_match(self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None) -> int | None:
         if self.source == "legacy" and item.legacy_id:
             found = self.session.execute(select(Match.id).where(Match.legacy_id == item.legacy_id)).scalar_one_or_none()
             if found is not None:
@@ -318,26 +338,66 @@ class UpsertPipeline:
             ).scalar_one_or_none()
             if found is not None:
                 return found
-        return self._duplicate_probe(item)
+        if self.source == "yallakora":
+            return self._yallakora_probe(item, home_team_id, away_team_id)
+        return self._duplicate_probe(item, home_team_id, away_team_id)
 
-    def _duplicate_probe(self, item: NormalizedFixture) -> int | None:
+    def _yallakora_probe(
+        self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None
+    ) -> int | None:
+        """Link only on both teams, in order, and one kickoff within 45 minutes (FR-022a, R7).
+
+        ``app/live/links.py`` trusts a stored id, so a wrong link publishes another match's score.
+        ``None`` means no row holds this fixture, so the card gets its own. A card that might be a
+        row we can't prove it is waits: linking could be wrong, and a new row could be a duplicate.
+        """
+        if home_team_id is None or away_team_id is None:
+            if self._same_names_held_elsewhere(item):
+                raise WaitForEditor("unresolved_names_match_a_row")
+            return None
+        if item.kickoff_at is None:
+            return None
+        found = (
+            self.session.execute(
+                select(Match.id)
+                .where(
+                    Match.home_team_id == home_team_id,
+                    Match.away_team_id == away_team_id,
+                    Match.kickoff_at.between(item.kickoff_at - KICKOFF_TOLERANCE, item.kickoff_at + KICKOFF_TOLERANCE),
+                )
+                .order_by(Match.id)
+                .limit(2)
+            )
+            .scalars()
+            .all()
+        )
+        if len(found) > 1:
+            raise WaitForEditor("more_than_one_match")
+        return found[0] if found else None
+
+    def _same_names_held_elsewhere(self, item: NormalizedFixture) -> bool:
+        """A row with these names that day and no YallaKora id: one with an id is another of its cards."""
+        has_yallakora_id = (
+            select(MatchExternalId.match_id)
+            .where(MatchExternalId.match_id == Match.id, MatchExternalId.source == "yallakora")
+            .exists()
+        )
+        found = self.session.execute(
+            select(Match.id)
+            .where(
+                Match.match_date == item.match_date,
+                func.ar_normalize(Match.home_team_name) == func.ar_normalize(item.home or ""),
+                func.ar_normalize(Match.away_team_name) == func.ar_normalize(item.away or ""),
+                ~has_yallakora_id,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        return found is not None
+
+    def _duplicate_probe(
+        self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None
+    ) -> int | None:
         """A fixture another source already holds: the same teams within 45 min, or the same names."""
-        home_team_id = resolve_team(
-            self.session,
-            external_id=item.home_external_id,
-            name=item.home,
-            sport=item.sport,
-            competition_name=item.competition,
-            source=self.source,
-        ).entity_id
-        away_team_id = resolve_team(
-            self.session,
-            external_id=item.away_external_id,
-            name=item.away,
-            sport=item.sport,
-            competition_name=item.competition,
-            source=self.source,
-        ).entity_id
         if home_team_id is not None and away_team_id is not None and item.kickoff_at is not None:
             window = timedelta(minutes=KICKOFF_TOLERANCE.total_seconds() // 60)
             return self.session.execute(
