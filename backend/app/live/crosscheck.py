@@ -267,7 +267,8 @@ def _fulltime_step(
     showing = [reading for reading in known if reading.status == FINISHED]
     if len(showing) >= 2:
         return replace(held, met=True)
-    if any(reading.status in EXTRA_STATUSES for reading in known):
+    # No parser maps extra time yet, so a status nobody has seen may be it (B1-R2-1). + 210 still bounds the match.
+    if any(reading.status in EXTRA_STATUSES or reading.unknown_status is not None for reading in readings):
         return _FullTime()
     if showing:
         source = showing[0].source

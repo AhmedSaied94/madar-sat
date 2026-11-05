@@ -69,12 +69,12 @@ The minute follows these rules, in order:
 
 | Situation (usable readings) | What happens |
 |---|---|
-| Two or more readings show full time | The condition is met, even if another reading shows extra time or penalties |
-| Any reading shows extra time or penalties | A lone full time doesn't count. Clear `fulltime_source`, `fulltime_since` and `finish_wait_since` |
+| Two or more readings show full time | The condition is met, even if another reading shows extra time, penalties or an `unknown_status` |
+| Any reading shows extra time, penalties or an `unknown_status`, which may be either | A lone full time doesn't count. Clear `fulltime_source`, `fulltime_since` and `finish_wait_since`. The + 210 limit still bounds the match |
 | One reading shows it, from `fulltime_source`, and `fulltime_since` is `fulltime_hold` old or more | The condition is met |
 | One reading shows it, from `fulltime_source`, for less time | Keep waiting |
 | One reading shows it, from another source or with nothing held | Set `fulltime_source` to it and `fulltime_since` to now. Clear `finish_wait_since` |
-| `fulltime_source` read something else, including `unknown_status` | Clear all three. The 10 minutes start again |
+| `fulltime_source` read something else | Clear all three. The 10 minutes start again |
 | `fulltime_source` has no reading this poll, as after a failed request | Keep waiting, with nothing cleared |
 
 Once the condition is met:
