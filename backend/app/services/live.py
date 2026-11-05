@@ -8,7 +8,7 @@ from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Match
-from app.domain.status import derive_status
+from app.domain.status import STATUS_POSTPONED, derive_status
 from app.schemas import public as s
 from app.services.matches import match_score
 
@@ -31,6 +31,11 @@ def live_window_query(now: datetime) -> Select[Match]:
         )
         .order_by(Match.kickoff_at.asc(), Match.id.asc())
     )
+
+
+def poll_window_query(now: datetime) -> Select[Match]:
+    """What the poller reads. A postponed match stays on ``/v1/live`` as stored, but nothing more will come."""
+    return live_window_query(now).where(Match.status != STATUS_POSTPONED)
 
 
 async def list_live(session: AsyncSession, now: datetime) -> list[s.LiveState]:

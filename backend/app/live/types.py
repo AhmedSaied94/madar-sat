@@ -26,6 +26,14 @@ class Score:
     def is_nil(self) -> bool:
         return self == Score(0, 0)
 
+    @property
+    def goals(self) -> Score:
+        return Score(self.home, self.away)
+
+    @property
+    def has_penalties(self) -> bool:
+        return self.home_pen is not None and self.away_pen is not None
+
 
 @dataclass(frozen=True, slots=True)
 class Event:
@@ -129,7 +137,8 @@ class LiveState:
     confirmed: Score | None = None
     candidate: Candidate | None = None
     disagreement_since: datetime | None = None
-    previous_status: tuple[str | None, str | None] | None = None  # the last poll's (status, period)
+    previous_status: tuple[str | None, str | None] | None = None  # (status, period) of the last poll's primary
+    previous_primary: str | None = None  # the source status and minute came from in the last poll
 
 
 @dataclass(frozen=True, slots=True)

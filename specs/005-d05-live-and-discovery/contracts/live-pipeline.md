@@ -6,9 +6,9 @@ B1 builds it in `backend/app/live/`. B2 starts its worker and owns the shared ad
 
 | Task | Queue | Beat | Lock | Does |
 |---|---|---|---|---|
-| `live.scheduler` | `live` | every 60 s | `lock:live:scheduler` | Selects matches with `live_window_query`: the 150-minute start window, plus `feed` matches with no final state up to kickoff + 210 min. None or paused: returns without any request. Otherwise queues one `live.poll` |
+| `live.scheduler` | `live` | every 60 s | `lock:live:scheduler` | Selects matches with `poll_window_query`: the 150-minute start window, plus `feed` matches with no final state up to kickoff + 210 min, leaving out `postponed` ones. None or paused: returns without any request. Otherwise queues one `live.poll` |
 | `live.poll` | `live` | from the scheduler | `lock:live:poll`, `SET NX EX 90` | One cycle (below). An overlap exits |
-| `live.watchdog` | `maintenance` | every 2 min | `lock:live:watchdog` | Moves stale `feed` rows, or those past kickoff + 210 min, to the clock ([R6](../research.md#r6-falling-back-staying-honest-and-the-watchdog)) |
+| `live.watchdog` | `maintenance` | every 2 min | `lock:live:watchdog` | Moves stale `feed` rows, or those past kickoff + 210 min, to the clock, except `postponed` ones ([R6](../research.md#r6-falling-back-staying-honest-and-the-watchdog)) |
 | `live.prune_runs` | `maintenance` | daily | `lock:live:prune` | Deletes `live_poller` runs older than 30 days |
 | `live.check_robots` | `live` | daily | `lock:live:robots` | Compares each `robots.txt` with the committed copy. A difference opens `robots:<host>` |
 | `adapters.read_raw_page` | `maintenance` | on demand | none | Writes `rawview:<run>:<page>`. B2's ([R13](../research.md#r13-run-detail-reads-raw-pages-over-redis)) |
@@ -25,6 +25,8 @@ All use `bind=True`, `autoretry_for`, `retry_backoff`, `retry_jitter`, and a bou
 6. Open or close `live_problems`, send alerts after commit, write the `import_runs` row, and call `health.record_live_cycle`.
 
 The whole cycle must finish inside 60 s. A cycle that runs out of tokens uses what it has and logs the rest as skipped.
+
+Any exception while parsing a page counts as that source failing validation: one `format:` alert, and the other source is still used. One row's or one match's error is logged and counted in `match_errors`, and the rest carry on. The `import_runs` row always closes, as `failed` if the cycle itself broke.
 
 ## The pure interfaces
 
@@ -44,7 +46,7 @@ def decide(state: LiveState, filgoal: SideInput, yallakora: SideInput, now: date
 
 `SideInput` is `valid(reading)`, `not_covering`, or `unavailable`. `Decision` holds the status to write, the score to confirm (or none), the new candidate, the goal-event hold and the problems to open or close. Table-driven tests cover every row of SD §6.7's table, in both source orders.
 
-**Status and minute** come from FilGoal when it's usable, otherwise YallaKora. They need no second source. A status moving backwards (for example `finished` to `live`) needs two polls in a row.
+**Status and minute** come from FilGoal when it's usable, otherwise YallaKora. They need no second source. A status moving backwards (for example `finished` to `live`) needs two polls in a row from a source that was the primary in both, so one failed FilGoal request can't publish YallaKora's lag. A final status isn't written while a candidate or a disagreement is open: polling continues until the sources agree or the watchdog's hard limit moves the row to the clock. `Decision.write_status` is false for that poll, so the row keeps its last status and minute, and `status_updated_at` shows their age.
 
 ## Shared code B2 owns
 

@@ -16,6 +16,7 @@ LIVE_WINDOW = timedelta(minutes=120)
 STATUS_SCHEDULED = "scheduled"
 STATUS_LIVE = "live"
 STATUS_FINISHED = "finished"
+STATUS_POSTPONED = "postponed"
 
 
 @dataclass(frozen=True)

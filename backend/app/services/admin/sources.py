@@ -31,10 +31,10 @@ ENTITY = "source"
 WINDOW = timedelta(hours=24)
 SPARKLINE_POINTS = 24
 RUNS_MAX_LIMIT = 50
-KIND_LIVE = "live"
-KIND_LIVE_READER = "live_reader"
-LIVE_KINDS = frozenset({KIND_LIVE, KIND_LIVE_READER})
+# Named, not told apart by ``kind``: the release before 0007 loads every row's kind into its own list.
 LIVE_POLLER = "live_poller"
+LIVE_READER = "filgoal"
+LIVE_SOURCES = frozenset({LIVE_POLLER, LIVE_READER})
 IN_PLAY_STATUSES = ("live", "halftime", "extra_time", "penalties")
 RAW_REQUEST_TTL_S = 10
 
@@ -108,7 +108,7 @@ async def health(session: AsyncSession, now: datetime, name: str | None = None) 
         query = query.where(Source.name == name)
     else:
         # A live reader is a part of the Live poller's card, not a card of its own.
-        query = query.where(Source.kind != KIND_LIVE_READER)
+        query = query.where(Source.name != LIVE_READER)
     sources = list((await session.scalars(query)).all())
     if not sources:
         return []
@@ -133,7 +133,7 @@ async def health(session: AsyncSession, now: datetime, name: str | None = None) 
         by_source[run.source].append(run)
 
     running = await _running(names)
-    live = await _live_card(session) if any(source.kind == KIND_LIVE for source in sources) else None
+    live = await _live_card(session) if LIVE_POLLER in names else None
     return [
         _health(
             source,
@@ -141,7 +141,7 @@ async def health(session: AsyncSession, now: datetime, name: str | None = None) 
             latest.get(source.name),
             by_source[source.name],
             source.name in running,
-            live if source.kind == KIND_LIVE else None,
+            live if source.name == LIVE_POLLER else None,
         )
         for source in sources
     ]
@@ -197,7 +197,7 @@ def _bridge_configured() -> bool:
 async def check_runnable(session: AsyncSession, name: str) -> Source:
     """The source, if a run makes sense now: runnable kind, and its lock is free."""
     source = await get(session, name)
-    if source.kind in LIVE_KINDS:
+    if source.name in LIVE_SOURCES:
         raise source_not_runnable()
     if source.kind == "internal" and not (source.name == "legacy" and _bridge_configured()):
         raise source_not_runnable()

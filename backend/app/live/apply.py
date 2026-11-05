@@ -17,17 +17,30 @@ from sqlalchemy.orm import Session
 from app.adapters.health import bump_datasets
 from app.db.models import Match, MatchEvent, MatchLineup, MatchLiveState, MatchSourceReading
 from app.domain.lockable import STATUS_COLUMNS
-from app.live.types import GOAL_TYPES, Candidate, Decision, Event, LineupSide, LiveState, Score, SourceReading
+from app.domain.status import STATUS_POSTPONED
+from app.live.types import GOAL_TYPES, SOURCES, Candidate, Decision, Event, LineupSide, LiveState, Score, SourceReading
 
 log = logging.getLogger(__name__)
 
 LIVE_DATASET = "live"
 
 
-def load_state(session: Session, match: Match, primary_source: str | None) -> LiveState:
-    """What ``decide`` needs to remember, from ``match_live_state`` and the last poll's reading."""
+def _last_primary(session: Session, match_id: int) -> MatchSourceReading | None:
+    """The reading status came from in the last poll: every source read in one poll shares its ``read_at``."""
+    rows = {
+        row.source: row
+        for row in session.scalars(select(MatchSourceReading).where(MatchSourceReading.match_id == match_id))
+    }
+    if not rows:
+        return None
+    latest = max(row.read_at for row in rows.values())
+    return next(rows[source] for source in SOURCES if source in rows and rows[source].read_at == latest)
+
+
+def load_state(session: Session, match: Match) -> LiveState:
+    """What ``decide`` needs to remember, from ``match_live_state`` and the last poll's primary reading."""
     row = session.get(MatchLiveState, match.id)
-    previous = session.get(MatchSourceReading, (match.id, primary_source)) if primary_source else None
+    previous = _last_primary(session, match.id)
     confirmed = None
     if row is not None and row.confirmed_home is not None and row.confirmed_away is not None:
         confirmed = Score(row.confirmed_home, row.confirmed_away, row.confirmed_home_pen, row.confirmed_away_pen)
@@ -39,6 +52,7 @@ def load_state(session: Session, match: Match, primary_source: str | None) -> Li
         candidate=Candidate.from_json(row.candidate) if row is not None and row.candidate else None,
         disagreement_since=row.disagreement_since if row is not None else None,
         previous_status=(previous.status, previous.period) if previous is not None else None,
+        previous_primary=previous.source if previous is not None else None,
     )
 
 
@@ -46,9 +60,10 @@ def to_clock(match: Match, now: datetime) -> bool:
     """Back to the clock estimate, leaving ``match_live_state`` with the score. ``True`` when it moved.
 
     Only a ``feed`` row moves. A locked status or score stays too: a person answered for it, and
-    ``ck_matches_clock_no_score`` couldn't hold while keeping it.
+    ``ck_matches_clock_no_score`` couldn't hold while keeping it. A postponed match stays as stored:
+    the clock would show a match that never kicked off as live, then finished.
     """
-    if match.status_source != "feed":
+    if match.status_source != "feed" or match.status == STATUS_POSTPONED:
         return False
     if STATUS_COLUMNS & set(match.locked_fields or ()):
         log.info("live_fallback_skipped", extra={"match_id": match.id, "why": "locked"})

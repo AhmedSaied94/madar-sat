@@ -312,7 +312,7 @@ def test_the_memory_round_trips_through_load_state(sync_session):
     )
     sync_session.flush()
 
-    state = load_state(sync_session, match, "filgoal")
+    state = load_state(sync_session, match)
 
     assert state.confirmed == Score(1, 0)
     assert state.candidate == candidate
@@ -345,3 +345,81 @@ def test_the_alert_text_names_the_saved_page(sync_session):
 
 def test_closing_a_problem_that_never_opened_says_nothing(sync_session):
     assert close_problem(sync_session, "both_down", NOW) is None
+
+
+def _stored_reading(session, match, source, status, period, read_at):
+    session.add(
+        MatchSourceReading(
+            match_id=match.id, source=source, status=status, period=period, read_at=read_at, changed_at=read_at
+        )
+    )
+    session.flush()
+
+
+def test_the_last_polls_primary_is_filgoal_when_it_was_read_then(sync_session):
+    match = make_match(sync_session, KICKOFF)
+    _stored_reading(sync_session, match, "filgoal", "live", "1H", NOW)
+    _stored_reading(sync_session, match, "yallakora", "scheduled", None, NOW)
+
+    state = load_state(sync_session, match)
+
+    assert (state.previous_primary, state.previous_status) == ("filgoal", ("live", "1H"))
+
+
+def test_the_last_polls_primary_is_yallakora_when_filgoal_had_no_reading_in_that_poll(sync_session):
+    match = make_match(sync_session, KICKOFF)
+    _stored_reading(sync_session, match, "filgoal", "live", "1H", NOW - timedelta(seconds=60))
+    _stored_reading(sync_session, match, "yallakora", "scheduled", None, NOW)
+
+    state = load_state(sync_session, match)
+
+    assert (state.previous_primary, state.previous_status) == ("yallakora", ("scheduled", None))
+
+
+def test_a_match_never_read_has_no_previous_poll(sync_session):
+    match = make_match(sync_session, KICKOFF)
+
+    state = load_state(sync_session, match)
+
+    assert (state.previous_primary, state.previous_status) == (None, None)
+
+
+def test_a_postponed_row_never_goes_to_the_clock(sync_session):
+    match = make_match(sync_session, KICKOFF, status_source="feed", status="postponed", status_label="تأجيل")
+    before = version(sync_session, "live")
+
+    assert to_clock(match, NOW) is False
+    changed = apply_decision(sync_session, match, Decision(fallback=True), readings=[], now=NOW)
+    sync_session.flush()
+
+    assert changed is False
+    assert (match.status_source, match.status, match.status_label) == ("feed", "postponed", "تأجيل")
+    assert version(sync_session, "live") == before
+
+
+def test_a_held_final_status_leaves_status_and_minute_as_they_were(sync_session):
+    match = make_match(
+        sync_session,
+        KICKOFF,
+        status_source="feed",
+        status="live",
+        period="2H",
+        minute="90+3",
+        home_score=1,
+        away_score=1,
+    )
+    before = version(sync_session, "live")
+    held = Decision(candidate=Candidate(Score(2, 1), "filgoal", NOW, 1), disagreement_since=NOW, hold_goal_events=True)
+
+    apply_decision(
+        sync_session,
+        match,
+        held,
+        readings=[make_reading("filgoal", Score(2, 1), status="finished", period=None, minute=None, label="انتهت")],
+        now=NOW,
+    )
+    sync_session.flush()
+
+    assert (match.status, match.minute, match.home_score, match.away_score) == ("live", "90+3", 1, 1)
+    assert version(sync_session, "live") == before
+    assert sync_session.get(MatchLiveState, match.id).candidate["home"] == 2
