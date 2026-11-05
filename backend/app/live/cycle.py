@@ -12,7 +12,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Any, TypeVar
-from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import select
@@ -33,6 +32,7 @@ from app.live.pick import SlotCandidate, pick_slots
 from app.live.problems import sync_problems
 from app.live.robots import FILGOAL_HOST, GOAL_HOST, YALLAKORA_HOST, is_allowed
 from app.live.sources import filgoal, goal, yallakora
+from app.live.sources.common import safe_path
 from app.live.types import LayoutChanged, SideInput, SourceReading
 from app.live.watchdog import pause_feed_rows
 from app.services.live import FEED_WINDOW_BEFORE, WINDOW_AFTER, poll_window_query
@@ -279,9 +279,13 @@ def _read_pages(
             cycle.skipped += [f"{read.source}:{item.match_id}" for item in slots[number:]]
             return
         external_id = linked[slot.match_id]
-        assert slot.path is not None  # pick_slots keeps only slots with a path
+        path = safe_path(slot.path)
+        if path is None:
+            cycle.http_failures += 1
+            log.info("live_page_bad_path", extra={"source": read.source, "match_id": slot.match_id})
+            continue
         try:
-            page = _guarded_get(deps, read.source, urlsplit(slot.path).path)
+            page = _guarded_get(deps, read.source, path)
         except OutOfTokens:
             cycle.skipped += [f"{read.source}:{item.match_id}" for item in slots[number:]]
             return
@@ -290,7 +294,7 @@ def _read_pages(
             cycle.http_failures += 1
             log.info("live_page_blocked", extra={"source": read.source, "why": str(exc)[:200]})
             return
-        except (FetchError, httpx.HTTPError) as exc:
+        except (FetchError, httpx.HTTPError, httpx.InvalidURL) as exc:
             cycle.http_failures += 1
             log.info("live_page_failed", extra={"source": read.source, "why": str(exc)[:200]})
             continue
@@ -512,6 +516,8 @@ def _finish_run(deps: Deps, run_id: int, cycle: CycleLog, *, matches: int, broke
                 "match_errors": cycle.errors,
             }
         deps.record_live_cycle(session, status=status, items_found=matches, finished_at=now)
+        # A13's run list has this version in its ETag, as every importer's run does. Last, as in tasks.py.
+        bump_datasets(session, ["sources"])
 
 
 def _open_run(deps: Deps, now: datetime) -> int:

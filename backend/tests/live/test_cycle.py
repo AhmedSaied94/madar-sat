@@ -609,6 +609,46 @@ def test_each_cycle_writes_a_run_row_and_tells_health(world):
     assert world.health[0]["items_found"] == 1
 
 
+def test_each_cycle_moves_the_sources_version_so_a13_sees_its_run(world):
+    """The run list's ETag is built from it: without a move, a reload is a 304 on the old list."""
+    world.add_match()
+    with world.factory() as session:
+        before = version(session, "sources")
+
+    world.run()
+    world.run()
+
+    with world.factory() as session:
+        assert version(session, "sources") == before + 2
+
+
+@pytest.mark.parametrize("href", [":abc/x", "@evil.example/x", "/a/../login", "/a/./login", "/a\\b"])
+def test_a_bad_path_from_a_page_costs_that_page_and_nothing_else(world, href):
+    match_id = world.add_match()
+    world.caps["LIVE_PAGE_CAP_YALLAKORA"] = 2
+    body = yallakora_list(("y1", 1, 0, YK_LIVE)).decode().replace("/league/1/match/y1/x#MC", href)
+    world.fetch.pages[YALLAKORA_LIST] = body.encode()
+
+    world.run()
+
+    assert world.last_run().status == "succeeded"
+    assert world.match(match_id).home_score == 1
+    assert [url for url in world.fetch.requests if url not in (FILGOAL_LIST, YALLAKORA_LIST)] == []
+
+
+def test_a_url_httpx_refuses_costs_that_page_and_nothing_else(world):
+    match_id = world.add_match()
+    world.caps["LIVE_PAGE_CAP_YALLAKORA"] = 2
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 0, YK_LIVE))
+    page_url = "https://www.yallakora.com/league/1/match/y1/x"
+    world.fetch.pages[page_url] = httpx.InvalidURL("Invalid non-printable ASCII character in URL")
+
+    world.run()
+
+    assert world.last_run().status == "succeeded"
+    assert world.match(match_id).home_score == 1
+
+
 def test_one_failed_source_makes_a_partial_run(world):
     world.add_match()
     world.fetch.pages[FILGOAL_LIST] = httpx.ConnectError("no route")

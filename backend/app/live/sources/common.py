@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, date, datetime, time
 from typing import Any
+from urllib.parse import urlsplit
 
 # lxml ships no stubs and the project has no override for it (see app/adapters/ysscores.py).
 from lxml import html as lxml_html  # type: ignore[import-untyped]
@@ -66,6 +67,23 @@ def pair(home: int | None, away: int | None) -> Score | None:
     if home is None or away is None:
         raise LayoutChanged("only one side has a score")
     return Score(home, away)
+
+
+def safe_path(link: str | None) -> str | None:
+    """The path of a link a page gave us, or ``None`` if we shouldn't ask for it (B1-R1-7, B1-R2-2).
+
+    Pages are untrusted, and httpx normalizes what it's given: ``:8080/x`` reaches another port and ``/a/../b``
+    and ``/a/./b`` get past the deny list, which reads the raw path. One such row must cost its page and nothing else.
+    """
+    if not link or any(ord(char) < 33 or ord(char) == 127 for char in link):
+        return None
+    try:
+        path = urlsplit(link).path
+    except ValueError:
+        return None
+    if not path.startswith("/") or path.startswith("//") or any(part in path for part in ("\\", ":", "@")):
+        return None
+    return None if {".", ".."} & set(path.split("/")) else path
 
 
 def require_score(status: str, score: Score | None) -> None:

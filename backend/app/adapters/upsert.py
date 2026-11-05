@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, timedelta
 from typing import Any, cast
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import and_, func, or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.adapters.base import NormalizedFixture, ParsedFixture
@@ -45,6 +45,10 @@ from app.db.models import (
 log = logging.getLogger(__name__)
 
 KICKOFF_TOLERANCE = timedelta(minutes=45)
+# Two matches for one club are at least this far apart, so anything closer is the same fixture misspelt.
+SAME_CLUB_GAP = timedelta(hours=12)
+# As A13's suggestions: close enough to make an editor look, and never enough to link on.
+NEAR_SPELLING = 0.3
 SOURCES = ("ysscores", "legacy", "manual", "yallakora")
 
 
@@ -347,52 +351,66 @@ class UpsertPipeline:
     ) -> int | None:
         """Link only on both teams, in order, and one kickoff within 45 minutes (FR-022a, R7).
 
-        ``app/live/links.py`` trusts a stored id, so a wrong link publishes another match's score.
-        ``None`` means no row holds this fixture, so the card gets its own. A card that might be a
-        row we can't prove it is waits: linking could be wrong, and a new row could be a duplicate.
+        ``app/live/links.py`` trusts a stored id, so a wrong link publishes another match's score. ``None``
+        means no row can hold this fixture, so the card gets its own. Anything less certain waits: a spelling
+        we can't resolve, or a team already playing around then, may well be a row we hold, and a copy of it
+        shows fans a match with no channels (05 Nov 2026: 75 rows from one run).
         """
         if home_team_id is None or away_team_id is None:
-            if self._same_names_held_elsewhere(item):
-                raise WaitForEditor("unresolved_names_match_a_row")
-            return None
-        if item.kickoff_at is None:
-            return None
-        found = (
-            self.session.execute(
-                select(Match.id)
-                .where(
-                    Match.home_team_id == home_team_id,
-                    Match.away_team_id == away_team_id,
-                    Match.kickoff_at.between(item.kickoff_at - KICKOFF_TOLERANCE, item.kickoff_at + KICKOFF_TOLERANCE),
+            raise WaitForEditor("unresolved_team")
+        if item.kickoff_at is not None:
+            found = (
+                self.session.execute(
+                    select(Match.id)
+                    .where(
+                        Match.home_team_id == home_team_id,
+                        Match.away_team_id == away_team_id,
+                        Match.kickoff_at.between(
+                            item.kickoff_at - KICKOFF_TOLERANCE, item.kickoff_at + KICKOFF_TOLERANCE
+                        ),
+                    )
+                    .order_by(Match.id)
+                    .limit(2)
                 )
-                .order_by(Match.id)
-                .limit(2)
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        if len(found) > 1:
-            raise WaitForEditor("more_than_one_match")
-        return found[0] if found else None
+            if len(found) > 1:
+                raise WaitForEditor("more_than_one_match")
+            if found:
+                return found[0]
+        if self._may_be_a_near_row(item, (home_team_id, away_team_id)):
+            raise WaitForEditor("may_be_a_near_row")
+        return None
 
-    def _same_names_held_elsewhere(self, item: NormalizedFixture) -> bool:
-        """A row with these names that day and no YallaKora id: one with an id is another of its cards."""
-        has_yallakora_id = (
-            select(MatchExternalId.match_id)
-            .where(MatchExternalId.match_id == Match.id, MatchExternalId.source == "yallakora")
-            .exists()
-        )
-        found = self.session.execute(
-            select(Match.id)
-            .where(
-                Match.match_date == item.match_date,
-                func.ar_normalize(Match.home_team_name) == func.ar_normalize(item.home or ""),
-                func.ar_normalize(Match.away_team_name) == func.ar_normalize(item.away or ""),
-                ~has_yallakora_id,
+    def _may_be_a_near_row(self, item: NormalizedFixture, teams: tuple[int, int]) -> bool:
+        """A club plays once a day, so a row holding either team around then, even as text, is suspect."""
+        card_names = (func.ar_normalize(item.home), func.ar_normalize(item.away))
+
+        def holds(id_column: Any, name_column: Any) -> Any:
+            return or_(id_column.in_(teams), and_(id_column.is_(None), func.ar_normalize(name_column).in_(card_names)))
+
+        def looks_like(id_column: Any, name_column: Any) -> Any:
+            similar = [func.similarity(func.ar_normalize(name_column), name) >= NEAR_SPELLING for name in card_names]
+            return and_(id_column.is_(None), or_(*similar))
+
+        held = or_(holds(Match.home_team_id, Match.home_team_name), holds(Match.away_team_id, Match.away_team_name))
+        if item.kickoff_at is None:
+            near: Any = and_(Match.match_date == item.match_date, held)
+        else:
+            near = or_(
+                and_(Match.kickoff_at.is_(None), Match.match_date == item.match_date, held),
+                and_(Match.kickoff_at.between(item.kickoff_at - SAME_CLUB_GAP, item.kickoff_at + SAME_CLUB_GAP), held),
+                # هامبورغ and هامبورج: mapping one spelling fills nothing on a row holding the other.
+                and_(
+                    Match.kickoff_at.between(item.kickoff_at - KICKOFF_TOLERANCE, item.kickoff_at + KICKOFF_TOLERANCE),
+                    or_(
+                        looks_like(Match.home_team_id, Match.home_team_name),
+                        looks_like(Match.away_team_id, Match.away_team_name),
+                    ),
+                ),
             )
-            .limit(1)
-        ).scalar_one_or_none()
-        return found is not None
+        return self.session.execute(select(Match.id).where(near).limit(1)).scalar_one_or_none() is not None
 
     def _duplicate_probe(
         self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None

@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from sqlalchemy import select
 
-from app.db.models import Channel, Competition, CompetitionAlias, Team, TeamAlias, UnresolvedName
+from app.db.models import Channel, Competition, CompetitionAlias, Match, Team, TeamAlias, UnresolvedName
 from app.domain.arabic import ar_normalize
 
 from .helpers import ADMIN, audit_rows, changed_datasets, dataset_versions, if_match
@@ -138,6 +138,125 @@ async def test_map_writes_the_alias_audits_and_bumps(editor_client, session, fro
     assert await changed_datasets(session, before) == {"unresolved_names"}
     [audit] = await audit_rows(session, "unresolved_name", row.id)
     assert audit.diff["state"] == ["open", "mapped"]
+
+
+async def _fixture_row(session, now, *, home="أهلي النص", away="زمالك النص", competition="دوري الربط", **fields):
+    values = {"kickoff_at": now + timedelta(hours=1), **fields}
+    match = Match(
+        source="ysscores",
+        match_date=now.date(),
+        competition_name=competition,
+        home_team_name=home,
+        away_team_name=away,
+        **values,
+    )
+    session.add(match)
+    await session.flush()
+    return match
+
+
+async def _map(client, row, team, *, scope=True):
+    etag = (await _listed(client, row.id))["etag"]
+    response = await client.post(
+        f"{URL}/{row.id}/map", json={"target_id": team.id, "scope_to_competition": scope}, headers=if_match(etag)
+    )
+    assert response.status_code == 200, response.text
+
+
+async def test_map_fills_the_empty_team_on_coming_matches_with_that_name(editor_client, session, frozen_now):
+    """A linker compares ids: without this, a mapped name still can't link the match it was queued for."""
+    team = await _team(session, "فريق الربط")
+    row = await _name(session, frozen_now, "زمالك النص", competition="دوري الربط")
+    away_side = await _fixture_row(session, frozen_now)
+    home_side = await _fixture_row(session, frozen_now, home="زمالك النص", away="أهلي النص")
+    before = await dataset_versions(session)
+
+    await _map(editor_client, row, team)
+
+    await session.refresh(away_side)
+    await session.refresh(home_side)
+    assert away_side.away_team_id == team.id
+    assert away_side.home_team_id is None
+    assert home_side.home_team_id == team.id
+    assert await changed_datasets(session, before) == {"unresolved_names", "matches"}
+    [audit] = await audit_rows(session, "matches", away_side.id)
+    assert audit.diff == {"away_team_id": [None, team.id]}
+    assert audit.admin_user_id == editor_client.admin.id
+
+
+async def test_map_fills_only_what_the_name_and_competition_prove(editor_client, session, frozen_now):
+    team = await _team(session, "فريق الربط")
+    other_team = await _team(session, "فريق آخر")
+    row = await _name(session, frozen_now, "زمالك النص", competition="دوري الربط")
+    other_league = await _fixture_row(session, frozen_now, competition="دوري آخر")
+    finished = await _fixture_row(session, frozen_now, status="finished", status_source="feed")
+    long_ago = await _fixture_row(session, frozen_now, kickoff_at=frozen_now - timedelta(minutes=211))
+    locked = await _fixture_row(session, frozen_now, locked_fields=["away_team_id"])
+    already = await _fixture_row(session, frozen_now, away_team_id=other_team.id)
+    before = await dataset_versions(session)
+
+    await _map(editor_client, row, team, scope=False)
+
+    for match in (other_league, finished, long_ago, locked):
+        await session.refresh(match)
+        assert match.away_team_id is None
+    await session.refresh(already)
+    assert already.away_team_id == other_team.id
+    assert await changed_datasets(session, before) == {"unresolved_names"}
+
+
+async def test_map_does_not_fill_a_row_into_a_copy_of_another(editor_client, session, frozen_now):
+    """Two rows with the same teams can't link at all, so the row with the channels would lose its feed."""
+    home = await _team(session, "أهلي الربط")
+    team = await _team(session, "فريق الربط")
+    original = await _fixture_row(session, frozen_now, home_team_id=home.id, away_team_id=team.id)
+    copy = await _fixture_row(session, frozen_now, home_team_id=home.id)
+    row = await _name(session, frozen_now, "زمالك النص", competition="دوري الربط")
+    before = await dataset_versions(session)
+
+    await _map(editor_client, row, team)
+
+    await session.refresh(copy)
+    await session.refresh(original)
+    assert copy.away_team_id is None
+    assert original.away_team_id == team.id
+    assert await changed_datasets(session, before) == {"unresolved_names"}
+
+
+async def test_map_fills_a_match_with_no_kickoff_yet(editor_client, session, frozen_now):
+    team = await _team(session, "فريق الربط")
+    row = await _name(session, frozen_now, "زمالك النص", competition="دوري الربط")
+    no_time = await _fixture_row(session, frozen_now, kickoff_at=None, time_tbd=True)
+
+    await _map(editor_client, row, team)
+
+    await session.refresh(no_time)
+    assert no_time.away_team_id == team.id
+
+
+async def test_map_of_a_name_with_no_competition_fills_nothing(editor_client, session, frozen_now):
+    """With no competition to compare, a name shared by several clubs could fill the wrong match."""
+    team = await _team(session, "فريق الربط")
+    row = await _name(session, frozen_now, "زمالك النص")
+    match = await _fixture_row(session, frozen_now, competition="")
+
+    await _map(editor_client, row, team, scope=False)
+
+    await session.refresh(match)
+    assert match.away_team_id is None
+
+
+async def test_map_of_a_competition_fills_no_team(editor_client, session, frozen_now):
+    competition = Competition(name="دوري جديد")
+    session.add(competition)
+    await session.flush()
+    row = await _name(session, frozen_now, "زمالك النص", kind="competition", competition="دوري الربط")
+    match = await _fixture_row(session, frozen_now)
+
+    await _map(editor_client, row, competition)
+
+    await session.refresh(match)
+    assert match.away_team_id is None
 
 
 async def test_map_without_scope_writes_an_any_competition_alias(editor_client, session, frozen_now):

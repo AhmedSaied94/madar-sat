@@ -179,6 +179,19 @@ def test_the_cli_defaults_are_the_ones_the_disk_figure_assumes():
     assert (args.minutes, args.page_cap) == (240, DEFAULT_PAGE_CAP)
 
 
+@pytest.mark.parametrize("href", [":abc/x", "//[x/y", "/a/../login"])
+def test_a_bad_path_on_one_row_does_not_end_the_capture(run, href):
+    body = yallakora_list(("y1", 1, 0, YK_LIVE), ("y2", 2, 0, YK_LIVE)).decode()
+    run.site.pages[YALLAKORA_LIST] = body.replace("/league/1/match/y1/x#MC", href).encode()
+    run.site.pages["https://www.yallakora.com/league/1/match/y2/x"] = b"<html>y2</html>"
+
+    run()
+
+    assert any("yallakora_y2" in name for name in run.saved())
+    assert not any("yallakora_y1" in name for name in run.saved())
+    assert GOAL_LIST in run.site.requests
+
+
 def test_pages_are_saved_gzipped(run):
     run()
 
