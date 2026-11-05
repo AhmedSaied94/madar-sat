@@ -35,8 +35,9 @@ export function BrandMark({ size, className }: BrandMarkProps): ReactElement {
     >
       <defs>
         <mask id={bandId} maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32">
-          <rect width="32" height="32" fill="#fff" />
-          <path d={NEAR_HALF_OF_RING} fill="none" stroke="#000" strokeWidth="3.08" />
+          {/* Mask luminance, never painted: white keeps the planet and black cuts the ring's band. */}
+          <rect width="32" height="32" fill="white" />
+          <path d={NEAR_HALF_OF_RING} fill="none" stroke="black" strokeWidth="3.08" />
         </mask>
       </defs>
       <rect width="32" height="32" rx="9" className="fill-on-accent" />
