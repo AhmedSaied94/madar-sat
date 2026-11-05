@@ -228,6 +228,14 @@ The next section's tests and parsers don't wait for T020. T021 corrects them onc
 - [ ] T076 [US4] Compare with the boards at 1440 and 1024 in both themes and attach the screenshots to the PR. Walk [quickstart A](quickstart.md#lane-a) over WireGuard after deploy, including SC-007's timing.
 - [X] T077 [US4] Add Lane A's items to `docs/owner-actions.md`, and the queue's use to `docs/runbooks/imports-and-sources.md`, where its section already exists.
 
+### Review fixes (round 1)
+
+From `reviews/a-round-1.md`.
+
+- [X] A-R1-1 Add the logo field to `admin/src/features/rights/RightsHolderEditor.tsx`: A9 has none, so a holder's logo can't be set or changed, though the API takes `logo_asset_id`. Follow the team and competition editors. Add a test that fails before the fix. (HIGH, per FR-032, US4 scenario 4, PB A9)
+- [X] A-R1-2 Make satellites a multi-select per carriage in `admin/src/features/rights/RightsHolderEditor.tsx` (`rightsHolderBodySchema`, `draftOf`, `bodyOf`): each carriage is forced to exactly one, so saving a migrated holder silently drops its other satellites, and a carriage with none blocks the save. After the fix every id is kept and zero is allowed. Add a test with a two-satellite carriage that fails before the fix. (HIGH, per FR-032, PB A9)
+- [X] A-R1-3 Show the conflict state on A9 in `admin/src/features/rights/RightsHolderEditor.tsx` and `RightsHoldersPage.tsx`: a stale save only shows a message and retrying resends the same tag, and a stale reorder only shows a toast. After the fix both open `ConflictDialog` as `TeamEditor.tsx` does. Add tests that fail before the fix, including that `If-Match` equals the detail's ETag. (HIGH, per US4 scenario 5)
+
 ---
 
 ## Lane M

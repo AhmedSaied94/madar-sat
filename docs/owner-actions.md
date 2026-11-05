@@ -577,13 +577,15 @@ Code on `d05-a` in `../madar-a`, merged up from the spec branch with B1's and B2
 
 What is in: A13's unresolved-names queue with map/create/ignore, the Live poller card, the run detail's five stages and the raw page, and A9 (list, drag order, editor, delete). Two D4 test fixtures needed the new `SourceHealth.live` field; nothing else outside `admin/` changed.
 
+Round-1 review fixes (A-R1-1 to A-R1-3) are on `d05-a`, uncommitted, with 285 admin tests: A9's editor now has the logo field (upload and remove), a satellites multi-select on each carriage, and `ConflictDialog` on a stale save and a stale reorder.
+
 #### Before merge
 
 - [ ] **T076 The screenshots.** Compare A13 Sources, A13 Run detail and A9 with their boards at 1440 and 1024 in both themes and attach the screenshots to the PR. The code is done; the comparison is a pair of eyes on the built app (`pnpm dev`, Prism, `?mock=`) — never on the mockup HTML.
 
 #### After merge
 
-- [ ] **T076 The WireGuard walk, with SC-007's timing.** With the admin deployed, open A13 and A9 at `https://10.8.0.1` over `wg0` ([admin-access](runbooks/admin-access.md)) and walk [quickstart A](../specs/005-d05-live-and-discovery/quickstart.md#lane-a): map, create and ignore a queued name; read a failed run's raw page; create a rights holder and see it in `/v1/competitions/{id}`. Record how long a map takes (SC-007).
+- [ ] **T076 The WireGuard walk, with SC-007's timing.** With the admin deployed, open A13 and A9 at `https://10.8.0.1` over `wg0` ([admin-access](runbooks/admin-access.md)) and walk [quickstart A](../specs/005-d05-live-and-discovery/quickstart.md#lane-a): map, create and ignore a queued name; read a failed run's raw page; create a rights holder and see it in `/v1/competitions/{id}`. On A9, also set and remove a logo, save a carriage with two satellites and with none, and try a two-browser stale save and stale reorder (A-R1-1 to A-R1-3). Record how long a map takes (SC-007).
 - [ ] **T060's rows in the queue.** The queue fills from B2's YallaKora run and B1's poller, so the walk above is real data only after their first runs on the host.
 
 ### Lane M: app

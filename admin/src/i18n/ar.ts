@@ -799,9 +799,8 @@ export const rights = {
   beamLabel: 'الحزمة',
   accessLabel: 'الوصول',
   packageLabel: 'الباقة',
-  satellite: 'القمر',
+  satellites: 'الأقمار',
   edit: 'تعديل',
-  satelliteRequired: 'اختر قمراً لكل مجموعة ترددات',
   frequency: 'التردد',
   removeCarriage: 'حذف القمر',
   removeFrequency: 'حذف التردد',
@@ -823,7 +822,10 @@ export const rights = {
   satelliteCount: (count: number): string => `${count} قمر`,
   noCarriages: 'لا أقمار بعد',
   logo: 'الشعار',
+  logoUpload: 'رفع شعار',
+  logoRemove: 'إزالة الشعار',
   name: 'اسم الجهة',
+  unsavedBody: 'إذا غادرت الآن ستفقد تعديلات الجهة.',
 } as const;
 
 export type ErrorCode =
