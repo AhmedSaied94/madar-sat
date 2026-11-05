@@ -125,3 +125,27 @@ SELECT column_name FROM information_schema.columns
 ```
 
 One row. The downgrade drops it and leaves every other row unchanged; no data migration is needed.
+
+## Revision 0008
+
+Added by spec 031 (`backend/alembic/versions/0008_live_sources.py`). Expand-only: nullable columns, one new table and one new source, so the release before it keeps running on the new schema. `match_live_state.candidate` is no longer written, and stays for rollback.
+
+- `match_live_state`: `score_first_source`, `score_changed_at`, `drop_since`, `status_drop_since`, `fulltime_source`, `fulltime_since`, `finish_wait_since`: what the [live rules](live-poller.md#the-rules-in-short) remember.
+- `match_source_readings`: `peak_minute smallint`, `peak_period text`: the highest minute each source has shown.
+- `match_events.missing_since`: an event's deletion waits for five minutes of absence.
+- `match_stats (match_id, source, stats jsonb, updated_at)`, primary key `(match_id, source)`, `ON DELETE CASCADE`: Goal.com's summary, never served to clients.
+- `sources`: the row `('goal', 'internal')`. `GET /sources` hides it by name.
+
+Check it after a deploy:
+
+```sql
+SELECT version_num FROM alembic_version;                                 -- 0008
+SELECT count(*) FROM information_schema.columns
+ WHERE (table_name, column_name) IN (('match_live_state', 'drop_since'),
+                                     ('match_source_readings', 'peak_minute'),
+                                     ('match_events', 'missing_since'),
+                                     ('match_stats', 'stats'));          -- 4
+SELECT name, kind FROM sources WHERE name = 'goal';                      -- goal, internal
+```
+
+The downgrade drops all of it and removes `goal`'s rows from the tables the poller or an editor's name mapping can fill, then the source itself. Other sources' rows stay.

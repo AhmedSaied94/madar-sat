@@ -1,8 +1,8 @@
 """FilGoal: the list page and the JSON model in a match's coverage page (SD §6.7, research R1).
 
-Status strings come from saved pages' ``MatchStatusHistory``; any other string fails validation, so
-a state nobody has seen can't publish a wrong score. The capture completes this table (T021).
-``Comments`` and every other written field are never read: facts only.
+Status strings come from saved pages' ``MatchStatusHistory``. A row with any other keeps its score and
+nothing else (FR-001), and the cycle tells the owner. ``Comments`` and every other written field are
+never read: facts only.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from typing import Any
 
 from app.domain.time import CAIRO
 from app.live.sources.common import (
+    UNKNOWN_LABEL_CHARS,
     cairo_kickoff,
     clean,
     first,
@@ -42,12 +43,17 @@ STATUS_MAP: dict[str, tuple[str, str | None]] = {
     "انتهت": ("finished", None),
     "تأجيل": ("postponed", None),
 }
-# The minute a period starts from, and its length.
+# The minute a period starts from.
 PERIOD_BASE = {"1H": 0, "2H": 45}
+# Elapsed time in a period past its length, beyond which the clock isn't a match minute (research R4).
+MAX_STOPPAGE_MINUTES = 15
+# ``TimeElapsed`` comes back shifted by whole hours, so a negative value is this many minutes short.
+CLOCK_SHIFT_MINUTES = 60
 
 # ``MatchEventTypeId`` → our type. Yellow cards (3) aren't served. Others are logged, not guessed.
-EVENT_TYPES = {1: "goal", 8: "penalty", 21: "red_card"}
+EVENT_TYPES = {1: "goal", 4: "red_card", 8: "penalty", 9: "missed_penalty", 20: "own_goal", 21: "red_card"}
 NOT_SERVED_EVENT_TYPES = frozenset({3})
+OWN_GOAL_TYPE = 20
 
 _MODEL = re.compile(r"viewModelData\s*=\s*")
 _DECODER = json.JSONDecoder()
@@ -57,11 +63,10 @@ def match_path(external_id: str) -> str:
     return f"/matches/{external_id}/coverage/"
 
 
-def _status(name: str) -> tuple[str, str | None]:
+def _status(name: str) -> tuple[str | None, str | None, str | None]:
+    """``(status, period, unknown_status)``: an unknown one leaves the first two empty."""
     state = STATUS_MAP.get(clean(name))
-    if state is None:
-        raise LayoutChanged(f"filgoal: unknown status {clean(name)[:40]!r}")
-    return state
+    return (state[0], state[1], None) if state is not None else (None, None, clean(name)[:UNKNOWN_LABEL_CHARS])
 
 
 def parse_list(body: bytes, *, today: date) -> list[SourceReading]:
@@ -79,7 +84,7 @@ def parse_list(body: bytes, *, today: date) -> list[SourceReading]:
 
 def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
     label = text_of(first(row.xpath(".//*[contains(concat(' ', normalize-space(@class), ' '), ' status ')]")))
-    status, period = _status(require_name(label, "status"))
+    status, period, unknown = _status(require_name(label, "status"))
     names = row.xpath(".//div/div/span")
     if len(names) < 2:
         raise LayoutChanged("filgoal: a row without two teams")
@@ -88,7 +93,8 @@ def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
     if home_score is None or away_score is None:
         raise LayoutChanged("filgoal: a row without its scores")
     score = pair(score_part(home_score.text_content()), score_part(away_score.text_content()))
-    require_score(status, score)
+    if status is not None:
+        require_score(status, score)
     return SourceReading(
         source=SOURCE,
         external_id=external_id,
@@ -100,8 +106,9 @@ def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
         period=period,
         minute=None,
         score=score,
-        status_label=label,
+        status_label=None if unknown else label,
         page_path=match_path(external_id),
+        unknown_status=unknown,
     )
 
 
@@ -124,16 +131,26 @@ def _field(model: dict[str, Any], name: str) -> Any:
 
 
 def _minute(current: dict[str, Any], period: str | None) -> str | None:
-    """``TimeElapsed`` counts from this period's start; past its length it shows as stoppage time."""
+    """``TimeElapsed`` counts from this period's start; past its length it shows as stoppage time.
+
+    FilGoal's start time is shifted by whole hours, flipping between server groups, so the value can be
+    negative: −98 at minute 22 (research R4). The limit is on elapsed time in the period, before the base
+    is added, or every second-half minute past 60 would disappear.
+    """
     if period is None or not current.get("IsCounterEnabled"):
         return None
     elapsed = (current.get("TimeElapsed") or {}).get("Minutes")
-    if not isinstance(elapsed, int) or elapsed < 0:
+    if not isinstance(elapsed, int):
         return None
+    if elapsed < 0:
+        elapsed %= CLOCK_SHIFT_MINUTES
     base = PERIOD_BASE[period]
     length = current.get("MatchStatusMaxTime")
-    if isinstance(length, int) and elapsed > length:
-        return f"{base + length}+{elapsed - length}"
+    if isinstance(length, int):
+        if elapsed > length + MAX_STOPPAGE_MINUTES:
+            return None
+        if elapsed > length:
+            return f"{base + length}+{elapsed - length}"
     return str(base + elapsed)
 
 
@@ -172,11 +189,13 @@ def _events(model: dict[str, Any]) -> tuple[tuple[Event, ...], tuple[str, ...]]:
         team = item.get("TeamId")
         if team not in (home_id, away_id):
             raise LayoutChanged("filgoal: an event for neither team")
+        # ``TeamId`` is the player's team, and an own goal counts for the other one (research R7).
+        counts_for_home = (team == home_id) != (type_id == OWN_GOAL_TYPE)
         events.append(
             Event(
                 external_id=str(_field(item, "Id")),
                 type=kind,
-                side="home" if team == home_id else "away",
+                side="home" if counts_for_home else "away",
                 minute=_event_minute(item),
                 player=clean(item.get("PlayerAName")) or None,
             )
@@ -224,9 +243,10 @@ def parse_match(body: bytes) -> SourceReading:
     if not isinstance(current, dict):
         raise LayoutChanged("filgoal: the model has no current status")
     label = clean(_field(current, "MatchStatusName"))
-    status, period = _status(require_name(label, "status"))
+    status, period, unknown = _status(require_name(label, "status"))
     score = _score(model)
-    require_score(status, score)
+    if status is not None:
+        require_score(status, score)
     events, ignored = _events(model)
     return SourceReading(
         source=SOURCE,
@@ -241,7 +261,8 @@ def parse_match(body: bytes) -> SourceReading:
         score=score,
         events=events,
         lineups=_lineups(model),
-        status_label=label,
+        status_label=None if unknown else label,
         page_path=match_path(str(model["Id"])),
         ignored_event_types=ignored,
+        unknown_status=unknown,
     )

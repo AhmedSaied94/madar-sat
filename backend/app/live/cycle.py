@@ -1,14 +1,15 @@
 """One poll (005 contracts/live-pipeline.md, One cycle). Celery-free, so a fake fetcher can drive it.
 
 Each match gets its own transaction ending in the ``live`` bump, and alerts go out only after that
-transaction commits. Source problems are ``format:`` and ``down:``. No outbox row is written (FR-014).
+transaction commits. Source problems are ``format:``, ``down:`` and ``unknown_status:``. No outbox row is
+written (FR-014 of spec 005).
 """
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Any, TypeVar
 from urllib.parse import urlsplit
@@ -30,8 +31,8 @@ from app.live.crosscheck import BOTH_DOWN, decide
 from app.live.links import link_reading
 from app.live.pick import SlotCandidate, pick_slots
 from app.live.problems import sync_problems
-from app.live.robots import FILGOAL_HOST, YALLAKORA_HOST, is_allowed
-from app.live.sources import filgoal, yallakora
+from app.live.robots import FILGOAL_HOST, GOAL_HOST, YALLAKORA_HOST, is_allowed
+from app.live.sources import filgoal, goal, yallakora
 from app.live.types import LayoutChanged, SideInput, SourceReading
 from app.live.watchdog import pause_feed_rows
 from app.services.live import FEED_WINDOW_BEFORE, WINDOW_AFTER, poll_window_query
@@ -45,8 +46,8 @@ POLLER = "live_poller"
 CYCLE_DEADLINE_S = 50.0
 MAX_LOGGED = 50
 USABLE_STATES = frozenset({"ok", "failing"})
-HOSTS = {filgoal.SOURCE: FILGOAL_HOST, yallakora.SOURCE: YALLAKORA_HOST}
-LIST_PATHS = {filgoal.SOURCE: filgoal.LIST_PATH, yallakora.SOURCE: yallakora.LIST_PATH}
+# A list row's stage fills in a match page that doesn't say which half it's in.
+STAGED_ON_THE_LIST = frozenset({"live", "halftime"})
 
 
 class OutOfTokens(Exception):
@@ -81,6 +82,7 @@ class SourceRead:
     pages_to_save: list[RawPage] = field(default_factory=list)
     reason: str | None = None
     pages_read: int = 0
+    unknown_statuses: set[str] = field(default_factory=set)
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +104,7 @@ class CycleLog:
     reads: list[SourceRead] = field(default_factory=list)
     states: dict[str, str] = field(default_factory=dict)
     raw_ref: str | None = None
+    filgoal_slots: set[int] = field(default_factory=set)
 
 
 def _send(deps: Deps, texts: Sequence[str]) -> None:
@@ -135,12 +138,6 @@ def _validated(source: str, parse: Callable[[], T]) -> T:
         raise LayoutChanged(f"{source}: an unexpected page shape ({type(exc).__name__})") from exc
 
 
-def _parse_list(source: str, body: bytes, now: datetime) -> list[SourceReading]:
-    today = now.astimezone(CAIRO).date()
-    parser = filgoal.parse_list if source == filgoal.SOURCE else yallakora.parse_list
-    return _validated(source, lambda: parser(body, today=today))
-
-
 def _parse_filgoal_page(body: bytes, external_id: str) -> SourceReading:
     reading = filgoal.parse_match(body)
     if reading.external_id != external_id:
@@ -148,14 +145,69 @@ def _parse_filgoal_page(body: bytes, external_id: str) -> SourceReading:
     return reading
 
 
+def _parse_yallakora_page(body: bytes, external_id: str) -> SourceReading:
+    return yallakora.parse_match(body, external_id=external_id)
+
+
+def _parse_goal_page(body: bytes, external_id: str) -> SourceReading:
+    reading = goal.parse_match(body)
+    if reading.external_id != external_id:
+        raise LayoutChanged("goal: the page is about another match")
+    return reading
+
+
+@dataclass(frozen=True, slots=True)
+class LiveSource:
+    name: str
+    host: str
+    list_path: str
+    parse_list: Callable[..., list[SourceReading]]
+    parse_page: Callable[[bytes, str], SourceReading]
+    page_cap: Callable[[LiveSettings], int]
+    enabled: Callable[[LiveSettings], bool] = lambda _settings: True
+
+
+FILGOAL = LiveSource(
+    filgoal.SOURCE,
+    FILGOAL_HOST,
+    filgoal.LIST_PATH,
+    filgoal.parse_list,
+    _parse_filgoal_page,
+    lambda settings: settings.page_cap_filgoal,
+)
+YALLAKORA = LiveSource(
+    yallakora.SOURCE,
+    YALLAKORA_HOST,
+    yallakora.LIST_PATH,
+    yallakora.parse_list,
+    _parse_yallakora_page,
+    lambda settings: settings.page_cap_yallakora,
+)
+GOAL = LiveSource(
+    goal.SOURCE,
+    GOAL_HOST,
+    goal.LIST_PATH,
+    goal.parse_list,
+    _parse_goal_page,
+    lambda settings: settings.page_cap_goal,
+    lambda settings: settings.goal_enabled,
+)
+# Each group reads its lists and then its pages. Goal.com answers slowly, so it only uses time left over (R8).
+READ_GROUPS: tuple[tuple[LiveSource, ...], ...] = ((FILGOAL, YALLAKORA), (GOAL,))
+BY_NAME = {source.name: source for group in READ_GROUPS for source in group}
+
+
+def _parse_list(source: str, body: bytes, now: datetime) -> list[SourceReading]:
+    today = now.astimezone(CAIRO).date()
+    return _validated(source, lambda: BY_NAME[source].parse_list(body, today=today))
+
+
 def _parse_page(source: str, body: bytes, external_id: str) -> SourceReading:
-    if source == yallakora.SOURCE:
-        return _validated(source, lambda: yallakora.parse_match(body, external_id=external_id))
-    return _validated(source, lambda: _parse_filgoal_page(body, external_id))
+    return _validated(source, lambda: BY_NAME[source].parse_page(body, external_id))
 
 
 def _guarded_get(deps: Deps, source: str, path: str) -> RawPage:
-    host = HOSTS[source]
+    host = BY_NAME[source].host
     if not is_allowed(host, path):
         raise FetchError(f"{host}{path} is off limits")
     return deps.fetch(f"https://{host}{path}", host)
@@ -163,12 +215,12 @@ def _guarded_get(deps: Deps, source: str, path: str) -> RawPage:
 
 def _read_list(deps: Deps, source: str, now: datetime, cycle: CycleLog) -> SourceRead:
     read = SourceRead(source)
-    host = HOSTS[source]
+    host = BY_NAME[source].host
     if deps.backoff.active(host):
         read.outcome, read.reason = "failed", "backoff"
         return read
     try:
-        page = _guarded_get(deps, source, LIST_PATHS[source])
+        page = _guarded_get(deps, source, BY_NAME[source].list_path)
     except OutOfTokens:
         read.outcome, read.reason = "skipped", "out_of_tokens"
         cycle.skipped.append(f"{source}:list")
@@ -193,9 +245,23 @@ def _read_list(deps: Deps, source: str, now: datetime, cycle: CycleLog) -> Sourc
         read.pages_to_save.append(page)
         return read
     read.readings = {row.external_id: row for row in rows}
+    read.unknown_statuses.update(row.unknown_status for row in rows if row.unknown_status)
     if deps.hashes.changed(page.url, page.body):
         read.pages_to_save.append(page)
     return read
+
+
+def _with_list_stage(page: SourceReading, row: SourceReading | None) -> SourceReading:
+    """A match page may say only ``live``, and its list row knows the half: YallaKora's does (R2)."""
+    if page.status != "live" or page.period is not None or row is None or row.status not in STAGED_ON_THE_LIST:
+        return page
+    return replace(
+        page,
+        status=row.status,
+        period=row.period,
+        status_label=row.status_label,
+        minute=page.minute if row.status == "live" else None,
+    )
 
 
 def _read_pages(
@@ -207,7 +273,7 @@ def _read_pages(
     cycle: CycleLog,
 ) -> None:
     """Replaces list readings with match pages. A page that fails validation stops the whole source."""
-    host = HOSTS[read.source]
+    host = BY_NAME[read.source].host
     for number, slot in enumerate(slots):
         if deps.monotonic() >= deadline:
             cycle.skipped += [f"{read.source}:{item.match_id}" for item in slots[number:]]
@@ -238,7 +304,9 @@ def _read_pages(
             return
         if reading.ignored_event_types:
             cycle.ignored_event_types.update(reading.ignored_event_types)
-        read.readings[external_id] = reading
+        if reading.unknown_status:
+            read.unknown_statuses.add(reading.unknown_status)
+        read.readings[external_id] = _with_list_stage(reading, read.readings.get(external_id))
         if deps.hashes.changed(page.url, page.body):
             read.pages_to_save.append(page)
 
@@ -269,9 +337,8 @@ def _link_all(deps: Deps, read: SourceRead, window_ids: set[int], now: datetime,
 
 
 def _slots(deps: Deps, read: SourceRead, window: Sequence[WindowMatch], linked: dict[int, str]) -> list[SlotCandidate]:
-    host = HOSTS[read.source]
+    source = BY_NAME[read.source]
     is_filgoal = read.source == filgoal.SOURCE
-    cap = deps.settings.page_cap_filgoal if is_filgoal else deps.settings.page_cap_yallakora
     candidates = [
         SlotCandidate(
             match_id=match.id,
@@ -283,7 +350,7 @@ def _slots(deps: Deps, read: SourceRead, window: Sequence[WindowMatch], linked: 
         for match in window
         if match.id in linked
     ]
-    return pick_slots(candidates, host=host, cap=cap)
+    return pick_slots(candidates, host=source.host, cap=source.page_cap(deps.settings))
 
 
 def _save_raw(deps: Deps, run_id: int, reads: Sequence[SourceRead], now: datetime) -> str | None:
@@ -316,8 +383,17 @@ def _next_state(row: LiveSourceState, outcome: str, down_after: int) -> None:
             row.state = "failing"
 
 
+def _unknown_status_problems(session: Session, read: SourceRead, raw_ref: str | None, now: datetime) -> list[str]:
+    """It doesn't stop the source: the row's score still counts, and the owner reads the saved page (FR-001)."""
+    key = f"unknown_status:{read.source}"
+    if not read.unknown_statuses:
+        return sync_problems(session, closed=(key,), now=now)
+    log.warning("live_unknown_status", extra={"source": read.source, "labels": sorted(read.unknown_statuses)})
+    return sync_problems(session, opened=(key,), now=now, raw_ref=raw_ref)
+
+
 def _update_sources(deps: Deps, reads: Sequence[SourceRead], raw_ref: str | None, now: datetime) -> dict[str, str]:
-    """``live_source_state`` and the ``format:`` / ``down:`` problems, in one transaction."""
+    """``live_source_state`` and the source problems, in one transaction."""
     states: dict[str, str] = {}
     texts: list[str] = []
     with deps.session_factory() as session, session.begin():
@@ -330,6 +406,7 @@ def _update_sources(deps: Deps, reads: Sequence[SourceRead], raw_ref: str | None
             before = row.state
             if read.outcome == "ok":
                 row.state, row.consecutive_failures, row.last_ok_at = "ok", 0, now
+                texts += _unknown_status_problems(session, read, raw_ref, now)
                 texts += sync_problems(session, closed=(f"format:{read.source}", f"down:{read.source}"), now=now)
             elif read.outcome != "skipped":
                 _next_state(row, read.outcome, deps.settings.down_after_failures)
@@ -353,9 +430,12 @@ def _side(read: SourceRead, state: str, external_id: str | None) -> SideInput:
     """A source that merely failed this cycle has nothing to say; only a stopped one is ``unavailable``."""
     if state not in USABLE_STATES:
         return SideInput.unavailable()
-    if read.outcome == "ok" and external_id is not None and external_id in read.readings:
-        return SideInput.valid(read.readings[external_id])
-    return SideInput.not_covering()
+    if read.outcome != "ok" or external_id is None or external_id not in read.readings:
+        return SideInput.not_covering()
+    reading = read.readings[external_id]
+    if reading.unknown_status is not None and reading.score is None:
+        return SideInput.not_covering()  # nothing to use, and it mustn't keep the match from going stale
+    return SideInput.valid(reading)
 
 
 def _apply_match(
@@ -367,13 +447,30 @@ def _apply_match(
     raw_ref: str | None,
 ) -> bool:
     readings = [side.reading for side in sides.values() if side.reading is not None]
+    settings = deps.settings
     with deps.session_factory() as session, session.begin():
         match = session.get(Match, match_id, with_for_update=True)
         if match is None:
             return False
         state = load_state(session, match)
-        decision = decide(state, sides[filgoal.SOURCE], sides[yallakora.SOURCE], now, wait=deps.settings.confirm_wait)
-        changed = apply_decision(session, match, decision, readings=readings, now=now, has_page_slot=has_slot)
+        decision = decide(
+            state,
+            sides,
+            now,
+            drop_hold=settings.drop_hold,
+            disagree_after=settings.disagree_after,
+            fulltime_hold=settings.fulltime_hold,
+        )
+        changed = apply_decision(
+            session,
+            match,
+            decision,
+            readings=readings,
+            now=now,
+            has_page_slot=has_slot,
+            drop_hold=settings.drop_hold,
+            stuck_after=settings.stuck_after,
+        )
         closed = list(decision.close_problems)
         if readings:
             closed.append(f"stale:{match_id}")
@@ -409,6 +506,9 @@ def _finish_run(deps: Deps, run_id: int, cycle: CycleLog, *, matches: int, broke
                 "sources": states,
                 "skipped": cycle.skipped[:MAX_LOGGED],
                 "ignored_event_types": sorted(cycle.ignored_event_types)[:MAX_LOGGED],
+                "unknown_statuses": {
+                    read.source: sorted(read.unknown_statuses)[:MAX_LOGGED] for read in reads if read.unknown_statuses
+                },
                 "match_errors": cycle.errors,
             }
         deps.record_live_cycle(session, status=status, items_found=matches, finished_at=now)
@@ -427,7 +527,7 @@ def run_cycle(deps: Deps) -> dict[str, Any]:
     now = deps.clock()
     with deps.session_factory() as session, session.begin():
         if paused(session, now):
-            pause_feed_rows(session, now)
+            pause_feed_rows(session, now, stuck_after=deps.settings.stuck_after)
             return {"skipped": "paused"}
         window = _window(session, now)
     if not window:
@@ -453,45 +553,71 @@ def _close_broken_run(deps: Deps, run_id: int, cycle: CycleLog, matches: int, ex
         log.exception("live_run_not_closed", extra={"run_id": run_id})
 
 
-def _poll(deps: Deps, run_id: int, window: Sequence[WindowMatch], now: datetime, cycle: CycleLog) -> None:
-    deadline = deps.monotonic() + CYCLE_DEADLINE_S
+def _read_group(
+    deps: Deps,
+    sources: Sequence[LiveSource],
+    window: Sequence[WindowMatch],
+    now: datetime,
+    deadline: float,
+    cycle: CycleLog,
+    *,
+    after_others: bool,
+) -> dict[str, dict[int, str]]:
+    """Lists, then links, then pages, adding to ``cycle.reads``. Returns ``source → match id → external id``."""
+    reads = [
+        _past_deadline(source.name, cycle)
+        if after_others and deps.monotonic() >= deadline
+        else _read_list(deps, source.name, now, cycle)
+        for source in sources
+    ]
+    cycle.reads += reads
     window_ids = {match.id for match in window}
-    reads = cycle.reads
-    reads += [_read_list(deps, source, now, cycle) for source in (filgoal.SOURCE, yallakora.SOURCE)]
-    links: dict[str, dict[int, str]] = {}
-    filgoal_slots: set[int] = set()
-    for read in reads:
-        links[read.source] = _link_all(deps, read, window_ids, now, cycle) if read.outcome == "ok" else {}
+    links = {
+        read.source: _link_all(deps, read, window_ids, now, cycle) if read.outcome == "ok" else {} for read in reads
+    }
     for read in reads:
         if read.outcome != "ok":
             continue
         slots = _slots(deps, read, window, links[read.source])
         if read.source == filgoal.SOURCE:
-            filgoal_slots = {slot.match_id for slot in slots}
+            cycle.filgoal_slots = {slot.match_id for slot in slots}
         _read_pages(deps, read, slots, links[read.source], deadline, cycle)
+    return links
 
+
+def _past_deadline(source: str, cycle: CycleLog) -> SourceRead:
+    """Not the source's fault: no failure counts, and the other sources have had their reads."""
+    cycle.skipped.append(f"{source}:list")
+    return SourceRead(source, outcome="skipped", reason="past_deadline")
+
+
+def _poll(deps: Deps, run_id: int, window: Sequence[WindowMatch], now: datetime, cycle: CycleLog) -> None:
+    deadline = deps.monotonic() + CYCLE_DEADLINE_S
+    links: dict[str, dict[int, str]] = {}
+    for number, group in enumerate(READ_GROUPS):
+        enabled = [source for source in group if source.enabled(deps.settings)]
+        links |= _read_group(deps, enabled, window, now, deadline, cycle, after_others=number > 0)
+
+    reads = cycle.reads
     raw_ref = cycle.raw_ref = _save_raw(deps, run_id, reads, now)
     states = cycle.states = _update_sources(deps, reads, raw_ref, now)
 
     by_source = {read.source: read for read in reads}
     for match in window:
-        sides = {
-            source: _side(by_source[source], states[source], links[source].get(match.id))
-            for source in (filgoal.SOURCE, yallakora.SOURCE)
-        }
+        sides = {source: _side(read, states[source], links[source].get(match.id)) for source, read in by_source.items()}
         try:
-            if _apply_match(deps, match.id, sides, match.id in filgoal_slots, now, raw_ref):
+            if _apply_match(deps, match.id, sides, match.id in cycle.filgoal_slots, now, raw_ref):
                 cycle.changed += 1
         except Exception:  # noqa: BLE001 - one match's error can't cost the others their poll
             cycle.errors += 1
             log.exception("live_match_not_applied", extra={"match_id": match.id})
 
 
-def has_work_in(session_factory: Callable[[], Session], now: datetime) -> bool:
+def has_work_in(session_factory: Callable[[], Session], now: datetime, *, stuck_after: timedelta) -> bool:
     """The scheduler's check. Paused rows go to the clock here, with no request and no alert."""
     with session_factory() as session, session.begin():
         if paused(session, now):
-            pause_feed_rows(session, now)
+            pause_feed_rows(session, now, stuck_after=stuck_after)
             return False
         return session.scalars(poll_window_query(now).limit(1)).first() is not None
 

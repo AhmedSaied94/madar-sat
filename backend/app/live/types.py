@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
-SOURCES = ("filgoal", "yallakora")
+# The order is a preference: for a status at the same stage, and for events and lineups (FR-017).
+SOURCES = ("filgoal", "goal", "yallakora")
 GOAL_TYPES = frozenset({"goal", "own_goal", "penalty"})
 FINAL_STATUSES = frozenset({"finished", "cancelled", "abandoned"})
 
@@ -75,6 +77,8 @@ class SourceReading:
     status_label: str | None = None
     page_path: str | None = None  # the match page, when the list row links to it
     ignored_event_types: tuple[str, ...] = ()  # names the parser doesn't map, for the run log
+    unknown_status: str | None = None  # a status nobody has seen: status, period and minute stay empty (FR-001)
+    stats: tuple[dict[str, Any], ...] | None = None  # ``{type, home, away}`` rows, from Goal.com only
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,33 +102,11 @@ class SideInput:
 
 
 @dataclass(frozen=True, slots=True)
-class Candidate:
-    """A new score seen but not yet confirmed (data-model ``match_live_state``)."""
+class Peak:
+    """The highest match minute one source has shown for a match, and the period it was in (research R4)."""
 
-    score: Score
-    source: str
-    first_seen_at: datetime
-    polls: int
-
-    def as_json(self) -> dict[str, Any]:
-        return {
-            "home": self.score.home,
-            "away": self.score.away,
-            "home_pen": self.score.home_pen,
-            "away_pen": self.score.away_pen,
-            "source": self.source,
-            "first_seen_at": self.first_seen_at.isoformat(),
-            "polls": self.polls,
-        }
-
-    @classmethod
-    def from_json(cls, value: dict[str, Any]) -> Candidate:
-        return cls(
-            score=Score(value["home"], value["away"], value.get("home_pen"), value.get("away_pen")),
-            source=value["source"],
-            first_seen_at=datetime.fromisoformat(value["first_seen_at"]),
-            polls=value["polls"],
-        )
+    minute: int
+    period: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,25 +116,38 @@ class LiveState:
     match_id: int
     status: str
     period: str | None
+    minute: str | None = None
+    status_label: str | None = None
     confirmed: Score | None = None
-    candidate: Candidate | None = None
+    drop_since: datetime | None = None
+    status_drop_since: datetime | None = None
+    score_first_source: str | None = None
+    score_changed_at: datetime | None = None
+    fulltime_source: str | None = None
+    fulltime_since: datetime | None = None
+    finish_wait_since: datetime | None = None
     disagreement_since: datetime | None = None
-    previous_status: tuple[str | None, str | None] | None = None  # (status, period) of the last poll's primary
-    previous_primary: str | None = None  # the source status and minute came from in the last poll
+    peaks: Mapping[str, Peak] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
 class Decision:
-    fallback: bool = False  # both sources unusable: back to the clock estimate
+    """What one poll means. Every memory field is the value to store next, changed or not."""
+
+    fallback: bool = False  # every enabled source unusable: back to the clock estimate
     write_status: bool = False
     status: str | None = None
     period: str | None = None
     minute: str | None = None
     status_label: str | None = None
-    status_reading: SourceReading | None = None
     confirm: Score | None = None
-    candidate: Candidate | None = None
+    drop_since: datetime | None = None
+    status_drop_since: datetime | None = None
+    score_first_source: str | None = None
+    score_changed_at: datetime | None = None
+    fulltime_source: str | None = None
+    fulltime_since: datetime | None = None
+    finish_wait_since: datetime | None = None
     disagreement_since: datetime | None = None
-    hold_goal_events: bool = False
     open_problems: tuple[str, ...] = ()
     close_problems: tuple[str, ...] = ()

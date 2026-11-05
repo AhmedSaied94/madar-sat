@@ -25,16 +25,20 @@ from app.db.models import (
     MatchEvent,
     MatchExternalId,
     MatchLineup,
+    MatchSourceReading,
+    MatchStats,
     NotificationOutbox,
     Source,
+    Team,
     UnresolvedName,
 )
 from app.db.session import sync_engine
 from app.live import cycle as cycle_module
 from app.live.backoff import Backoff, PageHashes, next_delay
 from app.live.config import LiveSettings
-from app.live.cycle import Deps, OutOfTokens, delete_old_runs, has_work_in, run_cycle
-from app.live.sources import filgoal, yallakora
+from app.live.cycle import Deps, OutOfTokens, delete_old_runs, run_cycle
+from app.live.cycle import has_work_in as has_work_within
+from app.live.sources import filgoal, goal, yallakora
 from app.live.types import LayoutChanged
 from app.workers.base import Retryable
 from tests.live.helpers import make_match, version
@@ -43,6 +47,7 @@ NOW = datetime(2026, 11, 4, 20, 0, tzinfo=UTC)
 KICKOFF = NOW - timedelta(minutes=30)
 FILGOAL_LIST = "https://www.filgoal.com/matches/"
 YALLAKORA_LIST = "https://www.yallakora.com/matches-center"
+GOAL_LIST = f"https://{goal.HOST}{goal.LIST_PATH}"
 FIXTURES = Path(__file__).parent / "fixtures"
 LIVE = "الشوط الاول"
 YK_LIVE = "الشوط الأول"
@@ -73,6 +78,53 @@ def yallakora_list(*rows) -> bytes:
     ).encode()
 
 
+GOAL_LIVE = {"1H": {"type": "FIRST_HALF", "minute": 20}, "2H": {"type": "SECOND_HALF", "minute": 70}}
+
+
+def goal_list(*rows) -> bytes:
+    """Rows of ``(id, home, away, status, period)``, with the link the real list has for each."""
+    matches = [
+        {
+            "id": id_,
+            "status": status,
+            "period": GOAL_LIVE.get(period),
+            "score": {"teamA": h, "teamB": a},
+            "startDate": "2026-11-04T19:30:00.000Z",
+            "teamA": {"name": "أ"},
+            "teamB": {"name": "ب"},
+        }
+        for id_, h, a, status, period in rows
+    ]
+    links = "".join(f'<a href="/ar-eg/match/x/{id_}">x</a>' for id_, *_ in rows)
+    groups = [{"competition": {"name": "دوري"}, "matches": matches}]
+    blob = json.dumps({"props": {"pageProps": {"content": {"liveScores": groups}}}}, ensure_ascii=False)
+    script = f'<script id="__NEXT_DATA__" type="application/json">{blob}</script>'
+    return f"<html><body>{script}{links}</body></html>".encode()
+
+
+def goal_page(id_="g1", *, stats=None) -> bytes:
+    match = {
+        "id": id_,
+        "status": "LIVE",
+        "period": GOAL_LIVE["1H"],
+        "score": {"teamA": 1, "teamB": 0},
+        "startDate": "2026-11-04T19:30:00.000Z",
+        "teamA": {"name": "أ"},
+        "teamB": {"name": "ب"},
+        "events": [
+            {
+                "type": "GOAL",
+                "side": "TEAM_A",
+                "period": {"minute": 12},
+                "scorer": {"id": "p1", "name": "لاعب"},
+            }
+        ],
+        "stats": {"summary": stats or []},
+    }
+    blob = json.dumps({"props": {"pageProps": {"content": {"match": match}}}}, ensure_ascii=False)
+    return f'<html><body><script id="__NEXT_DATA__" type="application/json">{blob}</script></body></html>'.encode()
+
+
 class Pages:
     """A fake fetcher. A value is a body, or an exception to raise."""
 
@@ -84,6 +136,10 @@ class Pages:
         other_home, other_away = other if other is not None else (home, away)
         self.pages[FILGOAL_LIST] = filgoal_list(("f1", home, away, LIVE))
         self.pages[YALLAKORA_LIST] = yallakora_list(("y1", other_home, other_away, YK_LIVE))
+        return self
+
+    def goal(self, home: int = 0, away: int = 0, *, status="LIVE", period="1H"):
+        self.pages[GOAL_LIST] = goal_list(("g1", home, away, status, period))
         return self
 
     def __call__(self, url: str, host: str) -> RawPage:
@@ -155,12 +211,6 @@ def factory(_prepare_database):
             trans.rollback()
 
 
-@pytest.fixture(autouse=True)
-def _yallakora_knows_live(monkeypatch):
-    """Its live status strings arrive with the capture (T021); one stands in for them here."""
-    monkeypatch.setitem(yallakora.STATUS_MAP, YK_LIVE, ("live", "1H"))
-
-
 class World:
     def __init__(self, factory, tmp_path):
         self.factory = factory
@@ -171,7 +221,12 @@ class World:
         self.unresolved: list[dict] = []
         self.clock = Clock()
         self.raw_root = tmp_path
-        self.caps = {"LIVE_PAGE_CAP_FILGOAL": 0, "LIVE_PAGE_CAP_YALLAKORA": 0}
+        self.caps = {
+            "LIVE_PAGE_CAP_FILGOAL": 0,
+            "LIVE_PAGE_CAP_YALLAKORA": 0,
+            "LIVE_PAGE_CAP_GOAL": 0,
+            "LIVE_GOAL_ENABLED": False,
+        }
 
     def deps(self, **changes) -> Deps:
         values = {
@@ -203,7 +258,13 @@ class World:
             match = make_match(session, kickoff, **values)
             session.add(MatchExternalId(source="filgoal", external_id="f1", match_id=match.id))
             session.add(MatchExternalId(source="yallakora", external_id="y1", match_id=match.id))
+            session.add(MatchExternalId(source="goal", external_id="g1", match_id=match.id))
             return match.id
+
+    def with_goal(self, *values, **changes):
+        self.caps["LIVE_GOAL_ENABLED"] = True
+        self.fetch.goal(*values, **changes)
+        return self
 
     def match(self, match_id):
         from app.db.models import Match
@@ -236,6 +297,10 @@ def world(factory, tmp_path):
     return World(factory, tmp_path)
 
 
+def has_work_in(factory, now):
+    return has_work_within(factory, now, stuck_after=LiveSettings().stuck_after)
+
+
 def test_both_sources_agreeing_put_the_score_on_the_row(world):
     match_id = world.add_match()
     world.fetch.both(1, 0)
@@ -262,16 +327,13 @@ def test_a_match_with_no_opened_page_takes_status_and_score_from_the_lists(world
     assert world.match(match_id).status == "live"
 
 
-def test_one_source_ahead_changes_nothing_then_the_other_confirms(world):
+def test_one_source_ahead_goes_out_at_once(world):
     match_id = world.add_match()
     world.run()
 
     world.fetch.both(1, 0, other=(0, 0))
     world.run()
-    assert world.match(match_id).home_score == 0
 
-    world.fetch.both(1, 0)
-    world.run()
     assert world.match(match_id).home_score == 1
 
 
@@ -280,12 +342,12 @@ def test_a_disagreement_alerts_once_after_the_wait_and_closes_on_agreement(world
     world.run()
     world.fetch.both(1, 0, other=(0, 0))
 
-    for _ in range(5):
+    for _ in range(11):
         world.run()
 
     disagreement = [text for text in world.alerts if str(match_id) in text]
     assert len(disagreement) == 1
-    assert world.match(match_id).home_score == 0
+    assert world.match(match_id).home_score == 1
     assert world.problem(f"disagree:{match_id}").closed_at is None
 
     world.fetch.both(1, 0)
@@ -360,8 +422,8 @@ def test_a_pause_acts_as_both_down_with_no_alert_and_no_request(world):
 def test_a_changed_format_gives_no_wrong_score(world):
     match_id = world.add_match()
     world.run()
-    # The same class moved to other data: the status is unknown, so nothing is read from it.
-    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 9, 9, "حالة جديدة"))
+    # Not a status any more, and not a score either: the page has changed shape.
+    world.fetch.pages[FILGOAL_LIST] = b"<html><body>Just a moment...</body></html>"
     world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 0, 0, YK_LIVE))
 
     world.run()
@@ -461,7 +523,7 @@ def test_repeated_failures_never_open_the_breaker_and_the_source_recovers(world)
     assert world.problem("down:filgoal").closed_at is not None
 
 
-def test_both_down_goes_to_the_clock_with_one_alert_and_recovery_restores_the_score(world):
+def test_every_source_down_goes_to_the_clock_with_one_alert_and_recovery_restores_the_score(world):
     match_id = world.add_match()
     world.fetch.both(2, 1)
     world.run()
@@ -479,7 +541,7 @@ def test_both_down_goes_to_the_clock_with_one_alert_and_recovery_restores_the_sc
     row = world.match(match_id)
     assert (row.status_source, row.status, row.home_score, row.minute) == ("clock", "scheduled", None, None)
     assert world.problem("both_down").closed_at is None
-    assert len([text for text in world.alerts if "المصدران" in text]) == 1
+    assert len([text for text in world.alerts if "كل المصادر" in text]) == 1
 
     world.fetch.both(2, 1)
     world.run()
@@ -511,7 +573,7 @@ def test_an_alert_is_sent_only_after_commit(world, monkeypatch):
     world.run()
     world.fetch.both(1, 0, other=(0, 0))
     world.run()
-    world.clock.tick(600)
+    world.clock.tick(LiveSettings().disagree_after_s)
     real = cycle_module.sync_problems
 
     def fails_after_writing(session, **values):
@@ -698,52 +760,74 @@ def test_a_saved_run_opens_in_the_raw_view_with_its_urls(world):
     assert first["content_type"] == "text/html"
 
 
-def test_a_final_status_waits_out_a_disagreement_and_polling_goes_on(world):
+def test_a_final_status_waits_out_a_disagreement_then_finishes_with_an_alert(world):
     match_id = world.add_match()
     world.fetch.both(1, 1)
     world.run()
     world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 2, 1, "انتهت"))
     world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 1, "انتهت"))
-    requests = len(world.fetch.requests)
 
-    for _ in range(6):
+    for _ in range(5):
         world.run()
 
     row = world.match(match_id)
-    assert (row.status_source, row.status, row.home_score, row.away_score) == ("feed", "live", 1, 1)
+    assert (row.status_source, row.status, row.home_score, row.away_score) == ("feed", "live", 2, 1)
+    assert has_work_in(world.factory, world.clock()) is True
+
+    world.run()
+
+    row = world.match(match_id)
+    assert (row.status, row.home_score, row.away_score) == ("finished", 2, 1)
     assert world.problem(f"disagree:{match_id}").closed_at is None
     assert len([text for text in world.alerts if str(match_id) in text]) == 1
-    assert has_work_in(world.factory, world.clock()) is True
-    assert len(world.fetch.requests) == requests + 12
+    assert has_work_in(world.factory, world.clock()) is False
 
-    # The lagging source catches up, minutes later: only now does the final score go out.
+
+def test_the_lagging_source_catching_up_finishes_a_held_match_at_once(world):
+    match_id = world.add_match()
+    world.fetch.both(1, 1)
+    world.run()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 2, 1, "انتهت"))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 1, "انتهت"))
+    world.run()
+    assert world.match(match_id).status == "live"
+
     world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 2, 1, "انتهت"))
     world.run()
 
     row = world.match(match_id)
     assert (row.status, row.home_score, row.away_score) == ("finished", 2, 1)
-    assert world.problem(f"disagree:{match_id}").closed_at is not None
-    assert len([text for text in world.alerts if str(match_id) in text]) == 2
+    assert world.problem(f"disagree:{match_id}") is None
 
 
-def test_one_failed_request_cannot_turn_a_disagreement_into_the_final_score(world):
+def test_one_failed_request_cannot_lower_a_score_or_end_the_match(world):
     match_id = world.add_match()
-    world.fetch.both(1, 1)
+    world.fetch.both(2, 1)
     world.run()
-    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 2, 1, "انتهت"))
-    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 1, "انتهت"))
-    for _ in range(5):
-        world.run()
-
-    world.fetch.pages[YALLAKORA_LIST] = httpx.ConnectError("no route")
-    world.run()
-    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 1, "انتهت"))
     world.fetch.pages[FILGOAL_LIST] = httpx.ConnectError("no route")
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 1, "انتهت"))
     world.run()
 
     row = world.match(match_id)
-    assert (row.status, row.home_score, row.away_score) == ("live", 1, 1)
-    assert world.problem(f"disagree:{match_id}").closed_at is None
+    assert (row.status, row.home_score, row.away_score) == ("live", 2, 1)
+
+
+def test_one_source_holding_full_time_alone_finishes_after_the_hold(world):
+    match_id = world.add_match()
+    world.fetch.both(1, 0)
+    world.run()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 1, 0, "انتهت"))
+    world.fetch.pages[YALLAKORA_LIST] = httpx.ConnectError("no route")
+
+    world.run()
+    assert world.match(match_id).status == "live"
+    assert world.match(match_id).minute is None
+
+    world.clock.tick(LiveSettings().fulltime_hold_s)
+    world.run()
+
+    row = world.match(match_id)
+    assert (row.status, row.home_score, row.away_score) == ("finished", 1, 0)
 
 
 def test_one_failed_filgoal_poll_cannot_move_a_live_match_back(world):
@@ -759,7 +843,8 @@ def test_one_failed_filgoal_poll_cannot_move_a_live_match_back(world):
     row = world.match(match_id)
     assert (row.status_source, row.status) == ("feed", "live")
 
-    # The second poll in a row with YallaKora as the primary.
+    # Going back waits until no usable source has shown the later stage for five minutes.
+    world.clock.tick(LiveSettings().drop_hold_s)
     world.run()
     assert world.match(match_id).status == "scheduled"
 
@@ -945,3 +1030,252 @@ def test_overlapping_cycles_exit(monkeypatch):
     monkeypatch.setattr(cycle_module, "run_cycle", lambda deps: pytest.fail("the lock is held"))
 
     assert tasks.live_poll.run() == {"skipped": "lock_held"}
+
+
+# ----------------------------------------------------------------------------------- three sources (T016)
+
+
+def test_three_sources_are_read_in_one_cycle_goal_com_last(world):
+    match_id = world.with_goal(1, 0).add_match()
+    world.fetch.both(0, 0)
+
+    world.run()
+
+    assert world.fetch.requests == [FILGOAL_LIST, YALLAKORA_LIST, GOAL_LIST]
+    row = world.match(match_id)
+    assert (row.home_score, row.away_score, row.minute) == (1, 0, "20")
+    assert world.last_run().log["sources"] == {"filgoal": "ok", "yallakora": "ok", "goal": "ok"}
+    with world.factory() as session:
+        assert session.get(MatchSourceReading, (match_id, "goal")).home_score == 1
+
+
+def test_switched_off_goal_com_gets_no_request_and_writes_nothing(world):
+    match_id = world.add_match()
+    world.fetch.goal(5, 5)
+
+    world.run()
+
+    assert GOAL_LIST not in world.fetch.requests
+    assert world.source_state("goal") is None
+    assert world.last_run().log["sources"] == {"filgoal": "ok", "yallakora": "ok"}
+    assert world.match(match_id).home_score == 0
+    with world.factory() as session:
+        assert session.get(MatchSourceReading, (match_id, "goal")) is None
+
+
+def test_goal_coms_pages_come_after_the_other_pages_and_bring_events_and_stats(world):
+    world.with_goal(1, 0).add_match()
+    world.caps["LIVE_PAGE_CAP_FILGOAL"] = 8
+    world.caps["LIVE_PAGE_CAP_GOAL"] = 4
+    page = "https://www.goal.com/ar-eg/match/x/g1"
+    stats = [{"type": "POSSESSION", "teamA": 55, "teamB": 45}]
+    world.fetch.pages[page] = goal_page(stats=stats)
+    world.fetch.pages["https://www.filgoal.com/matches/f1/coverage/"] = httpx.ConnectError("no route")
+
+    world.run()
+
+    assert world.fetch.requests == [
+        FILGOAL_LIST,
+        YALLAKORA_LIST,
+        "https://www.filgoal.com/matches/f1/coverage/",
+        GOAL_LIST,
+        page,
+    ]
+    assert {(row.source, row.type) for row in world.rows(MatchEvent)} == {("goal", "goal")}
+    assert [row.stats for row in world.rows(MatchStats)] == [[{"type": "POSSESSION", "home": 55, "away": 45}]]
+
+
+def test_goal_coms_page_cap_holds(world):
+    world.with_goal(1, 0).add_match()
+
+    world.run()
+
+    assert world.fetch.requests == [FILGOAL_LIST, YALLAKORA_LIST, GOAL_LIST]
+
+
+def test_goal_com_past_the_deadline_is_skipped_and_costs_the_others_nothing(world):
+    match_id = world.with_goal(9, 9).add_match()
+    world.fetch.both(1, 0)
+    times = iter([0.0, 100.0, 100.0, 100.0])
+
+    world.run(monotonic=lambda: next(times))
+
+    assert world.fetch.requests == [FILGOAL_LIST, YALLAKORA_LIST]
+    assert world.match(match_id).home_score == 1
+    assert "goal:list" in world.last_run().log["skipped"]
+    assert world.last_run().status == "partial"
+    assert world.source_state("goal").consecutive_failures == 0
+
+
+def test_goal_coms_pages_stop_at_the_deadline(world):
+    world.with_goal(1, 0).add_match()
+    world.caps["LIVE_PAGE_CAP_GOAL"] = 4
+    times = iter([0.0, 0.0, 100.0, 100.0])
+
+    world.run(monotonic=lambda: next(times))
+
+    assert world.fetch.requests == [FILGOAL_LIST, YALLAKORA_LIST, GOAL_LIST]
+    assert any(item.startswith("goal:") for item in world.last_run().log["skipped"])
+
+
+@pytest.mark.parametrize(
+    ("failure", "state", "problem"),
+    [
+        (httpx.ConnectError("no route"), "failing", None),
+        (Retryable("answered 429"), "failing", None),
+        (b"<html><body>Just a moment...</body></html>", "invalid", "format:goal"),
+    ],
+    ids=["failing", "blocked", "invalid"],
+)
+def test_goal_com_failing_leaves_the_others_working(world, failure, state, problem):
+    match_id = world.with_goal().add_match()
+    world.fetch.both(1, 0)
+    world.fetch.pages[GOAL_LIST] = failure
+
+    world.run()
+
+    assert world.match(match_id).home_score == 1
+    assert world.source_state("goal").state == state
+    assert world.source_state("filgoal").state == "ok"
+    assert world.last_run().status == "partial"
+    if problem is not None:
+        assert world.problem(problem).closed_at is None
+
+
+def test_a_goal_com_block_backs_off_goal_com_only(world):
+    world.with_goal().add_match()
+    world.fetch.pages[GOAL_LIST] = Retryable("answered 403")
+
+    world.run()
+    world.run()
+
+    assert world.redis.exists(f"live:backoff:{goal.HOST}")
+    assert world.fetch.requests.count(GOAL_LIST) == 1
+    assert world.fetch.requests.count(FILGOAL_LIST) == 2
+
+
+def test_every_enabled_source_must_be_down_before_the_clock(world):
+    match_id = world.with_goal().add_match()
+    world.fetch.both(2, 1)
+    world.fetch.goal(2, 1)
+    world.run()
+    world.fetch.pages[FILGOAL_LIST] = httpx.ConnectError("no route")
+    world.fetch.pages[YALLAKORA_LIST] = httpx.ConnectError("no route")
+
+    for _ in range(4):
+        world.run()
+
+    assert world.source_state("filgoal").state == "down"
+    assert world.source_state("yallakora").state == "down"
+    assert world.problem("both_down") is None
+    assert world.match(match_id).status_source == "feed"
+
+    world.fetch.pages[GOAL_LIST] = httpx.ConnectError("no route")
+    for _ in range(4):
+        world.run()
+
+    assert world.problem("both_down").closed_at is None
+    assert world.match(match_id).status_source == "clock"
+
+
+def test_the_two_enabled_sources_down_is_all_of_them_with_goal_com_off(world):
+    match_id = world.add_match()
+    world.fetch.pages[FILGOAL_LIST] = httpx.ConnectError("no route")
+    world.fetch.pages[YALLAKORA_LIST] = httpx.ConnectError("no route")
+
+    for _ in range(4):
+        world.run()
+
+    assert world.problem("both_down").closed_at is None
+    assert world.match(match_id).status_source == "clock"
+
+
+def test_goal_com_names_reach_the_queue_under_goal_and_no_team_is_made(world):
+    world.with_goal().add_match()
+    world.fetch.pages[GOAL_LIST] = goal_list(("g1", 0, 0, "LIVE", "1H"), ("new", 0, 0, "LIVE", "1H"))
+    with world.factory() as session:
+        teams = len(session.scalars(select(Team)).all())
+
+    world.run()
+
+    assert {(call["source"], call["kind"]) for call in world.unresolved} == {("goal", "team")}
+    with world.factory() as session:
+        assert len(session.scalars(select(Team)).all()) == teams
+
+
+# ----------------------------------------------------------------------------------- an unknown status
+
+
+def test_an_unknown_status_opens_one_problem_and_does_not_stop_the_source(world):
+    world.add_match()
+    world.fetch.both(1, 0)
+    world.run()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 1, 0, "حالة جديدة"))
+
+    world.run()
+    world.run()
+
+    assert world.problem("unknown_status:filgoal").closed_at is None
+    assert len([text for text in world.alerts if "filgoal" in text]) == 1
+    assert world.source_state("filgoal").state == "ok"
+    assert world.problem("format:filgoal") is None
+    assert world.last_run().log["unknown_statuses"] == {"filgoal": ["حالة جديدة"]}
+
+    world.fetch.both(1, 0)
+    world.run()
+
+    assert world.problem("unknown_status:filgoal").closed_at is not None
+    assert len([text for text in world.alerts if "filgoal" in text]) == 2
+
+
+def test_an_unknown_status_with_a_score_counts_and_keeps_the_match_fresh(world):
+    match_id = world.add_match()
+    world.fetch.both(1, 0)
+    world.run()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 2, 0, "حالة جديدة"))
+    world.fetch.pages[YALLAKORA_LIST] = httpx.ConnectError("no route")
+    now = world.clock()
+
+    world.run()
+
+    row = world.match(match_id)
+    assert (row.status, row.home_score) == ("live", 2)
+    with world.factory() as session:
+        from app.db.models import MatchLiveState
+
+        assert session.get(MatchLiveState, match_id).last_reading_at == now
+        assert session.get(MatchSourceReading, (match_id, "filgoal")).status is None
+
+
+def test_an_unknown_status_with_no_score_is_as_if_it_did_not_cover_the_match(world):
+    match_id = world.add_match()
+    world.fetch.both(1, 0)
+    world.run()
+    before = world.clock()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", "-", "-", "حالة جديدة"))
+    world.fetch.pages[YALLAKORA_LIST] = httpx.ConnectError("no route")
+
+    world.run()
+
+    with world.factory() as session:
+        from app.db.models import MatchLiveState
+
+        assert session.get(MatchLiveState, match_id).last_reading_at < before
+    assert world.match(match_id).status_source == "feed"
+    assert world.problem("unknown_status:filgoal").closed_at is None
+
+
+def test_a_page_with_no_period_takes_the_stage_from_its_list_row(world):
+    match_id = world.add_match()
+    world.caps["LIVE_PAGE_CAP_YALLAKORA"] = 2
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 1, 0, "الشوط الثاني"))
+    page = (FIXTURES / "yallakora_match_live.html").read_bytes()
+    world.fetch.pages["https://www.yallakora.com/league/1/match/y1/x"] = page
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 0, "الشوط الثاني"))
+
+    world.run()
+
+    with world.factory() as session:
+        reading = session.get(MatchSourceReading, (match_id, "yallakora"))
+    assert (reading.status, reading.period) == ("live", "2H")
+    assert world.match(match_id).period == "2H"

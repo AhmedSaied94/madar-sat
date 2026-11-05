@@ -1,0 +1,104 @@
+{
+ "Id": 378944,
+ "HomeTeamId": 224,
+ "HomeTeamName": "بورتو",
+ "AwayTeamId": 757,
+ "AwayTeamName": "نابولي",
+ "HomeScore": 4,
+ "AwayScore": 1,
+ "HomePenaltyScore": null,
+ "AwayPenaltyScore": null,
+ "ChampionshipName": "دوري أبطال أوروبا",
+ "Date": "2026-11-04T22:00:00",
+ "CurrentMatchStatus": {
+  "Id": 934691,
+  "MatchId": 378944,
+  "MatchStatusId": 5,
+  "IsCounterEnabled": true,
+  "MatchStatusName": "الشوط الثاني",
+  "MatchStatusMaxTime": 45,
+  "StartAt": "2026-11-05T01:05:36.147",
+  "MatchStatusIndicatorId": 2,
+  "Status": 5,
+  "StatusIndicator": 2,
+  "TimeElapsedBeforeStatus": 45,
+  "TimeElapsed": {
+   "Minutes": -73,
+   "Seconds": -56
+  }
+ },
+ "Events": [
+  {
+   "Id": 971747,
+   "TeamId": 224,
+   "MatchEventTypeId": 8,
+   "MatchEventTypeName": "إحراز ركلة جزاء",
+   "PlayerAName": "سامو أوموروديون",
+   "CalculatedTime": 90,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971746,
+   "TeamId": 757,
+   "MatchEventTypeId": 4,
+   "MatchEventTypeName": "بطاقة حمراء",
+   "PlayerAName": "رافاييل مارين",
+   "CalculatedTime": 88,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971740,
+   "TeamId": 224,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "ياكوب كيفيور",
+   "CalculatedTime": 80,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971737,
+   "TeamId": 224,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "جابرييل فيجا",
+   "CalculatedTime": 71,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971748,
+   "TeamId": 224,
+   "MatchEventTypeId": 2,
+   "MatchEventTypeName": "مساعدة",
+   "PlayerAName": "سانتياجو خيمينيز",
+   "CalculatedTime": 71,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971685,
+   "TeamId": 757,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "سكوت ماكتوميناي",
+   "CalculatedTime": 43,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971670,
+   "TeamId": 224,
+   "MatchEventTypeId": 1,
+   "MatchEventTypeName": "هدف",
+   "PlayerAName": "يان بيدناريك",
+   "CalculatedTime": 11,
+   "CalculatedAdditionalTime": 0
+  },
+  {
+   "Id": 971750,
+   "TeamId": 757,
+   "MatchEventTypeId": 3,
+   "MatchEventTypeName": "بطاقة صفراء",
+   "PlayerAName": "أنطونيو فيرجارا",
+   "CalculatedTime": 1,
+   "CalculatedAdditionalTime": 0
+  }
+ ]
+}

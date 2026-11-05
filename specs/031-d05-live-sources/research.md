@@ -111,7 +111,7 @@ The 5 needs no fine tuning. Within a period, late answers fell 1 below the peak 
 
 - **No list page was saved.** The first capture kept match pages, list counts and a few list fields, so the list shape below comes from `capture_goal.py`, not from a saved page. T005 saves one before writing the parser.
 - **Reads:** `__NEXT_DATA__` → `props.pageProps`. The list has `content` with match objects (`id`, `status`, `teamA`, `teamB`, `score`, `period`, `startDate`), and links come from `href`s ending in the match ID. A match page has `content.match`.
-- **Statuses seen:** `LIVE` with `FIRST_HALF`, `HALF_TIME`, `SECOND_HALF`, and `RESULT`, `FIXTURE`. Others in `capture_goal.py` (`POSTPONED`, `CANCELLED`, `SUSPENDED`) weren't seen, so they count as unknown until seen (R6). `penalty` and `extraTime` are unconfirmed, and the capture settles them.
+- **Statuses seen:** `LIVE` with `FIRST_HALF`, `HALF_TIME`, `SECOND_HALF`, and `RESULT`, `FIXTURE`. `POSTPONED` appeared on the list page T005 saved, with a score of 0–0, so it's mapped and its score isn't read. The others in `capture_goal.py` (`CANCELLED`, `SUSPENDED`) weren't seen, so they count as unknown until seen (R6). `penalty` and `extraTime` are unconfirmed, and the capture settles them.
 - **Events:** `GOAL`, `GOAL_OWN`, `GOAL_PENALTY` map to ours. `PERIOD_*` and `CARD_YELLOW` are skipped, others are logged, not guessed. Events have no ID, so `external_id` is the stable hash data-model already allows.
 - **Lineups:** `lineups.teamA.formation` and `.lineup[].person.name`, `.shirtNumber`. Player ratings (`score`) aren't stored.
 - **Never read:** `tabsInfo.commentary`, `venue`, articles and images.
@@ -168,7 +168,7 @@ The owner reports FootballCo's approval dated 2026-11-05, for scraping and every
 | Matches finished by FR-008 | 14 of 16 |
 | How they finished | 10 by a second source, 4 by the 10-minute hold |
 | Delay after the first full time | Median 2 minutes, 5 at most with a second source, and 14.9 at most on the hold |
-| FilGoal live readings showing a minute | 98.2%, 1,343 of 1,367, with no wrapped minute shown ([R4](#r4-filgoals-minute)) |
+| FilGoal live readings showing a minute | 98.2%, 1,343 of 1,367, with no wrapped minute shown ([R4](#r4-filgoals-minute)). T011 gets 97.9%, 1,338, through the real `decide`: the other 5 are polls where FilGoal flapped from half-time back to the first half, and the status correctly stayed on half-time |
 
 **The two left:** Bristol City v Wolves is the stuck match, and FR-009 finishes it at kickoff + 150, about 22:30, with its 1–2. Mouloudia's last page read came before its end, because the capture capped pages at 12 a poll, so the replay can't tell.
 

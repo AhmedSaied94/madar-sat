@@ -63,7 +63,7 @@ def test_a_held_lock_exits(client, task, lock):
 
 def test_the_scheduler_queues_one_poll_when_there_is_work(client, session, monkeypatch):
     queued = []
-    monkeypatch.setattr(cycle, "has_work_in", lambda factory, now: True)
+    monkeypatch.setattr(cycle, "has_work_in", lambda factory, now, **_: True)
     monkeypatch.setattr(tasks.live_poll, "apply_async", lambda **options: queued.append(options))
 
     assert tasks.live_scheduler.run() == {"queued": True}
@@ -71,7 +71,7 @@ def test_the_scheduler_queues_one_poll_when_there_is_work(client, session, monke
 
 
 def test_the_scheduler_queues_nothing_on_a_quiet_day(client, session, monkeypatch):
-    monkeypatch.setattr(cycle, "has_work_in", lambda factory, now: False)
+    monkeypatch.setattr(cycle, "has_work_in", lambda factory, now, **_: False)
     monkeypatch.setattr(tasks.live_poll, "apply_async", lambda **options: pytest.fail("no work"))
 
     assert tasks.live_scheduler.run() == {"queued": False}
@@ -83,7 +83,7 @@ def test_a_poll_runs_one_cycle_with_the_real_dependencies(client, monkeypatch):
     monkeypatch.setattr(cycle, "run_cycle", lambda deps: seen.append(deps) or {"matches": 1})
 
     assert tasks.live_poll.run() == {"matches": 1}
-    assert seen[0].settings.confirm_wait_s == 180
+    assert seen[0].settings.drop_hold_s == 300
     assert tasks.live_poll.max_retries == 0
 
 
@@ -101,6 +101,28 @@ def test_the_watchdog_alerts_after_its_transaction(client, session, alerts, monk
     assert alerts == ["نص التنبيه"]
 
 
+def test_the_watchdog_tells_the_owner_of_a_capture_that_stopped(client, session, monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    from app.live.capture import HEARTBEAT_KEY
+
+    sent = []
+
+    def accepted(text):
+        sent.append(text)
+        return True
+
+    monkeypatch.setattr(tasks, "send_alert", accepted)
+    monkeypatch.setattr(watchdog, "run_watchdog", lambda s, now, settings: [])
+    client.set(HEARTBEAT_KEY, (datetime.now(UTC) - timedelta(minutes=9)).isoformat())
+
+    tasks.live_watchdog.run()
+    tasks.live_watchdog.run()
+
+    assert len(sent) == 1
+    assert client.get(HEARTBEAT_KEY) is None
+
+
 def test_pruning_reports_what_it_deleted(client, session, monkeypatch):
     monkeypatch.setattr(cycle, "delete_old_runs", lambda s, now: 4)
 
@@ -109,7 +131,7 @@ def test_pruning_reports_what_it_deleted(client, session, monkeypatch):
 
 def test_the_robots_check_alerts_after_its_transaction(client, session, alerts, monkeypatch):
     monkeypatch.setattr(tasks, "_fetcher", lambda redis_client: nullcontext(object()))
-    monkeypatch.setattr("app.live.robots_check.check_robots", lambda s, fetch, now: ["تغير"])
+    monkeypatch.setattr("app.live.robots_check.check_robots", lambda s, fetch, now, **_: ["تغير"])
 
     assert tasks.live_check_robots.run() == {"alerts": 1}
     assert alerts == ["تغير"]

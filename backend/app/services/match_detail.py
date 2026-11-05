@@ -20,7 +20,6 @@ from app.db.models import (
     MatchCustomBroadcast,
     MatchEvent,
     MatchLineup,
-    MatchLiveState,
     Satellite,
     Team,
 )
@@ -31,8 +30,8 @@ from app.services.common import hidden_names, media_url, visible_link
 from app.services.matches import build_match_summary, fetch_media_paths, frequency, satellite_ref
 
 CommentatorLookup = Callable[[int | None], s.CommentatorRef | None]
-# A timeline must not contradict the score: these wait until a pending score is confirmed.
-GOAL_EVENT_TYPES = frozenset({"goal", "own_goal", "penalty"})
+# One source per timeline, so a goal can't show twice: names and minutes differ between them (R9).
+EVENT_SOURCES = ("filgoal", "goal")
 
 
 def _path(paths: dict[int, str], asset_id: int | None) -> str | None:
@@ -269,12 +268,16 @@ def _minute_key(minute: str) -> tuple[int, int]:
 
 
 async def _live_details(session: AsyncSession, match_id: int) -> tuple[list[s.MatchEvent], s.MatchLineups | None]:
-    pending = await session.scalar(select(MatchLiveState.candidate).where(MatchLiveState.match_id == match_id))
-    event_rows = await session.scalars(select(MatchEvent).where(MatchEvent.match_id == match_id))
+    event_rows = await session.scalars(
+        select(MatchEvent).where(MatchEvent.match_id == match_id, MatchEvent.source.in_(EVENT_SOURCES))
+    )
+    by_source: dict[str, list[MatchEvent]] = {}
+    for event in event_rows:
+        by_source.setdefault(event.source, []).append(event)
+    served = next((by_source[source] for source in EVENT_SOURCES if source in by_source), [])
     events = [
         s.MatchEvent(type=e.type, side=e.side, minute=e.minute, player=e.player_name)
-        for e in sorted(event_rows, key=lambda e: (_minute_key(e.minute), e.id))
-        if pending is None or e.type not in GOAL_EVENT_TYPES
+        for e in sorted(served, key=lambda e: (_minute_key(e.minute), e.id))
     ]
     sides = {
         row.side: s.LineupSide(formation=row.formation, players=row.players)

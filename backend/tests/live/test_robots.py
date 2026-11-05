@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.live import robots
-from app.live.robots import FILGOAL_HOST, YALLAKORA_HOST, is_allowed
+from app.live.robots import FILGOAL_HOST, GOAL_HOST, YALLAKORA_HOST, is_allowed
 
 
 @pytest.mark.parametrize(
@@ -58,6 +58,20 @@ def test_filgoal_allowed_paths(path):
     assert is_allowed(FILGOAL_HOST, path) is True
 
 
+@pytest.mark.parametrize("path", ["/ar-eg/%D8%A7/x/abc", "/robots.txt", "/en/anything?x=1"])
+def test_goal_com_allows_everything_as_its_robots_file_does(path):
+    assert robots.DENY_RULES[GOAL_HOST] == ()
+    assert is_allowed(GOAL_HOST, path) is True
+
+
+def test_goal_coms_copy_is_committed_and_disallows_nothing():
+    text = robots.committed_copy(GOAL_HOST)
+
+    assert "User-agent: *" in text
+    assert "Allow: /" in text
+    assert not [line for line in text.splitlines() if line.lower().startswith("disallow:")]
+
+
 def test_an_unknown_host_is_never_allowed():
     assert is_allowed("www.example.com", "/") is False
 
@@ -71,7 +85,7 @@ def test_a_non_ascii_query_rule_matches_only_non_ascii():
     assert is_allowed(YALLAKORA_HOST, "/x?q=عربي") is False
 
 
-@pytest.mark.parametrize("host", [FILGOAL_HOST, YALLAKORA_HOST])
+@pytest.mark.parametrize("host", [FILGOAL_HOST, YALLAKORA_HOST, GOAL_HOST])
 def test_the_deny_list_covers_every_disallow_of_the_committed_copy(host):
     lines = [line.split(":", 1)[1].strip() for line in robots.committed_copy(host).splitlines() if ":" in line]
     disallowed = {

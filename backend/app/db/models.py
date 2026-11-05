@@ -518,6 +518,7 @@ class MatchEvent(Base):
     player_name: Mapped[str | None] = mapped_column(Text)
     source: Mapped[str] = mapped_column(ForeignKey("sources.name"))
     external_id: Mapped[str] = mapped_column(Text)
+    missing_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -532,6 +533,17 @@ class MatchLineup(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class MatchStats(Base):
+    """One source's summary stats for a match, written only on change. Never served to clients."""
+
+    __tablename__ = "match_stats"
+
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"), primary_key=True)
+    source: Mapped[str] = mapped_column(ForeignKey("sources.name"), primary_key=True)
+    stats: Mapped[Any] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class MatchLiveState(Base):
     """The cross-check's memory for one polled match; it outlives a clock fallback (research R5)."""
 
@@ -542,8 +554,15 @@ class MatchLiveState(Base):
     confirmed_away: Mapped[int | None] = mapped_column(SmallInteger)
     confirmed_home_pen: Mapped[int | None] = mapped_column(SmallInteger)
     confirmed_away_pen: Mapped[int | None] = mapped_column(SmallInteger)
-    candidate: Mapped[Any | None] = mapped_column(JSONB)
+    candidate: Mapped[Any | None] = mapped_column(JSONB)  # no longer written; stays for rollback (0008)
     disagreement_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    score_first_source: Mapped[str | None] = mapped_column(Text)
+    score_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    drop_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status_drop_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fulltime_source: Mapped[str | None] = mapped_column(Text)
+    fulltime_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finish_wait_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     has_page_slot: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_reading_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -563,6 +582,8 @@ class MatchSourceReading(Base):
     away_score: Mapped[int | None] = mapped_column(SmallInteger)
     home_pen: Mapped[int | None] = mapped_column(SmallInteger)
     away_pen: Mapped[int | None] = mapped_column(SmallInteger)
+    peak_minute: Mapped[int | None] = mapped_column(SmallInteger)
+    peak_period: Mapped[str | None] = mapped_column(Text)
     read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

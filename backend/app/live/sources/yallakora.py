@@ -1,7 +1,8 @@
 """YallaKora, the cross-check: its list page and match page (SD §6.7, research R1, R3).
 
 Lineups stay out of reach (``*/Match/Matchsquad2`` is in ``robots.txt``), so this source gives status
-and score. Status strings come from saved pages; any other fails validation until the capture adds it.
+and score. Status strings come from saved pages. A row with any other keeps its score and nothing else
+(FR-001), and the cycle tells the owner.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from app.live.sources.common import (
+    UNKNOWN_LABEL_CHARS,
     cairo_kickoff,
     clean,
     first,
@@ -30,6 +32,11 @@ LIST_PATH = "/matches-center"
 
 STATUS_MAP: dict[str, tuple[str, str | None]] = {
     "لم تبدأ": ("scheduled", None),
+    "الشوط الأول": ("live", "1H"),
+    "استراحة": ("halftime", None),
+    "الشوط الثاني": ("live", "2H"),
+    # Only on a match page, which says nothing about the half. The list row's status carries it.
+    "مباشر": ("live", None),
     "انتهت": ("finished", None),
     "تأجيل": ("postponed", None),
 }
@@ -52,11 +59,10 @@ _MONTHS = {
 }
 
 
-def _status(name: str) -> tuple[str, str | None]:
+def _status(name: str) -> tuple[str | None, str | None, str | None]:
+    """``(status, period, unknown_status)``: an unknown one leaves the first two empty."""
     state = STATUS_MAP.get(clean(name))
-    if state is None:
-        raise LayoutChanged(f"yallakora: unknown status {clean(name)[:40]!r}")
-    return state
+    return (state[0], state[1], None) if state is not None else (None, None, clean(name)[:UNKNOWN_LABEL_CHARS])
 
 
 def _team(row: Any, side: str) -> str:
@@ -78,12 +84,13 @@ def parse_list(body: bytes, *, today: date) -> list[SourceReading]:
 
 def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
     label = text_of(first(row.xpath(".//*[contains(@class, 'matchStatus')]")))
-    status, period = _status(require_name(label, "status"))
+    status, period, unknown = _status(require_name(label, "status"))
     parts = row.xpath(".//*[contains(@class, 'MResult')]//span[contains(@class, 'score')]")
     if len(parts) != 2:
         raise LayoutChanged("yallakora: a row without its two scores")
     score = pair(score_part(parts[0].text_content()), score_part(parts[1].text_content()))
-    require_score(status, score)
+    if status is not None:
+        require_score(status, score)
     card = first(row.xpath("ancestor::*[contains(@class, 'matchCard')][1]"))
     competition = text_of(first(card.xpath(".//*[contains(@class, 'tourTitle')]//h2"))) if card is not None else ""
     link = first(row.xpath(".//a/@href"))
@@ -100,8 +107,9 @@ def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
         period=period,
         minute=None,
         score=score,
-        status_label=label,
+        status_label=None if unknown else label,
         page_path=urlsplit(link).path if link else None,
+        unknown_status=unknown,
     )
 
 
@@ -124,14 +132,15 @@ def parse_match(body: bytes, *, external_id: str) -> SourceReading:
     day = _page_day(text_of(first(header.xpath(".//*[contains(@class, 'matchDateInfo')]//*[@class='date']"))))
     if not label and day is None:
         raise LayoutChanged("yallakora: a match page with neither a status nor a date")
-    status, period = _status(label) if label else ("scheduled", None)
+    status, period, unknown = _status(label) if label else ("scheduled", None, None)
     home = first(info.xpath(".//*[contains(@class, 'result')]//*[@class='a']"))
     away = first(info.xpath(".//*[contains(@class, 'result')]//*[@class='b']"))
     score = pair(
         score_part(home.text_content()) if home is not None else None,
         score_part(away.text_content()) if away is not None else None,
     )
-    require_score(status, score)
+    if status is not None:
+        require_score(status, score)
     clock = text_of(first(header.xpath(".//*[contains(@class, 'matchDateInfo')]//*[@class='time']")))
     return SourceReading(
         source=SOURCE,
@@ -144,5 +153,6 @@ def parse_match(body: bytes, *, external_id: str) -> SourceReading:
         period=period,
         minute=None,
         score=score,
-        status_label=label or None,
+        status_label=None if unknown else label or None,
+        unknown_status=unknown,
     )
