@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import psycopg
 import pytest
 from alembic.config import Config
+from pydantic import TypeAdapter
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
@@ -126,7 +129,7 @@ def test_upgrade_creates_everything_and_downgrade_removes_it(empty_database):
     with psycopg.connect(empty_database) as conn:
         kinds = dict(conn.execute("SELECT name, kind FROM sources").fetchall())
         versions = {r[0] for r in conn.execute("SELECT name FROM dataset_versions")}
-    assert (kinds["filgoal"], kinds["yallakora"], kinds["live_poller"]) == ("live_reader", "fixtures", "live")
+    assert (kinds["filgoal"], kinds["yallakora"], kinds["live_poller"]) == ("internal", "scraper", "internal")
     assert versions == set(DATASET_NAMES)
     assert "unresolved_names" in versions
 
@@ -144,6 +147,24 @@ def test_upgrade_creates_everything_and_downgrade_removes_it(empty_database):
 
     command.upgrade(cfg, "head")
     assert TABLES <= _catalog(empty_database)["tables"]
+
+
+def test_the_previous_release_can_still_load_every_source_row(empty_database):
+    """``SourceItem.kind`` at d42c7de: the API before 0007 must keep answering on the migrated schema."""
+    previous = TypeAdapter(Literal["scraper", "api", "internal"])
+    command.upgrade(_alembic(empty_database), "head")
+
+    with psycopg.connect(empty_database) as conn:
+        rows = conn.execute("SELECT name, kind FROM sources").fetchall()
+        check = conn.execute(
+            "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'ck_sources_kind'"
+        ).fetchone()[0]
+
+    assert {"filgoal", "yallakora", "live_poller"} <= {name for name, _ in rows}
+    for _, kind in rows:
+        previous.validate_python(kind)
+    assert "fixtures" not in check
+    assert "live_reader" not in check
 
 
 def test_upgrade_and_downgrade_keep_existing_rows(empty_database):

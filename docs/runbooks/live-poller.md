@@ -14,9 +14,23 @@ No operator is needed during a match. While a parser waits for a fix, users stay
 | `live.watchdog` | `worker-maintenance` | Every 2 min | Moves a `feed` row with no reading for 5 min, or past kickoff + 210 min, to the clock |
 | `live.prune_runs` | `worker-maintenance` | Daily 03:40 UTC | Deletes `live_poller` runs older than 30 days |
 
-The window is a kickoff from 150 minutes ago to 10 minutes ahead, plus matches on `feed` with no final state up to kickoff + 210 minutes.
+The window is a kickoff from 150 minutes ago to 10 minutes ahead, plus matches on `feed` with no final state up to kickoff + 210 minutes. A `postponed` match stays on `/v1/live` as stored, but isn't polled.
 
-One cycle: both list pages, link rows to matches, pick the page slots, fetch them, cross-check each match, write it. Each cycle writes one `import_runs` row under `live_poller`, which A13's run detail shows.
+One cycle: both list pages, link rows to matches, pick the page slots, fetch them, cross-check each match, write it. Each cycle writes one `import_runs` row under `live_poller`, which A13's run detail shows. Any parser error counts as that source failing validation. One match's error appears as `match_errors` in the run's `log`, with `log.exception` output in `worker-live`, and the others still get their poll. If the cycle itself breaks, its run closes as `failed`, with the exception's type in `error`, and the next cycle is the retry.
+
+## A held final score
+
+A final status (`finished`, `cancelled`, `abandoned`) ends polling, so it isn't written while the sources differ on the score. Until they agree:
+
+- the row keeps its last status, minute and confirmed score. `status_updated_at` shows how old they are, and goal events are held;
+- `match_source_readings` shows what each source says, and polling continues, up to kickoff + 210 minutes;
+- one failed request from either source changes nothing: the disputed score needs the other source to show it, and the lagging source alone can't publish the old score as final.
+
+If they still differ at the limit, the watchdog moves the row to the clock (`stale:<match_id>`). It then shows an estimated `finished` with no score until an editor sets the result in A3. Penalties alone don't hold a match for long: when one source carries them, they need two polls, and they never open a disagreement.
+
+## Postponed matches
+
+A reading of `postponed` is written as usual, then polling stops for that match. The watchdog, a fallback and a pause all leave it as stored, so it raises no `stale:` alert and never shows as estimated live. If it's replayed or rescheduled, nothing reads the sources for it any more: in A3, set a manual status and then clear it. That returns the row to the clock, and it's polled again once it's back in the window.
 
 ## Settings
 
@@ -35,7 +49,7 @@ The poller also needs `SCRAPE_USER_AGENT` (it refuses to fetch without one) and 
 
 ## Pause and resume
 
-Use the live card in A13. A paused poller sends no requests, sends `feed` rows in the window to the clock on its next tick, and raises no alert. Resuming is enough: a valid reading then goes through the normal rules, and the kept score comes back. "Run now" is refused for this card.
+Use the live card in A13. A paused poller sends no requests, sends `feed` rows in the window to the clock on its next tick, and raises no alert. A `postponed` row stays as stored. Resuming is enough: a valid reading then goes through the normal rules, and the kept score comes back. "Run now" is refused for this card.
 
 ## What each alert means
 
@@ -46,8 +60,8 @@ Each one is sent once when the problem opens and once when it closes. `alerted_a
 | `تغيّر شكل صفحة ‹source›` | `format:<source>` | A page failed validation, or a list had no matches while one is in the window. That source is out until it's valid again | [Update the parser](#updating-a-parser-from-a-saved-page) when free. Nothing is urgent while the other source works |
 | `المصدر ‹source› متوقف` | `down:<source>` | `LIVE_DOWN_AFTER_FAILURES` failed cycles in a row, or a 429, 403 or 5xx backoff that keeps failing | Read `error` on the runs below. It closes by itself. Blocks are never worked around with proxies or another user agent |
 | `المصدران متوقفان` | `both_down` | Both unusable: matches in the window are on the clock estimate | As above. It closes when either source is valid |
-| `المصدران مختلفان على نتيجة المباراة ‹id›` | `disagree:<match_id>` | One source stayed ahead past `LIVE_CONFIRM_WAIT_S`. The last confirmed score stays and goal events are held | Compare with the broadcast. If needed, set a manual status in A3. It closes on agreement, or an hour after the match's limit |
-| `المباراة ‹id› بلا قراءة حديثة` | `stale:<match_id>` | The watchdog moved the row to the clock | If several arrive together, `worker-live` has probably stopped: see [What to check](#what-to-check). It closes on the next reading |
+| `المصدران مختلفان على نتيجة المباراة ‹id›` | `disagree:<match_id>` | One source stayed ahead past `LIVE_CONFIRM_WAIT_S`. The last confirmed score stays and goal events are held | Compare with the broadcast. No final score goes out meanwhile ([A held final score](#a-held-final-score)). If needed, set a manual status in A3. It closes on agreement, or an hour after the match's limit |
+| `المباراة ‹id› بلا قراءة حديثة` | `stale:<match_id>` | The watchdog moved the row to the clock, because no reading came for `LIVE_STALE_AFTER_S` or it reached `LIVE_HARD_LIMIT_MIN` with no final status. A disagreement still open means the sources never agreed | If several arrive together, `worker-live` has probably stopped: see [What to check](#what-to-check). It closes on the next reading |
 | `تغيّر ملف robots.txt` | `robots:<host>` | The site's rules differ from the committed copy. Nothing changes by itself | [The robots rules](#when-robotstxt-changes) |
 
 ## What to check

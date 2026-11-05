@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.adapters.health import bump_datasets
 from app.db.models import LiveProblem, Match, MatchLiveState
+from app.domain.status import STATUS_POSTPONED
 from app.live.apply import LIVE_DATASET, to_clock
 from app.live.config import LiveSettings
 from app.live.problems import close_problem, open_problem
-from app.services.live import SETTLED_STATUSES, live_window_query
+from app.services.live import SETTLED_STATUSES, poll_window_query
 
 # A match's own problems can't recover once it has left the window, so they close some time after.
 PROBLEM_GRACE = timedelta(hours=1)
@@ -26,7 +27,7 @@ def run_watchdog(session: Session, now: datetime, settings: LiveSettings) -> lis
         .outerjoin(MatchLiveState, MatchLiveState.match_id == Match.id)
         .where(
             Match.status_source == "feed",
-            Match.status.not_in(SETTLED_STATUSES),
+            Match.status.not_in((*SETTLED_STATUSES, STATUS_POSTPONED)),
             or_(
                 Match.kickoff_at < now - settings.hard_limit,
                 MatchLiveState.last_reading_at.is_(None),
@@ -70,7 +71,7 @@ def _close_past_matches(session: Session, now: datetime, settings: LiveSettings)
 def pause_feed_rows(session: Session, now: datetime) -> bool:
     """A paused poller counts as both sources down with no alert, so it can't leave stale scores (R6)."""
     rows = session.scalars(
-        live_window_query(now).where(Match.status_source == "feed").with_for_update(of=Match, skip_locked=True)
+        poll_window_query(now).where(Match.status_source == "feed").with_for_update(of=Match, skip_locked=True)
     ).all()
     moved = [to_clock(match, now) for match in rows]
     if any(moved):

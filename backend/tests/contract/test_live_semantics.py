@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects import postgresql
 
 from app.db.models import Match
-from app.services.live import live_window_query
+from app.services.live import live_window_query, poll_window_query
 
 
 def _match(label: str, kickoff, **fields) -> Match:
@@ -78,3 +78,28 @@ async def test_query_uses_the_live_window_index(session, frozen_now):
     await session.execute(text("SET LOCAL enable_seqscan = off"))
     plan = "\n".join((await session.execute(text(f"EXPLAIN {stmt}"))).scalars())  # noqa: S608 - compiled locally
     assert "matches_live_window_idx" in plan, plan
+
+
+@pytest.mark.asyncio
+async def test_the_poll_window_uses_the_live_window_index_too(session, frozen_now):
+    stmt = poll_window_query(frozen_now).compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+    await session.execute(text("SET LOCAL enable_seqscan = off"))
+    plan = "\n".join((await session.execute(text(f"EXPLAIN {stmt}"))).scalars())  # noqa: S608 - compiled locally
+    assert "matches_live_window_idx" in plan, plan
+
+
+@pytest.mark.asyncio
+async def test_a_postponed_match_in_the_window_is_served_as_stored_and_not_polled(session, public_client, frozen_now):
+    postponed = _match(
+        "postponed", frozen_now - timedelta(minutes=30), status="postponed", status_source="feed", status_label="تأجيل"
+    )
+    session.add(postponed)
+    await session.commit()
+
+    resp = await public_client.get("/v1/live")
+
+    item = next(row for row in resp.json()["data"] if row["match_id"] == postponed.id)
+    assert (item["status"], item["estimated"], item["score"], item["minute"]) == ("postponed", False, None, None)
+    assert item["status_label"] == "تأجيل"
+    polled = (await session.execute(poll_window_query(frozen_now))).scalars().all()
+    assert postponed.id not in {row.id for row in polled}

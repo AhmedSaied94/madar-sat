@@ -10,12 +10,11 @@ import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, TypeVar
 from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.adapters.base import RawPage
@@ -35,10 +34,12 @@ from app.live.robots import FILGOAL_HOST, YALLAKORA_HOST, is_allowed
 from app.live.sources import filgoal, yallakora
 from app.live.types import LayoutChanged, SideInput, SourceReading
 from app.live.watchdog import pause_feed_rows
-from app.services.live import FEED_WINDOW_BEFORE, WINDOW_AFTER, live_window_query
+from app.services.live import FEED_WINDOW_BEFORE, WINDOW_AFTER, poll_window_query
 from app.workers.base import Retryable
 
 log = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 POLLER = "live_poller"
 CYCLE_DEADLINE_S = 50.0
@@ -98,6 +99,9 @@ class CycleLog:
     ignored_event_types: set[str] = field(default_factory=set)
     changed: int = 0
     errors: int = 0
+    reads: list[SourceRead] = field(default_factory=list)
+    states: dict[str, str] = field(default_factory=dict)
+    raw_ref: str | None = None
 
 
 def _send(deps: Deps, texts: Sequence[str]) -> None:
@@ -108,7 +112,7 @@ def _send(deps: Deps, texts: Sequence[str]) -> None:
 
 def _window(session: Session, now: datetime) -> list[WindowMatch]:
     rows = session.execute(
-        live_window_query(now)
+        poll_window_query(now)
         .with_only_columns(Match.id, Match.kickoff_at, Competition.priority, MatchLiveState.has_page_slot)
         .select_from(Match)
         .outerjoin(Competition, Competition.id == Match.competition_id)
@@ -121,20 +125,33 @@ def paused(session: Session, now: datetime) -> bool:
     return source_is_paused(session, POLLER, now=now)
 
 
+def _validated(source: str, parse: Callable[[], T]) -> T:
+    """A page whose shape changed can raise anything: each of those is that page failing validation."""
+    try:
+        return parse()
+    except LayoutChanged:
+        raise
+    except Exception as exc:  # noqa: BLE001 - the page is untrusted, and the other source must still be used
+        raise LayoutChanged(f"{source}: an unexpected page shape ({type(exc).__name__})") from exc
+
+
 def _parse_list(source: str, body: bytes, now: datetime) -> list[SourceReading]:
     today = now.astimezone(CAIRO).date()
-    return (
-        filgoal.parse_list(body, today=today) if source == filgoal.SOURCE else yallakora.parse_list(body, today=today)
-    )
+    parser = filgoal.parse_list if source == filgoal.SOURCE else yallakora.parse_list
+    return _validated(source, lambda: parser(body, today=today))
 
 
-def _parse_page(source: str, body: bytes, external_id: str) -> SourceReading:
-    if source == yallakora.SOURCE:
-        return yallakora.parse_match(body, external_id=external_id)
+def _parse_filgoal_page(body: bytes, external_id: str) -> SourceReading:
     reading = filgoal.parse_match(body)
     if reading.external_id != external_id:
         raise LayoutChanged("filgoal: the page is about another match")
     return reading
+
+
+def _parse_page(source: str, body: bytes, external_id: str) -> SourceReading:
+    if source == yallakora.SOURCE:
+        return _validated(source, lambda: yallakora.parse_match(body, external_id=external_id))
+    return _validated(source, lambda: _parse_filgoal_page(body, external_id))
 
 
 def _guarded_get(deps: Deps, source: str, path: str) -> RawPage:
@@ -226,8 +243,8 @@ def _read_pages(
             read.pages_to_save.append(page)
 
 
-def _link_all(deps: Deps, read: SourceRead, window_ids: set[int], now: datetime) -> dict[int, str]:
-    """``match id → external id`` for this source's rows inside the window."""
+def _link_all(deps: Deps, read: SourceRead, window_ids: set[int], now: datetime, cycle: CycleLog) -> dict[int, str]:
+    """``match id → external id`` for this source's rows inside the window. One row's error skips that row."""
     bounds = (now - FEED_WINDOW_BEFORE, now + WINDOW_AFTER)
     linked: dict[int, str] = {}
     recorded: list[bool] = []
@@ -237,7 +254,13 @@ def _link_all(deps: Deps, read: SourceRead, window_ids: set[int], now: datetime)
 
     with deps.session_factory() as session, session.begin():
         for external_id, reading in read.readings.items():
-            match_id = link_reading(session, reading, record_unresolved=record, window=bounds)
+            try:
+                with session.begin_nested():
+                    match_id = link_reading(session, reading, record_unresolved=record, window=bounds)
+            except Exception:  # noqa: BLE001 - the other rows still count
+                cycle.errors += 1
+                log.exception("live_row_not_linked", extra={"source": read.source, "external_id": external_id})
+                continue
             if match_id in window_ids and match_id is not None:
                 linked[match_id] = external_id
         if any(recorded):
@@ -348,7 +371,7 @@ def _apply_match(
         match = session.get(Match, match_id, with_for_update=True)
         if match is None:
             return False
-        state = load_state(session, match, readings[0].source if readings else None)
+        state = load_state(session, match)
         decision = decide(state, sides[filgoal.SOURCE], sides[yallakora.SOURCE], now, wait=deps.settings.confirm_wait)
         changed = apply_decision(session, match, decision, readings=readings, now=now, has_page_slot=has_slot)
         closed = list(decision.close_problems)
@@ -359,19 +382,16 @@ def _apply_match(
     return changed
 
 
-def _finish_run(
-    deps: Deps,
-    run_id: int,
-    *,
-    reads: Sequence[SourceRead],
-    states: dict[str, str],
-    cycle: CycleLog,
-    raw_ref: str | None,
-    matches: int,
-) -> None:
+def _finish_run(deps: Deps, run_id: int, cycle: CycleLog, *, matches: int, broken: str | None = None) -> None:
     now = deps.clock()
+    reads, states, raw_ref = cycle.reads, cycle.states, cycle.raw_ref
     usable = [read for read in reads if read.outcome == "ok"]
-    status = "failed" if not usable else ("succeeded" if len(usable) == len(reads) and not cycle.errors else "partial")
+    status = "partial" if usable else "failed"
+    if broken is not None:
+        status = "failed"
+    elif usable and len(usable) == len(reads) and not cycle.errors:
+        status = "succeeded"
+    reasons = [read.reason for read in reads if read.reason]
     with deps.session_factory() as session, session.begin():
         run = session.get(ImportRun, run_id)
         if run is not None:
@@ -381,7 +401,7 @@ def _finish_run(
             run.items_upserted = cycle.changed
             run.http_errors = cycle.http_failures
             run.raw_path = raw_ref
-            run.error = "; ".join(read.reason for read in reads if read.reason)[:500] or None
+            run.error = "; ".join([*reasons, *([broken] if broken else [])])[:500] or None
             run.log = {
                 "pages": sum(len(read.pages_to_save) for read in reads),
                 "pages_read": sum(read.pages_read for read in reads),
@@ -413,16 +433,35 @@ def run_cycle(deps: Deps) -> dict[str, Any]:
     if not window:
         return {"skipped": "no_matches"}
 
-    deadline = deps.monotonic() + CYCLE_DEADLINE_S
     run_id = _open_run(deps, now)
     cycle = CycleLog()
-    window_ids = {match.id for match in window}
+    try:
+        _poll(deps, run_id, window, now, cycle)
+        _finish_run(deps, run_id, cycle, matches=len(window))
+    except Exception as exc:
+        log.exception("live_cycle_failed", extra={"run_id": run_id})
+        _close_broken_run(deps, run_id, cycle, len(window), exc)
+        raise
+    return {"run_id": run_id, "matches": len(window), "changed": cycle.changed, "sources": cycle.states}
 
-    reads = [_read_list(deps, source, now, cycle) for source in (filgoal.SOURCE, yallakora.SOURCE)]
+
+def _close_broken_run(deps: Deps, run_id: int, cycle: CycleLog, matches: int, exc: Exception) -> None:
+    """A run row left ``running`` would say the poller is still at it. The next cycle is the retry."""
+    try:
+        _finish_run(deps, run_id, cycle, matches=matches, broken=f"the cycle stopped: {type(exc).__name__}")
+    except Exception:  # noqa: BLE001 - the caller re-raises the first error, which is the one that matters
+        log.exception("live_run_not_closed", extra={"run_id": run_id})
+
+
+def _poll(deps: Deps, run_id: int, window: Sequence[WindowMatch], now: datetime, cycle: CycleLog) -> None:
+    deadline = deps.monotonic() + CYCLE_DEADLINE_S
+    window_ids = {match.id for match in window}
+    reads = cycle.reads
+    reads += [_read_list(deps, source, now, cycle) for source in (filgoal.SOURCE, yallakora.SOURCE)]
     links: dict[str, dict[int, str]] = {}
     filgoal_slots: set[int] = set()
     for read in reads:
-        links[read.source] = _link_all(deps, read, window_ids, now) if read.outcome == "ok" else {}
+        links[read.source] = _link_all(deps, read, window_ids, now, cycle) if read.outcome == "ok" else {}
     for read in reads:
         if read.outcome != "ok":
             continue
@@ -431,8 +470,8 @@ def run_cycle(deps: Deps) -> dict[str, Any]:
             filgoal_slots = {slot.match_id for slot in slots}
         _read_pages(deps, read, slots, links[read.source], deadline, cycle)
 
-    raw_ref = _save_raw(deps, run_id, reads, now)
-    states = _update_sources(deps, reads, raw_ref, now)
+    raw_ref = cycle.raw_ref = _save_raw(deps, run_id, reads, now)
+    states = cycle.states = _update_sources(deps, reads, raw_ref, now)
 
     by_source = {read.source: read for read in reads}
     for match in window:
@@ -443,12 +482,9 @@ def run_cycle(deps: Deps) -> dict[str, Any]:
         try:
             if _apply_match(deps, match.id, sides, match.id in filgoal_slots, now, raw_ref):
                 cycle.changed += 1
-        except SQLAlchemyError:
+        except Exception:  # noqa: BLE001 - one match's error can't cost the others their poll
             cycle.errors += 1
             log.exception("live_match_not_applied", extra={"match_id": match.id})
-
-    _finish_run(deps, run_id, reads=reads, states=states, cycle=cycle, raw_ref=raw_ref, matches=len(window))
-    return {"run_id": run_id, "matches": len(window), "changed": cycle.changed, "sources": states}
 
 
 def has_work_in(session_factory: Callable[[], Session], now: datetime) -> bool:
@@ -457,7 +493,7 @@ def has_work_in(session_factory: Callable[[], Session], now: datetime) -> bool:
         if paused(session, now):
             pause_feed_rows(session, now)
             return False
-        return session.scalars(live_window_query(now).limit(1)).first() is not None
+        return session.scalars(poll_window_query(now).limit(1)).first() is not None
 
 
 def delete_old_runs(session: Session, now: datetime, *, days: int = 30) -> int:

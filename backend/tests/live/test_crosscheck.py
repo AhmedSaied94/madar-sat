@@ -60,6 +60,10 @@ def run(current: LiveState, order: str, first: SideInput, second: SideInput, now
     return decide(current, filgoal, yallakora, now, wait=WAIT)
 
 
+def _final_other(order: str, score: Score | None) -> SideInput:
+    return other(order, score, status="finished", period=None, minute=None)
+
+
 def test_both_agree_on_a_new_score_confirms_it(order):
     decision = run(state(), order, side(order, Score(1, 0)), other(order, Score(1, 0)))
 
@@ -302,13 +306,19 @@ def test_a_backward_status_needs_two_polls_in_a_row():
     first = decide(current, back, SideInput.not_covering(), NOW, wait=WAIT)
     assert first.write_status is False
 
-    second = decide(replace(current, previous_status=("live", "2H")), back, SideInput.not_covering(), NOW, wait=WAIT)
+    second = decide(
+        replace(current, previous_status=("live", "2H"), previous_primary="filgoal"),
+        back,
+        SideInput.not_covering(),
+        NOW,
+        wait=WAIT,
+    )
     assert second.write_status is True
     assert second.status == "live"
 
 
 def test_a_different_earlier_poll_does_not_count_for_a_backward_status():
-    current = state(status="halftime", period=None, previous_status=("live", "2H"))
+    current = state(status="halftime", period=None, previous_status=("live", "2H"), previous_primary="filgoal")
 
     decision = decide(
         current, reading("filgoal", Score(0, 0), status="live", period="1H"), SideInput.not_covering(), NOW, wait=WAIT
@@ -332,21 +342,251 @@ def test_a_final_status_waits_for_a_pending_score():
     assert decision.candidate is not None
 
 
-def test_a_final_status_is_written_once_the_score_is_a_disagreement():
-    current = state(candidate=Candidate(Score(1, 0), "filgoal", NOW - WAIT, 4))
+def _final(source: str, score: Score | None, status: str = "finished") -> SideInput:
+    return reading(source, score, status=status, period=None, minute=None)
+
+
+@pytest.mark.parametrize("final", ["finished", "cancelled", "abandoned"])
+def test_a_final_status_is_never_written_when_the_wait_ends_without_agreement(final):
+    current = state(Score(1, 1), candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 4))
+
+    decision = decide(
+        current, _final("filgoal", Score(2, 1), final), _final("yallakora", Score(1, 1), final), NOW, wait=WAIT
+    )
+
+    assert decision.write_status is False
+    assert decision.confirm is None
+    assert decision.open_problems == (DISAGREE,)
+    assert decision.candidate.score == Score(2, 1)
+    assert decision.disagreement_since == NOW
+
+
+def test_a_final_status_stays_held_for_as_long_as_the_disagreement_is_open():
+    since = NOW - timedelta(minutes=20)
+    current = state(Score(1, 1), candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 25), disagreement_since=since)
+
+    decision = decide(current, _final("filgoal", Score(2, 1)), _final("yallakora", Score(1, 1)), NOW, wait=WAIT)
+
+    assert decision.write_status is False
+    assert decision.disagreement_since == since
+    assert decision.hold_goal_events is True
+
+
+def test_the_final_status_goes_out_with_the_score_once_the_sources_agree():
+    current = state(
+        Score(1, 1),
+        candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 25),
+        disagreement_since=NOW - timedelta(minutes=20),
+    )
+
+    decision = decide(current, _final("filgoal", Score(2, 1)), _final("yallakora", Score(2, 1)), NOW, wait=WAIT)
+
+    assert (decision.write_status, decision.status, decision.confirm) == (True, "finished", Score(2, 1))
+    assert decision.disagreement_since is None
+    assert DISAGREE in decision.close_problems
+
+
+def test_status_and_minute_keep_moving_during_a_disagreement():
+    current = state(
+        Score(1, 1),
+        candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 25),
+        disagreement_since=NOW - timedelta(minutes=20),
+    )
 
     decision = decide(
         current,
-        reading("filgoal", Score(1, 0), status="finished", period=None, minute=None),
-        reading("yallakora", Score(0, 0), status="finished", period=None, minute=None),
+        reading("filgoal", Score(2, 1), status="live", period="2H", minute="90+1"),
+        reading("yallakora", Score(1, 1), status="live", period="2H"),
         NOW,
         wait=WAIT,
     )
 
-    assert decision.write_status is True
-    assert decision.status == "finished"
+    assert (decision.write_status, decision.minute, decision.confirm) == (True, "90+1", None)
+
+
+@pytest.mark.parametrize("gone", [SideInput.unavailable(), SideInput.not_covering()], ids=["down", "not_covering"])
+def test_a_disagreement_ends_only_on_agreement_not_when_the_other_source_goes_quiet(gone):
+    """One failed request of the lagging source must not turn the disputed score into the final one."""
+    current = state(
+        Score(1, 1),
+        candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 25),
+        disagreement_since=NOW - timedelta(minutes=20),
+    )
+
+    decision = decide(current, _final("filgoal", Score(2, 1)), gone, NOW, wait=WAIT)
+
     assert decision.confirm is None
-    assert decision.open_problems == (DISAGREE,)
+    assert decision.write_status is False
+    assert decision.candidate.score == Score(2, 1)
+    assert decision.disagreement_since == current.disagreement_since
+    assert DISAGREE not in decision.close_problems
+
+
+@pytest.mark.parametrize("disagreement_since", [None, NOW - timedelta(minutes=20)], ids=["pending", "disagreement"])
+def test_the_lagging_source_alone_cannot_publish_the_old_score_as_final(disagreement_since):
+    """FilGoal's one timeout makes YallaKora primary, and its 1–1 equals the confirmed score."""
+    current = state(
+        Score(1, 1), candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 2), disagreement_since=disagreement_since
+    )
+
+    decision = decide(current, SideInput.not_covering(), _final("yallakora", Score(1, 1)), NOW, wait=WAIT)
+
+    assert decision.write_status is False
+    assert decision.candidate == current.candidate
+    assert decision.disagreement_since == disagreement_since
+    assert DISAGREE not in decision.close_problems
+    assert decision.hold_goal_events is True
+
+
+def test_the_source_that_held_the_new_score_can_take_it_back_alone():
+    current = state(
+        Score(1, 1),
+        candidate=Candidate(Score(2, 1), "filgoal", NOW - WAIT, 25),
+        disagreement_since=NOW - timedelta(minutes=20),
+    )
+
+    decision = decide(current, _final("filgoal", Score(1, 1)), SideInput.not_covering(), NOW, wait=WAIT)
+
+    assert (decision.write_status, decision.status) == (True, "finished")
+    assert decision.candidate is None
+    assert DISAGREE in decision.close_problems
+
+
+def test_penalties_one_source_carries_need_two_polls_and_never_become_a_disagreement(order):
+    current = state(Score(1, 1), status="penalties", period=None)
+    with_pens = Score(1, 1, 4, 3)
+
+    first = run(current, order, _final(order, with_pens), _final_other(order, Score(1, 1)))
+    assert first.confirm is None
+    assert first.candidate == Candidate(with_pens, order, NOW, 1)
+    assert first.open_problems == ()
+    assert first.write_status is False  # the final state waits for its penalties
+
+    later = NOW + WAIT + timedelta(seconds=1)
+    second = run(
+        replace(current, candidate=first.candidate),
+        order,
+        _final(order, with_pens),
+        _final_other(order, Score(1, 1)),
+        now=later,
+    )
+    assert second.confirm == with_pens
+    assert second.candidate is None
+    assert second.open_problems == ()
+    assert (second.write_status, second.status) == (True, "finished")
+    assert DISAGREE in second.close_problems
+
+
+def test_goals_both_show_go_out_at_once_while_the_penalties_wait(order):
+    current = state(Score(1, 0), status="live", period="2H")
+    with_pens = Score(1, 1, 4, 3)
+
+    decision = run(current, order, side(order, with_pens), other(order, Score(1, 1)))
+
+    assert decision.confirm == Score(1, 1)
+    assert decision.candidate == Candidate(with_pens, order, NOW, 1)
+    assert decision.hold_goal_events is True
+
+
+def test_a_source_without_penalties_never_erases_confirmed_ones(order):
+    current = state(Score(1, 1, 4, 3), status="penalties", period=None)
+
+    both = run(current, order, side(order, Score(1, 1)), other(order, Score(1, 1)))
+    assert both.confirm is None
+    assert both.candidate is None
+
+    alone = run(current, order, side(order, Score(1, 1)), SideInput.not_covering())
+    assert alone.confirm is None
+    assert alone.candidate is None
+
+    carried = run(current, order, side(order, Score(1, 1, 4, 3)), other(order, Score(1, 1)))
+    assert carried.confirm is None
+    assert carried.candidate is None
+    assert carried.hold_goal_events is False
+
+
+def test_a_candidate_is_measured_against_goals_when_the_confirmed_score_has_penalties(order):
+    current = state(Score(1, 1, 4, 3), status="penalties", period=None)
+
+    decision = run(current, order, side(order, Score(1, 1)), other(order, Score(2, 1)))
+
+    assert decision.confirm is None
+    assert decision.candidate.score == Score(2, 1)
+    assert decision.candidate.source == ("yallakora" if order == "filgoal" else "filgoal")
+
+
+def test_penalties_both_sources_carry_are_still_compared(order):
+    current = state(Score(1, 1), status="penalties", period=None)
+
+    decision = run(
+        current,
+        order,
+        side(order, Score(1, 1, 4, 3)),
+        other(order, Score(1, 1, 5, 3)),
+        now=NOW,
+    )
+    assert decision.confirm is None
+    assert decision.candidate.polls == 1
+
+    waited = run(
+        replace(current, candidate=decision.candidate),
+        order,
+        side(order, Score(1, 1, 4, 3)),
+        other(order, Score(1, 1, 5, 3)),
+        now=NOW + WAIT,
+    )
+    assert waited.open_problems == (DISAGREE,)
+
+
+def test_one_source_alone_needs_two_polls_for_penalties_too(order):
+    current = state(Score(1, 1), status="penalties", period=None)
+    with_pens = Score(1, 1, 4, 3)
+
+    first = run(current, order, side(order, with_pens), SideInput.not_covering())
+    assert first.confirm is None
+    assert first.candidate == Candidate(with_pens, order, NOW, 1)
+
+    second = run(replace(current, candidate=first.candidate), order, side(order, with_pens), SideInput.not_covering())
+    assert second.confirm == with_pens
+
+
+def test_a_source_that_just_took_over_cannot_move_the_status_backwards():
+    """FilGoal was primary and said live; its one failed request must not publish YallaKora's lag."""
+    current = state(previous_status=("live", "1H"), previous_primary="filgoal")
+
+    decision = decide(
+        current,
+        SideInput.not_covering(),
+        reading("yallakora", Score(0, 0), status="scheduled", period=None),
+        NOW,
+        wait=WAIT,
+    )
+
+    assert decision.write_status is False
+
+
+def test_a_backward_status_counts_only_the_polls_where_that_source_was_primary():
+    back = reading("yallakora", Score(0, 0), status="scheduled", period=None)
+
+    # YallaKora said it before too, but FilGoal was the primary then: this is its first poll as primary.
+    took_over = decide(
+        state(previous_status=("scheduled", None), previous_primary="filgoal"),
+        SideInput.not_covering(),
+        back,
+        NOW,
+        wait=WAIT,
+    )
+    assert took_over.write_status is False
+
+    # The second poll in a row as primary.
+    second = decide(
+        state(previous_status=("scheduled", None), previous_primary="yallakora"),
+        SideInput.not_covering(),
+        back,
+        NOW,
+        wait=WAIT,
+    )
+    assert (second.write_status, second.status) == (True, "scheduled")
 
 
 @pytest.mark.parametrize("status", ["postponed", "cancelled", "abandoned"])
@@ -363,3 +603,24 @@ def test_a_match_that_will_not_be_played_is_a_status_like_any_other(status):
 
     assert decision.write_status is True
     assert decision.status == status
+
+
+def test_a_poll_without_the_page_keeps_the_pending_penalties_and_the_final_waits(order):
+    """A failed page fetch leaves list rows with no penalties: they must not end the wait for them."""
+    with_pens = Score(1, 1, 4, 3)
+    current = state(
+        Score(1, 1), status="penalties", period=None, candidate=Candidate(with_pens, order, NOW, 1)
+    )
+
+    both_lists = run(current, order, _final(order, Score(1, 1)), _final_other(order, Score(1, 1)))
+    assert both_lists.candidate == current.candidate
+    assert both_lists.confirm is None
+    assert both_lists.write_status is False
+
+    one_list = run(current, order, _final(order, Score(1, 1)), SideInput.not_covering())
+    assert one_list.candidate == current.candidate
+    assert one_list.write_status is False
+
+    page_back = run(current, order, _final(order, with_pens), _final_other(order, Score(1, 1)))
+    assert page_back.confirm == with_pens
+    assert page_back.write_status is True

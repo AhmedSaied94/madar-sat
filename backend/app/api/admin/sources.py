@@ -104,7 +104,7 @@ async def resume_source(name: SourceName, session: Db, admin: Editor, now: Now) 
     item = await service.resume(session, admin, name, now)
     await session.commit()
     # The live poller has no importer to run: the next scheduler tick picks it up.
-    if item.kind not in service.LIVE_KINDS:
+    if item.name not in service.LIVE_SOURCES:
         send_manual_run(name)
     return ok(item)
 

@@ -144,6 +144,8 @@ def _score(model: dict[str, Any]) -> Score | None:
     if not isinstance(home, int) or not isinstance(away, int):
         raise LayoutChanged("filgoal: a score that isn't a number")
     home_pen, away_pen = model.get("HomePenaltyScore"), model.get("AwayPenaltyScore")
+    if not all(pen is None or isinstance(pen, int) for pen in (home_pen, away_pen)):
+        raise LayoutChanged("filgoal: a penalty score that isn't a number")
     return Score(home, away, home_pen, away_pen)
 
 

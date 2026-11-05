@@ -57,7 +57,12 @@ pending ─(the other source shows it)─▶ confirmed, candidate cleared
 pending ─(other source down/invalid/not covering, same score in 2 polls)─▶ confirmed
 pending ─(wait ends without agreement)─▶ disagreement: last confirmed score stays, one alert
 disagreement ─(sources agree)─▶ confirmed, problem closed, recovery alert
+disagreement ─(hard limit)─▶ the watchdog moves the row to the clock
 ```
+
+While a candidate or a disagreement is open, a final status isn't written, so polling goes on. Other statuses and the minute keep moving. A disagreement doesn't end because one source went quiet, and a pending candidate isn't dropped because the other source, alone, still shows the confirmed score: that source may simply be lagging.
+
+Penalties are compared only when both sources carry them. If only one does, the goals both show are confirmed and the penalties go by the two-poll rule, with no wait and no disagreement. A source without penalties never erases confirmed ones.
 
 ### `match_source_readings`
 
@@ -70,7 +75,7 @@ The latest reading per match and source, overwritten each cycle only when it cha
 | `home_score`, `away_score`, `home_pen`, `away_pen` | smallint, null | |
 | `read_at`, `changed_at` | timestamptz | `changed_at` gives the source's update delay |
 
-Never served to clients.
+Never served to clients. Every source read in one poll shares a `read_at`, so the newest rows say who was read last time. FilGoal was that poll's primary if it's among them, otherwise YallaKora. A backward status counts only polls where the source was the primary.
 
 ### `live_source_state`
 
@@ -141,7 +146,7 @@ open ─map─▶ mapped        open ─create+map─▶ created        open ─
 
 | Table | Change |
 |---|---|
-| `sources` | New rows: `filgoal` (`kind='live_reader'`), `yallakora` (`kind='fixtures'`), `live_poller` (`kind='live'`). `filgoal` is hidden from A13's cards; `live_poller` carries the board's one Live poller card. `yallakora` keeps its importer card |
+| `sources` | New rows: `filgoal` and `live_poller` (`kind='internal'`), `yallakora` (`kind='scraper'`). `ck_sources_kind` doesn't change, because the release before this revision loads every row's kind into `Literal["scraper", "api", "internal"]` (constitution VI). The code tells the live sources apart by name: `filgoal` is hidden from A13's cards; `live_poller` carries the board's one Live poller card. `yallakora` keeps its importer card. Neither live source accepts a manual run |
 | `dataset_versions` | The check allows a new `unresolved_names` |
 | `rights_holder_carriages` | New nullable `package` text, which PB A9 asks for and the table lacks |
 | `matches` | New nullable `local_broadcaster_eg` text. `MatchDetail` already has the field, always `null`, and nothing stores it. It joins `MATCH_LOCKABLE` and `ck_matches_locked_fields`. Written by `yallakora`, served by `match_detail.py` |
@@ -161,4 +166,4 @@ open ─map─▶ mapped        open ─create+map─▶ created        open ─
 
 `app/live/sources/*.py` map each source's strings to the §6.2.3 states (`scheduled`, `live` with `1H`/`2H`, `halftime`, `extra_time` with `ET1`/`ET2`, `penalties`, `finished`, `postponed`, `cancelled`, `abandoned`). Each mapping table starts from saved pages and the capture completes it. An unknown string fails validation. Strings seen so far: «لم تبدأ», «تأجيل».
 
-The final states `finished`, `cancelled` and `abandoned` end polling. `postponed` stays as stored and leaves the window normally.
+The final states `finished`, `cancelled` and `abandoned` end polling. `postponed` ends polling too (`poll_window_query`), but stays on `/v1/live` as stored until it leaves the window normally, with `matches_live_window_idx`'s predicate unchanged. Neither the watchdog, a fallback nor a pause moves a postponed row to the clock, and it raises no `stale:` alert. An editor brings a rescheduled match back by setting and then clearing a manual status in A3, which returns it to the clock.

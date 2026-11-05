@@ -35,6 +35,22 @@ async def _run(session, now, raw_path: str | None = "live_poller/2026-11-04/run.
     return run
 
 
+@pytest.mark.parametrize("name", ["live_poller", "filgoal"])
+async def test_the_live_sources_are_refused_a_manual_run_by_name(admin_client, name):
+    response = await admin_client.post(f"/admin/api/sources/{name}/run")
+
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["code"] == "source_not_runnable"
+
+
+async def test_only_the_live_poller_carries_the_live_block(editor_client, session):
+    sources = await _sources(editor_client)
+
+    assert sources["live_poller"]["live"] is not None
+    assert sources["yallakora"]["live"] is None
+    assert sources["yallakora"]["kind"] == "scraper"
+
+
 async def test_the_live_card_is_listed_and_the_reader_is_hidden(editor_client, session, frozen_now):
     session.add_all(
         [
@@ -69,7 +85,7 @@ async def test_the_live_card_is_listed_and_the_reader_is_hidden(editor_client, s
     assert live["error_share"] == 0.5
     assert live["sources"] == [{"name": "filgoal", "state": "ok"}, {"name": "yallakora", "state": "down"}]
     assert sources["ysscores"]["live"] is None
-    assert sources["yallakora"]["kind"] == "fixtures"
+    assert sources["yallakora"]["kind"] == "scraper"
 
 
 @pytest.mark.parametrize("name", ["live_poller", "filgoal"])

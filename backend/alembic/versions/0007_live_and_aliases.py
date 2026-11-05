@@ -13,7 +13,9 @@ Expand-only: new tables, nullable columns and wider checks, so the D4 API keeps 
 - ``team_aliases``, ``competition_aliases``, ``channel_aliases``, ``unresolved_names``: names the
   importers can't match wait for an editor instead of creating duplicates (R8, R9);
 - ``matches.local_broadcaster_eg``, ``rights_holder_carriages.package``;
-- the ``filgoal``, ``yallakora`` and ``live_poller`` sources, with the kinds they need.
+- the ``filgoal``, ``yallakora`` and ``live_poller`` sources. Their kinds stay inside what the release
+  before this revision accepts (``SourceItem.kind``), so its ``GET /sources`` keeps working during a
+  deploy and after a rollback; the code tells the live sources apart by name.
 """
 
 from __future__ import annotations
@@ -26,9 +28,6 @@ revision = "0007"
 down_revision = "0006"
 branch_labels = None
 depends_on = None
-
-KINDS_BEFORE = ("scraper", "api", "internal")
-KINDS_AFTER = (*KINDS_BEFORE, "fixtures", "live_reader", "live")
 
 DATASETS_BEFORE = (
     "matches",
@@ -68,11 +67,6 @@ LOCKABLE_AFTER = (*LOCKABLE_BEFORE, "local_broadcaster_eg")
 
 def _in(names: tuple[str, ...]) -> str:
     return ", ".join(f"'{name}'" for name in names)
-
-
-def _set_kinds(names: tuple[str, ...]) -> None:
-    op.execute("ALTER TABLE sources DROP CONSTRAINT ck_sources_kind")
-    op.execute(f"ALTER TABLE sources ADD CONSTRAINT ck_sources_kind CHECK (kind IN ({_in(names)}))")
 
 
 def _set_datasets(names: tuple[str, ...]) -> None:
@@ -243,11 +237,9 @@ def _alias_tables() -> None:
 
 
 def upgrade() -> None:
-    _set_kinds(KINDS_AFTER)
-    op.execute("UPDATE sources SET kind = 'fixtures', updated_at = now() WHERE name = 'yallakora'")
     op.execute(
         "INSERT INTO sources (name, kind) VALUES "
-        "('filgoal', 'live_reader'), ('yallakora', 'fixtures'), ('live_poller', 'live') "
+        "('filgoal', 'internal'), ('yallakora', 'scraper'), ('live_poller', 'internal') "
         "ON CONFLICT (name) DO NOTHING"
     )
 
@@ -291,5 +283,3 @@ def downgrade() -> None:
     # The poller's own run records go with its source; importer runs are untouched.
     op.execute("DELETE FROM import_runs WHERE source IN ('filgoal', 'live_poller')")
     op.execute("DELETE FROM sources WHERE name IN ('filgoal', 'live_poller')")
-    op.execute("UPDATE sources SET kind = 'scraper', updated_at = now() WHERE name = 'yallakora'")
-    _set_kinds(KINDS_BEFORE)
