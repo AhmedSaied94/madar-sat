@@ -1672,6 +1672,12 @@ abstract class AppLocalizations {
   /// **'تتابع المباراة'**
   String get followingMatch;
 
+  /// No description provided for @s3FollowStartedNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدأت المباراة، فلن يصلك تذكير بها'**
+  String get s3FollowStartedNote;
+
   /// No description provided for @unfollow.
   ///
   /// In ar, this message translates to:

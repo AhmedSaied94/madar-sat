@@ -283,6 +283,7 @@
   "s0Retrying": "جارٍ المحاولة...",
   "followMatch": "تابع المباراة",
   "followingMatch": "تتابع المباراة",
+  "s3FollowStartedNote": "بدأت المباراة، فلن يصلك تذكير بها",
   "unfollow": "إلغاء المتابعة",
   "s3ChooseSatellitesChip": "حدد أقمارك",
   "remindersOn": "التنبيهات مفعّلة",

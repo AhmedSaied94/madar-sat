@@ -956,6 +956,60 @@ void main() {
       expect(find.text('تتابع المباراة'), findsWidgets);
     });
 
+    const startedNote = 'بدأت المباراة، فلن يصلك تذكير بها';
+
+    testWidgets('following before kickoff says nothing, as the reminder is still to come',
+        (tester) async {
+      answerSatellites();
+      answerDetail(sampleMatchDetail());
+      await open(tester);
+
+      await tester.tap(find.text('تابع المباراة').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text(startedNote), findsNothing);
+    });
+
+    testWidgets('following a match that has started says no reminder is coming, and still follows',
+        (tester) async {
+      answerSatellites();
+      answerDetail(sampleMatchDetail(kickoff: sampleKickoffAt(hour: 17)));
+      await open(tester);
+
+      await tester.tap(find.text('تابع المباراة').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text(startedNote), findsOneWidget);
+      expect(
+        (await db.readFollows()).where((row) => row.kind == 'match'),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('following a match whose kickoff is unknown says nothing', (tester) async {
+      answerSatellites();
+      answerDetail(sampleMatchDetail(timeTbd: true));
+      await open(tester);
+
+      await tester.tap(find.text('تابع المباراة').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text(startedNote), findsNothing);
+    });
+
+    testWidgets('unfollowing a match that has started says nothing', (tester) async {
+      answerSatellites();
+      answerDetail(sampleMatchDetail(kickoff: sampleKickoffAt(hour: 17)));
+      await db.setFollow(kind: 'match', targetId: _matchId, on: true);
+      await open(tester);
+
+      await tester.tap(find.text('تتابع المباراة').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text(startedNote), findsNothing);
+      expect((await db.readFollows()).where((row) => row.kind == 'match'), isEmpty);
+    });
+
     testWidgets('the toolbar and its filters are not shown with nothing to filter', (tester) async {
       answerSatellites();
       answerDetail(sampleMatchDetail());

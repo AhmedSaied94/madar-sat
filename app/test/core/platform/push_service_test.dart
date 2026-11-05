@@ -17,6 +17,9 @@ class _FakeMessaging implements PushMessaging {
 
   int permissionCalls = 0;
 
+  /// What the next [register] call throws, as FCM does when it cannot register.
+  Object? registerError;
+
   @override
   Future<AuthorizationStatus> requestPermission() async {
     permissionCalls += 1;
@@ -26,6 +29,8 @@ class _FakeMessaging implements PushMessaging {
   @override
   Future<void> register({String? vapidKey}) async {
     registeredWith.add(vapidKey);
+    final error = registerError;
+    if (error != null) throw error;
     // The plugin answers on `onRegistered`; the fake answers at once with `id`.
     final id = _nextId;
     if (id != null) scheduleMicrotask(() => registered.add(id));
@@ -74,13 +79,16 @@ void main() {
     InstallGuide? guide,
     bool isWeb = false,
     String vapidKey = 'vapid-key',
-  }) =>
-      FirebasePushService(
-        guide: guide ?? _Guide(),
-        messaging: messaging,
-        isWeb: isWeb,
-        vapidKey: vapidKey,
-      );
+    Duration registrationTimeout = const Duration(seconds: 10),
+    void Function(Object error, StackTrace stackTrace)? onRegistrationFailed,
+  }) => FirebasePushService(
+    guide: guide ?? _Guide(),
+    messaging: messaging,
+    isWeb: isWeb,
+    vapidKey: vapidKey,
+    registrationTimeout: registrationTimeout,
+    onRegistrationFailed: onRegistrationFailed,
+  );
 
   test('an iPhone PWA that is not installed cannot ask for permission', () async {
     final push = service(guide: _Guide(isWeb: true, isInstalled: false, needsInstallSteps: true));
@@ -105,8 +113,7 @@ void main() {
     expect(await service().requestPermission(), isTrue);
   });
 
-  test('the current token is the id FCM registered, and the web passes the VAPID key',
-      () async {
+  test('the current token is the id FCM registered, and the web passes the VAPID key', () async {
     messaging.willReport('fcm-1');
 
     expect(await service(isWeb: true).currentToken(), 'fcm-1');
@@ -118,6 +125,40 @@ void main() {
 
     expect(await service().currentToken(), 'fcm-1');
     expect(messaging.registeredWith.single, isNull);
+  });
+
+  test('a registration that works reports no failure', () async {
+    final failures = <Object>[];
+    messaging.willReport('fcm-1');
+
+    final token = await service(onRegistrationFailed: (error, _) => failures.add(error))
+        .currentToken();
+
+    expect(token, 'fcm-1');
+    expect(failures, isEmpty);
+  });
+
+  test('a registration FCM refuses gives no token, and is reported', () async {
+    final failures = <Object>[];
+    messaging.registerError = StateError('FIS_AUTH_ERROR');
+
+    final token = await service(onRegistrationFailed: (error, _) => failures.add(error))
+        .currentToken();
+
+    expect(token, isNull);
+    expect(failures.single, isA<StateError>());
+  });
+
+  test('a registration that never answers gives no token, and is reported', () async {
+    final failures = <Object>[];
+
+    final token = await service(
+      registrationTimeout: Duration.zero,
+      onRegistrationFailed: (error, _) => failures.add(error),
+    ).currentToken();
+
+    expect(token, isNull);
+    expect(failures.single, isA<TimeoutException>());
   });
 
   test('a token change is reported once, and a repeat is not sent again', () async {
@@ -133,8 +174,7 @@ void main() {
     expect(tokens, ['fcm-1', 'fcm-2']);
   });
 
-  test('a foreground message opens its route, and one without a route opens nothing',
-      () async {
+  test('a foreground message opens its route, and one without a route opens nothing', () async {
     final routes = service().openedRoutes;
     final first = routes.first;
 

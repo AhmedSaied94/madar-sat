@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/bidi.dart';
@@ -14,16 +13,14 @@ import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/badges.dart';
 import '../../../design/components/carriage_row.dart';
 import '../../../design/components/commentator_row.dart';
-import '../../../design/components/button.dart';
 import '../../../design/components/empty_state.dart';
 import '../../../design/components/filter_chip_row.dart';
 import '../../../design/components/logo.dart';
 import '../../../design/components/search_field.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/carriage_mapper.dart';
-import '../../follows/data/follows_repository.dart';
-import '../../follows/domain/follow_set.dart';
 import '../domain/carriage_order.dart';
+import 'match_follow_button.dart';
 import 'where_to_watch_state.dart';
 import '../../../core/config/media_image.dart';
 
@@ -48,6 +45,7 @@ class WhereToWatchSlivers {
     required this.onWatchReception,
     required this.onRefresh,
     required this.matchId,
+    required this.kickoffAt,
     this.showChooseSatellites = false,
     this.onChooseSatellites,
   });
@@ -74,6 +72,9 @@ class WhereToWatchSlivers {
   /// The match the empty state offers to follow (S3, US2 scenario 9).
   final int matchId;
 
+  /// Its kickoff, or null while unknown.
+  final DateTime? kickoffAt;
+
   /// True while the O10 default satellites stand in: the toolbar then offers «حدد أقمارك».
   final bool showChooseSatellites;
   final VoidCallback? onChooseSatellites;
@@ -96,7 +97,7 @@ class WhereToWatchSlivers {
     ];
 
     if (all.isEmpty) {
-      return [...slivers, SliverToBoxAdapter(child: _NoChannels(matchId: matchId))];
+      return [...slivers, SliverToBoxAdapter(child: _NoChannels(matchId: matchId, kickoffAt: kickoffAt))];
     }
     if (shown.isEmpty) {
       return [...slivers, SliverToBoxAdapter(child: _Note(text: l.s3NoResults))];
@@ -667,27 +668,19 @@ class _Note extends StatelessWidget {
 
 /// «لم تُضف القنوات الناقلة بعد», with «تابع المباراة» as the next action (US2 scenario 9):
 /// following the match means its reminder reaches the device when a channel is found.
-class _NoChannels extends ConsumerWidget {
-  const _NoChannels({required this.matchId});
+class _NoChannels extends StatelessWidget {
+  const _NoChannels({required this.matchId, required this.kickoffAt});
 
   final int matchId;
+  final DateTime? kickoffAt;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final follows = ref.watch(followSetValueProvider);
-    final following = follows.matches.contains(matchId);
     return EmptyState(
       title: l.s3NoChannelsTitle,
       body: l.s3NoChannelsBody,
-      action: FollowButton(
-        following: following,
-        label: l.followMatch,
-        followingLabel: l.followingMatch,
-        onPressed: () => ref
-            .read(followsRepositoryProvider)
-            .toggle(FollowKind.match, matchId),
-      ),
+      action: MatchFollowButton(matchId: matchId, kickoffAt: kickoffAt),
     );
   }
 }
