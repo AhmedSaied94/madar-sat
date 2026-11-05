@@ -129,7 +129,7 @@ Web: satair-6983b.web.app shows a "get it on Google Play" page; ?app=1 opens a p
 | O4 | A domain (about $10/year) for the API and media hosts | Not urgent: hosts come from Remote Config, and the PWA lives on `web.app`. It removes the dependence on sslip.io (R6) |
 | O5 | Apple enrollment as an individual (fast; personal name shown as seller) or an organization (needs a D-U-N-S number, takes weeks) | iOS native timeline |
 | O6 | **Decided 2026-11-03: stay on Spark with the mirror design** (spec 004 Clarifications). Blaze was the alternative (costs cents, no cap) | §5.2: the mirror and service worker ship on D4 |
-| O7 | **Decided 2026-11-04, pending a live capture: scrape FilGoal as the main source, with YallaKora as the cross-check**, at $0 (§6.7). Manual live entry was rejected, because there are no operators. A paid feed (API-Football Pro, about $19/month) stays the alternative if the capture fails. The owner accepts the risk of terms not yet read (R1). No live match has been captured from either site yet, so spec 005 starts with that capture | Live match center (§6.7) |
+| O7 | **Decided 2026-11-04, changed 2026-11-05 after the first capture: scrape FilGoal, Goal.com and YallaKora**, at $0 (§6.7). Manual live entry was rejected, because there are no operators. A paid feed (API-Football Pro, about $19/month) stays the alternative if the capture fails. The owner accepts the risk of terms not yet read (R1). The first capture ran on 2026-11-04 from a home connection, and spec 031 acts on it. A capture from VPS-2 is still due. **Goal.com's terms forbid scraping and commercial use without consent. FootballCo approved on 2026-11-05, as the owner reports: scraping for scores, match stats and everything else spec 031 plans, with no conditions or exceptions** (R1) | Live match center (§6.7) |
 
 ---
 
@@ -451,7 +451,7 @@ Pipeline: fetch (`scrape` queue) → parse → normalize → resolve entities �
 | sporteventz | Basketball, handball, volleyball and tennis events with broadcasters | Every 6 h | Writes `match_custom_broadcasts` |
 | YallaKora | Egyptian and Arab fixtures; the Egyptian broadcaster | Daily, plus every 6 h for today | |
 | API-Football (free, about 100 requests/day) | Fill-in fixtures and IDs | Budgeted by a daily counter | Lineups come from the live poller (O7) |
-| Live poller | Status, minute, score, events, lineups; stats where filled in | §6.7 | FilGoal main, YallaKora cross-check (O7) |
+| Live poller | Status, minute, score, events, lineups; stats from Goal.com | §6.7 | FilGoal, Goal.com and YallaKora (O7) |
 
 **Safety:**
 - per-host token-bucket rate limits in Redis;
@@ -478,27 +478,31 @@ Importers never touch fields listed in `locked_fields`. They remove only the `ma
 3. Every write bumps the `live` dataset version. `/v1/live` is rebuilt at most every 15 s and served to all clients from Redis.
 4. If an admin sets a manual status, it wins until cleared.
 
-**Sources (O7).** Both were checked from VPS-2 on finished matches only. The parsers start on saved finished and scheduled pages, and any status they haven't seen fails validation. A capture of real live matches must then confirm the fields, status codes and update delay, and complete the parsers.
+**Sources (O7).** FilGoal and YallaKora were checked from VPS-2 on finished matches only, then read live on 2026-11-04 from a home connection, with no blocks. Goal.com was read live for 15 minutes. Spec 031 acts on those results, and its capture from VPS-2 confirms the fields, status values and update delays.
 
 | Source | Reads | Used for |
 |---|---|---|
-| FilGoal (main) | The JSON model in the coverage page (`/matches/{id}/coverage/`): score, status, minute, typed events, lineups | Status, minute, score, events, lineups |
-| YallaKora (cross-check) | The list page and the match page (`/{competition}/{id}/match/{id}/`) | Confirming goals; stats where filled in |
+| FilGoal (first for status) | The JSON model in the coverage page (`/matches/{id}/coverage/`): score, status, minute, typed events, lineups. No stats | Status, minute, score, events, lineups |
+| Goal.com (equal third source; setting `LIVE_GOAL_ENABLED`) | The JSON in the list page (`/ar-eg/مباريات-جارية-حاليًا`) and the match page: score, status, period and minute, events, lineups, stats | Score; status, minute, events and lineups where FilGoal has none; the only source of stats. It can be switched off at any time |
+| YallaKora | The list page and the match page (`/{competition}/{id}/match/{id}/`). Its stats are incomplete and aren't stored | Score; status and minute only when the others have none |
 
 - **Requests:** poll a list page every 60 s for every linked match, and open a match's page only while it's live or when it has changed, for at most N matches per cycle per host, chosen by competition priority (a setting; the capture sets N). A FilGoal coverage page is about 450 KB. A match without a page takes status and score from the list pages under the same cross-check, and has no events or lineups.
 - **Off limits:** paths in each site's `robots.txt`, such as YallaKora's `*/Match/EuroMatchStats2` and `*MatchMinByMinPaging*`. Requests aren't disguised, and blocks aren't evaded with proxies. Store structured facts only, never FilGoal's written commentary.
-- **Cross-check:** a new score goes out only when both sources show it.
+- **Score and status rules (decided 2026-11-05, built by spec 031):** a higher score goes out as soon as any source shows it. A lower score or earlier status needs 5 minutes in which no source shows the current one or higher. On the capture's data, waiting for both sources delayed goals by a median of 112 s and up to 428 s; the new rule took under 60 s and never went backward. The cost is that a source's false goal can show for minutes, which the owner accepted. Goal pushes (D6) use a stricter bar: a second source has it, or it has held for 3 minutes with no other source covering the match.
 
 | Situation | What happens |
 |---|---|
-| Both agree on a new score | Update it and write the goal outbox row |
-| Only one has updated | Change nothing yet and wait for the other. The capture sets the wait |
-| Still different after that wait | Hold the goal notification, keep the last confirmed score and alert the owner |
-| One source is down or fails validation | Use the other, and require the new score in two polls in a row |
-| Both are down or fail validation | Fall back to the clock estimate (`estimated: true`, §6.2.3) and alert the owner |
+| A source shows a higher score | Update it at once |
+| A source shows a lower score, and another still shows the current one or higher | Keep the current score |
+| No source shows the current score or higher for 5 minutes | Update to the highest score shown |
+| Sources still differ after 10 minutes, or on a finished match | Keep the rule above and alert the owner |
+| Any source shows full time | The match is finished |
+| No source closes a match by kickoff + 150 min, in its second half with no score change for 15 minutes | Mark it finished with its last score, and alert the owner |
+| A source is down or fails validation | Use the others, under the same rules. An unknown status on one row drops only that row |
+| All sources are down or fail validation | Fall back to the clock estimate (`estimated: true`, §6.2.3) and alert the owner |
 
 - **Validation:** every response is checked for expected fields and known status values. A failure stops that source being used, so a changed format can't publish a wrong score.
-- **Alerts:** format changes, source failures, disagreements, both sources down and recovery go to Telegram through `app/adapters/alerts.py`, with a reference to the saved raw page. Send one alert per problem, then stay quiet until it recovers.
+- **Alerts:** format changes, source failures, disagreements, all sources down, stuck matches and recovery go to Telegram through `app/adapters/alerts.py`, with a reference to the saved raw page. Send one alert per problem, then stay quiet until it recovers.
 - **No operator is needed during a match.** The owner fixes a parser when free, while users stay on the other source or the clock estimate.
 
 ### 6.8 Notifications
@@ -682,7 +686,7 @@ Each day is exactly one Spec Kit spec, and its scope is the day's brief in deliv
 
 | # | Risk | Impact | Mitigation |
 |---|---|---|---|
-| R1 | Sources block us or change layout. Their terms likely forbid commercial reuse. FilGoal's and YallaKora's terms are still unread, and the owner accepts that for live data (O7) | Fixtures or channels stop; live scores fall back to the clock estimate | Adapters + circuit breaker + zero-items alarm. Home-box worker. Live data is cross-checked and validated, and alerts go to Telegram (§6.7). Curated channel and frequency data is our own asset. Budget for a licensed fixtures API once revenue allows |
+| R1 | Sources block us or change layout. Their terms likely forbid commercial reuse. FilGoal's and YallaKora's terms are still unread, and the owner accepts that for live data (O7). Goal.com's terms forbid scraping and commercial use without consent: FootballCo approved on 2026-11-05, as the owner reports: scraping for scores, match stats and everything else spec 031 plans, with no conditions or exceptions | Fixtures or channels stop; live scores fall back to the clock estimate | Adapters + circuit breaker + zero-items alarm. Home-box worker. Live data is cross-checked and validated, and alerts go to Telegram (§6.7). Curated channel and frequency data is our own asset. Budget for a licensed fixtures API once revenue allows |
 | R2 | VPS-1 outage | App shows cached or offline data | Backups, restore drills, Kuma alerts, the PWA mirror failover design |
 | R3 | **Card-sharing labels** (`Mega Share`, `Apollo`, `VIP`, `ليست مكسورة` = "not cracked") and BISS keys in feeds | Store removal under IP-infringement policies; rights-holder action | O3: don't migrate these labels; expose only `access` (free/encrypted) + official provider/package; no BISS keys |
 | R4 | The Firebase Spark quota | New PWA installs fail | Mirror design (§5.2), shipped on D4 (O6 decided: Spark) |

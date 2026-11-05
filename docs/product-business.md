@@ -169,7 +169,7 @@ The PWA has no ads at launch. AdMob doesn't run there, and web ads in a Flutter 
 | Onboarding | [P] | Multi-satellite; notification priming; iOS install guide |
 | **Follow** teams, competitions, matches, channels → **My matches** + push | [V1] | Server push on every platform |
 | **My satellites** (dish setup) filtering every channel list, free first | [V1] | Uses existing data |
-| **Live match center**: score, minute, goals; lineups where available | [V1] | Lineups come from FilGoal where it has them (O7) |
+| **Live match center**: score, minute, goals; lineups where available | [V1] | Lineups come from FilGoal, or Goal.com where FilGoal has none (O7) |
 | **Frequency-change alerts** + "changed recently" badges | [V1] | |
 | Team, competition and channel pages; global search | [V1] | Needed for following |
 | Other sports through a sport switcher on Matches | [V1] | Basketball, handball, volleyball, tennis |
@@ -780,7 +780,7 @@ O1–O3 and O7 are the same items as in system-design §3.2. O8–O10 are produc
 | O1 | Package ID (the name is set: Madar Sat / مدار سات) | Trademark and store-name checks for "Madar Sat", then the ID |
 | O2 | v1 scope (§6) | Confirm or trim [V1] items |
 | O3 | Card-sharing labels and BISS keys: drop (recommended) or keep | Yes/no. The designs assume drop |
-| O7 | Live data source for minute, events and lineups | **Decided 2026-11-04, pending the live capture:** FilGoal main, YallaKora cross-check (system-design §3.3). Coverage varies by match, so S3's live center must cope with missing events or lineups |
+| O7 | Live data source for minute, events and lineups | **Decided 2026-11-04, changed 2026-11-05:** FilGoal, Goal.com and YallaKora (system-design §3.3, spec 031). A goal shows as soon as one source has it, so a source's false goal can show for minutes. Coverage varies by match, so S3's live center must cope with missing events or lineups |
 | O8 | Keep Feeds in v1? | The collection is empty today |
 | O9 | Interstitial placement (§5) | Confirm "on return from detail" |
 | O10 | Default "My satellites" when the user skips: Nilesat + Badr (old rule) or regional by time zone | Confirm |
