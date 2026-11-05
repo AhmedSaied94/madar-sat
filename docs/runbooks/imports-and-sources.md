@@ -121,7 +121,7 @@ points at the pages:
 ssh -J ubuntu@10.8.0.1 ubuntu@"$VPS2_VCN_IP" 'sudo -iu deploy cat /srv/raw/livesoccertv/2026-11-07/*/run.json'
 ```
 
-`run.json` holds `counts`, `skipped`, `unresolved`, `unmatched`, `placeholders_created` and
+`run.json` holds `counts`, `skipped`, `unresolved`, `waiting`, `unmatched`, `placeholders_created` and
 `health`. An unresolved team is not a bug: v0 never guesses (research R17). The alias tables and the
 queue that resolves names arrive on D5; until then the name keeps its text, so the app still shows
 it. Folders older than 5 days are deleted nightly.
@@ -189,13 +189,31 @@ dc exec postgres psql -U madar -d madar -c "select count(*) from matches where l
 ```
 
 **What it may write.** On a row it created, every field that isn't locked. On a row another source
-holds (the duplicate probe found it), only `local_broadcaster_eg` and its own external id, so two
-importers don't rewrite each other's spelling. A card with no channel leaves the broadcaster alone.
+holds, only `local_broadcaster_eg` and its own external id, so two importers don't rewrite each other's
+spelling. A card with no channel leaves the broadcaster alone.
 
-**A first run can add duplicates.** The probe joins rows on both team ids and a kickoff within 45 min,
-or on the same normalized names on the same day. A team spelled differently from ysscores, and with
-no alias yet, matches neither, so that fixture appears twice until an editor maps the name in A13 and
-someone removes the extra row. Compare `report coverage` before and after the first run.
+**When it links to another source's row.** Only when both teams resolve, in that order, and exactly
+one match has them with a kickoff within 45 min (FR-022a, research R7). The live poller trusts a stored
+id, so a wrong link would publish another match's score. Text is never enough. For a card it has no
+stored id for:
+
+| The card | What happens |
+| --- | --- |
+| Both teams resolve, one match within 45 min | Linked: the row gains the id and the broadcaster |
+| Both teams resolve, more than one match within 45 min | **Waits** (`more_than_one_match`): no id, no broadcaster, no new row |
+| Both teams resolve, no match within 45 min, or no kickoff | A new row |
+| A team is unresolved, and a row with no YallaKora id has the same names that day | **Waits** (`unresolved_names_match_a_row`): the names are queued, with no id, no broadcaster and no new row |
+| A team is unresolved, and no such row | A new row with the text names, and the names are queued |
+
+A waiting card is listed under `waiting` in `run.json` and leaves the run `succeeded`. There's nothing
+to clean up: once an editor maps the names in A13, the next run links it. `ysscores` and `legacy`
+still join on the same names on the same day.
+
+**A first run can add duplicates.** A team spelled differently from ysscores and with no alias yet has
+no row with the same names, so that card gets a row of its own, and the fixture appears twice until an
+editor maps the name in A13 and someone removes the extra row. The same happens after a mapping if the
+other source's row has no team ids yet, so map a name for both sources. Compare `report coverage`
+before and after the first run.
 
 ## The unresolved queue
 

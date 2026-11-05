@@ -17,6 +17,7 @@ on:
     paths:
       - "backend/**"
       - "infra/compose/**"  # the api-admin command check parses infra/compose/vps1.yml (B2-R2-14)
+      - ".github/oasdiff/**"  # a change to the breaking-change exception must run that check
       - ".github/workflows/backend.yml"
   workflow_dispatch:
     inputs:
@@ -143,10 +144,12 @@ jobs:
             echo "::notice::contract-v1 isn't tagged yet; skipping the breaking-change check"
             exit 0
           fi
+          # err-ignore.txt holds the owner's one accepted finding: docs/runbooks/ci-workflows.md.
           for f in public admin; do
             git show "contract-v1:backend/openapi/$f.json" > "$RUNNER_TEMP/$f-v1.json"
-            docker run --rm -v "$RUNNER_TEMP:/base:ro" -v "$PWD/openapi:/head:ro" tufin/oasdiff:v1.35.0 \
-              breaking "/base/$f-v1.json" "/head/$f.json" --fail-on ERR
+            docker run --rm -v "$RUNNER_TEMP:/base:ro" -v "$PWD/openapi:/head:ro" \
+              -v "$GITHUB_WORKSPACE/.github/oasdiff:/ignore:ro" tufin/oasdiff:v1.35.0 \
+              breaking "/base/$f-v1.json" "/head/$f.json" --fail-on ERR --err-ignore /ignore/err-ignore.txt
           done
 
   # The generated TS and Dart clients match the committed OpenAPI documents. Skipped until both

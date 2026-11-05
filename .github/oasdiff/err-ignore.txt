@@ -1,0 +1,1 @@
+GET /v1/matches/{match_id} added `#/components/schemas/MatchLineups, subschema #2` to the `data/anyOf[subschema #1: MatchDetail]/lineups` response property `anyOf` list for the response status `200`

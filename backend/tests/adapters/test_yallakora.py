@@ -207,3 +207,22 @@ def test_fetch_needs_a_fetcher() -> None:
 def test_the_parser_is_pure() -> None:
     """Twice the same page, no fetcher, no database, no clock: the same fixtures."""
     assert adapter().parse(page("2026-11-04")) == adapter().parse(page("2026-11-04"))
+
+
+@pytest.mark.parametrize("day", ["2026-11-03", "2026-11-04"])
+def test_a_real_page_that_lost_its_match_lists_is_a_layout_change(day: str) -> None:
+    """Real pages carry the empty text in a hidden ``#noLiveMatch``; that isn't an empty day (B2-R1-2)."""
+    original = (FIXTURES / f"{day}.html").read_text(encoding="utf-8")
+    assert 'id="noLiveMatch"' in original
+    assert "noStats" not in original
+    renamed = original.replace("matchesList", "fixturesGroup")
+
+    with pytest.raises(LayoutChanged):
+        adapter().parse(page(day, renamed.encode()))
+
+
+def test_only_the_empty_day_element_with_its_text_is_an_empty_day() -> None:
+    other_use = b'<html><body><div class="noStats"><p>no statistics yet</p></div></body></html>'
+
+    with pytest.raises(LayoutChanged):
+        adapter().parse(page("2027-07-21", other_use))
