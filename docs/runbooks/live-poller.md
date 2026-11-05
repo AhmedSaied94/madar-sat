@@ -222,6 +222,8 @@ To stop it early, run `docker stop madar-capture`. Only a normal end clears its 
 
 At most 8 FilGoal pages a minute gzip to about 60 KB each, so a busy day stays well under 1 GB, and a 5-day prune applies (`adapters.prune_raw_pages`).
 
+A 240-minute capture adds about 360 MB at most, from the page sizes on 2026-11-04: three list pages of about 170 KB gzipped together, and up to 12 match pages each from FilGoal (about 60 KB gzipped), YallaKora (about 20 KB) and Goal.com (about 30 KB), so about 1.5 MB a round. VPS-2 had 37 GB free on 2026-11-05. The capture's folder isn't pruned.
+
 ```bash
 ssh madar-vps2 'df -h /srv/raw; du -sh /srv/raw/live_poller /srv/raw/capture'
 ```

@@ -58,6 +58,24 @@ def test_the_live_hosts_allow_one_request_per_four_seconds_with_a_burst_of_two(l
     assert limiter.take(host, now=7_004.0) is True
 
 
+def test_goal_com_has_its_own_bucket_sized_for_a_poll_with_room_for_retries(limiter: RateLimiter) -> None:
+    """Spec 031 T030. One list page and four match pages a minute, under the other live hosts' rate."""
+    bucket = DEFAULT_LIMITS["www.goal.com"]
+    assert bucket == Bucket(capacity=2, refill_seconds=4.0)
+    assert 60 / bucket.refill_seconds >= 2 * (1 + 4)
+    assert limiter.take("www.goal.com", now=9_500.0) is True
+    assert limiter.take("www.goal.com", now=9_500.0) is True
+    assert limiter.take("www.goal.com", now=9_500.0) is False
+
+
+@pytest.mark.parametrize("other", ["www.filgoal.com", "www.yallakora.com", "www.ysscores.com"])
+def test_goal_com_shares_no_bucket_with_the_other_hosts(limiter: RateLimiter, other: str) -> None:
+    assert limiter.take("www.goal.com", now=9_600.0) is True
+    assert limiter.take("www.goal.com", now=9_600.0) is True
+    assert limiter.take("www.goal.com", now=9_600.0) is False
+    assert limiter.take(other, now=9_600.0) is True
+
+
 def test_the_poller_and_the_importer_share_one_key(client: redis.Redis) -> None:
     poller = RateLimiter(client=client)
     importer = RateLimiter(client=client)

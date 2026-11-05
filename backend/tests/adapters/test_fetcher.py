@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import http.client
+from collections.abc import Callable, Iterator
 
 import httpx
 import pytest
@@ -249,3 +250,72 @@ def test_a_four_day_fetch_waits_for_the_bucket_instead_of_failing() -> None:
         for key in client.scan_iter(match="ratelimit:*"):
             client.delete(key)
         client.close()
+
+
+GOAL_HOST = frozenset({"www.goal.com"})
+
+
+def _dropped_body(error: Exception) -> httpx.Response:
+    class Dropping(httpx.SyncByteStream):
+        def __iter__(self) -> Iterator[bytes]:
+            yield b"<html>part of a page"
+            raise error
+
+    return httpx.Response(200, stream=Dropping())
+
+
+def test_goal_com_is_fetched_by_its_allowlist_and_nothing_else_opens_it() -> None:
+    """Spec 031 T031: the host check takes the host as it does the others."""
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="ok")
+
+    page = _fetcher(handler, calls).get("https://www.goal.com/ar/live-scores", allowed_hosts=GOAL_HOST)
+    assert page.body == b"ok"
+    with pytest.raises(HostNotAllowed):
+        _fetcher(handler, calls).get("https://www.goal.com/ar/live-scores", allowed_hosts=ALLOWED)
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        http.client.IncompleteRead(b"part", expected=100),
+        http.client.RemoteDisconnected("gone"),
+        httpx.RemoteProtocolError("peer closed connection without sending complete message body"),
+        httpx.ReadError("connection reset"),
+    ],
+    ids=["incomplete-read", "remote-disconnected", "remote-protocol-error", "read-error"],
+)
+def test_a_dropped_connection_comes_out_as_retryable_not_raw(error: Exception) -> None:
+    """Spec 031 T031. The first capture died on an uncaught ``IncompleteRead``, and nobody knew."""
+    calls: list[httpx.Request] = []
+
+    with pytest.raises(Retryable) as caught:
+        _fetcher(lambda _: _dropped_body(error), calls).get(
+            "https://www.goal.com/ar/live-scores?secret=1", allowed_hosts=GOAL_HOST
+        )
+    assert "dropped" in str(caught.value)
+    assert "secret" not in str(caught.value)
+    assert not str(caught.value).startswith("rate limit reached")  # the poller reads that as out of tokens
+
+
+def test_a_connection_dropped_before_any_answer_comes_out_as_retryable() -> None:
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.RemoteProtocolError("server disconnected without sending a response")
+
+    with pytest.raises(Retryable):
+        _fetcher(handler, calls).get("https://www.goal.com/ar/live-scores", allowed_hosts=GOAL_HOST)
+
+
+def test_a_timeout_stays_an_httpx_error_for_the_callers_that_read_it() -> None:
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("slow")
+
+    with pytest.raises(httpx.ReadTimeout):
+        _fetcher(handler, calls).get("https://www.goal.com/ar/live-scores", allowed_hosts=GOAL_HOST)
