@@ -201,19 +201,57 @@ stored id for:
 | --- | --- |
 | Both teams resolve, one match within 45 min | Linked: the row gains the id and the broadcaster |
 | Both teams resolve, more than one match within 45 min | **Waits** (`more_than_one_match`): no id, no broadcaster, no new row |
-| Both teams resolve, no match within 45 min, or no kickoff | A new row |
-| A team is unresolved, and a row with no YallaKora id has the same names that day | **Waits** (`unresolved_names_match_a_row`): the names are queued, with no id, no broadcaster and no new row |
-| A team is unresolved, and no such row | A new row with the text names, and the names are queued |
+| Both teams resolve, no match within 45 min, and a row may be this fixture | **Waits** (`may_be_a_near_row`): no id, no broadcaster, no new row. "May be" means a row within 12 h has either team, or its text on a side with no id, because a club plays once a day. Or a row within 45 min has a side with no id and a spelling at least 0.3 similar. With no kickoff on the card, the row must be that day |
+| Both teams resolve, and no such row | A new row |
+| A team is unresolved | **Waits** (`unresolved_team`): the names are queued, with no id, no broadcaster and no new row |
 
-A waiting card is listed under `waiting` in `run.json` and leaves the run `succeeded`. There's nothing
-to clean up: once an editor maps the names in A13, the next run links it. `ysscores` and `legacy`
-still join on the same names on the same day.
+A waiting card is listed under `waiting` in `run.json` and in A13's run detail, and leaves the run
+`succeeded`. There's nothing to clean up, and what clears it depends on its reason:
 
-**A first run can add duplicates.** A team spelled differently from ysscores and with no alias yet has
-no row with the same names, so that card gets a row of its own, and the fixture appears twice until an
-editor maps the name in A13 and someone removes the extra row. The same happens after a mapping if the
-other source's row has no team ids yet, so map a name for both sources. Compare `report coverage`
-before and after the first run.
+| Reason | What clears it |
+| --- | --- |
+| `unresolved_team` | Map its names in A13. The next run links it, or gives it a row if no source holds it |
+| `may_be_a_near_row` | Usually the row has no team ids: map that row's own names in A13 too, under the source that holds them, which fills the row. If the kickoffs differ by more than 45 min, correct the row's kickoff in A3. If a name on the row points at another club, fix that alias |
+| `more_than_one_match` | Two rows hold this fixture: see [merging duplicate matches](#merging-duplicate-matches) |
+
+`ysscores` and `legacy` still join on the same names on the same day.
+
+**Why so much waits.** On 2026-11-05 the first run made 75 rows, 73 of them copies of fixtures we held under other spellings. A copy has no channels, and a polled copy takes the score away from the row that has them. So a fixture only YallaKora knows gets its row after its names are mapped, which is a smaller cost than a copy. Compare `report coverage` before and after a first run on a new host.
+
+## Merging duplicate matches
+
+`repair-matches` is for one incident: YallaKora's first runs on 2026-11-05 made 74 copies of fixtures we held, listed in [the reviewed pairs](../../specs/031-d05-live-sources/repair/duplicate-pairs-2026-11-05.md). The older row keeps its channels and takes the copy's score, links, readings, events and broadcaster.
+
+Matches are never deleted, and a trigger enforces that. **The owner approved one exception on 2026-11-05 for these rows.** The command refuses any row outside those runs, and turns the trigger off only inside its own transaction, so a failure restores it. Writers to `matches` wait while it runs, and it gives up after 10 s if it can't get the lock. It can't be undone, though `audit_log` keeps what each copy held. Without `--apply` it does all the work and rolls it back.
+
+```bash
+# from your laptop, in the repo
+scp specs/031-d05-live-sources/repair/duplicate-pairs-2026-11-05.json madar-vps2:/tmp/duplicate-pairs.json
+ssh madar-vps2 chmod 644 /tmp/duplicate-pairs.json
+
+# VPS-2, as deploy
+cd /srv/madar/infra
+export IMAGE_TAG=$(cat /srv/madar/current_tag)
+dc() { docker compose --env-file /srv/madar/.env -f compose/vps2.yml "$@"; }
+
+# read the output, in particular `differs` and any REFUSED line
+dc exec -T worker-imports python -m app.cli repair-matches merge - < /tmp/duplicate-pairs.json
+
+# then, the same with the change made
+dc exec -T worker-imports python -m app.cli repair-matches merge --apply - < /tmp/duplicate-pairs.json
+
+# fill empty teams from names decided before the queue did this itself
+dc exec -T worker-imports python -m app.cli repair-matches fill-teams
+dc exec -T worker-imports python -m app.cli repair-matches fill-teams --apply
+```
+
+To check, on VPS-1 (with `compose/vps1.yml` in `dc`) this lists fixtures still held twice, and should show only what you chose to leave:
+
+```bash
+dc exec postgres psql -U madar -d madar -c "select a.id, b.id, a.kickoff_at, a.home_team_name, a.away_team_name from matches a join matches b on a.id < b.id and a.home_team_id = b.home_team_id and a.away_team_id = b.away_team_id and abs(extract(epoch from a.kickoff_at - b.kickoff_at)) <= 2700 where a.kickoff_at > now() - interval '1 day'"
+```
+
+Rows that waited as `more_than_one_match` link on the next run. Once it has run, delete the merge from `backend/app/services/match_repair.py` and `backend/app/cli.py`, so the exception can't be used again.
 
 ## The unresolved queue
 
@@ -223,6 +261,10 @@ and refreshes `context`. An editor works it in A13: map to an existing entity, c
 
 - **Who writes it:** `ysscores`, `legacy`, `yallakora` (teams and competitions), `livesoccertv`
   (channels, while keeping the hidden placeholder, D5 R11), and the live poller.
+- **A team mapping also fills matches.** Coming and in-play matches with no id on that side, the same
+  text name and the same competition get the team at once, with an audit row. The same words in another
+  competition are left alone, and a queue row with no competition fills nothing. Without this, a match
+  with only a text name can't link however many aliases exist.
 - **Mapping takes effect on the next run.** Resolution goes external id → alias for this competition
   → alias for any competition → the name rules, and an alias belongs to one source.
 - **A decided row stays decided.** `ignored`, `mapped` and `created` rows never reopen, and their count

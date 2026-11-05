@@ -190,7 +190,7 @@ Lane A adds the unresolved-names queue to A13, completes run detail, and builds 
 - **FR-020**: A `yallakora` adapter MUST implement `SourceAdapter`, with a pure parser tested on saved pages, run daily and every 6 h for today, and store Egyptian and Arab fixtures with the Egyptian broadcaster.
 - **FR-021**: Entity resolution MUST normalize the name, try an exact alias, then disambiguate within the competition, as SD §6.6 says, for all importers and the live poller. It MUST NOT guess beyond those rules.
 - **FR-022**: Anything unmatched MUST go to `unresolved_names` with its source, kind (team, competition or channel) and match context, one row per name per source and kind, and MUST NOT create an entity. The match keeps the text name.
-- **FR-022a**: A source's match MUST be linked to ours only when both teams resolve and the kickoffs are within 45 min (SD §6.6's cross-source rule). With one team unresolved, it MUST NOT be linked, because a wrong link would publish another match's score; the unresolved name is queued and the match stays on the clock estimate.
+- **FR-022a**: A source's match MUST be linked to ours only when both teams resolve and the kickoffs are within 45 min (SD §6.6's cross-source rule). A row with no time of its own, as FilGoal's is once a match starts, MUST instead fit exactly one match inside the poll window (found on 2026-11-05). With one team unresolved, it MUST NOT be linked, because a wrong link would publish another match's score; the unresolved name is queued and the match stays on the clock estimate.
 - **FR-023**: Importers MUST NOT write fields in `locked_fields`, and MUST upsert by `(source, external_id)`.
 
 #### Admin (Lane A)

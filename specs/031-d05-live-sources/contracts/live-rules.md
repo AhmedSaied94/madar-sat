@@ -69,8 +69,8 @@ The minute follows these rules, in order:
 
 | Situation (usable readings) | What happens |
 |---|---|
-| Two or more readings show full time | The condition is met, even if another reading shows extra time, penalties or an `unknown_status` |
-| Any reading shows extra time, penalties or an `unknown_status`, which may be either | A lone full time doesn't count. Clear `fulltime_source`, `fulltime_since` and `finish_wait_since`. The + 210 limit still bounds the match |
+| Two or more readings show full time | The condition is met, even if another reading shows extra time, penalties, an `unknown_status` or `live` with no period |
+| Any reading shows extra time, penalties, an `unknown_status` or `live` with no period, which may be either | A lone full time doesn't count. Clear `fulltime_source`, `fulltime_since` and `finish_wait_since`. The + 210 limit still bounds the match |
 | One reading shows it, from `fulltime_source`, and `fulltime_since` is `fulltime_hold` old or more | The condition is met |
 | One reading shows it, from `fulltime_source`, for less time | Keep waiting |
 | One reading shows it, from another source or with nothing held | Set `fulltime_source` to it and `fulltime_since` to now. Clear `finish_wait_since` |
