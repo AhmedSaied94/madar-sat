@@ -32,6 +32,9 @@ LIVESOCCERTV_BUCKET = Bucket(capacity=1, refill_seconds=4.0)
 # D5 R3: the live poller and the `yallakora` importer spend one bucket per host, through one key.
 FILGOAL_BUCKET = Bucket(capacity=2, refill_seconds=4.0)
 YALLAKORA_BUCKET = Bucket(capacity=2, refill_seconds=4.0)
+# Spec 031 FR-015: the other live hosts' rate. One list page and `LIVE_PAGE_CAP_GOAL` (4) match pages a
+# minute need 5 of its 15 tokens, which leaves room for retries.
+GOAL_BUCKET = Bucket(capacity=2, refill_seconds=4.0)
 
 DEFAULT_LIMITS: Mapping[str, Bucket] = {
     "www.ysscores.com": YSSCORES_BUCKET,
@@ -39,6 +42,7 @@ DEFAULT_LIMITS: Mapping[str, Bucket] = {
     "www.livesoccertv.com": LIVESOCCERTV_BUCKET,
     "www.filgoal.com": FILGOAL_BUCKET,
     "www.yallakora.com": YALLAKORA_BUCKET,
+    "www.goal.com": GOAL_BUCKET,
 }
 
 TTL_SECONDS = 3600

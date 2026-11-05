@@ -7,6 +7,7 @@ Guarantees, all tested in ``tests/adapters/test_fetcher.py``:
 - at most three redirects;
 - a 5 s connect timeout, a 20 s read timeout and a 5 MB streaming cap;
 - 429, 403 and 5xx raise ``Retryable`` so Celery backs off with jitter; other 4xx fail the run;
+- a connection dropped before or during the answer raises ``Retryable`` too, never a raw error (031 T031);
 - one request per host per the Redis token bucket: the fetcher waits for the next token, up to
   ``wait_budget`` seconds, instead of failing the whole run (B2-R1-8);
 - ``http_errors`` counts every response of 400 or more, for the run row (B2-R1-9).
@@ -14,6 +15,7 @@ Guarantees, all tested in ``tests/adapters/test_fetcher.py``:
 
 from __future__ import annotations
 
+import http.client
 import time
 from collections.abc import Callable
 from types import TracebackType
@@ -31,6 +33,9 @@ READ_TIMEOUT = 20.0
 MAX_BYTES = 5 * 1024 * 1024
 MAX_REDIRECTS = 3
 RETRYABLE_STATUSES = frozenset({403, 429})
+# The peer went away before the whole answer arrived. ``http.client``'s are what a transport built on the
+# standard library raises: the first live capture died on an uncaught ``IncompleteRead`` (031 R12).
+DROPPED_CONNECTION = (httpx.RemoteProtocolError, httpx.ReadError, http.client.HTTPException)
 # A four-day ysscores run needs two burst tokens and one more every 4 s, so it waits about 8 s.
 WAIT_BUDGET = 60.0
 POLL_SECONDS = 0.25
@@ -145,37 +150,40 @@ class HttpFetcher:
             self._check_host(current, allowed_hosts)
             self._wait_for_token(host_of(current))
 
-            with self.client.stream(
-                method,
-                current,
-                params=params,
-                data=data,
-                headers={USER_AGENT_HEADER: self.user_agent, **(headers or {})},
-            ) as response:
-                if response.is_redirect:
-                    redirects += 1
-                    if redirects > self.max_redirects:
-                        raise RedirectLimit(f"more than {self.max_redirects} redirects from {url}")
-                    location = response.headers.get("location")
-                    if not location:
-                        raise FetchError(f"{current} answered {response.status_code} without a location")
-                    target = urljoin(current, location)
-                    self._check_host(target, allowed_hosts)
-                    current = target
-                    if response.status_code in {301, 302, 303}:
-                        method, data = "GET", None
-                    params = None
-                    continue
+            try:
+                with self.client.stream(
+                    method,
+                    current,
+                    params=params,
+                    data=data,
+                    headers={USER_AGENT_HEADER: self.user_agent, **(headers or {})},
+                ) as response:
+                    if response.is_redirect:
+                        redirects += 1
+                        if redirects > self.max_redirects:
+                            raise RedirectLimit(f"more than {self.max_redirects} redirects from {url}")
+                        location = response.headers.get("location")
+                        if not location:
+                            raise FetchError(f"{current} answered {response.status_code} without a location")
+                        target = urljoin(current, location)
+                        self._check_host(target, allowed_hosts)
+                        current = target
+                        if response.status_code in {301, 302, 303}:
+                            method, data = "GET", None
+                        params = None
+                        continue
 
-                if response.status_code >= 400:
-                    self.http_errors += 1
-                body = self._read_capped(response)
-                page = RawPage(
-                    url=str(response.url),
-                    status=response.status_code,
-                    body=body,
-                    content_type=response.headers.get("content-type"),
-                )
+                    if response.status_code >= 400:
+                        self.http_errors += 1
+                    body = self._read_capped(response)
+                    page = RawPage(
+                        url=str(response.url),
+                        status=response.status_code,
+                        body=body,
+                        content_type=response.headers.get("content-type"),
+                    )
+            except DROPPED_CONNECTION as exc:
+                raise Retryable(f"{_without_query(current)} dropped the connection: {type(exc).__name__}") from exc
 
             if page.status in RETRYABLE_STATUSES or page.status >= 500:
                 raise Retryable(f"{current} answered {page.status}")

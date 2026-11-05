@@ -657,6 +657,23 @@ Spec: [031](../specs/031-d05-live-sources/spec.md). It acts on the 2026-11-04 ca
 - The first capture's raw data and scripts are on your laptop in `~/madar-capture/2026-11-04/`, outside the repo.
 - `LIVE_CONFIRM_WAIT_S` is removed by this spec. If you set it on VPS-2, delete it after merge.
 
+### Lane B2
+
+Nothing here blocks the merge. These run after the deploy that carries the capture, before T026.
+
+- [ ] **T033 The host check.** Lane B2 confirmed what it can from outside: `worker-live` and `worker-maintenance` render with the live settings, `/srv/raw` is mounted and owned by the image's user (uid 10001), and VPS-2 had 37 GB free on 2026-11-05. The SSH user can't read `.env` or reach Docker, so these three are yours, as in [live-poller](runbooks/live-poller.md#the-capture):
+
+  ```bash
+  ssh madar-vps2
+  sudo -iu deploy
+  cd /srv/madar/infra
+  export IMAGE_TAG=$(cat /srv/madar/current_tag)
+  dc() { docker compose --env-file /srv/madar/.env -f compose/vps2.yml "$@"; }
+  grep -cE '^(SCRAPE_USER_AGENT|TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID)=.' /srv/madar/.env   # 3
+  dc run --rm worker-live python -c "import os, redis; print(redis.Redis.from_url(os.environ['CELERY_BROKER_URL']).ping())"   # True
+  dc run --rm worker-live sh -c 'mkdir -p /srv/raw/capture && test -w /srv/raw/capture && echo writable'
+  ```
+
 ## Known for later features
 
 ### Day 0 leftovers
