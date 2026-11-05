@@ -31,6 +31,7 @@ import '../../fixtures/fake_share.dart';
 import '../../fixtures/sample_details.dart';
 import '../../fixtures/sample_match_detail.dart';
 import '../../fixtures/sample_models.dart';
+import '../../fixtures/semantics_actions.dart';
 const int _channelId = 5512;
 final String _channelPath = '/v1/channels/$_channelId';
 
@@ -210,6 +211,21 @@ void main() {
       await tester.pump();
 
       expect(share.shared.single, contains('beIN SPORTS 1'));
+    });
+
+    testWidgets('a screen reader can reach share, outside the header label (M-R1-1)',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      answerChannel(standard());
+      await open(tester);
+
+      expect(semanticAction('مشاركة القناة'), findsOne);
+
+      tapSemanticAction(tester, 'مشاركة القناة');
+      await tester.pump();
+
+      expect(share.shared.single, contains('beIN SPORTS 1'));
+      handle.dispose();
     });
 
     testWidgets('the satellite row marks a satellite of mine', (tester) async {

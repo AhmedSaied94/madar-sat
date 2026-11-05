@@ -22,7 +22,7 @@ import '../../../l10n/app_localizations.dart';
 import '../domain/channel_sections.dart';
 
 /// The sheet's heading: the channel's logo, its name, its category and country, and the share
-/// action. The whole block reads as one Arabic label.
+/// action. The text block reads as one Arabic label, and share stays outside it as its own node.
 class ChannelSheetHeader extends StatelessWidget {
   const ChannelSheetHeader({
     super.key,
@@ -49,55 +49,63 @@ class ChannelSheetHeader extends StatelessWidget {
       ?country,
     ];
 
-    return Semantics(
-      container: true,
-      label: words.join(l.listSeparator),
-      excludeSemantics: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LogoTile(
-            kind: LogoTileKind.channel,
-            logo: detail.logo,
-            fallbackText: name,
-            size: MadarSpace.s12 + MadarSpace.s4,
-          ),
-          const SizedBox(width: MadarSpace.s3),
-          Expanded(
-            child: Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Semantics(
+            container: true,
+            label: words.join(l.listSeparator),
+            excludeSemantics: true,
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                EntityName(
-                  name,
-                  style: MadarText.heading2.copyWith(color: colors.textPrimary),
+                LogoTile(
+                  kind: LogoTileKind.channel,
+                  logo: detail.logo,
+                  fallbackText: name,
+                  size: MadarSpace.s12 + MadarSpace.s4,
                 ),
-                if (category != null || country != null) ...[
-                  const SizedBox(height: MadarSpace.s1),
-                  Wrap(
-                    spacing: MadarSpace.s2,
-                    runSpacing: MadarSpace.s1,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                const SizedBox(width: MadarSpace.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (category != null) CategoryBadge(sports: category == Category.sports),
-                      if (country != null)
-                        Text(
-                          country,
-                          style: MadarText.textCaption.copyWith(color: colors.textTertiary),
+                      EntityName(
+                        name,
+                        style: MadarText.heading2.copyWith(color: colors.textPrimary),
+                      ),
+                      if (category != null || country != null) ...[
+                        const SizedBox(height: MadarSpace.s1),
+                        Wrap(
+                          spacing: MadarSpace.s2,
+                          runSpacing: MadarSpace.s1,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (category != null)
+                              CategoryBadge(sports: category == Category.sports),
+                            if (country != null)
+                              Text(
+                                country,
+                                style: MadarText.textCaption.copyWith(color: colors.textTertiary),
+                              ),
+                          ],
                         ),
+                      ],
                     ],
                   ),
-                ],
+                ),
               ],
             ),
           ),
-          const SizedBox(width: MadarSpace.s2),
-          IconButton(
-            tooltip: l.s6Share,
-            onPressed: onShare,
-            icon: Icon(Icons.share_outlined, color: colors.textSecondary),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: MadarSpace.s2),
+        IconButton(
+          tooltip: l.s6Share,
+          onPressed: onShare,
+          icon: Icon(Icons.share_outlined, color: colors.textSecondary),
+        ),
+      ],
     );
   }
 }

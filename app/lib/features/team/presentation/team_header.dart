@@ -9,7 +9,8 @@ import '../../../l10n/app_localizations.dart';
 /// S7's header: the crest, the name, the main competition and the stadium, with the follow
 /// button under them (§S7).
 ///
-/// The whole block reads as one Arabic label: the name, the competition and the stadium.
+/// The text block reads as one Arabic label: the name, the competition and the stadium. The
+/// follow button stays outside it, as its own node.
 class TeamHeader extends StatelessWidget {
   const TeamHeader({
     super.key,
@@ -33,21 +34,21 @@ class TeamHeader extends StatelessWidget {
     final competition = detail.primaryCompetition?.name;
     final stadium = detail.stadium;
 
-    return Semantics(
-      container: true,
-      label: [detail.name, ?competition, ?stadium].join(l.listSeparator),
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(
-          MadarSpace.s4,
-          MadarSpace.s4,
-          MadarSpace.s4,
-          MadarSpace.s4,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        MadarSpace.s4,
+        MadarSpace.s4,
+        MadarSpace.s4,
+        MadarSpace.s4,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            container: true,
+            label: [detail.name, ?competition, ?stadium].join(l.listSeparator),
+            excludeSemantics: true,
+            child: Row(
               children: [
                 TeamCrest(name: detail.name, logo: logo, size: MadarSpace.s12 + MadarSpace.s6),
                 const SizedBox(width: MadarSpace.s4),
@@ -75,16 +76,16 @@ class TeamHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: MadarSpace.s4),
-            MadarButton(
-              label: following ? l.s7FollowingTeam : l.s7FollowTeam,
-              icon: following ? Icons.star : Icons.star_border,
-              variant: following ? MadarButtonVariant.secondary : MadarButtonVariant.primary,
-              expanded: true,
-              onPressed: onFollow,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: MadarSpace.s4),
+          MadarButton(
+            label: following ? l.s7FollowingTeam : l.s7FollowTeam,
+            icon: following ? Icons.star : Icons.star_border,
+            variant: following ? MadarButtonVariant.secondary : MadarButtonVariant.primary,
+            expanded: true,
+            onPressed: onFollow,
+          ),
+        ],
       ),
     );
   }

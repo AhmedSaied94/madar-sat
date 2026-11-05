@@ -28,6 +28,10 @@ Shorthand: **SD** = `docs/system-design.md`, **PB** = `docs/product-business.md`
 - Q: On a busy match day, should the live poller open match pages for every linked match, or only some of them? → A: Only some. It reads the list page for every linked match and opens match pages for up to N matches per cycle, chosen by competition priority. The capture and the plan set N.
 - Q: Must the live parsers wait for a capture of a real live match? → A: No. They start on saved finished and scheduled pages, any status they haven't seen fails validation, and the capture confirms and completes them.
 
+### Session 2026-11-05
+
+- Q: S3's carriage row shows «عرض القناة» only once it's expanded, which is two taps to S6. Should S3's row get a one-tap way to S6, or should SC-008 change? → A: Keep two taps, per PB S5.2. S6 is reached by expanding a carriage row and tapping «عرض القناة», and the frequency is already visible on the row with no tap. S7 and S8 stay one tap. US2 scenario 1 and SC-008 get reworded to match.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Each story is one lane's work and maps to that lane's section of `tasks.md` (`## Lane B1`, `## Lane B2`, `## Lane A`, `## Lane M`). The order reflects how early each must finish: the contract comes first, and every other lane builds on it.
@@ -68,13 +72,13 @@ Lane M builds three screens and connects them to S2 and S3: S6 as a sheet with t
 
 **Why this priority**: It's half the day's goal and half the done check. It can run alongside the live work because these endpoints already exist and need only completing.
 
-**Independent Test**: On a real Android phone, from S2 or S3, tap a channel, a team and a competition. Each screen opens with real data in both themes, follows work and survive a restart, and each screen's offline and empty states show.
+**Independent Test**: On a real Android phone, from S2 or S3, open a channel, a team and a competition. Each screen opens with real data in both themes, follows work and survive a restart, and each screen's offline and empty states show.
 
 **Read**: PB §9 S6, S7, S8; SD §6.3.2; app: S6 Channel sheet, S7 Team, S8 Competition; `madar-design/README.md`.
 
 **Acceptance Scenarios**:
 
-1. **Given** a channel in S3, **When** it is tapped, **Then** S6 opens as a sheet with logo, name, category and country; a carriage card with satellite, the frequency readout with copy, access and provider or package; other carriages; upcoming matches for 7 days, whose rows open S3; and the follow action.
+1. **Given** a carriage row in S3, **When** it is expanded and «عرض القناة» is tapped (two taps from S3, with the frequency already visible on the row with no tap), **Then** S6 opens as a sheet with logo, name, category and country; a carriage card with satellite, the frequency readout with copy, access and provider or package; other carriages; upcoming matches for 7 days, whose rows open S3; and the follow action.
 2. **Given** a channel with recorded frequency changes, **Then** S6 shows the last 3 with dates. **Given** none, which is every channel until D6 starts recording them, **Then** the section is hidden and nothing is invented.
 3. **Given** a team name or crest in S3's hero (a row in S2 keeps opening S3), **When** it is tapped, **Then** S7 opens with logo, name, main competition, stadium and follow, plus «القادمة» and «النتائج» tabs of S2-style rows with channel lines. **Given** no upcoming matches, **Then** it shows «لا توجد مباريات قادمة».
 4. **Given** a competition in S2 or S3, **When** it is tapped, **Then** S8 opens with logo, name, follow, matches by date (upcoming and results) and a «حقوق البث» section listing rights holders.
@@ -242,7 +246,7 @@ Lane A adds the unresolved-names queue to A13, completes run detail, and builds 
 - **SC-005**: A confirmed score reaches the app within 45 s of its confirmation. The time from a source first showing it to confirmation isn't counted, and is recorded in the capture report.
 - **SC-006**: A YallaKora run completes on the live host, and 100 % of its unmatched names are in the queue with 0 new teams, competitions or channels created by it.
 - **SC-007**: An editor clears a queued name in under 1 minute, and the next import resolves it.
-- **SC-008**: On a real Android phone, a fan reaches S6 and S7 in one tap from S3 and S8 in one tap from S2 or S3, and a channel's frequency is visible with no further tap.
+- **SC-008**: On a real Android phone, a fan reaches S6 in two taps from S3 (expand a carriage row, then «عرض القناة»), S7 in one tap from S3 and S8 in one tap from S2 or S3, and a channel's frequency is visible on S3's row and on S6 with no tap.
 - **SC-010**: A re-run of the load test at 004's targets passes on the deployed VPS-1, with its result committed.
 - **SC-009**: The day's **done check** passes, word for word from delivery-plan Appendix A: *"A real live match updates status and score from FilGoal, cross-checked with YallaKora (O7); YallaKora imports; unresolved names visible in the admin; S6, S7, S8 on a device"*.
 

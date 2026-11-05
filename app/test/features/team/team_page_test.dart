@@ -28,6 +28,7 @@ import '../../fixtures/fake_http_adapter.dart';
 import '../../fixtures/sample_details.dart';
 import '../../fixtures/sample_match_detail.dart';
 import '../../fixtures/sample_models.dart';
+import '../../fixtures/semantics_actions.dart';
 
 const int _teamId = 1;
 final String _teamPath = '/v1/teams/$_teamId';
@@ -189,6 +190,25 @@ void main() {
         [_teamId],
       );
       expect(find.text('تتابع الفريق'), findsOneWidget);
+    });
+
+    testWidgets('a screen reader hears the header once and can reach follow (M-R1-1)',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      answerTeam(standard());
+      await open(tester);
+
+      expect(
+        find.semantics.byLabel('الأهلي، الدوري المصري الممتاز، استاد القاهرة الدولي'),
+        findsOne,
+      );
+      expect(semanticAction('تابع الفريق'), findsOne);
+
+      tapSemanticAction(tester, 'تابع الفريق');
+      await tester.pumpAndSettle();
+
+      expect(find.text('تتابع الفريق'), findsOneWidget);
+      handle.dispose();
     });
 
     testWidgets('a followed team opens as followed', (tester) async {

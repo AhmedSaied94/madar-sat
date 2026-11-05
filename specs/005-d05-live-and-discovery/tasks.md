@@ -313,6 +313,14 @@ From `reviews/a-round-1.md`.
   `docs/owner-actions.md` under 005 · Lane M.
 - [x] T091 [US2] Add Lane M's items to `docs/owner-actions.md`: the device walk, the Remote Config value, and the next `app-v*` and `web-v*` tags.
 
+### Review fixes (round 1)
+
+From `reviews/m-round-1.md`.
+
+- [x] M-R1-1 Make actions reachable by screen reader in `app/lib/features/team/presentation/team_header.dart`, `app/lib/features/competition/presentation/competition_sections.dart`, `app/lib/features/channel/presentation/channel_sections.dart` and `app/lib/features/match_detail/presentation/match_hero.dart`: `Semantics(excludeSemantics: true)` wraps the follow, «حقوق البث» and share buttons and S3's taps to S7 and S8. After the fix the merged label covers the text only and each action is its own semantics node. Add a semantics test per screen that fails before the fix. (HIGH, per FR-041, FR-042, FR-044, §13.8)
+- [x] M-R1-2 Add entry-point tests under `app/test/features/`: S3 carriage row and S5 row to S6, S3 hero to S7 and S8, S2 section header to S8. T081 asks for them and none exist, so removing a link fails nothing. Each test must fail if its tap target is removed. (HIGH, per T081, FR-040 to FR-042)
+- [x] M-R1-3 Ask the owner about S6 from S3: `app/lib/design/components/carriage_row.dart` shows «عرض القناة» only on an expanded row, which is two taps. SC-008 and US2 scenario 1 say one, and PB S5.2 describes the expanded form. Either give S3's row a one-tap way to S6 with a test, or have the owner change SC-008. (HIGH, per SC-008, US2 scenario 1)
+
 ---
 
 ## Done check

@@ -600,7 +600,7 @@ points from S2, S3, S5 and S9. The whole lane's task list in
 [tasks.md](../specs/005-d05-live-and-discovery/tasks.md#lane-m) is ticked.
 
 Checked without a device, in `app/`: `flutter analyze` clean, `./tool/check_literals.sh`,
-`./tool/check_token_copy.sh`, and the whole suite on the test box — 789 tests, 1 skipped
+`./tool/check_token_copy.sh`, and the whole suite on the test box — 802 tests, 1 skipped
 (`env/example.json` is not in a checkout). All three screens have their goldens in
 `app/test/goldens/` (`s6_channel_*`, `s7_team_*`, `s8_competition_*`), RTL × {light, dark} ×
 {1.0, 1.3}. Two board details are deliberately not drawn, and the review should know why: S8's
@@ -614,9 +614,12 @@ rights section).
   `madar-design/app-flutter/screens/04-satellites-frequencies/Channel.png`,
   `05-follow-and-search/Team.png` and `05-follow-and-search/Competition.png` in both themes;
   what is left is your walk on a real Android phone: S6 opens from an S3 carriage row and from
-  an S5 channel row with the frequency readable with no tap, S7 opens from S3's crest and from
+  an S5 channel row (expand the row, then «عرض القناة»: two taps, your decision of 2026-11-05)
+  with the frequency readable with no tap, S7 opens from S3's crest and from
   S9's teams, S8 opens from S2's section header, S3's competition line and S9's «البطولات»,
-  follows survive a restart, and every offline and empty state shows
+  follows survive a restart, and every offline and empty state shows. With TalkBack on, follow,
+  «حقوق البث», share and S3's team and competition buttons can each be reached and activated
+  (M-R1-1)
   ([quickstart Lane M](../specs/005-d05-live-and-discovery/quickstart.md#lane-m)).
 - [ ] **Merge the PR** once its checks are green.
 

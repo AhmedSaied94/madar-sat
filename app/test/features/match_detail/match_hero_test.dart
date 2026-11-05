@@ -7,6 +7,7 @@ import 'package:madar_sat/features/match_detail/presentation/match_hero.dart';
 
 import '../../fixtures/sample_match_detail.dart';
 import '../../fixtures/sample_models.dart';
+import '../../fixtures/semantics_actions.dart';
 import '../../fixtures/test_app.dart';
 
 /// The hero's countdown line: «تبدأ بعد …» only while the match is scheduled, has a kickoff,
@@ -65,6 +66,60 @@ void main() {
     );
 
     expect(find.textContaining('تبدأ بعد'), findsNothing);
+  });
+
+  group('a screen reader (M-R1-1, §13.8)', () {
+    final now = kickoff.subtract(const Duration(hours: 3));
+
+    testWidgets('the hero stays one merged label', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        testApp(MatchHero(match: sampleMatchDetail(), now: now, onOpenTeam: (_) {}, onOpenCompetition: (_) {})),
+      );
+
+      final label = tester.getSemantics(find.byType(MatchHero)).label;
+      for (final part in ['الأهلي', 'الزمالك', 'الدوري المصري الممتاز', 'تبدأ بعد 3 ساعات']) {
+        expect(label, contains(part));
+      }
+      // The date line and the countdown are in that label, not nodes of their own.
+      expect(find.semantics.byLabel('تبدأ بعد 3 ساعات'), findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('each team and the competition is a button of its own', (tester) async {
+      final handle = tester.ensureSemantics();
+      final teams = <int>[];
+      final competitions = <int>[];
+      await tester.pumpWidget(
+        testApp(
+          MatchHero(
+            match: sampleMatchDetail(),
+            now: now,
+            onOpenTeam: teams.add,
+            onOpenCompetition: competitions.add,
+          ),
+        ),
+      );
+
+      tapSemanticAction(tester, 'الأهلي');
+      tapSemanticAction(tester, 'الزمالك');
+      tapSemanticAction(tester, 'الدوري المصري الممتاز');
+
+      expect(teams, [1, 2]);
+      expect(competitions, [12]);
+      handle.dispose();
+    });
+
+    testWidgets('with no actions it offers no buttons, only the merged label', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(testApp(MatchHero(match: sampleMatchDetail(), now: now)));
+
+      expect(semanticAction('الأهلي'), findsNothing);
+      expect(semanticAction('الدوري المصري الممتاز'), findsNothing);
+      expect(find.semantics.byLabel('الأهلي'), findsNothing);
+      expect(find.semantics.byLabel('الدوري المصري الممتاز'), findsNothing);
+      handle.dispose();
+    });
   });
 
   group('the date follows the chosen zone (M-R2-3)', () {
