@@ -180,9 +180,19 @@ class _Stage:
     drop_since: datetime | None = None
 
 
+def _says_only_live(reading: SourceReading) -> bool:
+    """«مباشر» with no half: a source saying the match is on, and nothing about how far it's got."""
+    return reading.status == "live" and reading.period is None
+
+
+def _names_the_stage(showing: Sequence[SourceReading]) -> SourceReading:
+    """The first at this stage that says which: «مباشر» first in ``ORDER`` mustn't hide what another knows."""
+    return next((reading for reading in showing if not _says_only_live(reading)), showing[0])
+
+
 def _written(readings: Sequence[SourceReading], ranks: Mapping[str, int], rank: int) -> _Stage:
     showing = tuple(reading for reading in readings if ranks[reading.source] == rank)
-    first = showing[0]
+    first = _names_the_stage(showing)
     assert first.status is not None  # only readings with a known status get here
     return _Stage(first.status, first.period, first.status_label, showing)
 
@@ -191,10 +201,11 @@ def _kept_stage(state: LiveState, showing: tuple[SourceReading, ...]) -> _Stage:
     """No move. The label comes from the first source showing it, and a period fills in if the row had none."""
     if not showing:
         return _Stage(state.status, state.period, state.status_label, ())
-    first = showing[0]
+    first = _names_the_stage(showing)
     status = POSTPONED if first.status == POSTPONED else state.status
-    period = next((reading.period for reading in showing if reading.period), state.period)
-    return _Stage(status, period, first.status_label, showing)
+    period = first.period or state.period
+    label = state.status_label if _says_only_live(first) and state.status_label else first.status_label
+    return _Stage(status, period, label, showing)
 
 
 def _stage_step(
@@ -255,6 +266,11 @@ class _FullTime:
     wait_since: datetime | None = None
 
 
+def _may_be_extra_time(reading: SourceReading) -> bool:
+    """No parser maps extra time yet, so an unknown status, or «مباشر» with no half, may be it (B1-R2-1)."""
+    return reading.status in EXTRA_STATUSES or reading.unknown_status is not None or _says_only_live(reading)
+
+
 def _fulltime_step(
     state: LiveState,
     readings: Sequence[SourceReading],
@@ -267,8 +283,7 @@ def _fulltime_step(
     showing = [reading for reading in known if reading.status == FINISHED]
     if len(showing) >= 2:
         return replace(held, met=True)
-    # No parser maps extra time yet, so a status nobody has seen may be it (B1-R2-1). + 210 still bounds the match.
-    if any(reading.status in EXTRA_STATUSES or reading.unknown_status is not None for reading in readings):
+    if any(_may_be_extra_time(reading) for reading in readings):
         return _FullTime()
     if showing:
         source = showing[0].source

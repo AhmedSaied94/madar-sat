@@ -567,6 +567,7 @@ def _compact_log(
             outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []
         ),
         "unresolved": _bounded(outcome.unresolved if outcome is not None else []),
+        "waiting": _bounded(outcome.waiting if outcome is not None else []),
         "unmatched": _bounded([item.model_dump() for item in data.unmatched]),
         "health": health_outcome.as_log() if health_outcome is not None else {},
     }

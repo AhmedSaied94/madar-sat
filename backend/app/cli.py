@@ -1,4 +1,4 @@
-"""CLI: export-openapi, load-snapshot, rehost-media, create-admin, set-admin-password, deactivate-admin.
+"""CLI: export-openapi, load-snapshot, rehost-media, repair-matches, create-admin, set-admin-password, deactivate-admin.
 
 Stdlib argparse. A password is never accepted as an argument (it would land in shell history and
 ``ps``): it is read twice from the terminal, or once from stdin with ``--password-stdin``.
@@ -10,9 +10,11 @@ import argparse
 import getpass
 import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.auth import admins
@@ -20,6 +22,7 @@ from app.db.session import SyncSession
 from app.etl.report import Report
 from app.etl.snapshot import load
 from app.etl.types import read_snapshot
+from app.services.match_repair import FillResult, MergeResult, RepairRefused, fill_teams, merge_pairs
 from app.settings import get_settings
 
 
@@ -140,6 +143,61 @@ def cmd_capture_live(args: argparse.Namespace) -> int:
     return 0
 
 
+def _read_pairs(path: str) -> list[tuple[int, int]]:
+    """``[{"keep": 870, "drop": 1258}, ...]``, from a file or, with ``-``, stdin."""
+    raw = sys.stdin.read() if path == "-" else Path(path).read_text(encoding="utf-8")
+    return [(int(pair["keep"]), int(pair["drop"])) for pair in json.loads(raw)]
+
+
+def _print_merge(result: MergeResult) -> None:
+    print(
+        json.dumps(
+            {
+                "keep": result.keep_id,
+                "drop": result.drop_id,
+                "filled": result.filled,
+                "live_copied": result.live_copied,
+                "differs": result.differs,
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+def _print_fill(result: FillResult) -> None:
+    for match_id, side, team_id in result.filled:
+        print(json.dumps({"match": match_id, "side": side, "team": team_id}))
+    for name_norm, competition_norm in result.ambiguous:
+        print(json.dumps({"decided_two_ways": name_norm, "competition": competition_norm}, ensure_ascii=False))
+
+
+def cmd_repair_matches(args: argparse.Namespace) -> int:
+    """All of it or none of it, and nothing at all without ``--apply``: a dry run rolls the real work back."""
+    now = datetime.now(UTC)
+    with SyncSession() as session:
+        try:
+            if args.action == "merge":
+                for result in merge_pairs(session, _read_pairs(args.pairs), now):
+                    _print_merge(result)
+            else:
+                _print_fill(fill_teams(session, now))
+        except RepairRefused as exc:
+            session.rollback()
+            print(f"REFUSED, nothing changed: {exc}")
+            return 1
+        except OperationalError as exc:
+            session.rollback()
+            print(f"Couldn't lock matches, nothing changed. Try again: {exc.orig}")
+            return 1
+        if args.apply:
+            session.commit()
+            print("Applied.")
+        else:
+            session.rollback()
+            print("DRY RUN: nothing changed. Add --apply to do this.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -171,6 +229,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--minutes", type=int, default=240, help="How long to record, about one round a minute")
     p.add_argument("--page-cap", type=int, default=12, help="Most match pages per source per round")
 
+    p = sub.add_parser("repair-matches", help="Fold duplicate matches together, or fill teams decided in A13")
+    actions = p.add_subparsers(dest="action", required=True)
+    merge = actions.add_parser("merge", help="Merge reviewed pairs. A dry run unless --apply")
+    merge.add_argument("pairs", help='A JSON file of [{"keep": id, "drop": id}], or - for stdin')
+    merge.add_argument("--apply", action="store_true", help="Do it, rather than show what it would do")
+    fill = actions.add_parser(
+        "fill-teams", help="Fill empty teams from names already decided. A dry run unless --apply"
+    )
+    fill.add_argument("--apply", action="store_true", help="Do it, rather than show what it would do")
+
     return parser
 
 
@@ -185,6 +253,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_rehost_media(args)
     if args.command == "capture-live":
         return cmd_capture_live(args)
+    if args.command == "repair-matches":
+        return cmd_repair_matches(args)
     if args.command in ("create-admin", "set-admin-password", "deactivate-admin"):
         return _run_admin_command(args)
     parser.error(f"unknown command {args.command}")

@@ -133,8 +133,53 @@ def test_a_row_outside_the_window_is_not_looked_up(sync_session, teams):
     assert recorder.calls == []
 
 
-def test_a_row_without_a_time_is_not_looked_up(sync_session):
-    recorder = Recorder()
+def _no_time(**values):
+    return make_reading(external_id="f9", home=HOME, away=AWAY, kickoff_at=None, **values)
 
-    assert link(sync_session, make_reading(external_id="f9", home="مجهول", away="مجهول آخر"), recorder) is None
+
+def test_a_row_without_a_time_links_to_the_one_match_with_those_teams_in_the_window(sync_session, teams):
+    """FilGoal's row loses its clock once a match starts, and the match still needs its score (R7)."""
+    match = make_match(sync_session, NOW - timedelta(minutes=200), home_team_id=teams[0].id, away_team_id=teams[1].id)
+
+    assert link(sync_session, _no_time()) == match.id
+    stored = sync_session.scalar(select(MatchExternalId).where(MatchExternalId.external_id == "f9"))
+    assert stored.match_id == match.id
+
+
+def test_a_row_without_a_time_does_not_link_to_a_match_outside_the_window(sync_session, teams):
+    make_match(sync_session, NOW - timedelta(minutes=211), home_team_id=teams[0].id, away_team_id=teams[1].id)
+
+    assert link(sync_session, _no_time()) is None
+
+
+def test_a_row_without_a_time_does_not_link_when_two_matches_fit(sync_session, teams):
+    for minutes in (20, 120):
+        make_match(sync_session, NOW - timedelta(minutes=minutes), home_team_id=teams[0].id, away_team_id=teams[1].id)
+
+    assert link(sync_session, _no_time()) is None
+
+
+def test_a_row_without_a_time_does_not_link_on_a_reversed_order(sync_session, teams):
+    make_match(sync_session, KICKOFF, home_team_id=teams[1].id, away_team_id=teams[0].id)
+
+    assert link(sync_session, _no_time()) is None
+
+
+def test_a_playing_row_without_a_time_queues_a_name_it_cannot_resolve(sync_session):
+    recorder = Recorder()
+    row = make_reading(external_id="f9", home="مجهول", away="مجهول آخر", kickoff_at=None, status=None, period=None)
+
+    assert link(sync_session, row, recorder) is None
+    assert {call["name"] for call in recorder.calls} == {"مجهول", "مجهول آخر"}
+
+
+def test_a_finished_row_without_a_time_links_but_queues_nothing(sync_session, teams):
+    """The list keeps yesterday's results, and they would fill the queue with names nobody needs."""
+    recorder = Recorder()
+    finished = {"status": "finished", "period": None, "minute": None}
+    stale = make_reading(external_id="f8", home="مجهول", away="مجهول آخر", kickoff_at=None, **finished)
+    match = make_match(sync_session, KICKOFF, home_team_id=teams[0].id, away_team_id=teams[1].id)
+
+    assert link(sync_session, stale, recorder) is None
     assert recorder.calls == []
+    assert link(sync_session, _no_time(**finished), recorder) == match.id

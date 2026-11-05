@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from datetime import date
 from typing import Any
-from urllib.parse import urlsplit
 
 from app.live.sources.common import (
     UNKNOWN_LABEL_CHARS,
@@ -20,6 +19,7 @@ from app.live.sources.common import (
     parse_document,
     require_name,
     require_score,
+    safe_path,
     score_part,
     text_of,
     western,
@@ -108,7 +108,7 @@ def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
         minute=None,
         score=score,
         status_label=None if unknown else label,
-        page_path=urlsplit(link).path if link else None,
+        page_path=safe_path(link),
         unknown_status=unknown,
     )
 

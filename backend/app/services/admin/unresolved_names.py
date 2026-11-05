@@ -28,6 +28,7 @@ from app.db.models import (
 )
 from app.schemas import admin_queue as q
 from app.services.admin import lists, versions, writer
+from app.services.match_teams import empty_team_updates
 
 ENTITY = "unresolved_name"
 NOT_FOUND = "unresolved_name_not_found"
@@ -226,6 +227,25 @@ async def _target_exists(session: AsyncSession, kind: str, target_id: int) -> bo
     return channel is not None and channel.deleted_at is None
 
 
+async def _fill_matches(
+    session: AsyncSession, admin: AuthedAdmin, row: UnresolvedName, team_id: int, now: datetime
+) -> bool:
+    """Coming matches holding this name get the team, or they could never link and would attract a copy."""
+    filled = False
+    for side, statement in empty_team_updates(row.name_norm, row.competition_norm, team_id, now):
+        for match_id in (await session.scalars(statement)).all():
+            writer.add_audit(
+                session,
+                admin,
+                entity="matches",
+                entity_id=match_id,
+                action="update",
+                diff={side: [None, team_id]},
+            )
+            filled = True
+    return filled
+
+
 async def map_name(
     session: AsyncSession,
     admin: AuthedAdmin,
@@ -239,15 +259,18 @@ async def map_name(
         raise EntityNotFound(TARGET_NOT_FOUND[row.kind])
 
     before = versions.row_state(row)
+    filled = False
     if row.kind == "team":
         await _write_team_alias(session, row, admin, body.target_id, body.scope_to_competition)
+        filled = await _fill_matches(session, admin, row, body.target_id, now)
     elif row.kind == "competition":
         await _write_named_alias(session, CompetitionAlias, "competition_id", row, admin, body.target_id)
     else:
         await _write_named_alias(session, ChannelAlias, "channel_id", row, admin, body.target_id)
 
     _resolve(row, admin, "created" if body.created else "mapped", body.target_id, now)
-    await writer.save_update(session, admin, entity=ENTITY, row=row, before=before, datasets=DATASETS, now=now)
+    datasets = (*DATASETS, "matches") if filled else DATASETS
+    await writer.save_update(session, admin, entity=ENTITY, row=row, before=before, datasets=datasets, now=now)
     return to_row(row, [])
 
 

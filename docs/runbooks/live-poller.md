@@ -18,7 +18,7 @@ Three sources are read: FilGoal, YallaKora and Goal.com. Goal.com has [an off sw
 
 The window is a kickoff from 150 minutes ago to 10 minutes ahead, plus matches on `feed` with no final state up to kickoff + 210 minutes. A `postponed` match stays on `/v1/live` as stored, but isn't polled.
 
-One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the page slots, fetch them. Then the same for Goal.com, only if the cycle's 50 s aren't up, because it answers slowly and mustn't cost the others their reads. Then the rules run on each match, and it's written. Each cycle writes one `import_runs` row under `live_poller`, which A13's run detail shows. Any parser error counts as that source failing validation. One match's error appears as `match_errors` in the run's `log`, with `log.exception` output in `worker-live`, and the others still get their poll. If the cycle itself breaks, its run closes as `failed`, with the exception's type in `error`, and the next cycle is the retry.
+One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the page slots, fetch them. A page link that isn't a plain path on the site (a port, `..`, `@` or a control character) costs that page and counts as an HTTP error; nothing else in the cycle stops. Then the same for Goal.com, only if the cycle's 50 s aren't up, because it answers slowly and mustn't cost the others their reads. Then the rules run on each match, and it's written. Each cycle writes one `import_runs` row under `live_poller`, which A13's run list and detail show, and moves the `sources` version so a reload sees it. Any parser error counts as that source failing validation. One match's error appears as `match_errors` in the run's `log`, with `log.exception` output in `worker-live`, and the others still get their poll. If the cycle itself breaks, its run closes as `failed`, with the exception's type in `error`, and the next cycle is the retry.
 
 ## The rules, in short
 
@@ -26,6 +26,8 @@ One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the 
 - **A lower score, an earlier stage or a missing event** waits until no usable source has shown the current one for `LIVE_DROP_HOLD_S`. A goal event stays while the score still counts it.
 - **Sources that differ** keep the accepted score. After `LIVE_DISAGREE_AFTER_S` the owner gets a `disagree:` alert.
 - **An unknown status** doesn't stop a source. The row's score counts only if it equals or covers the accepted one, and its status is left out.
+- **Linking** needs both teams to resolve, in order, and exactly one match with them. A row with a time needs that match within 45 minutes. FilGoal's row loses its time once a match starts, so a row with none needs that one match inside the poll window instead. A finished row with no time can link, but its names don't go to the queue, because the list keeps yesterday's results.
+- **«مباشر»** on FilGoal's list means live with no half. It moves a scheduled row to live, and any source that names the half decides the period and the label. A match page, when the row gets one, has the half.
 - **The minute** comes from the source that gave the status. FilGoal's clock wraps once a period passes 60 minutes, so a minute more than 5 below that source's `peak_minute` in the same period counts as no minute. A poll with readings but no minute clears it, so a frozen one never looks current.
 - **Order, when sources show the same stage:** FilGoal, Goal.com, YallaKora. Events and lineups come from FilGoal if it has any, then Goal.com. Each source's events stay stored under its own name, and `/v1` serves one source per match, so a goal can't show twice.
 - **Stats** come from Goal.com's summary and are stored in `match_stats` on change. No client reads them.
@@ -35,10 +37,10 @@ One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the 
 `finished` ends polling, and only a person can undo it, so one source isn't enough:
 
 - Two usable sources showing it meet the condition, even if a third still shows extra time, penalties or a status nobody has seen.
-- One source alone must hold it for `LIVE_FULLTIME_HOLD_S`. If that source reads anything else, or any source shows extra time, penalties or a status nobody has seen, the wait starts again. No parser maps extra time yet, so an unknown status counts as possibly extra time.
+- One source alone must hold it for `LIVE_FULLTIME_HOLD_S`. If that source reads anything else, or any source shows extra time, penalties, a status nobody has seen, or live with no half, the wait starts again. No parser maps extra time yet, so those last two count as possibly extra time.
 - A source that merely failed a request keeps the wait going, with nothing cleared.
 
-**So a match can stay live for up to 10 minutes after one source's full time.** That's on purpose: a level match may be going to extra time. While it waits it shows no minute, and that isn't a fault. If a source stays on an unknown status and no second source shows full time, the match can stay live until the kickoff + 210 limit.
+**So a match can stay live for up to 10 minutes after one source's full time.** That's on purpose: a level match may be going to extra time. While it waits it shows no minute, and that isn't a fault. If a source stays on one of those and no second source shows full time, the match can stay live until the kickoff + 210 limit.
 
 Once the condition is met, a drop still open or scores that differ hold it until they agree or for `LIVE_DROP_HOLD_S`. Then it finishes on the accepted score, with a `disagree:` alert if they still differ. An editor can correct the result in A3.
 

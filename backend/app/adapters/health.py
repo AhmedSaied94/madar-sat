@@ -158,7 +158,7 @@ def record_live_cycle(session: Any, *, status: str, items_found: int, finished_a
 
     The poller has its own failure handling per source (``live_source_state``, the watchdog), and an
     open breaker would stop a live match's polling, so this never sets ``breaker_opened_at``.
-    It doesn't bump ``sources`` either: a cycle runs every minute, and the caller bumps what changed.
+    The caller bumps ``sources``, last in its transaction, so A13's run list shows the cycle.
     An idle cycle (not failed, no items) leaves the row as it is.
     """
     if status == "failed":

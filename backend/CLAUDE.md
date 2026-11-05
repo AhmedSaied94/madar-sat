@@ -124,6 +124,8 @@ ADMIN_JWT_SECRET=$(openssl rand -hex 32) uv run uvicorn app.admin:app --port 800
   (settings fail fast at import), but connects to nothing, so placeholder values work in CI.
 - `python -m app.cli load-snapshot --snapshot-dir <dir> --report-dir <dir>`
 - `python -m app.cli rehost-media --snapshot-dir <dir> --report-dir <dir>`
+- `python -m app.cli capture-live [--minutes <n>] [--page-cap <n>]`: saves live pages ([live-poller.md](../docs/runbooks/live-poller.md))
+- `python -m app.cli repair-matches merge <pairs.json | -> [--apply]`, `repair-matches fill-teams [--apply]`: a dry run without `--apply`. The merge is a one-time, owner-approved exception to "matches are never deleted" ([imports-and-sources.md](../docs/runbooks/imports-and-sources.md#merging-duplicate-matches))
 - `python -m app.cli create-admin --email <e> --name <n> --role editor|admin`, `set-admin-password --email <e>`,
   `deactivate-admin --email <e>`: staff accounts until A16 (D6). There is **no `--password` option**: the password
   is read twice from the terminal, or once from stdin with `--password-stdin`, so it never reaches shell

@@ -40,6 +40,8 @@ STATUS_MAP: dict[str, tuple[str, str | None]] = {
     "الشوط الأول": ("live", "1H"),
     "استراحة": ("halftime", None),
     "الشوط الثاني": ("live", "2H"),
+    # The list's word once a match is on, with no half. The match page knows it, and a row with no page stays so.
+    "مباشر": ("live", None),
     "انتهت": ("finished", None),
     "تأجيل": ("postponed", None),
 }
@@ -69,6 +71,12 @@ def _status(name: str) -> tuple[str | None, str | None, str | None]:
     return (state[0], state[1], None) if state is not None else (None, None, clean(name)[:UNKNOWN_LABEL_CHARS])
 
 
+def _require_score_if_due(status: str | None, period: str | None, score: Score | None) -> None:
+    """«مباشر» can come before the first score, and one row mustn't fail the whole page."""
+    if status is not None and (status, period) != ("live", None):
+        require_score(status, score)
+
+
 def parse_list(body: bytes, *, today: date) -> list[SourceReading]:
     """Every match row. ``today`` is the Cairo date the page shows: a row holds only a clock time."""
     doc = parse_document(body, SOURCE)
@@ -93,8 +101,7 @@ def _list_row(row: Any, external_id: str, today: date) -> SourceReading:
     if home_score is None or away_score is None:
         raise LayoutChanged("filgoal: a row without its scores")
     score = pair(score_part(home_score.text_content()), score_part(away_score.text_content()))
-    if status is not None:
-        require_score(status, score)
+    _require_score_if_due(status, period, score)
     return SourceReading(
         source=SOURCE,
         external_id=external_id,
@@ -245,8 +252,7 @@ def parse_match(body: bytes) -> SourceReading:
     label = clean(_field(current, "MatchStatusName"))
     status, period, unknown = _status(require_name(label, "status"))
     score = _score(model)
-    if status is not None:
-        require_score(status, score)
+    _require_score_if_due(status, period, score)
     events, ignored = _events(model)
     return SourceReading(
         source=SOURCE,

@@ -829,6 +829,85 @@ def test_two_full_times_finish_even_if_a_third_shows_a_status_no_parser_knows():
     assert decided(second_half(), sides).status == "finished"
 
 
+def test_a_live_row_with_no_half_stops_another_sources_lone_full_time():
+    # FilGoal's list says only «مباشر», so that source may be in extra time too (bug: same gap as B1-R2-1).
+    before = second_half(fulltime_source="goal", fulltime_since=NOW - FULLTIME_HOLD, finish_wait_since=NOW)
+    sides = {
+        "goal": side("goal", Score(1, 1), **FT),
+        "filgoal": side("filgoal", Score(1, 1), status="live", period=None, minute=None),
+    }
+
+    decision = decided(before, sides)
+
+    assert decision.status == "live"
+    assert (decision.fulltime_source, decision.fulltime_since, decision.finish_wait_since) == (None, None, None)
+
+
+def test_two_full_times_finish_even_if_a_third_is_live_with_no_half():
+    sides = {
+        "goal": side("goal", Score(1, 1), **FT),
+        "yallakora": side("yallakora", Score(1, 1), **FT),
+        "filgoal": side("filgoal", Score(1, 1), status="live", period=None, minute=None),
+    }
+
+    assert decided(second_half(), sides).status == "finished"
+
+
+def test_a_new_stage_takes_its_half_from_the_source_that_knows_it():
+    before = state(None, status="scheduled", period=None, minute=None, status_label=None)
+    sides = {
+        "filgoal": side("filgoal", Score(0, 0), status="live", period=None, minute=None),
+        "goal": side("goal", Score(0, 0), status="live", period="1H", minute="3"),
+    }
+
+    decision = decided(before, sides)
+
+    assert (decision.status, decision.period, decision.status_label) == ("live", "1H", "goal-label")
+    assert decision.minute == "3"
+
+
+def test_a_row_with_no_half_does_not_replace_the_label_of_one_that_knows_it():
+    sides = {
+        "filgoal": side("filgoal", Score(1, 0), status="live", period=None, minute=None),
+        "goal": side("goal", Score(1, 0), **SECOND_HALF),
+    }
+
+    decision = decided(second_half(), sides)
+
+    assert (decision.period, decision.status_label) == ("2H", "goal-label")
+
+
+def test_a_row_saying_only_live_does_not_label_a_match_at_halftime():
+    before = state(Score(1, 0), status="halftime", period=None, minute=None, status_label="استراحة")
+    sides = {
+        "filgoal": side("filgoal", Score(1, 0), status="live", period=None, minute=None),
+        "yallakora": side("yallakora", Score(1, 0), status="halftime", period=None, minute=None),
+    }
+
+    decision = decided(before, sides)
+
+    assert (decision.status, decision.period, decision.status_label) == ("halftime", None, "yallakora-label")
+
+
+@pytest.mark.parametrize(
+    "stored",
+    [
+        pytest.param({"status": "halftime", "period": None, "status_label": "استراحة"}, id="halftime"),
+        pytest.param({"status": "live", "period": "2H", "status_label": "الشوط الثاني"}, id="second half"),
+    ],
+)
+def test_a_row_saying_only_live_keeps_the_label_the_match_has(stored):
+    before = state(Score(1, 0), minute=None, **stored)
+
+    decision = decided(before, {"filgoal": side("filgoal", Score(1, 0), status="live", period=None, minute=None)})
+
+    assert (decision.status, decision.period, decision.status_label) == (
+        stored["status"],
+        stored["period"],
+        stored["status_label"],
+    )
+
+
 def test_a_lone_full_time_blocks_a_backward_move():
     before = second_half(status_drop_since=NOW - DROP_HOLD)
     sides = {

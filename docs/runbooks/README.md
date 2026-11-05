@@ -118,6 +118,7 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | Releasing, or a deploy failed | [deploy-and-rollback.md](deploy-and-rollback.md) |
 | Releasing the Android app, or a Play upload was refused | [store-releases.md](store-releases.md) |
 | No fixtures arrived, or a run is `failed`/`partial` | [imports-and-sources.md](imports-and-sources.md) |
+| A match shows twice since YallaKora's runs of 5 Nov 2026 | [imports-and-sources.md](imports-and-sources.md#merging-duplicate-matches) |
 | A Telegram alert about a source, or one is still paused | [source-alerts.md](source-alerts.md) |
 | A live score is wrong or stale, a live alert, or fixing a live parser | [live-poller.md](live-poller.md) |
 | A backup monitor is red, or you need to restore something | [backups.md](backups.md) |

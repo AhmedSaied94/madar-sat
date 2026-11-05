@@ -78,7 +78,7 @@ So the list pages appear to carry what the page-cap decision needs. Live values 
 
 ## R7. A match is linked only on both teams and the kickoff
 
-**Decision:** Link order: an existing `(source, external_id)` in `match_external_ids`; otherwise both team names resolve and exactly one of our matches has those teams in that order, with kickoffs within 45 min. A reversed order, or more than one match, isn't linked and is logged. `filgoal` writes external IDs on linking, and `yallakora`'s importer writes them for its source too.
+**Decision:** Link order: an existing `(source, external_id)` in `match_external_ids`; otherwise both team names resolve and exactly one of our matches has those teams in that order, with kickoffs within 45 min. A row with no time of its own, as FilGoal's is once a match starts, needs that one match inside the poll window instead. A reversed order, or more than one match, isn't linked and is logged. `filgoal` writes external IDs on linking, and `yallakora`'s importer writes them for its source too.
 
 **Why:** A wrong link publishes another match's score (spec FR-022a). Reversed order would swap scores.
 

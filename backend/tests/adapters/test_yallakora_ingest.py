@@ -13,6 +13,7 @@ from sqlalchemy import func, select, text
 from app.adapters.base import RawPage
 from app.adapters.config import get_adapter_settings
 from app.adapters.messages import ScrapeResult
+from app.adapters.resolve import resolve_team
 from app.adapters.tasks import ingest
 from app.adapters.yallakora import LIST_URL, YallakoraAdapter
 from app.db.models import Channel, Competition, ImportRun, Match, MatchExternalId, Team
@@ -56,11 +57,45 @@ def _run(run_id: str = "r-1") -> dict[str, Any]:
     return ingest.apply(args=[result.as_task_arg()]).get()
 
 
+def _cards() -> list[Any]:
+    adapter = YallakoraAdapter(fetcher=None)
+    pages = [
+        RawPage(url=f"{LIST_URL}?date={day}", status=200, body=(FIXTURES / f"{day}.html").read_bytes(), fetched_at=NOW)
+        for day in ("2026-11-04", "2027-07-21")
+    ]
+    return [item for page in pages for item in adapter.parse(page)]
+
+
+def _add_every_team(session: Any, *, but: tuple[str | None, ...] = ()) -> None:
+    """As after an editor has worked the queue: a card whose names all resolve can be stored or linked."""
+    for name in sorted({name for card in _cards() for name in (card.home, card.away)} - set(but)):
+        found = resolve_team(session, external_id=None, name=name, competition_name=None, source="yallakora")
+        if found.entity_id is None:
+            session.add(Team(name=name))
+    session.flush()
+
+
 def _count(session: Any, model: Any) -> int:
     return session.execute(select(func.count()).select_from(model)).scalar_one()
 
 
+def test_cards_with_names_we_cannot_resolve_wait_in_the_queue_and_add_no_row(sync_session, loaded_snapshot) -> None:
+    """05 Nov 2026: 75 rows from one run, because a different spelling looked like a new fixture."""
+    before = {model: _count(sync_session, model) for model in (Team, Competition, Channel, Match)}
+
+    outcome = _run()
+
+    assert outcome["status"] == "succeeded"
+    assert outcome["items_upserted"] == 0
+    assert {model: _count(sync_session, model) for model in before} == before
+    queued = sync_session.execute(
+        text("SELECT count(*) FROM unresolved_names WHERE source = 'yallakora' AND kind = 'team'")
+    ).scalar_one()
+    assert queued > 0
+
+
 def test_a_run_stores_fixtures_broadcasters_and_queue_rows_and_creates_no_entity(sync_session, loaded_snapshot) -> None:
+    _add_every_team(sync_session)
     before = {model: _count(sync_session, model) for model in (Team, Competition, Channel)}
 
     outcome = _run()
@@ -95,6 +130,7 @@ def test_a_run_stores_fixtures_broadcasters_and_queue_rows_and_creates_no_entity
 
 
 def test_a_second_run_raises_the_counts_and_duplicates_nothing(sync_session, loaded_snapshot) -> None:
+    _add_every_team(sync_session)
     _run("r-1")
     matches = _count(sync_session, Match)
     rows = sync_session.execute(text("SELECT count(*), sum(seen_count) FROM unresolved_names")).one()
@@ -112,19 +148,15 @@ def test_a_card_that_waits_on_an_editor_is_listed_and_the_run_still_succeeds(
     sync_session, loaded_snapshot, tmp_path: Path
 ) -> None:
     """Waiting isn't a failed item, so the run isn't ``partial`` and ``run.json`` says who waits (B2-R1-1)."""
-    from app.adapters.resolve import resolve_team
-
-    adapter = YallakoraAdapter(fetcher=None)
-    day = "2026-11-04"
-    page = RawPage(url=f"{LIST_URL}?date={day}", status=200, body=(FIXTURES / f"{day}.html").read_bytes())
     card = next(
         item
-        for item in adapter.parse(page)
+        for item in _cards()
         if resolve_team(
             sync_session, external_id=None, name=item.home, competition_name=item.competition, source="yallakora"
         ).entity_id
         is None
     )
+    _add_every_team(sync_session, but=(card.home,))
     held = Match(
         source="ysscores",
         match_date=card.match_date,
@@ -143,7 +175,8 @@ def test_a_card_that_waits_on_an_editor_is_listed_and_the_run_still_succeeds(
     assert outcome["items_upserted"] == 15
     run = sync_session.execute(select(ImportRun).where(ImportRun.source == "yallakora")).scalar_one()
     info = json.loads((tmp_path / run.raw_path / "run.json").read_text(encoding="utf-8"))
-    assert info["waiting"] == [{"ref": card.external_id, "reason": "unresolved_names_match_a_row"}]
+    assert info["waiting"] == [{"ref": card.external_id, "reason": "unresolved_team"}]
+    assert run.log["waiting"]["items"] == info["waiting"]  # on disk only, an editor would never see why
     linked = sync_session.execute(
         select(MatchExternalId).where(MatchExternalId.source == "yallakora", MatchExternalId.match_id == held.id)
     ).first()

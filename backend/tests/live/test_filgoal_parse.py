@@ -251,6 +251,17 @@ def test_a_missed_penalty_stays_on_the_players_team():
     assert reading.minute == "69"
 
 
+def test_a_match_page_saying_only_live_with_no_score_yet_does_not_fail_the_source():
+    model = _model("filgoal_match_finished.html")
+    model["CurrentMatchStatus"].update(MatchStatusName="مباشر", IsCounterEnabled=True, MatchStatusMaxTime=45)
+    model["CurrentMatchStatus"]["TimeElapsed"] = {"Minutes": 10, "Seconds": 0}
+    model.update(HomeScore=None, AwayScore=None)
+
+    reading = filgoal.parse_match(_with_model(model))
+
+    assert (reading.status, reading.period, reading.score) == ("live", None, None)
+
+
 def test_an_unknown_status_on_the_page_keeps_its_score_and_nothing_else():
     model = _model("filgoal_match_finished.html")
     model["CurrentMatchStatus"].update(MatchStatusName="ركلات الترجيح", IsCounterEnabled=True, MatchStatusMaxTime=45)
@@ -262,6 +273,23 @@ def test_an_unknown_status_on_the_page_keeps_its_score_and_nothing_else():
     assert (reading.status, reading.period, reading.minute) == (None, None, None)
     assert reading.score == Score(3, 2)
     assert reading.events  # the events are still facts about this match
+
+
+def test_a_list_row_saying_only_live_is_live_with_no_half():
+    page = _page("filgoal_list.html").decode().replace("انتهت", "مباشر", 1).encode()
+
+    row = next(row for row in filgoal.parse_list(page, today=TODAY) if row.status_label == "مباشر")
+
+    assert (row.status, row.period, row.minute, row.unknown_status) == ("live", None, None, None)
+    assert row.score == Score(0, 2)
+
+
+def test_a_list_row_saying_only_live_with_no_score_yet_does_not_fail_the_page():
+    page = _page("filgoal_list.html").decode().replace("لم تبدأ", "مباشر", 1).encode()
+
+    row = next(row for row in filgoal.parse_list(page, today=TODAY) if row.status_label == "مباشر")
+
+    assert (row.status, row.score) == ("live", None)
 
 
 def test_an_unknown_status_on_the_list_affects_that_row_only():

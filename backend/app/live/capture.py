@@ -21,13 +21,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 import redis
 
 from app.domain.time import CAIRO
 from app.live.robots import FILGOAL_HOST, GOAL_HOST, YALLAKORA_HOST, is_allowed
 from app.live.sources import filgoal, goal, yallakora
+from app.live.sources.common import safe_path
 from app.live.types import SourceReading
 
 log = logging.getLogger(__name__)
@@ -129,12 +129,13 @@ def capture_source(source: ListSource, fetch: Fetch, root: Path, clock: Clock, p
         return SourceRound(read=False, refused=listed.refused)
     rows = _rows(source, listed.body, clock())
     live_rows = sum(row.status in PLAYING for row in rows)
-    chosen = [row for row in rows if row.page_path and (row.status in PLAYING or row.unknown_status)][:page_cap]
+    chosen = [row for row in rows if safe_path(row.page_path) and (row.status in PLAYING or row.unknown_status)]
     saved = 1
-    for row in chosen:
-        assert row.page_path is not None  # filtered above
+    for row in chosen[:page_cap]:
+        path = safe_path(row.page_path)
+        assert path is not None  # filtered above
         name = f"{source.name}_{_UNSAFE_IN_A_NAME.sub('_', row.external_id)}"
-        match_page = _save_page(Target(name, source.host, urlsplit(row.page_path).path), fetch, root, clock)
+        match_page = _save_page(Target(name, source.host, path), fetch, root, clock)
         if match_page.refused:
             return SourceRound(True, live_rows, saved, refused=True)
         if match_page.body is not None:
