@@ -78,6 +78,27 @@ eight-name CHECK.
 SELECT name, version FROM dataset_versions ORDER BY name;       -- ten rows, both new ones at 0
 ```
 
+## Revision 0009 (D6)
+
+`0009_notifications_and_accounts` adds `channel_frequency_changes` and `match_channel_changes`, the
+outbox's `error` and `audit_log_id`, `match_live_state.push_memory`, `admin_users.must_change_password`
+and `admin_users.test_device_id`, the `broadcasts` lockable value and the `stopped` run status, and the
+`outbox` and `admin_users` dataset names. It is expand-only.
+
+Its downgrade rewrites, in this order, the two values the release before it cannot read:
+
+```sql
+UPDATE import_runs SET status = 'failed' WHERE status = 'stopped';
+UPDATE matches SET locked_fields = array_remove(locked_fields, 'broadcasts')
+ WHERE 'broadcasts' = ANY (locked_fields);
+```
+
+then restores both CHECKs, deletes the two dataset rows, drops the new columns and the two tables. A
+`stopped` run therefore reads `failed` after a rollback, and an editor's broadcaster slots are no longer
+protected from importers (the slots themselves stay). Nothing is lost from the history a follower was
+told: `channel_frequency_changes` goes with the rollback, and the runbook for a re-deploy does not
+recreate it, so re-check the channel page after a rollback ([deploy-and-rollback.md](deploy-and-rollback.md)).
+
 ## Writing a migration
 
 The rules (constitution, "Migrations"):

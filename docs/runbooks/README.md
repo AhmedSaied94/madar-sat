@@ -133,7 +133,11 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A deploy key leaked or needs replacing | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
 | Every development phase is done and the repository goes private | [deploy-and-rollback.md "Making the repository private"](deploy-and-rollback.md#making-the-repository-private) |
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
-| A reminder didn't arrive, or FCM rejects the credentials | [push-notifications.md](push-notifications.md) |
+| A reminder or any other push didn't arrive, FCM rejects the credentials, or every push must stop now | [push-notifications.md](push-notifications.md) |
+| An announcement must go out, or a test send fails with `test_device_not_set` | [push-notifications.md "The composer and the test device"](push-notifications.md#the-composer-and-the-test-device) |
+| A push failed, or more than 20 % of a send failed | [on-call.md "A push row failed"](on-call.md#3b-a-push-row-failed) |
+| Editor accounts in A16, or a temporary password | [staff-accounts.md](staff-accounts.md#add-an-account-in-a16-temporary-password) |
+| A sporteventz row is labelled with the wrong sport | [imports-and-sources.md "Relabelling a sporteventz row's sport"](imports-and-sources.md#relabelling-a-sporteventz-rows-sport) |
 | A 429 appears in the API log, or public reads feel slow | [response-cache-and-limits.md](response-cache-and-limits.md) |
 | You are about to load-test the API, or p95 misses its target | [load-testing.md](load-testing.md) |
 | VPS-1 needs more CPU | [provision-host.md "Resize an instance"](provision-host.md#resize-an-instance) |

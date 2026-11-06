@@ -224,7 +224,13 @@ async def test_me_returns_the_signed_in_admin(anon_admin_client, signed_in):
     )
 
     assert resp.status_code == 200
-    assert resp.json()["data"] == {"id": admin.id, "email": EMAIL, "name": "محرر", "role": "editor"}
+    assert resp.json()["data"] == {
+        "id": admin.id,
+        "email": EMAIL,
+        "name": "محرر",
+        "role": "editor",
+        "must_change_password": False,
+    }
 
 
 async def test_the_access_token_carries_sub_role_iat_and_a_fifteen_minute_exp(signed_in, frozen_now):

@@ -154,3 +154,58 @@ async def test_delete_removes_the_device_and_its_follows_and_kills_the_token(
 
     gone = await device_client.put("/v1/devices/me", json={}, headers={"Authorization": f"Device {token}"})
     assert gone.status_code == 401
+
+
+async def test_prefs_accept_enabled_and_keep_every_type_on_read(device_client):
+    response = await device_client.put(
+        "/v1/devices/me",
+        json={"prefs": {"enabled": False, "types": {"goal": {"on": False}}}},
+    )
+    assert response.status_code == 200, response.text
+    prefs = response.json()["data"]["prefs"]
+    assert prefs["enabled"] is False
+    # Every type is still served, with its default, even while the master switch is off.
+    assert set(prefs["types"]) == {
+        "kickoff_reminder",
+        "goal",
+        "final_score",
+        "match_started",
+        "channels_updated",
+        "frequency_changed",
+        "announcement",
+    }
+    assert prefs["types"]["goal"]["on"] is False
+    assert prefs["types"]["match_started"]["on"] is False
+
+
+async def test_an_unknown_pref_key_is_still_refused(device_client):
+    response = await device_client.put("/v1/devices/me", json={"prefs": {"enabled": True, "nope": 1}})
+    assert response.status_code == 422
+
+
+async def test_a_document_with_no_types_key_still_reads_as_types(device_client, session, frozen_now):
+    """A document written before D6 is a flat map of types, and ``enabled`` defaults to true."""
+    from app.db.models import Device
+
+    device = await session.get(Device, device_client.device_id)
+    assert device is not None
+    device.prefs = {"goal": {"on": False}}
+    await session.flush()
+
+    prefs = (await device_client.put("/v1/devices/me", json={})).json()["data"]["prefs"]
+    assert prefs["enabled"] is True
+    assert prefs["types"]["goal"]["on"] is False
+    assert prefs["types"]["final_score"] == {"on": True, "lead_min": None}
+
+
+async def test_enabled_false_keeps_the_per_type_values_on_read(device_client, session):
+    from app.db.models import Device
+
+    device = await session.get(Device, device_client.device_id)
+    assert device is not None
+    device.prefs = {"enabled": False, "types": {"goal": {"on": True}}}
+    await session.flush()
+
+    prefs = (await device_client.put("/v1/devices/me", json={})).json()["data"]["prefs"]
+    assert prefs["enabled"] is False
+    assert prefs["types"]["goal"] == {"on": True, "lead_min": None}

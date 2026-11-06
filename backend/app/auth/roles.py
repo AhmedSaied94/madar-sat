@@ -22,7 +22,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_now
-from app.api.errors import forbidden, unauthenticated
+from app.api.errors import forbidden, password_change_required, unauthenticated
 from app.auth.tokens import InvalidToken, TokenExpired, decode_access_token
 from app.db.models import AdminUser
 from app.db.session import get_session
@@ -65,7 +65,9 @@ async def authenticate(request: Request, session: AsyncSession, now: datetime) -
     return admin
 
 
-def require_role(role: Role) -> Callable[..., Awaitable[AuthedAdmin]]:
+def require_role(role: Role, *, allow_flagged: bool = False) -> Callable[..., Awaitable[AuthedAdmin]]:
+    """The role check, plus the temporary-password flag unless ``allow_flagged`` (R19)."""
+
     async def dependency(
         request: Request,
         session: AsyncSession = Depends(get_session),
@@ -75,6 +77,8 @@ def require_role(role: Role) -> Callable[..., Awaitable[AuthedAdmin]]:
         authed = AuthedAdmin(id=admin.id, email=admin.email, name=admin.name, role=admin.role)  # type: ignore[arg-type]
         if not authed.covers(role):
             raise forbidden(role)
+        if not allow_flagged and admin.must_change_password:
+            raise password_change_required()
         return authed
 
     dependency.required_role = role  # type: ignore[attr-defined]  # read by the route-walking test
@@ -83,3 +87,5 @@ def require_role(role: Role) -> Callable[..., Awaitable[AuthedAdmin]]:
 
 require_editor = require_role("editor")
 require_admin = require_role("admin")
+# ``auth/me`` and ``auth/change-password``: the role check stays, the flag check doesn't.
+require_signed_in = require_role("editor", allow_flagged=True)

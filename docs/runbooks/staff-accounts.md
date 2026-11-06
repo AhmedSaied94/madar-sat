@@ -50,6 +50,22 @@ It refuses, and prints why (`error: …`, exit status 1), when:
 
 Give the person the password over a channel you trust, and ask them to keep it in a password manager. There is no self-service reset yet.
 
+## Add an account in A16 (temporary password)
+
+Since D6 A16 manages accounts: `POST /admin/api/users` with `{email, name, role}`, an admin only. The
+answer carries a `temporary_password` (16 characters from `secrets`, stored as argon2id only) once,
+with `Cache-Control: no-store`, and the account starts with `must_change_password = true`. The next
+sign-in returns the flag and the admin app sends that person to `/change-password`, where every route
+but `auth/me`, `auth/change-password`, refresh and logout answers `403 password_change_required` until
+they change it. The password is never in a response log or an `audit_log` row, and the reset's audit
+diff is `{"password": "changed"}`.
+
+`POST /admin/api/users/{id}/reset-password` (with `If-Match`) is the same thing for an existing
+account: new temporary password, `must_change_password = true`, every refresh token revoked.
+
+The CLI stays for the first account and for a lost admin app; there is no `--password` option, so the
+password comes from the terminal or stdin and never reaches shell history or `ps`.
+
 ## Check an account works
 
 From a WireGuard peer ([private-network.md](private-network.md#the-admin-site) has the CA root):

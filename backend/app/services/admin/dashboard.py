@@ -16,6 +16,7 @@ from app.db.models import AdminUser, AuditLog, Channel, Competition, Match, Matc
 from app.schemas import admin as a
 from app.services.admin import sources as source_service
 from app.services.common import hidden_names, visible_link
+from app.services.matches import MATCH_SPORT
 
 MAX_SPAN = timedelta(days=2)
 RECENT_CHANGES = 10
@@ -40,6 +41,8 @@ async def dashboard(session: AsyncSession, now: datetime, from_dt: datetime, to_
             select(Match, Competition.priority)
             .outerjoin(Competition, Competition.id == Match.competition_id)
             .where(
+                # FR-039: another sport has its own channels and never counts as missing here (R12).
+                Match.sport == MATCH_SPORT,
                 Match.kickoff_at.is_not(None),
                 Match.kickoff_at >= from_dt,
                 Match.kickoff_at < to_dt,

@@ -32,6 +32,7 @@ from app.schemas.public import (
     CompetitionRef,
     Frequency,
     Kind,
+    NotificationType,
     Period,
     Score,
     Sport,
@@ -50,6 +51,8 @@ class AdminUser(BaseModel):
     email: EmailStr
     name: str
     role: AdminRole
+    # Set by a temporary password; the client redirects to the change-password screen (R19).
+    must_change_password: bool = False
 
 
 class Session(BaseModel):
@@ -77,6 +80,15 @@ class Session(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr = Field(max_length=254)
     password: str = Field(min_length=1, max_length=256)
+
+
+class ChangePasswordRequest(BaseModel):
+    """A flagged account's own change; the length rules answer ``422 password_too_short`` (admin-api)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=1, max_length=256)
 
 
 # --- D2: validation building blocks (data-model "Validation rules") ------------------------------
@@ -704,7 +716,7 @@ class ImportRunRow(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [ex.IMPORT_RUN_ROW]})
 
     id: Id
-    status: Literal["running", "succeeded", "partial", "failed"]
+    status: Literal["running", "succeeded", "partial", "failed", "stopped"]
     started_at: datetime
     finished_at: datetime | None
     items_found: Int32
@@ -842,3 +854,183 @@ class MediaAsset(BaseModel):
     height: int | None
     duration_ms: int | None
     bytes: int
+
+
+# --- D6: notifications, staff accounts, audit and channel history (contracts/admin-api.md) --------
+#
+# The outbox log, the composer, A16's accounts, A17's audit and A8's history. Every ``GET`` carries
+# an ``ETag``; the writes go through the writer and write ``audit_log`` (FR-024 to FR-026).
+
+
+NotificationStatus = Literal["pending", "sending", "sent", "failed", "cancelled"]
+NotificationAudienceKind = Literal[
+    "match_followers", "match_core", "match_only", "channel", "team", "competition", "all", "device"
+]
+ReachKind = Literal["all", "team", "competition", "match", "channel"]
+AnnouncementAudienceKind = Literal["all", "team", "competition", "match", "channel"]
+
+
+class NotificationTarget(BaseModel):
+    """Where a row went, built from current data; ``label`` is null for ``all`` (admin-api)."""
+
+    kind: NotificationAudienceKind
+    label: str | None
+    id: int | None
+
+
+class NotificationRow(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.NOTIFICATION_ROW]})
+
+    id: Id
+    type: NotificationType
+    status: NotificationStatus
+    error: str | None
+    target: NotificationTarget
+    is_test: bool
+    is_correction: bool
+    recipients: Int32
+    sent: Int32
+    failed: Int32
+    due_at: datetime
+    sent_at: datetime | None
+    created_at: datetime
+
+
+class NotificationReach(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.NOTIFICATION_REACH]})
+
+    devices: Int32
+
+
+class AnnouncementTarget(_Body):
+    type: Literal["none", "match", "channel"]
+    id: Id | None = None
+
+
+class AnnouncementAudience(_Body):
+    kind: AnnouncementAudienceKind
+    id: Id | None = None
+
+
+class AnnouncementCreate(_Body):
+    """A15's composer; the route is built here, never sent as text (admin-api)."""
+
+    model_config = ConfigDict(
+        extra="forbid", json_schema_extra={"examples": [ex.ANNOUNCEMENT_BODY]}, str_strip_whitespace=True
+    )
+
+    # The label screen runs in the service, so it answers ``422 text_not_allowed`` (admin-api).
+    title: Annotated[str, Field(min_length=1, max_length=65)]
+    body: Annotated[str, Field(min_length=1, max_length=180)]
+    target: AnnouncementTarget
+    audience: AnnouncementAudience
+    send_at: AwareDatetime | None = None
+
+
+class TestSendCreate(_Body):
+    """A test send goes to the admin's saved device, prefs ignored (admin-api)."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: Annotated[str, Field(min_length=1, max_length=65)]
+    body: Annotated[str, Field(min_length=1, max_length=180)]
+    target: AnnouncementTarget
+
+
+class TestDeviceRow(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.TEST_DEVICE]})
+
+    device_id: Id
+    platform: str
+    app_version: str | None
+    has_push_token: bool
+
+
+class TestDevicePatch(_Body):
+    device_id: Id
+
+
+class AdminUserRow(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.ADMIN_USER_ROW]})
+
+    id: Id
+    email: EmailStr
+    name: str
+    role: AdminRole
+    is_active: bool
+    # The TTL of ``auth:locked:<h>``, or null (research R19).
+    locked_for_s: Int32 | None
+    last_login_at: datetime | None
+    must_change_password: bool
+
+
+class UserCreate(_Body):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    email: EmailStr = Field(max_length=254)
+    name: Annotated[str, Field(min_length=1, max_length=80), AfterValidator(_no_card_sharing_label)]
+    role: AdminRole
+
+
+class UserPatch(_Body):
+    name: Annotated[str, Field(min_length=1, max_length=80), AfterValidator(_no_card_sharing_label)] | None = None
+    role: AdminRole | None = None
+    is_active: bool | None = None
+
+
+class UserWithPassword(BaseModel):
+    """The temporary password is returned once, with ``Cache-Control: no-store``, and never stored in clear."""
+
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.USER_WITH_PASSWORD]})
+
+    user: AdminUserRow
+    temporary_password: str
+
+
+class AuditActor(BaseModel):
+    kind: Literal["admin", "importer", "system"]
+    id: int | None
+    name: str | None
+
+
+class AuditRow(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.AUDIT_ROW]})
+
+    id: Id
+    created_at: datetime
+    actor: AuditActor
+    entity: str
+    entity_id: Id | None
+    action: str
+    summary_fields: list[str]
+    has_notification: bool
+
+
+class AuditNotification(BaseModel):
+    id: Id
+    type: NotificationType
+    status: NotificationStatus
+    sent: Int32
+    failed: Int32
+
+
+class AuditDetail(AuditRow):
+    """``diff`` exactly as stored, old shapes included, and the outbox row that links to this entry."""
+
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.AUDIT_DETAIL]})
+
+    diff: dict[str, Any]
+    notification: AuditNotification | None
+
+
+class FrequencyHistoryRow(BaseModel):
+    """What followers of a carriage were told; ``actor`` from the row's own audit id (research R6, R20)."""
+
+    model_config = ConfigDict(json_schema_extra={"examples": [ex.FREQUENCY_HISTORY_ROW]})
+
+    id: Id
+    old: str
+    new: str
+    source: str
+    actor: str | None
+    detected_at: datetime

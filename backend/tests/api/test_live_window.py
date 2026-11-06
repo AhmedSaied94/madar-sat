@@ -58,3 +58,47 @@ async def test_the_window_depends_on_the_status_source(public_client, session, f
     assert not {ids["feed-211"], ids["clock-151"], ids["manual-170"], ids["feed-done"]} & found
     served = next(row for row in data if row["match_id"] == ids["feed-170"])
     assert (served["estimated"], served["minute"], served["score"]["home"]) == (False, "105", 1)
+
+
+async def _events(session, match, source: str, count: int) -> None:
+    from app.db.models import MatchEvent
+
+    for index in range(count):
+        session.add(
+            MatchEvent(
+                match_id=match.id,
+                side="home",
+                type="goal" if index % 2 == 0 else "red_card",
+                minute=str(10 + index),
+                player_name=f"لاعب {source} {index}",
+                source=source,
+                external_id=f"{source}-{match.id}-{index}",
+            )
+        )
+
+
+async def test_event_count_is_the_timeline_the_detail_serves(public_client, session, frozen_now):
+    match = _match("events", frozen_now - timedelta(minutes=20), **FEED)
+    session.add(match)
+    await session.flush()
+    await _events(session, match, "filgoal", 3)
+    await _events(session, match, "goal", 2)
+    await session.flush()
+
+    live = {row["match_id"]: row for row in (await public_client.get("/v1/live")).json()["data"]}
+    detail = (await public_client.get(f"/v1/matches/{match.id}")).json()["data"]
+
+    assert live[match.id]["event_count"] == 3
+    assert live[match.id]["event_count"] == len(detail["events"])
+
+
+async def test_an_estimated_state_reports_no_events(public_client, session, frozen_now):
+    match = _match("estimated", frozen_now - timedelta(minutes=20))
+    session.add(match)
+    await session.flush()
+    await _events(session, match, "filgoal", 4)
+    await session.flush()
+
+    row = {r["match_id"]: r for r in (await public_client.get("/v1/live")).json()["data"]}[match.id]
+    assert row["estimated"] is True
+    assert row["event_count"] == 0

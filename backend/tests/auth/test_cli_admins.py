@@ -187,3 +187,19 @@ def _live_tokens(sync_session, admin_id: int) -> int:
             )
         ).all()
     )
+
+
+def test_create_admin_does_not_ask_for_a_change_and_set_admin_password_clears_it(run, sync_session):
+    """The CLI's password is the owner's, so only a temporary one flags the account (research R19)."""
+    from app.auth.passwords import hash_password
+
+    assert run(BASE, "correct horse battery", "correct horse battery") == 0
+    created = _admin(sync_session)
+    assert created is not None and created.must_change_password is False
+
+    created.must_change_password = True
+    created.password_hash = hash_password("correct horse battery")
+    sync_session.flush()
+
+    assert run(["set-admin-password", "--email", EMAIL], "another good password", "another good password") == 0
+    assert _admin(sync_session).must_change_password is False

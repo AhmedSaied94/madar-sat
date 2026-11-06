@@ -14,6 +14,7 @@ from fastapi import FastAPI
 
 from app.api import errors, health, openapi
 from app.api.admin import (
+    audit,
     auth,
     channels,
     commentators,
@@ -22,12 +23,14 @@ from app.api.admin import (
     lists,
     matches,
     media,
+    notifications,
     ordering,
     rights_holders,
     satellites,
     sources,
     teams,
     unresolved_names,
+    users,
 )
 from app.auth.tokens import signing_key
 from app.settings import get_settings
@@ -74,6 +77,9 @@ def create_app() -> FastAPI:
         ordering.router,
         unresolved_names.router,
         rights_holders.router,
+        notifications.router,
+        users.router,
+        audit.router,
     ):
         app.include_router(router)
 

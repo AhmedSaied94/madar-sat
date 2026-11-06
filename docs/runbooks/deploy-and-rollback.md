@@ -133,6 +133,26 @@ readlink /srv/admin/current                      # releases/<sha>
 Then reload nothing: Caddy follows the symlink on every request. The admin is reachable only over
 WireGuard ([admin-access.md](admin-access.md)).
 
+## D6's deploy order
+
+The push release changes what every follower receives, so it goes in this order, and each step keeps
+the off switch to hand:
+
+1. `0009` and the contract PR first: the migration is expand-only and the API changes are additive, so
+   the release before it keeps running.
+2. A16 and A17 (accounts, audit) can follow at once: they are admin-app reads and writes.
+3. The push PR last. **Merging it starts every automatic type for every follower, PWA users included**
+   (FR-021), so nothing is set in `.env` first: `PUSH_TYPES_OFF` stays unset until the owner is watching
+   the first pushes. To stop everything after a problem,
+   `echo 'PUSH_TYPES_OFF=goal,match_started,kickoff_reminder,channels_updated,frequency_changed,announcement' >> .env`
+   on VPS-2 and `dc up -d worker-notify` (under a minute, [push-notifications.md](push-notifications.md#the-off-switch-under-a-minute)).
+4. The new app build follows as soon as Lane M's screens are in it.
+
+**During a rollback to the release before D6**, a new build's `PUT /v1/devices/me` can carry
+`prefs.enabled`, which the old release's `extra="forbid"` refuses with `422`: the app's dirty flag keeps
+it pending and it reaches the server once the release returns. Other device fields are held back in that
+gap too, so do not chase a "my settings didn't save" report during it.
+
 ## Roll back
 
 **Migrations are never reversed.** Every migration keeps the previous release working (expand/contract, constitution "Migrations"), so an older release runs on the newer schema.

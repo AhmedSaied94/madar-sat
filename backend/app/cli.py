@@ -22,7 +22,15 @@ from app.db.session import SyncSession
 from app.etl.report import Report
 from app.etl.snapshot import load
 from app.etl.types import read_snapshot
-from app.services.match_repair import FillResult, MergeResult, RepairRefused, fill_teams, merge_pairs
+from app.services.match_repair import (
+    FillResult,
+    MergeResult,
+    RepairRefused,
+    SportResult,
+    fill_teams,
+    merge_pairs,
+    repair_sports,
+)
 from app.settings import get_settings
 
 
@@ -164,6 +172,21 @@ def _print_merge(result: MergeResult) -> None:
     )
 
 
+def _read_sport_map(path: str) -> dict[int, str]:
+    """``{"870": "basketball", ...}``, from a file or, with ``-``, stdin. Never from the snapshot."""
+    raw = sys.stdin.read() if path == "-" else Path(path).read_text(encoding="utf-8")
+    return {int(match_id): str(sport) for match_id, sport in json.loads(raw).items()}
+
+
+def _print_sport(result: SportResult) -> None:
+    for match_id, sport in result.listed:
+        print(json.dumps({"listed": match_id, "sport": sport}))
+    for match_id, before, after in result.changed:
+        print(json.dumps({"changed": match_id, "from": before, "to": after}))
+    for match_id in result.unchanged:
+        print(json.dumps({"already": match_id}))
+
+
 def _print_fill(result: FillResult) -> None:
     for match_id, side, team_id in result.filled:
         print(json.dumps({"match": match_id, "side": side, "team": team_id}))
@@ -179,6 +202,9 @@ def cmd_repair_matches(args: argparse.Namespace) -> int:
             if args.action == "merge":
                 for result in merge_pairs(session, _read_pairs(args.pairs), now):
                     _print_merge(result)
+            elif args.action == "sport":
+                mapping = _read_sport_map(args.map) if args.map else {}
+                _print_sport(repair_sports(session, mapping, now))
             else:
                 _print_fill(fill_teams(session, now))
         except RepairRefused as exc:
@@ -238,6 +264,13 @@ def build_parser() -> argparse.ArgumentParser:
         "fill-teams", help="Fill empty teams from names already decided. A dry run unless --apply"
     )
     fill.add_argument("--apply", action="store_true", help="Do it, rather than show what it would do")
+    sport = actions.add_parser(
+        "sport", help="Relabel sporteventz rows a reviewer's map reads. A dry run unless --apply"
+    )
+    sport.add_argument(
+        "map", nargs="?", help='A JSON file of {"<match id>": "<sport>"}, or - for stdin. Without it, list only'
+    )
+    sport.add_argument("--apply", action="store_true", help="Do it, rather than show what it would do")
 
     return parser
 

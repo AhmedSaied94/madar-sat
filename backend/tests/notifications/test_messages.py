@@ -1,7 +1,8 @@
-"""The reminder copy and FCM fields (research R8, T021)."""
+"""The kickoff reminder and every D6 type's copy and FCM fields (research R8, D6 T021/T023)."""
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import replace
 from datetime import timedelta
@@ -10,10 +11,21 @@ import pytest
 
 from app.notifications.dispatcher import visible_links
 from app.notifications.messages import (
+    CHANNEL_ID,
     FSI,
     PDI,
+    ChannelView,
+    FrequencyReadout,
+    GoalEvent,
     MatchView,
     VisibleLink,
+    build_announcement,
+    build_channels_updated,
+    build_correction,
+    build_final_score,
+    build_frequency_changed,
+    build_goal,
+    build_match_started,
     build_message,
     minutes_phrase,
 )
@@ -167,3 +179,257 @@ def support_match_link(match_id: int, channel_id: int, *, is_hidden: bool = Fals
     from app.db.models import MatchChannel
 
     return MatchChannel(match_id=match_id, channel_id=channel_id, source="manual", is_hidden=is_hidden)
+
+
+# --------------------------------------------------------------------------------- D6: the copy table
+
+
+def _iso(text: str) -> str:
+    return f"{FSI}{text}{PDI}"
+
+
+def _score(home: str, home_goals: int, away: str, away_goals: int) -> str:
+    """The contract's shape: each name and each digit isolated, an en dash between the goals."""
+    return f"{_iso(home)} {_iso(str(home_goals))} – {_iso(str(away_goals))} {_iso(away)}"
+
+
+def test_match_started_copy_and_fields(frozen_now):
+    message = build_match_started(_view(frozen_now), PWA)
+
+    assert message.title == "بدأت المباراة"
+    assert message.body == f"{_iso('الأهلي')} × {_iso('Al Ahly SC')}"
+    assert message.tag == "match_48213"
+    assert message.data == {"type": "match_started", "match_id": "48213", "route": "/match/48213"}
+    assert message.link == "https://app.example/match/48213"
+
+
+def test_goal_copy_names_the_team_and_builds_the_score_beside_both_names(frozen_now):
+    message = build_goal(_view(frozen_now), 1, 0, "home", (), PWA)
+
+    assert message.title == f"هدف لـ {_iso('الأهلي')}!"
+    assert message.body == _score("الأهلي", 1, "Al Ahly SC", 0)
+    assert message.data == {"type": "goal", "match_id": "48213", "route": "/match/48213"}
+    assert message.tag == "match_48213"
+
+
+def test_the_scorer_is_the_last_goal_event_by_minute_when_the_count_matches(frozen_now):
+    events = [
+        GoalEvent("goal", "home", "10", "محمد"),
+        GoalEvent("penalty", "home", "20", "أحمد"),
+        GoalEvent("red_card", "home", "30", None),
+    ]
+
+    message = build_goal(_view(frozen_now), 2, 0, "home", events, PWA)
+
+    assert message.body == f"{_score('الأهلي', 2, 'Al Ahly SC', 0)} · {_iso('أحمد')} {_iso('20′')}"
+
+
+def test_a_scorer_is_never_shown_when_the_events_do_not_add_up(frozen_now):
+    events = [GoalEvent("goal", "home", "10", "محمد"), GoalEvent("penalty", "home", "20", "أحمد")]
+
+    message = build_goal(_view(frozen_now), 3, 0, "home", events, PWA)
+
+    assert message.body == _score("الأهلي", 3, "Al Ahly SC", 0)
+
+
+def test_an_event_without_a_player_names_none(frozen_now):
+    events = [GoalEvent("goal", "home", "10", "محمد"), GoalEvent("goal", "home", "20", None)]
+
+    message = build_goal(_view(frozen_now), 2, 0, "home", events, PWA)
+
+    assert message.body == _score("الأهلي", 2, "Al Ahly SC", 0)
+
+
+def test_an_own_goal_credits_the_side_that_scored_and_marks_the_scorer(frozen_now):
+    events = [GoalEvent("own_goal", "home", "23", "سامي")]
+
+    message = build_goal(_view(frozen_now), 1, 0, "home", events, PWA)
+
+    assert message.body == f"{_score('الأهلي', 1, 'Al Ahly SC', 0)} · {_iso('سامي')} عكسي {_iso('23′')}"
+
+
+def test_only_the_sides_goal_events_count(frozen_now):
+    events = [GoalEvent("goal", "home", "10", "محمد"), GoalEvent("goal", "away", "20", "خصم")]
+
+    message = build_goal(_view(frozen_now), 1, 1, "away", events, PWA)
+
+    assert message.body == f"{_score('الأهلي', 1, 'Al Ahly SC', 1)} · {_iso('خصم')} {_iso('20′')}"
+
+
+def test_correction_copy_stays_under_the_goal_type(frozen_now):
+    message = build_correction(_view(frozen_now), 0, 0, PWA)
+
+    assert message.title == "تصحيح النتيجة"
+    assert message.body == _score("الأهلي", 0, "Al Ahly SC", 0)
+    assert message.data == {"type": "goal", "match_id": "48213", "route": "/match/48213"}
+    assert message.tag == "match_48213"
+
+
+def test_final_score_copy(frozen_now):
+    message = build_final_score(_view(frozen_now), 2, 1, pwa_origin=PWA)
+
+    assert message.title == "انتهت المباراة"
+    assert message.body == _score("الأهلي", 2, "Al Ahly SC", 1)
+    assert message.data == {"type": "final_score", "match_id": "48213", "route": "/match/48213"}
+
+
+def test_final_score_adds_the_shootout_when_known(frozen_now):
+    message = build_final_score(_view(frozen_now), 1, 1, home_pen=4, away_pen=3, pwa_origin=PWA)
+
+    assert message.body == (f"{_score('الأهلي', 1, 'Al Ahly SC', 1)} · بركلات الترجيح {_iso('4')} – {_iso('3')}")
+
+
+def test_channels_added_names_the_channel_and_its_satellite(frozen_now):
+    added = [_link(1, access="free", satellite_id=10, slug="nilesat-7-0w")]
+
+    message = build_channels_updated(_view(frozen_now), added, [], (10,), PWA)
+
+    assert message.title == f"قنوات جديدة لمباراة {_iso('الأهلي')} × {_iso('Al Ahly SC')}"
+    assert message.body == f"أُضيفت {_iso('Channel 1')} على {_iso('Satellite 10')}"
+    assert message.data == {
+        "type": "channels_updated",
+        "match_id": "48213",
+        "route": "/match/48213?section=channels",
+    }
+    assert message.tag == "match_48213"
+    assert message.link == "https://app.example/match/48213?section=channels"
+
+
+def test_channels_added_counts_the_rest(frozen_now):
+    added = [
+        _link(1, access="free", satellite_id=10, slug="nilesat-7-0w"),
+        _link(2, access="encrypted", satellite_id=10, slug="nilesat-7-0w"),
+        _link(3, access="encrypted", satellite_id=10, slug="nilesat-7-0w"),
+    ]
+
+    message = build_channels_updated(_view(frozen_now), added, [], (10,), PWA)
+
+    assert message.body == f"أُضيفت {_iso('Channel 1')} على {_iso('Satellite 10')} و{_iso('2')} غيرها"
+
+
+def test_a_channel_without_a_satellite_drops_the_satellite_phrase(frozen_now):
+    added = [VisibleLink(channel_id=5, name="Platform", access="free", sort_order=1, show_in_match=True)]
+
+    message = build_channels_updated(_view(frozen_now), added, [], (), PWA)
+
+    assert message.body == f"أُضيفت {_iso('Platform')}"
+
+
+def test_channels_removed_only_uses_the_new_copy(frozen_now):
+    removed = [_link(4, access="free", satellite_id=10, slug="nilesat-7-0w")]
+
+    message = build_channels_updated(_view(frozen_now), [], removed, (10,), PWA)
+
+    assert message.title == f"تغيّرت قنوات مباراة {_iso('الأهلي')} × {_iso('Al Ahly SC')}"
+    assert message.body == f"لم تعد {_iso('Channel 4')} تنقل المباراة"
+
+
+def test_channels_added_win_over_removed_when_both_are_netted(frozen_now):
+    added = [_link(1, access="free", satellite_id=10, slug="nilesat-7-0w")]
+    removed = [_link(4, access="free", satellite_id=10, slug="nilesat-7-0w")]
+
+    message = build_channels_updated(_view(frozen_now), added, removed, (10,), PWA)
+
+    assert message.body == f"أُضيفت {_iso('Channel 1')} على {_iso('Satellite 10')}"
+
+
+def test_nothing_added_or_removed_is_never_a_message(frozen_now):
+    with pytest.raises(ValueError):
+        build_channels_updated(_view(frozen_now), [], [], (), PWA)
+
+
+def test_frequency_change_shows_the_new_and_old_readouts(frozen_now):
+    channel = ChannelView(id=77, name="beIN SPORTS 1", satellite_name="نايل سات")
+
+    message = build_frequency_changed(
+        channel,
+        FrequencyReadout(11766, "H", 27500),
+        FrequencyReadout(11843, "H", 27500),
+        PWA,
+    )
+
+    assert message.title == f"تغيّر تردد {_iso('beIN SPORTS 1')}"
+    assert message.body == f"على {_iso('نايل سات')}: {_iso('11843 H 27500')} (كان {_iso('11766 H 27500')})"
+    assert message.data == {"type": "frequency_changed", "channel_id": "77", "route": "/channel/77"}
+    assert message.tag == "channel_77"
+    assert message.link == "https://app.example/channel/77"
+
+
+def test_a_frequency_change_without_a_satellite_drops_the_satellite_phrase(frozen_now):
+    channel = ChannelView(id=77, name="beIN SPORTS 1")
+
+    message = build_frequency_changed(
+        channel,
+        FrequencyReadout(11766, "H", 27500),
+        FrequencyReadout(11843, "H", 27500),
+    )
+
+    assert message.body == f"{_iso('11843 H 27500')} (كان {_iso('11766 H 27500')})"
+    assert message.link is None
+
+
+def test_an_announcement_keeps_the_admins_text_verbatim(frozen_now):
+    message = build_announcement(901, "تحديث", "نص الإعلان", "/match/48213", PWA)
+
+    assert message.title == "تحديث"
+    assert message.body == "نص الإعلان"
+    assert message.tag == "announcement_901"
+    assert message.data == {"type": "announcement", "announcement_id": "901", "route": "/match/48213"}
+    assert message.link == "https://app.example/match/48213"
+
+
+def test_a_score_is_never_one_isolated_string(frozen_now):
+    message = build_goal(_view(frozen_now), 1, 0, "home", (), PWA)
+
+    assert f"{FSI}1 – 0{PDI}" not in message.body
+    assert _iso("1") in message.body
+    assert _iso("0") in message.body
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda view: build_match_started(view, PWA),
+        lambda view: build_goal(view, 1, 0, "home", (), PWA),
+        lambda view: build_correction(view, 0, 0, PWA),
+        lambda view: build_final_score(view, 2, 1, pwa_origin=PWA),
+    ],
+)
+def test_match_types_open_the_match_and_collapse_on_its_tag(frozen_now, build):
+    message = build(_view(frozen_now))
+
+    assert message.tag == "match_48213"
+    assert message.data["route"] == "/match/48213"
+    assert message.link == "https://app.example/match/48213"
+
+
+def test_every_type_keeps_the_reminders_android_channel(frozen_now):
+    """A new Android channel needs a client release, so old builds would fall back (contract, FCM fields)."""
+    from firebase_admin import messaging
+
+    assert CHANNEL_ID == "reminders"
+    message = replace(build_goal(_view(frozen_now), 1, 0, "home", (), PWA), token="device-token")
+    out = FcmSender(None)._message(messaging, message)
+
+    assert out.android is not None and out.android.notification.channel_id == "reminders"
+    assert out.data["type"] == "goal"
+    assert out.data["route"] == "/match/48213"
+
+
+def test_every_data_value_is_a_string(frozen_now):
+    channel = ChannelView(id=77, name="beIN SPORTS 1", satellite_name="نايل سات")
+    messages = [
+        build_match_started(_view(frozen_now), PWA),
+        build_goal(_view(frozen_now), 1, 0, "home", (), PWA),
+        build_correction(_view(frozen_now), 0, 0, PWA),
+        build_final_score(_view(frozen_now), 2, 1, pwa_origin=PWA),
+        build_channels_updated(_view(frozen_now), [_link(1, satellite_id=10)], [], (10,), PWA),
+        build_frequency_changed(channel, FrequencyReadout(11766, "H", 27500), FrequencyReadout(11843, "H", 27500), PWA),
+        build_announcement(901, "تحديث", "نص", "/match/48213", PWA),
+    ]
+
+    for message in messages:
+        assert all(isinstance(value, str) for value in message.data.values())
+        assert json.dumps(message.data)
+        assert not ARABIC_DIGITS.search(message.title)
+        assert not ARABIC_DIGITS.search(message.body)

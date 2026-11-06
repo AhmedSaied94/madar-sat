@@ -18,6 +18,7 @@ AUTH_ROUTES = {
     ("POST", "/admin/api/auth/refresh"),
     ("POST", "/admin/api/auth/logout"),
     ("GET", "/admin/api/auth/me"),
+    ("POST", "/admin/api/auth/change-password"),
 }
 
 
@@ -75,7 +76,24 @@ D5_ROUTES = {
     ("PATCH", "/admin/api/rights-holders/{id}"),
     ("DELETE", "/admin/api/rights-holders/{id}"),
 }
-ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES | D3_ROUTES | D5_ROUTES
+# contracts/admin-api.md D6: the outbox log, the composer, A16's accounts and A17's audit.
+D6_ROUTES = {
+    ("GET", "/admin/api/notifications"),
+    ("GET", "/admin/api/notifications/reach"),
+    ("POST", "/admin/api/notifications/announcements"),
+    ("POST", "/admin/api/notifications/{id}/cancel"),
+    ("POST", "/admin/api/notifications/test"),
+    ("GET", "/admin/api/notifications/test-device"),
+    ("PUT", "/admin/api/notifications/test-device"),
+    ("GET", "/admin/api/users"),
+    ("POST", "/admin/api/users"),
+    ("PATCH", "/admin/api/users/{id}"),
+    ("POST", "/admin/api/users/{id}/reset-password"),
+    ("GET", "/admin/api/audit"),
+    ("GET", "/admin/api/audit/{id}"),
+    ("GET", "/admin/api/channels/{id}/frequency-changes"),
+}
+ADMIN_ROUTES = AUTH_ROUTES | {("GET", "/admin/api/healthz")} | D2_ROUTES | D3_ROUTES | D5_ROUTES | D6_ROUTES
 
 
 def _normalize(operations: set[tuple[str, str]]) -> set[tuple[str, str]]:

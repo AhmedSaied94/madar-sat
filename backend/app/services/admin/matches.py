@@ -245,6 +245,9 @@ async def update(
         slots = await match_links.reconcile_slots(session, match.id, body.broadcasts)
         if slots:
             extra["broadcasts"] = slots
+            # Slots aren't columns, so ``lock_changed_fields`` can't see them: lock the value by hand,
+            # or an importer would wipe an editor's entries (research R23).
+            match.locked_fields = sorted({*(match.locked_fields or []), "broadcasts"})
     if body.channels is not None:
         links = await match_links.reconcile_links(session, match.id, body.channels)
         if links:
@@ -302,8 +305,10 @@ async def create(session: AsyncSession, admin: AuthedAdmin, body: a.MatchCreate,
 
     session.add(match)
     await writer.flush(session)
-    extra: dict[str, Any] = {"locked_fields": [None, list(match.locked_fields)]} if match.locked_fields else {}
     slots = await match_links.reconcile_slots(session, match.id, body.broadcasts)
+    if slots:
+        match.locked_fields = sorted({*(match.locked_fields or []), "broadcasts"})
+    extra: dict[str, Any] = {"locked_fields": [None, list(match.locked_fields)]} if match.locked_fields else {}
     if slots:
         extra["broadcasts"] = slots
     links = await match_links.reconcile_links(session, match.id, body.channels)

@@ -70,6 +70,11 @@ def forbidden(required_role: str) -> ApiError:
     return ApiError(403, "forbidden", meta={"required_role": required_role})
 
 
+def password_change_required() -> ApiError:
+    """A flagged account may only reach ``auth/me``, ``auth/change-password``, refresh and logout (R19)."""
+    return ApiError(403, "password_change_required")
+
+
 def precondition_required() -> ApiError:
     return ApiError(428, "precondition_required")
 

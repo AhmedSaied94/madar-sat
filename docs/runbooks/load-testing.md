@@ -184,6 +184,24 @@ per FR-002 target, and any fix and re-run.
    answering `/v1/live` from a short-lived cache, which needs a custom Caddy image and is a B2
    change). Do not adopt it without a second measured run.
 
+## The all-devices send (SC-002, SC-008)
+
+D6 adds a push load test that touches the production database and the outbox, so it needs a window with
+no live match and the owner's approval. `FCM_DRY_RUN=true` on VPS-2 stops every real delivery while it
+runs; `PUSH_TYPES_OFF` stays empty so the goal rows it writes are dispatched.
+
+1. Seed 50,000 devices with a `loadtest-` token prefix (a script under `backend/loadtest/`; they are
+   deleted by prefix afterwards, never by a broader `DELETE`).
+2. Compose an announcement to `all` (`POST /admin/api/notifications/announcements`) and, at the same
+   time, let a goal row arrive (a live-cycle poll on a match with followers, or a test row inserted by
+   hand). The dispatcher must finish the announcement, then send the goal, in that order.
+3. Read `sent`, `failed`, `sent_at − due_at` on both rows: the announcement finishes in ≤ 10 minutes and
+   the goal waits ≤ 60 s for its turn. Read VPS-2's load at the end (`docker stats --no-stream`).
+4. Turn `FCM_DRY_RUN` off, delete the `loadtest-` prefix, and write the numbers to `docs/load-tests/`.
+
+A row sends at most 20 pages (10,000 devices) per turn, then returns to `pending` with its cursor, so a
+50,000-device send takes five turns and never holds the lock for more than 50 s at a time.
+
 ## The two settings this touches
 
 | Variable | Where | Rule |

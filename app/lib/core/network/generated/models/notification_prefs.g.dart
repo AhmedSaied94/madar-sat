@@ -12,7 +12,8 @@ _NotificationPrefs _$NotificationPrefsFromJson(Map<String, dynamic> json) =>
         (k, e) =>
             MapEntry(k, NotificationPref.fromJson(e as Map<String, dynamic>)),
       ),
+      enabled: json['enabled'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$NotificationPrefsToJson(_NotificationPrefs instance) =>
-    <String, dynamic>{'types': ?instance.types};
+    <String, dynamic>{'types': ?instance.types, 'enabled': instance.enabled};

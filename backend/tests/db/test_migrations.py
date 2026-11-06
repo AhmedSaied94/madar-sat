@@ -31,6 +31,9 @@ DATASET_NAMES = {
     "broadcast_presets",
     "sources",
     "unresolved_names",
+    # 0009 (D6)
+    "outbox",
+    "admin_users",
 }
 
 # Every object revision 0002 adds (data-model "Revision 0002").
@@ -187,7 +190,7 @@ def test_0002_downgrades_cleanly_and_upgrades_again(empty_database):
 
 
 def test_session_database_is_at_head(sync_session):
-    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0008"
+    assert sync_session.scalar(text("SELECT version_num FROM alembic_version")) == "0009"
 
 
 @pytest.mark.parametrize(

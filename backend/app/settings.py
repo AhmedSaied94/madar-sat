@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # message with INVALID_ARGUMENT on ``fcm_options.link`` (B1-R1-2).
     pwa_origin: AnyHttpUrl | None = Field(default=None, alias="PWA_ORIGIN")
 
+    # D6's off switch (FR-021, research R10): a comma list of type names the dispatcher cancels with
+    # ``type_off``. Read by the notifications worker alone; an unknown name is ignored and logged, so a
+    # typo never stops a type nobody meant to stop.
+    push_types_off: str = Field(default="", alias="PUSH_TYPES_OFF")
+
     # D3 response cache (research R10).
     response_cache_enabled: bool = Field(default=True, alias="RESPONSE_CACHE_ENABLED")
     response_cache_max_bytes: int = Field(default=524288, alias="RESPONSE_CACHE_MAX_BYTES")

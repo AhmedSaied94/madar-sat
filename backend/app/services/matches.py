@@ -17,6 +17,10 @@ from app.domain.time import tbd_anchor
 from app.schemas import public as s
 from app.services.common import hidden_names, media_url, visible_link
 
+# The app is football-only. Every build in the field sends no ``sport``, so the default stays
+# football after other sports join the catalog (research R12).
+MATCH_SPORT = "football"
+
 
 async def fetch_media_paths(session: AsyncSession, asset_ids: Iterable[int | None]) -> dict[int, str]:
     ids = sorted({i for i in asset_ids if i is not None})
@@ -305,7 +309,7 @@ async def list_matches(
     now: datetime,
     from_dt: datetime,
     to_dt: datetime,
-    sport: str | None = None,
+    sport: str | None = MATCH_SPORT,
     competition_id: int | None = None,
     team_id: int | None = None,
     satellite_ids: tuple[int, ...] = (),

@@ -262,6 +262,8 @@ class LiveState(BaseModel):
     period: Period | None
     minute: str | None
     score: Score | None
+    # Rows of the timeline's own source, so a change in it means the timeline changed (R13).
+    event_count: int = 0
     status_label: str | None
     status_updated_at: datetime | None
 
@@ -435,14 +437,20 @@ DEFAULT_PREFS: dict[NotificationType, NotificationPref] = {
 class NotificationPrefs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # Absent means on, so a document written before D6 keeps working (public-api, data-model).
+    enabled: bool = True
     types: dict[NotificationType, NotificationPref] = Field(default_factory=dict)
 
     @classmethod
     def with_defaults(cls, stored: Any) -> NotificationPrefs:
         """The stored prefs, every missing type filled from the defaults."""
         types = dict(DEFAULT_PREFS)
+        enabled = True
         if isinstance(stored, dict):
-            incoming = stored.get("types", stored)
+            # ``enabled`` is read on its own, so a flat document of types never swallows it.
+            if isinstance(stored.get("enabled"), bool):
+                enabled = stored["enabled"]
+            incoming = stored["types"] if "types" in stored else {k: v for k, v in stored.items() if k != "enabled"}
             if isinstance(incoming, dict):
                 for name, value in incoming.items():
                     try:
@@ -450,7 +458,7 @@ class NotificationPrefs(BaseModel):
                     except ValueError:  # a type this version doesn't know: ignored, never served
                         continue
                     types[key] = NotificationPref.model_validate(value)
-        return cls(types=types)
+        return cls(enabled=enabled, types=types)
 
 
 class DeviceRegister(BaseModel):

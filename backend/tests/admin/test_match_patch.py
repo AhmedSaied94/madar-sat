@@ -203,6 +203,13 @@ class TestBroadcasts:
 
         assert resp.json()["data"]["broadcasts"] == []
 
+    async def test_saving_slots_locks_broadcasts_against_importers(self, editor_client):
+        """Slots aren't columns, so ``lock_changed_fields`` misses them (research R23)."""
+        match = await new_match(editor_client, broadcasts=[{"slot": 1, "label": "ON Sport 1"}])
+
+        assert match["locked_fields"] is not None
+        assert "broadcasts" in match["locked_fields"]
+
     async def test_a_section_left_out_is_untouched(self, editor_client):
         match = await new_match(editor_client, broadcasts=[{"slot": 1, "label": "ON Sport 1"}])
 
@@ -551,8 +558,13 @@ def _delete_match(match_id: int) -> None:
     from app.db.session import SyncSession
 
     with SyncSession() as cleanup:
-        cleanup.execute(text("SET session_replication_role = replica"))
-        for model in (MatchChannel, MatchCustomBroadcast, MatchExternalId):
-            cleanup.execute(model.__table__.delete().where(model.match_id == match_id))
-        cleanup.execute(Match.__table__.delete().where(Match.id == match_id))
-        cleanup.commit()
+        try:
+            cleanup.execute(text("SET session_replication_role = replica"))
+            for model in (MatchChannel, MatchCustomBroadcast, MatchExternalId):
+                cleanup.execute(model.__table__.delete().where(model.match_id == match_id))
+            cleanup.execute(Match.__table__.delete().where(Match.id == match_id))
+        finally:
+            # A session GUC survives the commit, and the pooled connection is reused by the next test:
+            # leaving `replica` here would silently disable every trigger for that test.
+            cleanup.execute(text("SET session_replication_role = DEFAULT"))
+            cleanup.commit()

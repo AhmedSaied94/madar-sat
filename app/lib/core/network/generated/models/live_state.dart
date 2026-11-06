@@ -25,6 +25,9 @@ abstract class LiveState with _$LiveState {
     required String? statusLabel,
     @JsonKey(name: 'status_updated_at')
     required DateTime? statusUpdatedAt,
+    @JsonKey(name: 'event_count')
+    @Default(0)
+    int eventCount,
   }) = _LiveState;
   
   factory LiveState.fromJson(Map<String, Object?> json) => _$LiveStateFromJson(json);

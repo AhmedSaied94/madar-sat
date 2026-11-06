@@ -412,3 +412,23 @@ def test_a_device_that_got_the_message_is_never_sent_it_again_when_another_stays
     assert (outbox.status, outbox.sent, outbox.failed) == ("sent", 1, 1)
     assert sorted(sender.tokens_sent) == ["push-cut-off", "push-reached"]
     assert dispatch_due(sync_session, sender, frozen_now).claimed == []
+
+
+def test_the_claim_leaves_newer_types_to_the_d6_dispatcher(sync_session, frozen_now):
+    """T015's PR deploys before the dispatcher understands announcements, so it never claims one (T032)."""
+    session = sync_session
+    session.execute(
+        text(
+            "INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status) VALUES "
+            "('kickoff_reminder', 'kickoff_reminder:1', '{}', '{}', :now, 'pending'), "
+            "('announcement', 'announcement:x', '{}', '{}', :now, 'pending')"
+        ),
+        {"now": frozen_now},
+    )
+    session.flush()
+
+    claimed = claim(session, frozen_now)
+
+    assert len(claimed) == 1
+    row = session.get(NotificationOutbox, claimed[0])
+    assert row is not None and row.type == "kickoff_reminder"

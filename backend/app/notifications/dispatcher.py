@@ -58,9 +58,12 @@ UPDATE notification_outbox
  WHERE status = 'sending' AND claimed_at IS NOT NULL AND claimed_at < :cutoff
 """
 
+# Until the D6 dispatcher PR lands (T032), this worker must not claim a row it cannot build a message
+# for: announcements are produced by T015's PR, which deploys first (quickstart "Deploy order").
 _CLAIM = """
 SELECT id FROM notification_outbox
  WHERE status = 'pending' AND due_at <= :now
+   AND type = 'kickoff_reminder'
  ORDER BY due_at, id
  FOR UPDATE SKIP LOCKED
  LIMIT :limit
