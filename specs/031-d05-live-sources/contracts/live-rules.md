@@ -125,7 +125,7 @@ At the hard limit (`LIVE_HARD_LIMIT_MIN`, kickoff + 210), `run_watchdog` handles
 | Second half, extra time or penalties | Finished, keeping the score, open `stuck:<match_id>` |
 | Never reached the second half | `to_clock`, as in spec 005 |
 
-Before the stuck limit, a row with no reading for `LIVE_STALE_AFTER_S` still goes to the clock, as in spec 005.
+Before the stuck limit, a row with no reading for `LIVE_STALE_AFTER_S` still goes to the clock, as in spec 005, unless `match_live_state.fulltime_since` is set. That means a source's last word was full time. `run_watchdog` then leaves the row as it is until `LIVE_FULLTIME_HOLD_S` has passed since that value, so a quiet source can't end a match sooner than one still reading, and then finishes it on its accepted score and opens `fulltime:<match_id>` (FR-010). A locked status stays as it is. A fallback inside a poll and a pause don't look at this, and still send the row to the clock.
 
 Past the stuck limit, `to_clock` refuses a row in the second half, extra time or penalties (FR-010). It takes the limit and returns `False`, so the one guard covers all three callers: the stale branch of `run_watchdog`, `apply_decision` on `decide`'s fallback, and `pause_feed_rows`. The row keeps its status and score, and no `stale:` alert opens. The stuck step finishes a second-half row, and the hard limit finishes the rest. A row that hasn't reached the second half still goes to the clock.
 
@@ -133,7 +133,9 @@ Past the stuck limit, `to_clock` refuses a row in the second half, extra time or
 
 ## Readers
 
-Each reader gives the same `SourceReading`. A new `goal.py` adds `parse_list` and `parse_match`, with `SOURCE`, `HOST` and `LIST_PATH`. A new optional `stats` field carries Goal.com's summary. `cycle.py` reads the sources from one table: name, host, list path, parsers, page cap, enabled.
+Each reader gives the same `SourceReading`. A new `goal.py` adds `parse_list` and `parse_match`, with `SOURCE`, `HOST` and `LIST_PATH`. A new optional `stats` field carries Goal.com's summary. `cycle.py` reads the sources from one table: name, host, list path, parsers, page cap, enabled, and an optional `dated_list_path`.
+
+A source with `dated_list_path` also reads the list of any earlier Cairo day a match in the window kicked off on (FR-012a), parsed with that day's date. Those rows join today's, and today's row wins an ID both have. A failed request there costs only that read: it adds to `http_errors`, and a 429, 403 or 5xx trips the host's backoff, but the source's state doesn't change. A page that fails validation stops the source, as any other page does. An empty list stops nothing.
 
 A parser gives a row with an unknown status a reading with `unknown_status` set and its score if it has one, and the cycle opens `unknown_status:<source>`. `LayoutChanged` still stops the source.
 

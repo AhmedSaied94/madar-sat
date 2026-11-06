@@ -13,7 +13,7 @@ Three sources are read: FilGoal, YallaKora and Goal.com. Goal.com has [an off sw
 | `live.scheduler` | `worker-live` | Every 60 s | Finds matches in the window. None or paused: no request. Otherwise queues one `live.poll` |
 | `live.poll` | `worker-live` | From the scheduler | One cycle under `lock:live:poll`. An overlap exits |
 | `live.check_robots` | `worker-live` | Daily 03:50 UTC | Compares each `robots.txt` with `backend/app/live/robots/` |
-| `live.watchdog` | `worker-maintenance` | Every 2 min | Finishes a [stuck match](#stuck-matches), moves a `feed` row with no reading for 5 min to the clock, and reports a [capture](#the-capture) that stopped |
+| `live.watchdog` | `worker-maintenance` | Every 2 min | Finishes a [stuck match](#stuck-matches), and a match a source last showed as [full time](#full-time) once its readings stop. Moves any other `feed` row with no reading for 5 min to the clock, and reports a [capture](#the-capture) that stopped |
 | `live.prune_runs` | `worker-maintenance` | Daily 03:40 UTC | Deletes `live_poller` runs older than 30 days |
 
 The window is a kickoff from 150 minutes ago to 10 minutes ahead, plus matches on `feed` with no final state up to kickoff + 210 minutes. A `postponed` match stays on `/v1/live` as stored, but isn't polled.
@@ -27,6 +27,7 @@ One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the 
 - **Sources that differ** keep the accepted score. After `LIVE_DISAGREE_AFTER_S` the owner gets a `disagree:` alert.
 - **An unknown status** doesn't stop a source. The row's score counts only if it equals or covers the accepted one, and its status is left out.
 - **Linking** needs both teams to resolve, in order, and exactly one match with them. A row with a time needs that match within 45 minutes. FilGoal's row loses its time once a match starts, so a row with none needs that one match inside the poll window instead. A finished row with no time can link, but its names don't go to the queue, because the list keeps yesterday's results.
+- **Cairo's midnight** moves YallaKora's list to the new day, even with matches still on. While a match from an earlier day is in the poll window, each cycle also reads that day's list (`/matches-center?date=YYYY-MM-DD`), which is one more request a minute, for at most about 2.5 hours after midnight. If that request fails, the source's state doesn't change. Goal.com's list had already left the 22:00 matches by about 23:00 Cairo on 2026-11-05, and we found no dated page for it, so it can't follow them. FilGoal's list moves at about 02:00 Cairo, and isn't read by date either.
 - **«مباشر»** on FilGoal's list means live with no half. It moves a scheduled row to live, and any source that names the half decides the period and the label. A match page, when the row gets one, has the half.
 - **The minute** comes from the source that gave the status. FilGoal's clock wraps once a period passes 60 minutes, so a minute more than 5 below that source's `peak_minute` in the same period counts as no minute. A poll with readings but no minute clears it, so a frozen one never looks current.
 - **Order, when sources show the same stage:** FilGoal, Goal.com, YallaKora. Events and lineups come from FilGoal if it has any, then Goal.com. Each source's events stay stored under its own name, and `/v1` serves one source per match, so a goal can't show twice.
@@ -41,6 +42,8 @@ One cycle: FilGoal's and YallaKora's list pages, link rows to matches, pick the 
 - A source that merely failed a request keeps the wait going, with nothing cleared.
 
 **So a match can stay live for up to 10 minutes after one source's full time.** That's on purpose: a level match may be going to extra time. While it waits it shows no minute, and that isn't a fault. If a source stays on one of those and no second source shows full time, the match can stay live until the kickoff + 210 limit.
+
+If readings stop during that wait, the match doesn't go back to the clock, because polling could end with no result. It keeps waiting, and when `LIVE_FULLTIME_HOLD_S` is up the watchdog finishes it on its accepted score, with one `fulltime:<match_id>` alert. A status locked in A3 is left alone. If every source is down, or the poller is paused, the row still goes to the clock, and it can need [a repair](#repairing-a-lost-result) if polling ends before a source reads it again.
 
 Once the condition is met, a drop still open or scores that differ hold it until they agree or for `LIVE_DROP_HOLD_S`. Then it finishes on the accepted score, with a `disagree:` alert if they still differ. An editor can correct the result in A3.
 
@@ -60,7 +63,7 @@ A match no source closes, like Bristol City v Wolves in the first capture, is fi
 
 A reading with no period and a status of `NULL` or `live` is an unmapped status, or a match page saying only «مباشر». It may be extra time or a shoot-out that no parser knows yet, so the row waits for the hard limit, showing `live`, second half, with no minute. If an `unknown_status:` alert came with it, see [what each alert means](#what-each-alert-means).
 
-Up to the stuck limit, a stale row, every source being down and a pause all send a row to the clock. Past it, a row that reached its second half stays as it is with no `stale:` alert, and the steps above finish it.
+Up to the stuck limit, a stale row, every source being down and a pause all send a row to the clock, except a stale row a source last showed as [full time](#full-time). Past it, a row that reached its second half stays as it is with no `stale:` alert, and the steps above finish it.
 
 ## Postponed matches
 
@@ -104,6 +107,7 @@ Each one is sent once when the problem opens and once when it closes. `alerted_a
 | `المصادر مختلفة على نتيجة المباراة ‹id›` | `disagree:<match_id>` | Usable scores differed for `LIVE_DISAGREE_AFTER_S`, or still differed when the match finished. The accepted score stays | Compare with the broadcast. If it's wrong, set a manual status in A3. It closes on agreement, or an hour after the match's limit |
 | `المباراة ‹id› بلا قراءة حديثة` | `stale:<match_id>` | The watchdog moved the row to the clock, because no reading came for `LIVE_STALE_AFTER_S`, or it reached `LIVE_HARD_LIMIT_MIN` without reaching its second half | If several arrive together, `worker-live` has probably stopped: see [What to check](#what-to-check). It closes on the next reading |
 | `أُنهيت المباراة ‹id› عند الحد الزمني` | `stuck:<match_id>` | No source closed it, so [the limit](#stuck-matches) finished it on its last score | Check the score against another source, and correct it in A3 if needed. It closes an hour after the match's limit |
+| `أُنهيت المباراة ‹id› بآخر نتيجة` | `fulltime:<match_id>` | One source showed full time, then readings stopped, so when `LIVE_FULLTIME_HOLD_S` was up the watchdog finished the match on its accepted score | Check the score against another source, and correct it in A3 if it's wrong. It closes an hour after the match's limit |
 | `تغيّر ملف robots.txt` | `robots:<host>` | The site's rules differ from the committed copy. Nothing changes by itself | [The robots rules](#when-robotstxt-changes) |
 
 ## What to check
@@ -130,6 +134,33 @@ A match's own readings, to compare the sources (never served to clients):
 dc exec postgres psql -U madar -d madar -c "select source, status, period, minute, peak_minute, peak_period, home_score, away_score, read_at, changed_at from match_source_readings where match_id = <id>"
 dc exec postgres psql -U madar -d madar -c "select * from match_live_state where match_id = <id>"
 ```
+
+## Repairing a lost result
+
+A `feed` row sent to the clock loses its score from `matches`. If polling ends before a source reads it again, nothing brings it back, and it stays on the clock with no result. `match_live_state` keeps the last accepted score, but that can be wrong if the source was still correcting it, so check the source's finished page first.
+
+1. Find the rows, in the VPS-1 `psql` shell ([database-migrations.md](database-migrations.md#read-the-state)):
+
+   ```sql
+   SELECT m.id, e.external_id, m.home_team_name, m.away_team_name, m.kickoff_at, l.confirmed_home, l.confirmed_away
+   FROM matches m
+   JOIN match_live_state l ON l.match_id = m.id
+   LEFT JOIN match_external_ids e ON e.match_id = m.id AND e.source = 'yallakora'
+   WHERE m.status_source = 'clock' AND m.status = 'scheduled' AND l.confirmed_home IS NOT NULL
+     AND m.kickoff_at < now() - interval '3 hours'
+   ORDER BY m.kickoff_at, m.id;
+   ```
+
+2. Compare each score with `https://www.yallakora.com/matches-center?date=YYYY-MM-DD`, for the match's Cairo date. Where the two differ, check a second source. On 2026-11-05 YallaKora's full-time row showed Monaco 1-0, and it corrected that to 2-0 afterwards.
+3. Copy [results-2026-11-05.sql](../../specs/031-d05-live-sources/repair/results-2026-11-05.sql), then change its rows, the count and the kickoff in its check. It stops without writing unless every row is still on the clock and unlocked.
+4. Run it from your machine:
+
+   ```bash
+   ssh madar-vps1 'sudo -n -iu deploy bash -c "cd /srv/madar/infra && export IMAGE_TAG=\$(cat /srv/madar/current_tag) && docker compose --env-file /srv/madar/.env -f compose/vps1.yml exec -T postgres psql -U madar -d madar -v ON_ERROR_STOP=1 -f -"' < results-YYYY-MM-DD.sql
+   ```
+
+   It prints the repaired rows, then `COMMIT`. An `expected … matches still on the clock` error means nothing was written.
+5. Open one of the matches in the app. S3 shows it finished, with its score.
 
 ## Updating a parser from a saved page
 
