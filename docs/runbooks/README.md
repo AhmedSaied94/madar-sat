@@ -19,7 +19,7 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | --- | --- |
 | [provision-host.md](provision-host.md) | Creating a VM and preparing it, up to its deploy key. Run once per VM. |
 | [private-network.md](private-network.md) | WireGuard peers, the admin site, the admin CA root on each device |
-| [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, deploy keys, infra updates |
+| [deploy-and-rollback.md](deploy-and-rollback.md) | How releases reach VPS-1, reading a failed deploy, rollbacks, the drill, GHCR images, the one-time GitHub setup, making the repository private, deploy keys, infra updates |
 | [break-glass.md](break-glass.md) | Getting back into a VM when WireGuard or SSH doesn't work, and an instance Oracle stopped |
 | [firebase-hosting.md](firebase-hosting.md) | The Firebase project, the deploy key, `.firebaserc`, the PWA preview channel and its CORS origin |
 | [pwa-release.md](pwa-release.md) | Cutting a `web-v*` PWA release: the tag, what the job does, the mirror check, rolling the live channel back, pruning |
@@ -131,6 +131,7 @@ Feature-specific checks (task IDs, scenarios to walk, decisions due) are in [own
 | A firewall rule must change | [firewall-changes.md](firewall-changes.md) |
 | A migration failed, or you need the schema's state | [database-migrations.md](database-migrations.md) |
 | A deploy key leaked or needs replacing | [deploy-and-rollback.md "Replacing a deploy key"](deploy-and-rollback.md#replacing-a-deploy-key) |
+| Every development phase is done and the repository goes private | [deploy-and-rollback.md "Making the repository private"](deploy-and-rollback.md#making-the-repository-private) |
 | Rotating a password or key, gitleaks failed, or a secret leaked | [secrets.md](secrets.md) |
 | A reminder didn't arrive, or FCM rejects the credentials | [push-notifications.md](push-notifications.md) |
 | A 429 appears in the API log, or public reads feel slow | [response-cache-and-limits.md](response-cache-and-limits.md) |

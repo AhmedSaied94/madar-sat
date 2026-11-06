@@ -63,7 +63,7 @@ Web: satair-6983b.web.app shows a "get it on Google Play" page; ?app=1 opens a p
 
 | # | Goal | Measure |
 |---|---|---|
-| G1 | Android app, iOS and desktop web from one Flutter codebase | Same feature set, except the native-only items in §5.3 |
+| G1 | Android app, iOS and desktop web from one Flutter codebase | Same feature set, except the native-only items in §5.3. Once Android production is live, Android browsers get a store screen instead (D17) |
 | G2 | An admin edit shows in the app quickly | ≤ 60 s from save to client, with no publish step |
 | G3 | Ingestion runs unattended and reports its health | Each source has a health page and alerts on failure |
 | G4 | Server push | Reminders, goals, final scores, channel changes, frequency changes |
@@ -107,6 +107,8 @@ Web: satair-6983b.web.app shows a "get it on Google Play" page; ?app=1 opens a p
 | D13 | Media lives on VPS-1's disk, served by Caddy, with a copy in the OCI bucket. Offsite backups go to Backblaze B2 | Object Storage allows only 50k requests a month, which is too few to serve from |
 | D14 | One monorepo with per-folder workflows: GitHub Actions for Android, PWA and backend/admin; Codemagic for iOS later | One PR can change an endpoint and both generated clients |
 | D15 | The recovered old source and the scraped snapshot stay out of the new repo's history | Copy `schema.sql` in, and git-ignore `migration/data/` |
+| D16 | The PWA shows an AdSense banner on `<project>.web.app`. Interstitials stay native-only | It earns from iPhone and desktop users. AdMob doesn't run on the web. `web.app` is on the public suffix list, which AdSense accepts as a site, so D8 stands. Google's web interstitial docs (Ad Manager GPT) list only user-action triggers and no call to fire one from code, so our interstitial rule can't run there |
+| D17 | Once Android production is live, Android browsers get a store screen instead of the PWA. The Play-signed APK is also on Uptodown and APKPure | The PWA has no interstitial, so it would stay the lighter way to use the app on Android. The two stores give phones without Google Play a way in. Using the Play-signed APK keeps one signature, so people can move between sources without reinstalling |
 
 ### 3.2 Proposed in this document (confirm)
 
@@ -204,9 +206,9 @@ app/lib/
   main_dev.dart · main_staging.dart · main_prod.dart
 ```
 
-**Key packages:** `flutter_riverpod` + `riverpod_generator`, `go_router`, `dio` + `retrofit` (generated from the OpenAPI spec with `swagger_parser`), `freezed`, `json_serializable`, `drift` (P6), `flutter_secure_storage` (device token), `cached_network_image`, `firebase_core`, `firebase_messaging`, `firebase_remote_config`, `firebase_crashlytics` (native only), `google_mobile_ads` (native only), `just_audio` (commentator clips, works on web), `share_plus`, `url_launcher`, `intl`. v2 adds `flutter_local_notifications`, `home_widget`, `geolocator` and compass sensors.
+**Key packages:** `flutter_riverpod` + `riverpod_generator`, `go_router`, `dio` + `retrofit` (generated from the OpenAPI spec with `swagger_parser`), `freezed`, `json_serializable`, `drift` (P6), `flutter_secure_storage` (device token), `cached_network_image`, `firebase_core`, `firebase_messaging`, `firebase_remote_config`, `firebase_crashlytics` (native only), `google_mobile_ads` (native only), `just_audio` (commentator clips, works on web), `share_plus`, `url_launcher`, `intl`. v2 adds `flutter_local_notifications`, `home_widget`, `geolocator` and compass sensors. The web banner is a standard AdSense unit in an `HtmlElementView`, not the `google_adsense` package, which is only for web games (D16).
 
-**Platform adapters.** Each native-only capability sits behind an interface, with a native implementation and a web no-op chosen by conditional import: `AdsService`, `LocalNotifier`, `HomeWidgetUpdater`, `CrashReporter`, `InstallGuide` (web only). Feature code never imports a plugin directly.
+**Platform adapters.** Each platform-specific capability sits behind an interface, with each platform's implementation chosen by conditional import: `AdsService` (AdMob on native; on web, the AdSense banner, with interstitial calls as no-ops), `LocalNotifier`, `HomeWidgetUpdater`, `CrashReporter` (web no-ops), `InstallGuide` (web only). Feature code never imports a plugin directly.
 
 **Data flow (stale-while-revalidate).** The repository emits the drift copy immediately. It then sends a request with `If-None-Match`; a `200` updates drift and emits again, a `304` changes nothing. Screens show a "last updated" hint when the copy is older than its freshness target (§11).
 
@@ -225,7 +227,8 @@ app/lib/
 | `api_base_url`, `media_base_url` | `https://api.<ip>.sslip.io` | Lets the host move without an app release |
 | `min_supported_build` / `latest_build` | `12` / `15` | Forced update screen / soft "update available" banner |
 | `maintenance` | `{"on":false,"message_ar":""}` | Maintenance screen |
-| `ads` | `{"enabled":true,"interstitial_min_interval_s":90,"interstitial_session_cap":4}` | Ad pacing (Android) |
+| `ads` | `{"enabled":true,"web_banner_enabled":false,"interstitial_min_interval_s":90,"interstitial_session_cap":4}` | Ad pacing (native); the PWA banner switch (D16) |
+| `android_stores` | `{"browser_gate":false,"uptodown_url":"","apkpure_url":""}` | The store screen on Android browsers (D17); update links for installs that didn't come from Google Play |
 | `features` | `{"live_center":true,"lineups":false,"reports":false,"satellite_finder":false}` | Feature flags and percentage rollouts |
 | `live_poll_interval_s` | `30` | Client live polling |
 
@@ -255,14 +258,18 @@ app/lib/
 |---|---|---|---|---|
 | Push | ✓ | Only after install + tapping Allow | ✓ (Chrome, Edge, Firefox, Safari on macOS) | ✓ |
 | Scheduled local notifications | ✓ (not used in v1; server pushes reminders) | ✗ | ✗ | ✓ |
-| Ads | AdMob banner + interstitial | None (ad-free) | None | AdMob |
+| Ads | AdMob banner + interstitial | AdSense banner, no interstitial | AdSense banner, no interstitial | AdMob |
 | Home widget, ongoing live notification / Live Activity | v2 | ✗ | ✗ | v2 |
 | Commentator voice clips | ✓ | ✓, after a tap | ✓ | ✓ |
 | Location + compass (satellite finder, v2) | ✓ | ✓ with permission (iOS asks separately for motion) | ✗ (no compass) | ✓ |
 | Share | Native sheet | Web Share | Copy link | Native sheet |
 | Back navigation | System back; root shows "press back again to exit" | Edge swipe | Browser back, deep links | Edge swipe |
-| Install | Play Store | Manual "Add to Home Screen" guide | Browser install prompt | App Store |
+| Install | Play Store; Uptodown or APKPure on phones without Google Play | Manual "Add to Home Screen" guide | Browser install prompt | App Store |
 | Crash reporting | Crashlytics | Logged to API (or Sentry, optional) | Same | Crashlytics |
+
+**Android browsers.** The PWA is the public Android channel until Android production is live. After that, `android_stores.browser_gate` replaces it on Android browsers with a store screen (product doc S0), and `manifest.json` points to the Play app (`related_applications`, `prefer_related_applications: true`). A browser's desktop-site mode can still get around the check, which is accepted.
+
+**Phones without Google Play services.** They run the APK from Uptodown or APKPure. FCM requires those services, so these phones get no push, and S10 and S15 say so. AdMob still offers most of its functions without them, and Remote Config and Crashlytics don't need them. Neither store is on AdMob's supported list, and apps listed only in unsupported stores get limited ad serving, so these listings go up after the Play listing is linked to the AdMob app.
 
 ### 5.4 Admin web
 
@@ -612,7 +619,7 @@ B2's free tier is 10 GB, so watch the size. Test a restore every month on a scra
 | Uploads | Magic-byte check, re-encoding, size caps, content-addressed names, `X-Content-Type-Options: nosniff` |
 | Transport and headers | HTTPS everywhere (Let's Encrypt; `tls internal` on `wg0`). HSTS, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY` on the admin |
 | Data at rest | Postgres and Redis on private interfaces with passwords (Redis ACL). Backups encrypted by restic |
-| Privacy | Anonymous devices, no accounts, `DELETE /v1/devices/me`. Ads require the AdMob UMP consent flow for EEA/UK users (product doc §16) |
+| Privacy | Anonymous devices, no accounts, `DELETE /v1/devices/me`. Ads require consent from EEA, UK and Swiss users: the AdMob UMP flow in the app, and a Google-certified consent message from AdSense Privacy & messaging on the PWA (product doc §16) |
 
 ---
 
@@ -696,6 +703,7 @@ Each day is exactly one Spec Kit spec, and its scope is the day's brief in deliv
 | R5 | Oracle reclaims an idle instance | Outage | Keep the instances busy; consider a pay-as-you-go upgrade (still $0) |
 | R6 | sslip.io, a third-party DNS service, goes down | API unreachable | Buy a domain (O4); hosts come from Remote Config |
 | R7 | Logo and voice-clip rights | Takedown requests | Act on takedowns promptly; keep source attribution in `media_assets.original_url` |
+| R8 | AdSense refuses the PWA. A Flutter canvas shows little readable text, and its review asks for unique content that adds value | No web ad revenue | Apply before D9. `ads.web_banner_enabled` stays off and every layout already works without a banner. A different ad network would be a new decision |
 
 ---
 
