@@ -90,7 +90,7 @@ describe('App routes', () => {
 
   it('shows the placeholder on a section that arrives on a later day', async () => {
     server.use(http.post('*/admin/api/auth/login', loginOk));
-    renderApp('/audit');
+    renderApp('/feeds');
 
     await signIn();
 
@@ -109,5 +109,102 @@ describe('App routes', () => {
 
     // The cached matches, lists and their versions go with the session (A-R2-10).
     await waitFor(() => expect(queryClient.getQueryCache().getAll()).toHaveLength(0));
+  });
+});
+
+// D6's three screens reach the router (contract admin-screens "Routes and roles"). Until now they
+// showed `ComingSoon`; an editor's direct address gets the shared not-permitted state instead.
+describe('the D6 routes', () => {
+  const envelope = (data: unknown, meta: Record<string, unknown> = {}): Record<string, unknown> => ({
+    success: true,
+    data,
+    error: null,
+    meta,
+  });
+
+  const loginAs = (role: 'admin' | 'editor') => () =>
+    HttpResponse.json({
+      success: true,
+      data: {
+        access_token: 'header.payload.signature',
+        token_type: 'Bearer',
+        expires_in: 900,
+        admin: { id: 1, email: 'admin@example.com', name: 'محمد علي', role },
+      },
+      error: null,
+      meta: {},
+    });
+
+  /** The three lists a screen may read on arrival, each empty. */
+  function serveEmptyLists(): void {
+    server.use(
+      http.get('*/admin/api/notifications', () => HttpResponse.json(envelope([], { next_cursor: null }))),
+      http.get('*/admin/api/users', () => HttpResponse.json(envelope([]))),
+      http.get('*/admin/api/audit', () => HttpResponse.json(envelope([], { next_cursor: null }))),
+    );
+  }
+
+  it('opens A15 on /notifications as an admin', async () => {
+    serveEmptyLists();
+    server.use(http.post('*/admin/api/auth/login', loginAs('admin')));
+    renderApp('/notifications');
+
+    await signIn();
+
+    expect(await screen.findByRole('heading', { name: 'الإشعارات' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'إعلان جديد' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'هذا القسم قيد البناء' })).not.toBeInTheDocument();
+  });
+
+  it('opens A16 on /users as an admin', async () => {
+    serveEmptyLists();
+    server.use(http.post('*/admin/api/auth/login', loginAs('admin')));
+    renderApp('/users');
+
+    await signIn();
+
+    expect(await screen.findByRole('heading', { name: 'المستخدمون' })).toBeInTheDocument();
+  });
+
+  it('opens A17 on /audit as an admin', async () => {
+    serveEmptyLists();
+    server.use(http.post('*/admin/api/auth/login', loginAs('admin')));
+    renderApp('/audit');
+
+    await signIn();
+
+    expect(await screen.findByRole('heading', { name: 'سجل التغييرات' })).toBeInTheDocument();
+  });
+
+  it('keeps A15 readable for an editor but hides the composer from them', async () => {
+    serveEmptyLists();
+    server.use(http.post('*/admin/api/auth/login', loginAs('editor')));
+    renderApp('/notifications');
+
+    await signIn();
+
+    expect(await screen.findByRole('heading', { name: 'الإشعارات' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'إعلان جديد' })).not.toBeInTheDocument();
+  });
+
+  it('shows not-permitted to an editor on a direct address to A16', async () => {
+    serveEmptyLists();
+    server.use(http.post('*/admin/api/auth/login', loginAs('editor')));
+    renderApp('/users');
+
+    await signIn();
+
+    expect(await screen.findByText('صلاحيتك لا تسمح بهذا الإجراء')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('shows not-permitted to an editor on a direct address to A17', async () => {
+    serveEmptyLists();
+    server.use(http.post('*/admin/api/auth/login', loginAs('editor')));
+    renderApp('/audit');
+
+    await signIn();
+
+    expect(await screen.findByText('صلاحيتك لا تسمح بهذا الإجراء')).toBeInTheDocument();
   });
 });

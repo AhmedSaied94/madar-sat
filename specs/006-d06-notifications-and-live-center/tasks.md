@@ -281,7 +281,7 @@ Tests first, seen failing, then code. The tasks are in order unless marked [P].
 ### Setup (A)
 
 - [ ] T068 [US3] After B1's T019, rebase and run `pnpm orval`, committing any output. Add every new endpoint to `responseSchemas` in `admin/src/api/http.ts` (a request without one fails). Add the copy to `admin/src/i18n/ar.ts`, and [each new code](contracts/admin-api.md#new-error-codes) to `ErrorCode` and `errorCopy`.
-- [ ] T069 [US3] Read `madar-design/admin-react/SCREENS.md` and the boards under `madar-design/admin-react/screens/03-operations/` (`Notifications`, `Users`, `Audit`, `Sources`) and `02-content/Channels.html`, as PNG and HTML. None has empty, error or loading copy, and no board draws the change-password form, so those follow the shared patterns and A1.
+- [x] T069 [US3] Read `madar-design/admin-react/SCREENS.md` and the boards under `madar-design/admin-react/screens/03-operations/` (`Notifications`, `Users`, `Audit`, `Sources`) and `02-content/Channels.html`, as PNG and HTML. None has empty, error or loading copy, and no board draws the change-password form, so those follow the shared patterns and A1.
 
 ### Tests first (A)
 
@@ -309,6 +309,8 @@ Tests first, seen failing, then code. The tasks are in order unless marked [P].
 - [ ] T085 [US3] From `admin/`, run `pnpm typecheck && pnpm lint && pnpm test && pnpm build && ./scripts/check-literals.sh && ./scripts/check-token-copy.sh && pnpm e2e`. Extend `admin/e2e/smoke.spec.ts` only if a new route breaks it.
 - [ ] T086 [US3] Compare with the boards at 1440 and 1024 in both themes and attach the screenshots to the PR. Walk [quickstart A](quickstart.md#lane-a) over WireGuard after deploy.
 - [ ] T087 [US3] Add Lane A's items to `docs/owner-actions.md`, including the test send and saving a test device, and A16's and A17's use to `docs/runbooks/staff-accounts.md`. Record that A13 stays open to editors and that A2's «من N مباراة اليوم» is an existing bug, both for the owner to decide ([noted, not changed](contracts/admin-screens.md#noted-not-changed)).
+
+**Status (opencode, 2026-11-06):** T069 is done, and T070–T076's tests are written and seen failing, in `admin/src/test/signedIn.tsx` plus `features/shell/navigation.test.tsx`, `app/App.test.tsx`, `features/auth/ChangePasswordPage.test.tsx`, `api/http.test.ts`, `features/notifications/{NotificationsPage,Composer}.test.tsx`, `features/users/UsersPage.test.tsx`, `features/audit/AuditPage.test.tsx`, `components/ConfirmDialog/DiffView.test.tsx`, `features/channels/ChannelsPage.test.tsx` and `features/sources/SourcesPage.test.tsx`. A15's cancel and its `ConflictDialog` live in `NotificationsPage.test.tsx`, beside the row they act on, rather than in the composer's file. T068 has not started and nothing is ticked ahead of it: the lane waits on B1's T019, because the new endpoints, `must_change_password` and `stopped` are not in the generated client yet, and on T077–T084, which turn the tests green.
 
 ---
 
