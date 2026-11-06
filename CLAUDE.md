@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Madar Sat (مدار سات) is an Arabic-first, RTL guide for football fans who watch on a satellite dish. For each match it answers: which channel, on which satellite, at what frequency, and can my dish receive it. It replaces Sat Air 3.8 (`com.satair.app`), whose recovered source is in the sibling folder `../old_app/`. That folder is outside this repo on purpose (D15): copy only `old_app/migration/schema.sql` in, and never commit `migration/data/` or the old Firebase web config.
 
 - `backend/`, `admin/`, `app/`, `infra/`, `.github/workflows/`: the code, one lane each (below).
-- `docs/system-design.md`: architecture, decisions (D1–D15 decided, P1–P6 proposed, O1–O7 open), API shapes (§6.3.3), the security checklist (§8), repo layout and CI (§9), delivery phases (§12).
+- `docs/system-design.md`: architecture, decisions (D1–D17 decided, P1–P6 proposed, O1–O7 open), API shapes (§6.3.3), the security checklist (§8), repo layout and CI (§9), delivery phases (§12).
 - `docs/product-business.md`: screen specs S0–S20 (app) and A0–A17 (admin), notification copy (§11), data dictionary (§12), design-system requirements (§13), Arabic voice and glossary (§14).
 - `docs/delivery-plan.md`: phases (MVP, V1, V2, V3), one Spec Kit spec per working day (specs 001–030 = D1–D30), work per lane (B1, B2, A, M) inside each day, ownership rules, the daily loop and quality gates.
 - `madar-design/`: the exported UI design package (tokens, 24 components, 46 app boards, 21 admin boards). Start with `madar-design/README.md`.

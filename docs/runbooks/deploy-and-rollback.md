@@ -199,7 +199,7 @@ For the rest of T066, merge a trivial `backend/` change and time it from merge t
 
 ## Images in GHCR
 
-Images live in `ghcr.io/ahmedsaied94/madar-backend`, tagged with the commit sha. The repository is private, so the package is private too, and the free plan gives private packages only 500 MB of storage (research R13). After every successful deploy, the `retention` job keeps the newest 3 versions: the current one, the previous one for rollback, and a spare.
+Images live in `ghcr.io/ahmedsaied94/madar-backend`, tagged with the commit sha. The free plan gives private packages only 500 MB of storage (research R13), so check each package's visibility in its settings; this matters once the repository goes private. After every successful deploy, the `retention` job keeps the newest 3 versions: the current one, the previous one for rollback, and a spare.
 
 ```bash
 gh auth refresh -s read:packages      # once
@@ -242,9 +242,37 @@ Do these before the first merge of Lanes B1 and B2.
    gh variable set VPS2_IP -R "$R" --body <VPS2_IP>
    ```
 
-2. **Actions minutes.** The repository is private (checked 2026-10-29). The free plan caps Actions minutes for private repositories, and GitHub's free arm64 runners serve public repositories only, so every backend build runs under QEMU and takes many minutes. Watch Settings → Billing → Actions. If the minutes run out, the options are making the repository public or a self-hosted arm64 runner (`ARM_RUNNER`); either is an owner decision under constitution IX.
+2. **Actions minutes.** The repository is public (checked 2026-11-06), so standard runners are free. `ARM_RUNNER` isn't set, so every backend build runs under QEMU and takes many minutes. The minutes start to count when the repository goes private: see [Making the repository private](#making-the-repository-private).
 3. **Failure emails:** GitHub → Settings → Notifications → Actions: turn on email for failed workflows. That email is the deploy alert until Uptime Kuma (D3).
-4. **Who can reach the secrets.** Branch protection isn't available for private repositories on the free plan, and the secrets aren't tied to an Environment, so a workflow pushed to any branch of this repository can read them. Keep write access to yourself.
+4. **Who can reach the secrets.** `master` isn't protected and the secrets aren't tied to an Environment, so a workflow pushed to any branch of this repository can read them. Keep write access to yourself. Pull requests from forks don't receive the secrets, and no workflow uses `pull_request_target`; keep it that way while the repository is public.
+
+## Making the repository private
+
+The repository stays public until every development phase is done, then goes private (decided 2026-11-06). Do this after V3, at a time when no deploy is running.
+
+1. **Check that the minutes fit.** For private repositories, GitHub Free includes about 2,000 minutes a month on standard Linux runners. Add up the job times for the last 30 days:
+
+   ```bash
+   R=AhmedSaied94/madar-sat
+   gh run list -R "$R" --created ">=<YYYY-MM-DD>" --limit 1000 --json databaseId,workflowName
+   gh run view <id> -R "$R" --json jobs
+   ```
+
+   If they don't fit, trim the workflows or add a self-hosted runner; either is an owner decision under constitution IX. Don't use VPS-1 or VPS-2 as a runner, because CI would run branch code next to live data.
+2. **Check for forks.** Existing forks stay public after the switch:
+
+   ```bash
+   gh repo view "$R" --json forkCount
+   ```
+
+3. **Switch.**
+
+   ```bash
+   gh repo edit "$R" --visibility private --accept-visibility-change-consequences
+   ```
+
+4. **Check the packages.** Open `madar-backend`, `madar-backend-amd64` and `madar-backup` under your GitHub profile → Packages, and note each one's visibility. Private packages count against the free plan's limits in Settings → Billing. If they don't fit, keep fewer versions or keep the packages public (see [Images in GHCR](#images-in-ghcr)).
+5. **Prove the pipeline.** Merge a trivial `backend/` change and confirm that the build, deploy and `retention` jobs in `backend.yml` pass, and that the home box still pulls its image.
 
 ## Replacing a deploy key
 

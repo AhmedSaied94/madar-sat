@@ -46,7 +46,7 @@
 | **Live data** | Clock estimate + admin override | Real live feed: status, minute, score, events; lineups where available (O7) | Ongoing live notification | — |
 | **Ingestion** | ysscores fixtures · LiveSoccerTV channels · bridge from the old Firestore (fallback) | YallaKora · sporteventz · API-Football · unresolved-names queue · bridge retired | — | English names (`name_en`) |
 | **Admin** | A1 login · A0 shell · A2 dashboard (basic) · A3 matches · A4 match editor · A5 teams · A6 competitions · A7 satellites · A8 channels · A10 commentators · A13 sources (basic) | A9 rights · A11 lists · A12 feeds · A13 unresolved queue + run detail · A15 push · A16 users · A17 audit · team and channel merge tools | A14 reports · TOTP · viewing-link fields | App users lookup · display-name moderation · English name fields · sponsor slots |
-| **Platform** | PWA on Firebase Hosting · Android closed testing · Remote Config · Crashlytics | AdMob + UMP consent · PWA mirror service worker · share links · soft update · maintenance · channel delta sync | iOS native (Codemagic, APNs, widget, local reminders) | Play Billing (later StoreKit) |
+| **Platform** | PWA on Firebase Hosting · Android closed testing · Remote Config · Crashlytics | AdMob + UMP consent · AdSense banner on the PWA · Android browser store screen · Uptodown and APKPure listings · PWA mirror service worker · share links · soft update · maintenance · channel delta sync | iOS native (Codemagic, APNs, widget, local reminders) | Play Billing (later StoreKit) |
 | **Ops** | Compose, Caddy, WireGuard, CI/CD, nightly backups, Uptime Kuma | Restore drill, runbook, alert routing, load test, security audit | Domain move (if bought) | — |
 
 ---
@@ -61,6 +61,8 @@
 | App Store review | D20 | 1–3 days, longer when rejected | iOS public |
 | Firebase Blaze switch (A3) | D0 | Minutes | PWA launch without the quota risk |
 | AdMob app + consent setup | D5 | AdMob reviews the app after it's on the Play Store | Ads in Android production |
+| AdSense site review for the PWA | Before D9 | No fixed time. Refusal is a real risk (SD R8) | The PWA banner |
+| Uptodown and APKPure developer accounts | Before D12 | Not checked yet | The APK for phones without Google Play, after Android production |
 | Claude Design pass for V3 screens (sign-in, profile, predictions, leaderboards, paywall, share card, sponsor slot) | D17 | 1–2 days | D21 |
 
 ---
@@ -101,7 +103,7 @@ NewSatApp/
 - Git can't check out one branch in two worktrees. So the day's spec lives on `master`, and each lane works on its own branch `dNN-<lane>`, cut from `master` each morning.
 - **`SPECIFY_FEATURE_DIRECTORY` tells Spec Kit which spec is active**, because the lane branch names don't match the spec folder and `.specify/feature.json` is per checkout (git-ignored): start each lane session as `SPECIFY_FEATURE_DIRECTORY=specs/0NN-dNN-<name> claude`. `SPECIFY_FEATURE` alone doesn't select a spec in this Spec Kit version.
 - **The `feature-branch` hook switches branches** before every Spec Kit step (and right after `/speckit-specify`). In a lane worktree it checks out `dNN-<lane>`, creating it from `origin/master` if it doesn't exist. In the planning checkout it checks out the spec branch `0NN-dNN-<name>`, creating it from the current HEAD. It never stashes, resets or discards: if the switch is blocked, the step stops and you decide.
-- **The default branch is `master`**, and it stays `master` (it is not renamed to `main`). It isn't protected: the repo is private on GitHub Free, which can't protect a branch, and the owner is its only contributor (decided 2026-10-29). By convention, changes reach `master` only through a PR, squash-merged once every check is green.
+- **The default branch is `master`**, and it stays `master` (it is not renamed to `main`). It isn't protected, because the owner is its only contributor (decided 2026-10-29). The repo is public until every development phase is done, then it goes private (decided 2026-11-06). By convention, changes reach `master` only through a PR, squash-merged once every check is green.
 
 ### 5.2 The daily loop
 
@@ -147,7 +149,7 @@ Agents self-review everything else, with CI as the gate.
 
 Everything not ready ships **dark** behind Remote Config `features.*` (system-design §5.1). That way all lanes can merge to `master` every day without exposing half-built screens. Flags are removed one phase after a feature launches.
 
-The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `satellite_finder` (already in system-design §5.1) and `home_widget`, `commentators`, `ongoing_live`, `viewing_links`, `accounts`, `predictions`, `share_card`, `calendar`, `ad_free`, `english_ui` (new; B1 adds each one to the Remote Config defaults on the day that introduces it). Ads use the existing `ads.enabled` key.
+The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `satellite_finder` (already in system-design §5.1) and `home_widget`, `commentators`, `ongoing_live`, `viewing_links`, `accounts`, `predictions`, `share_card`, `calendar`, `ad_free`, `english_ui` (new; B1 adds each one to the Remote Config defaults on the day that introduces it). Ads use the existing `ads` key (`enabled`, plus `web_banner_enabled` for the PWA), and the store screen uses `android_stores`. B1 adds both on D9.
 
 ---
 
@@ -189,10 +191,10 @@ The briefs in Appendix B use these keys: `live_center`, `lineups`, `reports`, `s
 | **D6 · 006** | All push types, per-type preferences, frequency-change detection + history | sporteventz; API-Football with a daily request budget | A15 outbox + composer, A16 users, A17 audit + diff | S3 live center (timeline, lineups, score animation) |
 | **D7 · 007** | `/v1/channels/sync` delta sync, `/v1/search`, cache review | Retire the Firestore bridge once 3 days of diffs are clean; alert routing | Team and channel merge tools, A11 lists, A12 feeds | S14 search, S11 rights, S13 sport switcher |
 | **D8 · 008** | Announcements; maintenance and soft-update config end to end | Restore drill, runbook v1 | Admin bug queue | S10 follow sheet, S15 competition order/hide, S12 feeds (if O8 keeps them), maintenance + soft-update UI |
-| **D9 · 009** | Load test at 5k concurrent; optional Caddy cache-handler | Mirror load check at 5k (the mirror and hashed build shipped on D4, A3) | **M2:** AdMob banner + paced interstitial (O9), UMP consent | Desktop two-pane (≥ 1024), hover and focus states |
+| **D9 · 009** | Load test at 5k concurrent; optional Caddy cache-handler; `ads.web_banner_enabled` and `android_stores` defaults; browser OS on device registration | Mirror load check at 5k (the mirror and hashed build shipped on D4, A3) | **M2:** AdMob banner + paced interstitial (O9), UMP consent; AdSense banner on the PWA + web consent; Android browser store screen (off) | Desktop two-pane (≥ 1024), hover and focus states |
 | **D10 · 010** | Integration bug fixes | Service-worker failover tests beyond D4's, emergency install link | **M2:** service-worker polish (built on D4), share links, install-guide polish | Accessibility pass: font scale 1.3, screen-reader labels, RTL/bidi audit |
 | **D11 · 011** | Coverage to 80 %, contract tests, `pip-audit` | Secret scan, dependency audit, backup verification | Admin coverage to 80 %, Playwright suite | App coverage to 80 %, `integration_test` flows, golden updates |
-| **D12 · 012** | Release fixes | Production deploy, monitoring review | Android release build with ads | Store screenshots from real screens; final PWA release; Android production submitted when the Play gate clears |
+| **D12 · 012** | Release fixes | Production deploy, monitoring review | Android release build with ads | Store screenshots from real screens; final PWA release; Android production submitted when the Play gate clears; once it's live, the APK on Uptodown and APKPure and the store screen on |
 
 ### Phase 3: V2 (D13–D20)
 
@@ -267,7 +269,7 @@ Madar Sat constitution
    tokens (no arbitrary values), React Query, React Hook Form + Zod, clsx/cva for conditional classes.
 6. App: Flutter, Riverpod only, go_router, Dio + Retrofit, drift, feature-first clean architecture.
    const constructors, mounted checks after await, dispose controllers, ListView.builder for lists,
-   native-only plugins behind interfaces with web no-op implementations, colours and text only from
+   platform-specific plugins behind interfaces (web no-ops, except the AdSense banner), colours and text only from
    madar_tokens.dart. Secrets never in Dart source; tokens in flutter_secure_storage.
 7. Design fidelity: RTL first; Latin names and frequencies are LTR isolates; red only for live;
    the frequency readout stays dark in both themes; Western tabular digits; honest data states;
@@ -322,6 +324,7 @@ Madar Sat constitution
 | Contract churn breaks the admin and app lanes | Medium | Contract frozen D1 13:00; changes through B1 only; generated clients checked in CI |
 | The scraped live sources break, disagree or object (O7) | Medium | Three sources under one rule (SD §6.7); validation stops a changed format; automatic fallback to the clock estimate ("تقديري"); Telegram alerts; live center behind a flag; Goal.com has an off switch if its approval changes |
 | Play 14-day test or review delays | Certain under A1 | The PWA is the public channel until Android clears |
+| AdSense refuses the PWA | Medium | Apply before D9. The banner stays off, and every layout already works without it. A different ad network would be a new decision |
 | iPhone push fails in the PWA | Medium | Test on a real iPhone (iOS ≥ 16.4) on D3, not D4 |
 | Apple enrollment is slow | Medium for organizations | Start on D0; A7 fallback swaps the iOS days for V3 work |
 | Oracle reclaims or loses a VPS | Low | Nightly off-site backups, restore drill on D8, infra as code in `infra/` |
@@ -364,10 +367,10 @@ A lane row that says **none** still gets a `## Lane X` section with the single t
 | **006** | `006-d06-notifications-and-live-center` | A goal push arrives with the correct score; the live center shows events; a frequency change pushes to followers; the admin composer sends a test push; audit diff visible |
 | **007** | `007-d07-sync-search-sources` | A second channel sync downloads < 5 KB; search matches Arabic letter variants; sporteventz and API-Football import; the bridge is retired (or the reason it can't be is logged); S11, S13, S14 on a device |
 | **008** | `008-d08-preferences-and-ops` | Restore drill passed; maintenance and soft-update switch from Remote Config on a device; per-type preferences respected by the dispatcher; merge tools work |
-| **009** | `009-d09-ads-and-desktop` | Banner + paced interstitial with UMP consent (EEA test device); desktop two-pane at 1440 with keyboard focus; load-test report at 5k concurrent |
+| **009** | `009-d09-ads-and-desktop` | Banner + paced interstitial with UMP consent (EEA test device); the PWA banner renders with its switch on (a test ad until AdSense approves); the store screen works on an Android browser with its switch on; desktop two-pane at 1440 with keyboard focus; load-test report at 5k concurrent |
 | **010** | `010-d10-pwa-and-accessibility` | The PWA loads from the mirror with Firebase blocked; a share link opens the match in the PWA and the app; the accessibility checklist passes at font scale 1.3 |
 | **011** | `011-d11-v1-hardening` | Coverage ≥ 80 % in all three apps; E2E suites green; no CRITICAL/HIGH security findings open |
-| **012** | `012-d12-v1-release` | **V1 gate:** all [P] and [V1] items done; live status correct over 3 match days; ≥ 95 % channel coverage at T−2 h; store listing, privacy policy, data safety and consent done; PWA V1 released; Android production submitted when the Play gate clears |
+| **012** | `012-d12-v1-release` | **V1 gate:** all [P] and [V1] items done; live status correct over 3 match days; ≥ 95 % channel coverage at T−2 h; store listing, privacy policy, data safety and consent done; PWA V1 released; Android production submitted when the Play gate clears, with the Uptodown and APKPure listings and the store screen following once it's live |
 | **013** | `013-d13-finder-and-ios-pipeline` | Finder azimuth and elevation match a reference calculator for 3 cities; Codemagic produces a signed iOS build (A7); the admin reports queue lists test reports |
 | **014** | `014-d14-widget-and-reports` | The Android widget shows the next followed match; report → admin → resolve → push works; the compass works on a device |
 | **015** | `015-d15-commentators-and-live-notification` | The ongoing notification updates during a live followed match; commentator profile + follow; viewing-link API live |
@@ -533,18 +536,21 @@ Rules for every brief:
 
 #### D9 · 009-d09-ads-and-desktop
 
-**Goal:** Android earns with ads that never block the answer, and desktop web gets its two-pane layout.
+**Goal:** Android earns with ads that never block the answer, the PWA adds a banner, and desktop web gets its two-pane layout.
 **Starts from:** 008.
-**Contract:** none.
+**Contract:** device registration gains an optional browser OS field.
 
 | Lane | Story | Read | Acceptance |
 |---|---|---|---|
 | B1 | As the owner, I know the API survives peak traffic | SD §11 scale assumption | Load test at 5k concurrent on `/v1/live`; Caddy cache-handler only if needed; report in `docs/` |
+| B1 | As the owner, I can see how many Android users are on the PWA, and switch web ads and the store screen remotely | SD §5.1, §5.3 | Device registration takes an optional browser OS; `ads.web_banner_enabled` and `android_stores` in the Remote Config defaults, both off |
 | B2 | As an iPhone user, the app still loads if Firebase Hosting runs out of quota | SD §5.2 | Content-hashed web build in CI; rsync to `app.<ip1>.sslip.io`; CORS for the `web.app` origins; cache headers in `firebase.json` and Caddyfile |
-| A → M2 | As the owner, ads earn without breaking Google's interstitial policy | PB §5 revenue rules, §16; SD §5.1 `ads` key | `AdsService` (native) + web no-op; banner above the bottom nav that takes space only once loaded; interstitial on return from S3 only, ≥ 90 s apart, ≤ 4 per session, never in the first 60 s; UMP consent for EEA/UK |
+| A → M2 | As the owner, ads earn without breaking Google's interstitial policy | PB §5 revenue rules, §16; SD §5.1 `ads` key | `AdsService` (native); banner above the bottom nav that takes space only once loaded; interstitial on return from S3 only, ≥ 90 s apart, ≤ 4 per session, never in the first 60 s; UMP consent for EEA/UK |
+| A → M2 | As the owner, the PWA earns from a banner too | PB §5, §7, §16; SD D16, §5.3 | `AdsService` on web: a standard AdSense unit in an `HtmlElementView`, not the `google_adsense` package; same placement rules as native, at the foot of the list pane on desktop; takes space only once loaded; interstitial calls are no-ops; `/ads.txt` served as a real file; certified consent message for EEA, UK and Switzerland; `privacy.html` names AdSense; off until AdSense approves the site |
+| A → M2 | As the owner, Android users stay on the app | PB S0, S10, S15; SD D17, §5.3 | S0 store screen on Android browsers behind `android_stores.browser_gate`; forced and soft update link to Uptodown or APKPure when Play didn't install the app; with no Google Play services, S10 and S15 say notifications are unavailable and a failed push registration isn't reported as an error |
 | M | As a desktop user, I browse the list and details side by side, with the keyboard | PB §7, §8.3; app: Desktop ≥1024, Desktop frequencies + channel pane | Nav rail on the right, list ≈ 420 px + detail pane ≥ 1024; hover and visible focus on every interactive component; width capped ≈ 1200 |
 
-**Flags:** `ads` (Remote Config `ads.enabled`).
+**Flags:** `ads` (`ads.enabled`, `ads.web_banner_enabled`), `android_stores.browser_gate`.
 **Done check:** 009 in Appendix A.
 
 #### D10 · 010-d10-pwa-and-accessibility
@@ -591,6 +597,7 @@ Rules for every brief:
 | B2 | As the owner, production runs the release and monitoring covers it | SD §7.4 | Release deploy; Kuma and alert review |
 | A → M2 | As the owner, the Android release build carries ads correctly | PB §5 | Production AAB with ads and UMP; AdMob app linked |
 | M | As the owner, the store listing shows the real product | PB §5 ASO, §16, §17 | Screenshots from real screens; privacy policy, data safety, consent; PWA V1 released; Android production submitted when the Play gate clears |
+| M | As a fan on a phone without Google Play, I can still install the app, and Android browsers send people to it | PB §5, S0; SD D17, §5.3 | Once Android production is live and the AdMob app is linked: the Play-signed universal APK (Play Console's App bundle explorer) on Uptodown and APKPure under `com.madarsat.app`; their URLs in `android_stores`; `manifest.json` points to the Play app; `browser_gate` on; `docs/runbooks/store-releases.md` covers every step |
 
 **Flags:** turn on everything [V1]; remove MVP-era flags that launched in phase 1.
 **Done check:** 012 in Appendix A.

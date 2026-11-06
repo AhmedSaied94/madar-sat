@@ -13,6 +13,7 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | Feature | Before merge | After merge | State |
 | --- | --- | --- | --- |
 | [Midnight fix](#midnight-fix) | Run the repair for 17 matches; review and merge | **Deploy before 22:00 Cairo on 2026-11-06**, then check the next morning that nothing was lost | **Open:** matches on at Cairo's midnight lose their result until this is deployed. |
+| [PWA ads and the Android store screen](#calendar-gates) | Apply to AdSense with `madar-sat.web.app` | None yet. The code comes on D9, and the store listings on D12 | **Decided 2026-11-06.** AdSense may refuse the site, because a Flutter canvas shows little readable text (system-design R8). The banner stays off until it approves. |
 | [001 D1 foundation](#001-d1-foundation) | none | none | **Done: signed off by the owner on 2026-10-30.** All tasks and owner items are ticked. Some were ticked without evidence (see [Day sign-off](#day-sign-off) and tasks.md "Done check"). **Carried into D2:** add `https://madar-sat--master-p2bbuj53.web.app` to `CORS_ORIGINS` on VPS-1 (the preview cannot load matches until then); back up the upload keystore; prove `app-release.yml` with a throwaway tag; enrol in Play App Signing; re-check the preview's Network tab after the PR #7 deploy. |
 | [002 D2 core flows](#002-d2-core-flows) | **Lane B1:** none (done 2026-10-31) · **Lane B2:** none left that can run before the merge (the home box's worker and its dry run follow the first deploy) · **Lane A:** 2 items (the editors' devices, and the walk-through over WireGuard with its screenshots) · **Lane M:** 2 items (the screens against the design, and the merge) | **Lane B1:** 5 items (the deploy check, the first admin, one account per editor, the `404` from the internet, and the token-leak drill) · **Lane B2:** 5 items (the first unattended run, the bridge, a logo, the firewall proof, and the queue decision; hosts up, the home box's worker and `/srv/raw` are done) · **Lane A:** 1 item (the first editor walk-through; `admin.yml` is green) · **Lane M:** 5 items (tag `app-v0.2.0`, Play App Signing and the closed-track upload, the testers list, the phone walk-through, and the PWA preview) | **All code lanes are done; the hosts, the first admin, the first run, the first release and the phone walk-through are yours.** Lane B2 builds on B1's `app.workers`, `app.media` and revisions `0003`–`0004`; Lane A is rebased on B1's T015 commit, so it carries the D2 admin client. Lane A's round-1, round-2 and round-3 fixes are closed (A-R1-1 … A-R1-24, A-R2-1 … A-R2-13 and A-R3-1, 176 tests); A-F1 (React Hook Form), A-F2 (`DataTable`) and T107's browser steps are open. Lane M's screens read the `/v1` API on VPS-1; its zones script (T133) and the two `app.yml` checks wait on you and B2. Its round-1, round-2 and round-3 review fixes are in `d02-features` (M-R1-1 to M-R1-17, M-R2-1 to M-R2-10 and M-R3-1 to M-R3-2, 480 tests). |
 | [003 D3 follow, push and sources](#003-d3-follow-push-and-sources) | **Lane B1:** 5 items (the contract diff, revisions `0005` and `0006`, the audience query, the rate-limit values) · **Lane B2:** 8 items (the matching, backup and Kuma reviews, the Telegram bot, the B2 and OCI buckets, the FCM key with B1, and the bootstrap re-run for the backup timers) · **Lane A:** 2 items (the WireGuard walk and the screenshots; B1's two contract additions are done) · **Lane M:** the Firebase identifiers, the VAPID key, the privacy and share links, the merge | **Lane B1:** 2 items (the deploy with `0005`, the FCM key and the first real reminder, which also covers T045's step 4) · **Lane B2:** 6 items (the deploy check, the Kuma monitors, the first LiveSoccerTV run, the breaker drill, the first backups, the stopped-worker drill) · **Lane A:** 1 item (the deployed editor walk-through) · **Lane M:** the Android and iPhone walks, the closed-test build, the Remote Config parameters | **Round 2 (2026-11-01/02), all lanes merged on `003-d03-follow-push-sources`:** the 10 open review fixes are done (B1-R2-1/2, B2-R2-1/2, A-R1-1/5, M-R2-1 … 4), with backend 95.21% coverage, 240 admin tests and the app suite green; T045 passes steps 1–3 and 5–8 locally, its step 4 moves to T047; the bare-form `KUMA_PUSH_URL_*` values (T086) are yours. Earlier: **Lane B1 is merged into `003-d03`** (PR #16) and its round-1 review fixes (B1-R1-1 to B1-R1-6) are on `d03-b1`, with revision `0006`; **Lane B2 is written on `d03-b2` and rebased onto it, with `0005` applied and the whole backend suite green** (PR #17, merged); its round-1 review fixes (B2-R1-1 to B2-R1-8) are on `d03-b2`, CI-proven and awaiting review. **Lane A** is written on `d03-a` and merged up: T088–T105 done, and its round-1 fixes are in the main checkout (236 admin tests) except the two that need B1 — per-row `etag` on the competition and satellite lists (A-R1-1) and `kind` in `ChannelPatch` (A-R1-5) — with aliases a third recorded gap (PR #18). Nothing is deployed or run on a host yet. **Lane M is written on `d03-m` in `../madar-d03-M`** and its round-1 review fixes (M-R1-1 … M-R1-12, including the T133 device registration and follow sync) are on that branch (605 app tests green on the test box). |
@@ -27,7 +28,7 @@ This starts once production is live (B2's deploy, T066). Each item is one the do
 - Test a restore on a scratch container and record the result in `runbooks/restore.md`, which arrives on D8 (constitution IX, system-design §7.3, delivery-plan D8). Backups start on D3.
 - Sign in to the OCI console and check that both instances run. Oracle may reclaim Always Free instances it considers idle; the pay-as-you-go upgrade, still free, reportedly removes the risk (system-design §7.2 and R5). → [provision-host](runbooks/provision-host.md)
 - Check that Backblaze B2 is well under its 10 GB free tier, from D3 (system-design §7.3).
-- Check that nothing charges: OCI, Firebase (with the $5 budget alert if on Blaze, delivery-plan A3) and GitHub Actions minutes on the private repo (constitution IX, system-design §2 G6).
+- Check that nothing charges: OCI, Firebase (with the $5 budget alert if on Blaze, delivery-plan A3) and GitHub Actions minutes once the repo is private (constitution IX, system-design §2 G6).
 - After V3: dependency updates and the KPI review (delivery-plan §6 "After V3", product-business §5).
 
 Not monthly, but standing: answer takedown requests within 48 h (product-business §16, constitution).
@@ -75,8 +76,8 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
   → [provision-host](runbooks/provision-host.md)
 - [x] **T064 step 1 Serial console.** Test the OCI serial console on both hosts before any SSH change. It's the only way back in if SSH breaks (system-design §7.2, FR-023). → [provision-host](runbooks/provision-host.md#2-console-password-then-test-the-serial-console), [break-glass](runbooks/break-glass.md)
 - [x] **OCI security list.** Open the ports in the security list (or an NSG), not only in iptables. VPS-1 needs 80/tcp, 443/tcp and 51820/udp from anywhere, plus 5432 and 6379 from VPS-2 inside the VCN. OCI's default list allows only 22 (Gaps 3). → [provision-host](runbooks/provision-host.md), [firewall-changes](runbooks/firewall-changes.md)
-- [x] **Private repo, no `master` protection.** Decided 2026-10-29: the repo stays private and you're its only contributor, so `master` stays unprotected (GitHub Free can't protect a private repo's branch). Changes reach `master` through a green PR by convention (delivery-plan §5.1).
-- [x] **Actions minutes.** A private repo's free Actions minutes are capped, and `backend.yml` builds arm64 images under QEMU, which is slow. Watch the usage after the first deploys.
+- [x] **No `master` protection.** Decided 2026-10-29: you're the repo's only contributor, so `master` stays unprotected. Changes reach `master` through a green PR by convention (delivery-plan §5.1). The repo is public until every development phase is done, then it goes private ([Repo goes private](#repo-goes-private)).
+- [x] **Actions minutes.** Public repos run CI free, so the minutes start to count when the repo goes private. `backend.yml` builds arm64 images under QEMU, which is slow.
 
   See Gaps 1. → [ci-workflows](runbooks/ci-workflows.md)
 - [x] **Who runs the bootstrap.** Either you run it on the hosts and Claude gives you the commands, or you give a lane SSH access.
@@ -97,7 +98,7 @@ The bootstrap and the GitHub secrets come before the merge. Merging touches `inf
   4. Connect over WireGuard, then close public SSH with `--serial-console-tested`.
   5. Reboot both hosts, and confirm that `check-firewall.sh` passes and WireGuard comes back.
 
-  The first run needs the repo's `infra/` on the host, and the repo is private (Gaps 23). → [provision-host](runbooks/provision-host.md), [private-network](runbooks/private-network.md)
+  The first run needs the repo's `infra/` on the host (Gaps 23). → [provision-host](runbooks/provision-host.md), [private-network](runbooks/private-network.md)
 - [x] **T050 GitHub secrets and variables.**
   - Secrets: `WG_CI_CONFIG` (the CI peer from T064), `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` (VPS-1's host key line for `10.8.0.1`, taken over WireGuard) and `FIREBASE_SERVICE_ACCOUNT`.
   - Variables: `VPS1_IP` and `VPS2_IP`, plus `ARM_RUNNER` if you have one.
@@ -746,9 +747,15 @@ From delivery-plan §3. The docs count working days, not dates.
 | ~~Firebase Blaze with a $5 budget alert (A3)~~ Not needed: O6 decided Spark on 2026-11-03; the mirror ships on D4 | D0 | — | — |
 | Bridge shadow run: 3 days of clean diffs | D2, when the bridge starts | ≥ 3 days (system-design §10: 1–2 weeks) | Retiring the bridge on D7 |
 | AdMob app and consent setup | D5 | AdMob reviews the app once it's on the Play Store | Ads in Android production (D12) |
+| AdSense site review for `madar-sat.web.app` | Now, before D9 | No fixed time. Refusal is a real risk (system-design R8) | The PWA banner (D9) |
+| Uptodown and APKPure developer accounts | Before D12 | Not checked yet | The APK for phones without Google Play, after Android production |
 | Claude Design pass for the V3 screens | D17 | 1–2 days | D21. Delivery-plan §9 wants them by D20 |
 | App Store review | D20 | 1–3 days, longer when rejected | iOS public |
 | Public launch timing | Before launch | Be stable 2–3 weeks *before* a high-traffic period, such as the Champions League knockouts in February–March (product-business §17) | The launch date |
+
+### Repo goes private
+
+The repo stays public until every development phase is done, then goes private (decided 2026-11-06). Do this after V3. Public repos run CI free, while a private repo on GitHub Free gets about 2,000 Linux minutes a month, so check the last month's use first. → [deploy-and-rollback](runbooks/deploy-and-rollback.md#making-the-repository-private)
 
 ### Decisions due
 
@@ -816,6 +823,7 @@ Each day gets its full section when it's implemented. These lines come from the 
 - **D9:**
   - the AdMob ad units;
   - an EEA test device for UMP consent;
+  - the AdSense ad unit, `ads.txt` and the consent message in Privacy & messaging for EEA, UK and Switzerland;
   - read the load-test report at 5k concurrent users.
 - **D10:** keep the emergency install link unpublished. It's only for a Firebase outage (system-design §5.2).
 - **D12:**
@@ -823,7 +831,8 @@ Each day gets its full section when it's implemented. These lines come from the 
   - the store listing, with screenshots from real screens;
   - link the AdMob app;
   - turn on the V1 flags;
-  - submit Android production once the Play gate clears.
+  - submit Android production once the Play gate clears;
+  - once it's live and the AdMob app is linked, upload the Play-signed universal APK to Uptodown and APKPure, set their URLs in `android_stores`, and turn on `browser_gate` (system-design D17).
 - **D13:**
   - check A7;
   - **decide O4**;
@@ -861,7 +870,7 @@ Each day gets its full section when it's implemented. These lines come from the 
 
 Places where the docs conflict, or say nothing about an owner step. Fix each one in the doc it names, then delete it here.
 
-1. **Resolved 2026-10-29: `master` protection.** The repo stays private with one contributor, so `master` is unprotected; delivery-plan §5.1, Day 0 step 4 and the D1 spec now say so. (Kept here so the later gap numbers don't shift.)
+1. **Resolved 2026-10-29: `master` protection.** The repo has one contributor, so `master` is unprotected; delivery-plan §5.1, Day 0 step 4 and the D1 spec now say so. (Kept here so the later gap numbers don't shift.)
 2. **Resolved 2026-11-03: the Firebase plan.** O6 is Spark (spec 004); delivery-plan A3 and system-design §3 now say so, matching constitution IX. (Kept so the later gap numbers don't shift.)
 3. **The OCI security list.** No task or delivery-plan step opens the ports in OCI's security list. System-design §7.2 only mentions it in passing ("even when the security list allows them").
 4. **The Play tracks:**
@@ -892,6 +901,6 @@ Places where the docs conflict, or say nothing about an owner step. Fix each one
     - `app.yml` builds a debug APK.
 
     System-design §9 should say these are D1's shape.
-22. **Missing runbooks.** These owner procedures have no runbook in the list yet: Play Console and releases, Apple and App Store Connect, AdMob, Telegram and Kuma alerts, and Remote Config changes. The restore runbook, `runbooks/restore.md`, comes with D8.
-23. **Getting `infra/` onto a host the first time.** The README and quickstart run `bootstrap-vps.sh` "from a checkout of this repo" on the host. The repo is private, and no doc says how the first checkout gets there.
+22. **Missing runbooks.** These owner procedures have no runbook in the list yet: Play Console and releases, Apple and App Store Connect, AdMob, AdSense, Uptodown and APKPure, Telegram and Kuma alerts, and Remote Config changes. The restore runbook, `runbooks/restore.md`, comes with D8.
+23. **Getting `infra/` onto a host the first time.** The README and quickstart run `bootstrap-vps.sh` "from a checkout of this repo" on the host. No doc says how the first checkout gets there once the repo is private.
 24. **Unused repo variables.** T050 and `infra/README.md` list the repo variables `VPS1_IP` and `VPS2_IP`, but B2's implementation reports that no workflow reads them.

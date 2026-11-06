@@ -116,12 +116,15 @@ Madar Sat is an Arabic-first guide for football fans who watch on a satellite di
 | Stream | Phase | Rules |
 |---|---|---|
 | AdMob banner | [P] Android | Pinned above the bottom nav. Not shown in onboarding, settings, the privacy policy, or while a sheet or search is open |
+| AdSense banner | [V1] PWA | Same placement rules as the AdMob banner. On desktop, at the foot of the list pane. Needs AdSense approval |
 | AdMob interstitial | [P] Android, **changed** | Shown on *return* from match detail and on switching to secondary tabs. Never before the answer. ≥ 90 s apart, at most 4 per session (Remote Config). Never in the first 60 s after launch |
 | Ad-free upgrade | [V3] | One-time Play Billing purchase, restored from the store account, so no app account is needed |
 | Official-viewing links | [V2] | Where a legal streaming service holds the rights (rights-holder data), link to it, as an affiliate where possible |
 | Sponsorship | Later | One sponsor slot (for example, a receiver brand) on satellite pages. Clearly labelled |
 
-The PWA has no ads at launch. AdMob doesn't run there, and web ads in a Flutter canvas are poor. Keeping it ad-free also makes it a better first impression on iOS.
+The PWA shows a banner from AdSense, because AdMob doesn't run on the web. It has no interstitial, because the web formats can't be fired at our transition points (system-design D16). Every layout must still look complete without a banner, because AdSense may refuse the site or send no ad.
+
+Once Android production is live, Android browsers get a store screen instead of the PWA (S0, system-design D17), so Android users stay on the app, where the full ad set runs. The APK is also on Uptodown and APKPure for phones without Google Play. AdMob gives limited ad serving to apps listed only in stores it doesn't support, so these listings go up after the Play listing is linked to AdMob.
 
 **Costs**
 
@@ -145,7 +148,7 @@ The PWA has no ads at launch. AdMob doesn't run there, and web ads in a Flutter 
 | Push | Opt-in: Android / PWA | ≥ 60 % / ≥ 30 % of installed |
 | Push | Open rate for reminders | ≥ 10 % |
 | Quality | Crash-free sessions | ≥ 99.5 % |
-| Revenue | ARPDAU (Android), interstitials per session | Track |
+| Revenue | ARPDAU (Android and PWA), interstitials per session, share of web devices on Android browsers | Track |
 
 **Growth loops**
 - **Share a match** [V1]: a link to `/match/<id>` that opens the PWA, or the app via deep link.
@@ -192,9 +195,9 @@ The full matrix is in system-design §5.3. What it means for the design:
 
 | Topic | Android app | iOS PWA | Desktop web |
 |---|---|---|---|
-| Ads | Banner slot + interstitials | None. Layout must look complete without a banner | None |
+| Ads | Banner slot + interstitials | Banner slot, no interstitials. Layout must look complete without a banner | Banner at the foot of the list pane, no interstitials. Same layout rule |
 | Push permission | Priming card → OS dialog (Android 13+) | Only **after** "Add to Home Screen". Before that, show the install guide instead | Browser prompt after priming |
-| Install | Play Store | In-app install guide (S1.5), reachable from More | Browser install button (optional) |
+| Install | Play Store; Uptodown or APKPure on phones without Google Play | In-app install guide (S1.5), reachable from More | Browser install button (optional) |
 | Navigation | Bottom nav, system back | Bottom nav, edge swipe; respect safe areas (notch, home indicator) | Navigation rail + list/detail panes |
 | Hover/focus | Pressed states | Pressed states | **Hover and visible keyboard focus required** |
 | Satellite finder [V2] | Full | Needs a motion-permission tap; no camera overlay | Hidden |
@@ -249,8 +252,9 @@ Native builds use the same paths after `‹scheme›://`. Push notifications ope
 | Screen | Trigger | Content |
 |---|---|---|
 | Splash | Cold start | Native: brand mark on the brand background (Android 12 splash API: icon on a solid color). Then the app's own splash, always dark, for one orbit (about 2 s) while the first screen loads underneath: the satellite circles the planet, with «مدار سات» and «أي قناة تنقل المباراة؟ والتردد جاهز.» under the mark. With reduced motion the mark stays still. |
-| Forced update | Build < `min_supported_build` | Title "تحديث مطلوب", body "يوجد إصدار جديد من التطبيق. يرجى التحديث للاستمرار.", CTA "تحديث الآن" (Play Store; on the PWA, reload) |
-| Soft update [V1] | Build < `latest_build` | Dismissible banner: "يتوفر إصدار جديد" + "تحديث" |
+| Forced update | Build < `min_supported_build` | Title "تحديث مطلوب", body "يوجد إصدار جديد من التطبيق. يرجى التحديث للاستمرار.", CTA "تحديث الآن" (Play Store; installs that didn't come from Play get the Uptodown or APKPure link from `android_stores`; on the PWA, reload) |
+| Store screen [V1] | Android browser, with `android_stores.browser_gate` on | Replaces the PWA, with no way to dismiss it. Title "حمّل تطبيق مدار سات", body "مدار سات على أندرويد متاح كتطبيق. حمّله مجانًا للاستمرار.", CTA "Google Play". Below it, "لا يوجد Google Play على هاتفك؟" with "Uptodown" and "APKPure". Uses the Forced update layout until a board exists |
+| Soft update [V1] | Build < `latest_build` | Dismissible banner: "يتوفر إصدار جديد" + "تحديث" (same link as Forced update) |
 | Maintenance [V1] | Remote Config flag | Full screen with the admin's message; cached content stays browsable |
 | No connection, nothing cached | First run, offline | "لا يوجد اتصال بالإنترنت" / "تأكد من اتصالك بالإنترنت وحاول مرة أخرى" + "إعادة المحاولة" |
 | Load failed | Server error, nothing cached | "تعذّر تحميل البيانات" + retry |
@@ -452,7 +456,8 @@ Opened from any follow button. The toggles depend on what's being followed:
 
 A footer explains the platform state:
 - **notifications off:** how to enable them;
-- **iOS not installed:** link to S1.5.
+- **iOS not installed:** link to S1.5;
+- **no Google Play services:** "الإشعارات غير متاحة على هذا الهاتف لأنه لا يدعم خدمات Google Play".
 
 ### S11 · Broadcast rights (حقوق البث) [P]
 
@@ -492,7 +497,7 @@ Folded into S2 through the sport switcher; there's no separate screen. Data come
 |---|---|
 | التوقيت | المنطقة الزمنية: "تلقائي (GMT+3)" or a list from GMT−12 to GMT+14 · صيغة الوقت: 12 / 24 ساعة |
 | المظهر | الوضع: داكن / فاتح / تلقائي [V1] · حجم الخط: عادي / كبير / كبير جداً (1.0 / 1.15 / 1.3×, on top of the OS setting) |
-| الإشعارات [V1] | Master switch · default reminder lead time · per-type switches · platform state (permission denied → steps to enable; iOS not installed → S1.5) |
+| الإشعارات [V1] | Master switch · default reminder lead time · per-type switches · platform state (permission denied → steps to enable; iOS not installed → S1.5; no Google Play services → notifications unavailable, as in S10) |
 | أقماري | Choose my satellites · show/hide satellites in channel lists ("N من 32 مرئي") · show "منصات وقنوات أخرى" |
 | البطولات | Order and hide (drag handle ⋮⋮, "اسحب لإعادة الترتيب"), "ترتيب افتراضي", "إظهار الكل" |
 | البيانات | Last sync time · clear cache |
@@ -751,8 +756,8 @@ Events go through Firebase Analytics on all platforms, after consent where requi
 | Data sources | Fixtures and channels are scraped; site terms may forbid this. The curated channel and frequency data is our own. Plan a licensed fixtures API once revenue allows |
 | Logos and voice clips | Third-party marks and recordings, common in this category. Credit the sources and respond to takedown requests within 48 h |
 | Privacy | No accounts. Anonymous device ID, push token, time zone and follows. A data-deletion option in Settings. A privacy policy page and the Play data-safety form are required |
-| Ads consent | The AdMob UMP consent form is required for EEA/UK users, which includes diaspora users |
-| Store policies | Interstitials only at natural transitions (Google's "unexpected interstitials" policy). The iOS app later needs native value (push, widget) to pass guideline 4.2 |
+| Ads consent | EEA, UK and Swiss users, which includes diaspora users, must give consent: the AdMob UMP form in the app, and a Google-certified consent message on the PWA (AdSense Privacy & messaging). Without a certified one, those users can't get personalized ads. The privacy page must also name AdSense and its cookies |
+| Store policies | Interstitials only at natural transitions (Google's "unexpected interstitials" policy). A Play install must update only through Play, so the app shows Uptodown or APKPure links only when Play didn't install it. The iOS app later needs native value (push, widget) to pass guideline 4.2 |
 
 ---
 

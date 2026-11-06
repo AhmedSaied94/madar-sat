@@ -13,12 +13,16 @@ and can my dish receive it (product doc §1, §8.1).
 - Every channel list MUST put the user's **My satellites** first and free channels first. When
   the user has chosen none, the documented default (product doc S1.3, O10) applies, and the
   UI prompts «حدد أقمارك».
-- Ads MUST NEVER block the answer. The interstitial fires only on return from match detail or
-  on switching to a secondary tab, never before an answer opens, never within 60 s of launch,
-  at least 90 s apart, and at most 4 per session (P5, Remote Config `ads`). The banner is
-  Android-only and above the bottom nav. It takes space only once an ad has loaded, and it
-  never appears in onboarding, settings, the privacy policy, or while a sheet or search is
-  open. The PWA is ad-free and its layouts MUST look complete without a banner slot.
+- Ads MUST NEVER block the answer. The interstitial runs only in native apps. It fires only on
+  return from match detail or on switching to a secondary tab, never before an answer opens,
+  never within 60 s of launch, at least 90 s apart, and at most 4 per session (P5, Remote Config
+  `ads`). The banner runs in native apps and on the PWA (D16), above the bottom nav, or at the
+  foot of the list pane on desktop. It takes space only once an ad has loaded, and it never
+  appears in onboarding, settings, the privacy policy, or while a sheet or search is open. Every
+  layout MUST look complete without a banner slot, because a banner may not load.
+- Once Android production is live, an Android browser MUST get a store screen (Google Play,
+  Uptodown, APKPure) instead of the PWA, switched by Remote Config (D17). This is the only
+  exception to the 2-tap rule. Until then, the PWA stays the public Android channel.
 - A screen with no data MUST explain why and offer the next action. Example: no channels shows
   «لم تُضف القنوات الناقلة بعد» with a follow CTA.
 
@@ -220,8 +224,10 @@ Clients show cached content first and stay within explicit budgets (G5, system-d
 - Repositories MUST be stale-while-revalidate: emit the drift copy, then revalidate with
   `If-None-Match` (a 200 updates drift, a 304 changes nothing). Skeletons appear only on a true
   first load.
-- Native-only capabilities (`AdsService`, `LocalNotifier`, `HomeWidgetUpdater`, `CrashReporter`,
-  `InstallGuide`) MUST sit behind interfaces, with web no-ops chosen by conditional import.
+- Platform-specific capabilities (`AdsService`, `LocalNotifier`, `HomeWidgetUpdater`,
+  `CrashReporter`, `InstallGuide`) MUST sit behind interfaces, with each platform's implementation
+  chosen by conditional import. The web implementation is a no-op unless the capability has a web
+  version: `AdsService` shows the web banner, and its interstitial calls are no-ops.
   Feature code MUST NOT import those plugins directly.
 - Lists that can grow (up to 171 channels on one match) MUST be virtualized.
 - Budgets:
@@ -277,7 +283,9 @@ override the owner's general stack defaults, such as Django or Hive/Isar.
 
 **Platform limits** (system-design §5.3). iOS ships as the Flutter web PWA until an Apple account
 exists. On iOS, push works only after "Add to Home Screen", so the app shows its install guide
-instead. Reminders are server pushes in v1, not scheduled local notifications.
+instead. Reminders are server pushes in v1, not scheduled local notifications. Phones without
+Google Play services install the APK from Uptodown or APKPure and get no push, because FCM
+requires those services, so the app MUST say so instead of showing reminders as working.
 
 **v1 non-goals.** No user accounts, no video streaming, no English UI (strings stay
 externalized), no multi-region HA. A feature that needs any of these needs an amendment.
@@ -392,4 +400,4 @@ constitution is re-read at each delivery-phase boundary (system-design §12).
 **Runtime guidance.** `CLAUDE.md`, `madar-design/README.md` and the component READMEs give the
 day-to-day detail. They MUST stay consistent with this document.
 
-**Version**: 1.3.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-11-04
+**Version**: 1.4.0 | **Ratified**: 2026-10-29 | **Last Amended**: 2026-11-06

@@ -115,8 +115,9 @@ verbatim; change `tokens.json`, run `generate_tokens.py`, then re-copy and rerun
   `live` red only for live.
 - Composite rows carry one merged Arabic semantics label (§13.8). Copy lives in
   `lib/core/l10n/app_ar.arb`; API `error.code`s map through `lib/core/l10n/error_copy.dart`.
-- Platform-only capabilities (ads, local notifications, widgets, crash reporting,
-  install guide) sit behind interfaces with web no-ops chosen by conditional import.
+- Platform-specific capabilities (ads, local notifications, widgets, crash reporting,
+  install guide) sit behind interfaces, with each platform's implementation chosen by
+  conditional import. On web they are no-ops, except the AdSense banner in `AdsService`.
   Feature code never imports those plugins directly.
 
 ## Goldens
