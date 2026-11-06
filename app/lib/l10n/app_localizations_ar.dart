@@ -935,6 +935,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get followingMatch => 'تتابع المباراة';
 
   @override
+  String get s3FollowStartedNote => 'بدأت المباراة، فلن يصلك تذكير بها';
+
+  @override
   String get unfollow => 'إلغاء المتابعة';
 
   @override

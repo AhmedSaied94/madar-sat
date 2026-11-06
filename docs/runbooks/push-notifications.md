@@ -2,6 +2,8 @@
 
 How the reminder gets made and sent, how to set up and rotate the FCM service account, how to read the outbox, and what to do when a row fails. Background: system-design §6.8, constitution VII, `specs/003-d03-follow-push-sources/` research R6–R9, and `backend/app/notifications/`.
 
+The kickoff reminder is the only push today: one message, 15 minutes before kickoff. Kickoff, goal, result and frequency alerts arrive with D6 (delivery-plan). So following a match that has already started sends nothing, and the app says so when you follow it (`MatchFollowButton`).
+
 ## How a reminder is made
 
 Three steps, no HTTP request in the path (FR-007):
@@ -116,8 +118,9 @@ Do not edit a `sent` row: the scheduler will not create a second one, so clearin
 
 ## When a reminder doesn't arrive
 
-1. `SELECT * FROM notification_outbox ORDER BY id DESC LIMIT 5;` — is there a row? If not, nobody follows the match (`device_follows`) or the match is `time_tbd` / postponed / cancelled / outside 24 h.
+1. `SELECT * FROM notification_outbox ORDER BY id DESC LIMIT 5;` — is there a row? If not, nobody followed the match by the last schedule run before kickoff (`device_follows`), or the match is `time_tbd` / postponed / cancelled / outside 24 h. A follow's `created_at` doesn't date it: the app replaces the device's whole set on every change, so all its rows get the time of the last change.
 2. Is `due_at` in the past and `status = 'pending'`? Look for `notifications.dispatch_due` in VPS-2's worker logs, and whether `beat` runs at all ([workers.md](workers.md)).
 3. `status = 'failed'` with `error`/`failed` counts: the FCM credentials are wrong or the key rotated, or FCM could not take a page for five attempts in a row (an outage; the re-send SQL above is safe once it is back). A `sent` row with a non-zero `failed` is a partial outage: see the dispatch step above. Check `dc logs worker-notify | grep -F 'fcm'`.
 4. A device with `push_token = NULL` was told `UNREGISTERED`: FCM says that token no longer exists. The app only sends a token when FCM gives it a new one, so the device stays silent until then; check the device row with `SELECT id, platform, last_seen_at, push_token FROM devices WHERE id = <id>` and ask the user to reopen the app, which re-registers the device (a new `POST /v1/devices` with the same `install_id` keeps the row and rotates its token).
 5. `FCM_DRY_RUN=true` on the host means nothing is delivered. Check the value in `/srv/madar/.env`.
+6. Android devices with no token at all (`SELECT platform, count(*), count(push_token) FROM devices GROUP BY 1`): registration never reached the server, and the dispatcher skips them. `firebase_messaging_installation_id_enabled` must be `true` in `app/android/app/src/main/AndroidManifest.xml`. Without it FCM calls `onNewToken`, not the `onRegistered` the app waits for, and nothing fails. Builds before `app-v0.2.2` don't have the flag. With the flag on, a phone logs `Push registration failed: <reason>` (`adb logcat -s flutter`), and Crashlytics records the same error. A sleeping phone blocks the app's network, so check with the screen on before reading a failure as a bug.

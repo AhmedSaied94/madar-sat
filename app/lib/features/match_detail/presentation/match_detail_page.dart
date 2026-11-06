@@ -15,7 +15,6 @@ import '../../../core/network/generated/models/match_detail.dart';
 import '../../../core/network/generated/models/satellite_ref.dart';
 import '../../../core/network/swr_snapshot.dart';
 import '../../../core/theme/madar_tokens.dart';
-import '../../../design/components/button.dart';
 import '../../../design/components/empty_state.dart';
 import '../../../design/components/skeleton.dart';
 import '../../../design/components/stale_hint.dart';
@@ -23,12 +22,11 @@ import '../../../design/components/top_bar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../live/live_merge.dart';
 import '../../live/live_poller.dart';
-import '../../follows/data/follows_repository.dart';
-import '../../follows/domain/follow_set.dart';
 import '../../my_satellites/data/my_satellites_provider.dart';
 import '../data/match_detail_providers.dart';
 import '../domain/carriage_order.dart';
 import '../domain/match_detail_live.dart';
+import 'match_follow_button.dart';
 import 'match_hero.dart';
 import 'match_info_cards.dart';
 import 'where_to_watch_slivers.dart';
@@ -173,17 +171,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
               actions: shown == null
                   ? const []
                   : [
-                      FollowButton(
-                        following: ref
-                            .watch(followSetValueProvider)
-                            .matches
-                            .contains(widget.matchId),
-                        label: l.followMatch,
-                        followingLabel: l.followingMatch,
-                        onPressed: () => ref
-                            .read(followsRepositoryProvider)
-                            .toggle(FollowKind.match, widget.matchId),
-                      ),
+                      MatchFollowButton(matchId: widget.matchId, kickoffAt: shown.kickoffAt),
                     ],
             ),
             Expanded(
@@ -251,6 +239,7 @@ class _Loaded extends ConsumerWidget {
     final whereToWatch = WhereToWatchSlivers(
       l: l,
       matchId: match.id,
+      kickoffAt: match.kickoffAt,
       showChooseSatellites: ref.watch(usesDefaultSatellitesProvider),
       onChooseSatellites: () => context.push('/settings/satellites'),
       all: all,

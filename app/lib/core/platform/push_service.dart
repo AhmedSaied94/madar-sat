@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../config/app_config.dart';
+import 'crash_reporter.dart';
+import 'firebase_bootstrap.dart';
 import 'install_guide.dart';
 
 part 'push_service.g.dart';
@@ -110,15 +112,28 @@ class FirebasePushService implements PushService {
     PushMessaging? messaging,
     bool? isWeb,
     String? vapidKey,
-  })  : _guide = guide ?? createInstallGuide(),
-        _messaging = messaging ?? const FirebasePushMessaging(),
-        _isWeb = isWeb ?? kIsWeb,
-        _vapidKey = vapidKey ?? AppConfig.firebaseVapidKey;
+    this._registrationTimeout = const Duration(seconds: 10),
+    void Function(Object error, StackTrace stackTrace)? onRegistrationFailed,
+  }) : _guide = guide ?? createInstallGuide(),
+       _messaging = messaging ?? const FirebasePushMessaging(),
+       _isWeb = isWeb ?? kIsWeb,
+       _vapidKey = vapidKey ?? AppConfig.firebaseVapidKey,
+       _onRegistrationFailed = onRegistrationFailed ?? _reportRegistrationFailure;
 
   final InstallGuide _guide;
   final PushMessaging _messaging;
   final bool _isWeb;
   final String _vapidKey;
+  final Duration _registrationTimeout;
+  final void Function(Object error, StackTrace stackTrace) _onRegistrationFailed;
+
+  /// To the log and, on a native build, to Crashlytics. On the server a device that failed
+  /// to register looks like any other device without a token, so this is the only trace.
+  static void _reportRegistrationFailure(Object error, StackTrace stackTrace) {
+    debugPrint('Push registration failed: $error');
+    if (!FirebaseBootstrap.started) return;
+    createCrashReporter(firebaseConfigured: true).recordError(error, stackTrace);
+  }
 
   @override
   bool get canRequestPermission => !_guide.needsInstallSteps;
@@ -133,22 +148,26 @@ class FirebasePushService implements PushService {
 
   /// The Firebase installation id registered for this app instance: FCM's direct-send
   /// target, which is what `push_token` carries. It is **not** the device's auth token
-  /// (M-R1-2).
+  /// (M-R1-2). Android reports it only with `firebase_messaging_installation_id_enabled` on
+  /// in the manifest.
   @override
   Future<String?> currentToken() async {
     final registered = Completer<String?>();
-    final subscription = _messaging.onRegistered.listen((String id) {
-      if (!registered.isCompleted) registered.complete(id);
-    });
+    StreamSubscription<String>? subscription;
     try {
+      subscription = _messaging.onRegistered.listen((String id) {
+        if (!registered.isCompleted) registered.complete(id);
+      });
       await _messaging.register(vapidKey: _isWeb && _vapidKey.isNotEmpty ? _vapidKey : null);
-      return await registered.future.timeout(const Duration(seconds: 10));
-    } on Object {
+      return await registered.future.timeout(_registrationTimeout);
+    } on Object catch (error, stackTrace) {
       // No APNs token yet on an iPhone, no permission, or the service worker is not
-      // registered: the next registration brings it.
+      // registered: the next registration brings it. Reported all the same, as the same
+      // answer also hides a device that can never register.
+      _onRegistrationFailed(error, stackTrace);
       return null;
     } finally {
-      await subscription.cancel();
+      await subscription?.cancel();
     }
   }
 
@@ -158,22 +177,22 @@ class FirebasePushService implements PushService {
 
   @override
   Stream<String> get openedRoutes => Stream<String>.multi((controller) {
-        final subscriptions = [
-          _messaging.onMessageOpenedApp.listen((message) => _addRoute(controller, message)),
-          _messaging.onMessage.listen((message) => _addRoute(controller, message)),
-        ];
-        controller.onCancel = () async {
-          for (final subscription in subscriptions) {
-            await subscription.cancel();
-          }
-        };
-        if (_isWeb) return;
-        unawaited(
-          _messaging.getInitialMessage.then((message) {
-            if (message != null) _addRoute(controller, message);
-          }),
-        );
-      }, isBroadcast: false);
+    final subscriptions = [
+      _messaging.onMessageOpenedApp.listen((message) => _addRoute(controller, message)),
+      _messaging.onMessage.listen((message) => _addRoute(controller, message)),
+    ];
+    controller.onCancel = () async {
+      for (final subscription in subscriptions) {
+        await subscription.cancel();
+      }
+    };
+    if (_isWeb) return;
+    unawaited(
+      _messaging.getInitialMessage.then((message) {
+        if (message != null) _addRoute(controller, message);
+      }),
+    );
+  }, isBroadcast: false);
 
   static void _addRoute(MultiStreamController<String> controller, RemoteMessage message) {
     final route = message.data['route'];

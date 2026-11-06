@@ -48,6 +48,7 @@ void main() {
       onWatchReception: (_) {},
       onRefresh: () {},
       matchId: int.parse(matchId),
+      kickoffAt: null,
       showChooseSatellites: showChooseSatellites,
       onChooseSatellites: onChooseSatellites,
     ).build();
