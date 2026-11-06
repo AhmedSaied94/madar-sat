@@ -30,6 +30,12 @@ SOURCE = "yallakora"
 HOST = "www.yallakora.com"
 LIST_PATH = "/matches-center"
 
+
+def dated_list_path(day: date) -> str:
+    """The list for one Cairo day. ``LIST_PATH`` alone moves to the new day at midnight, whatever is still on."""
+    return f"{LIST_PATH}?date={day.isoformat()}"
+
+
 STATUS_MAP: dict[str, tuple[str, str | None]] = {
     "لم تبدأ": ("scheduled", None),
     "الشوط الأول": ("live", "1H"),

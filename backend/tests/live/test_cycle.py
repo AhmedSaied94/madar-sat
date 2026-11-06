@@ -1319,3 +1319,180 @@ def test_a_page_with_no_period_takes_the_stage_from_its_list_row(world):
         reading = session.get(MatchSourceReading, (match_id, "yallakora"))
     assert (reading.status, reading.period) == ("live", "2H")
     assert world.match(match_id).period == "2H"
+
+
+# ---------------------------------------------------------------------------------- Cairo's midnight
+
+# 00:01 in Cairo on the 5th: YallaKora's list has moved to the 5th, with a match from the 4th still open.
+AFTER_MIDNIGHT = datetime(2026, 11, 4, 22, 1, tzinfo=UTC)
+LATE_KICKOFF = datetime(2026, 11, 4, 20, 0, tzinfo=UTC)
+YALLAKORA_THE_4TH = f"{YALLAKORA_LIST}?date=2026-11-04"
+YK_SECOND_HALF = "الشوط الثاني"
+YK_FINISHED = "انتهت"
+
+
+def _midnight_passes(world, *rows_of_the_4th):
+    world.clock.now = AFTER_MIDNIGHT
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f9", 0, 0, LIVE))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y9", "-", "-", "لم تبدأ"))
+    world.fetch.pages[YALLAKORA_THE_4TH] = yallakora_list(*rows_of_the_4th)
+
+
+def _add_todays_match(world, external_id="y2"):
+    with world.factory() as session, session.begin():
+        match = make_match(session, AFTER_MIDNIGHT - timedelta(minutes=1))
+        session.add(MatchExternalId(source="yallakora", external_id=external_id, match_id=match.id))
+        return match.id
+
+
+def test_a_match_still_on_at_midnight_is_read_from_its_own_days_list(world):
+    match_id = world.add_match(LATE_KICKOFF)
+    _midnight_passes(world, ("y1", 2, 1, YK_SECOND_HALF))
+
+    world.run()
+
+    assert YALLAKORA_THE_4TH in world.fetch.requests
+    row = world.match(match_id)
+    assert (row.status, row.period, row.home_score, row.away_score) == ("live", "2H", 2, 1)
+    assert world.source_state("yallakora").state == "ok"
+
+
+def test_a_lone_full_time_that_crosses_midnight_finishes_on_its_score(world):
+    world.clock.now = AFTER_MIDNIGHT - timedelta(minutes=4)
+    match_id = world.add_match(LATE_KICKOFF)
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f9", 0, 0, LIVE))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 2, 1, YK_SECOND_HALF))
+    world.run()
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 2, 1, YK_FINISHED))
+    world.run()
+
+    _midnight_passes(world, ("y1", 2, 1, YK_FINISHED))
+    world.run()
+    assert world.match(match_id).status == "live"
+
+    world.clock.tick(LiveSettings().fulltime_hold_s)
+    world.run()
+
+    row = world.match(match_id)
+    assert (row.status, row.status_source, row.home_score, row.away_score) == ("finished", "feed", 2, 1)
+
+
+def test_a_row_on_yesterdays_list_is_dated_yesterday(world):
+    world.add_match(LATE_KICKOFF)
+    _midnight_passes(world, ("y5", 2, 1, YK_SECOND_HALF))
+
+    world.run()
+
+    # Only a row inside the window gets as far as the queue, and 22:00 on the 5th isn't.
+    assert {call["name"] for call in world.unresolved if call["source"] == "yallakora"} == {"أ", "ب"}
+
+
+def test_todays_row_wins_an_id_both_lists_have(world):
+    match_id = world.add_match(LATE_KICKOFF)
+    _midnight_passes(world, ("y1", 2, 1, YK_SECOND_HALF))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 3, 1, YK_SECOND_HALF))
+
+    world.run()
+
+    assert world.match(match_id).home_score == 3
+
+
+def test_before_midnight_only_todays_list_is_read(world):
+    world.clock.now = AFTER_MIDNIGHT - timedelta(minutes=5)
+    world.add_match(LATE_KICKOFF)
+
+    world.run()
+
+    assert not [url for url in world.fetch.requests if "?date=" in url]
+
+
+def test_with_no_match_left_from_yesterday_its_list_is_not_read(world):
+    _add_todays_match(world)
+    _midnight_passes(world)
+
+    world.run()
+
+    assert YALLAKORA_THE_4TH not in world.fetch.requests
+
+
+def test_only_a_source_with_dated_lists_reads_yesterday(world):
+    world.with_goal().add_match(LATE_KICKOFF)
+    _midnight_passes(world, ("y1", 2, 1, YK_SECOND_HALF))
+    world.fetch.pages[GOAL_LIST] = goal_list(("g9", 0, 0, "LIVE", "1H"))
+
+    world.run()
+
+    assert sorted(world.fetch.requests) == sorted([FILGOAL_LIST, YALLAKORA_LIST, YALLAKORA_THE_4TH, GOAL_LIST])
+
+
+def test_a_failed_read_of_yesterdays_list_costs_todays_list_nothing(world):
+    world.add_match(LATE_KICKOFF)
+    todays = _add_todays_match(world)
+    _midnight_passes(world)
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y2", 1, 0, YK_LIVE))
+    world.fetch.pages[YALLAKORA_THE_4TH] = httpx.ConnectError("no route")
+
+    world.run()
+
+    assert world.match(todays).home_score == 1
+    assert world.source_state("yallakora").state == "ok"
+    assert world.last_run().http_errors == 1
+
+
+def test_a_block_on_yesterdays_list_backs_off_the_host_and_keeps_todays_list(world):
+    world.add_match(LATE_KICKOFF)
+    todays = _add_todays_match(world)
+    _midnight_passes(world)
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y2", 1, 0, YK_LIVE))
+    world.fetch.pages[YALLAKORA_THE_4TH] = Retryable("answered 403")
+
+    world.run()
+
+    assert world.redis.exists(f"live:backoff:{yallakora.HOST}")
+    assert world.match(todays).home_score == 1
+
+
+def test_no_tokens_for_yesterdays_list_is_nobodys_fault(world):
+    world.add_match(LATE_KICKOFF)
+    todays = _add_todays_match(world)
+    _midnight_passes(world)
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y2", 1, 0, YK_LIVE))
+    world.fetch.pages[YALLAKORA_THE_4TH] = OutOfTokens()
+
+    world.run()
+
+    assert world.match(todays).home_score == 1
+    assert world.source_state("yallakora").state == "ok"
+    assert world.last_run().log["skipped"] == ["yallakora:list:2026-11-04"]
+
+
+def test_yesterdays_list_past_the_deadline_is_skipped(world):
+    world.add_match(LATE_KICKOFF)
+    _midnight_passes(world)
+
+    world.run(monotonic=iter([0.0, 999.0, 999.0, 999.0, 999.0]).__next__)
+
+    assert YALLAKORA_THE_4TH not in world.fetch.requests
+    assert world.source_state("yallakora").state == "ok"
+    assert world.last_run().log["skipped"] == ["yallakora:list:2026-11-04"]
+
+
+def test_a_changed_page_on_yesterdays_list_stops_that_source_with_one_alert(world):
+    world.add_match(LATE_KICKOFF)
+    _midnight_passes(world)
+    world.fetch.pages[YALLAKORA_THE_4TH] = b"<html><body>another page</body></html>"
+
+    world.run()
+
+    assert world.source_state("yallakora").state == "invalid"
+    assert world.problem("format:yallakora").closed_at is None
+
+
+def test_an_empty_list_for_yesterday_stops_nothing(world):
+    world.add_match(LATE_KICKOFF)
+    _midnight_passes(world)
+
+    world.run()
+
+    assert world.source_state("yallakora").state == "ok"
+    assert world.problem("format:yallakora") is None

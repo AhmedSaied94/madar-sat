@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, TypeVar
 
 import httpx
@@ -165,6 +165,7 @@ class LiveSource:
     parse_page: Callable[[bytes, str], SourceReading]
     page_cap: Callable[[LiveSettings], int]
     enabled: Callable[[LiveSettings], bool] = lambda _settings: True
+    dated_list_path: Callable[[date], str] | None = None
 
 
 FILGOAL = LiveSource(
@@ -182,6 +183,7 @@ YALLAKORA = LiveSource(
     yallakora.parse_list,
     _parse_yallakora_page,
     lambda settings: settings.page_cap_yallakora,
+    dated_list_path=yallakora.dated_list_path,
 )
 GOAL = LiveSource(
     goal.SOURCE,
@@ -197,9 +199,8 @@ READ_GROUPS: tuple[tuple[LiveSource, ...], ...] = ((FILGOAL, YALLAKORA), (GOAL,)
 BY_NAME = {source.name: source for group in READ_GROUPS for source in group}
 
 
-def _parse_list(source: str, body: bytes, now: datetime) -> list[SourceReading]:
-    today = now.astimezone(CAIRO).date()
-    return _validated(source, lambda: BY_NAME[source].parse_list(body, today=today))
+def _parse_list(source: str, body: bytes, day: date) -> list[SourceReading]:
+    return _validated(source, lambda: BY_NAME[source].parse_list(body, today=day))
 
 
 def _parse_page(source: str, body: bytes, external_id: str) -> SourceReading:
@@ -237,7 +238,7 @@ def _read_list(deps: Deps, source: str, now: datetime, cycle: CycleLog) -> Sourc
     deps.backoff.clear(host)
     read.pages_read += 1
     try:
-        rows = _parse_list(source, page.body, now)
+        rows = _parse_list(source, page.body, now.astimezone(CAIRO).date())
         if not rows:
             raise LayoutChanged(f"{source}: a list with no matches while one is in the window")
     except LayoutChanged as exc:
@@ -249,6 +250,61 @@ def _read_list(deps: Deps, source: str, now: datetime, cycle: CycleLog) -> Sourc
     if deps.hashes.changed(page.url, page.body):
         read.pages_to_save.append(page)
     return read
+
+
+def _earlier_days(window: Sequence[WindowMatch], now: datetime) -> list[date]:
+    """The Cairo days before today that a match in the window kicked off on."""
+    today = now.astimezone(CAIRO).date()
+    return sorted({day for match in window if (day := match.kickoff_at.astimezone(CAIRO).date()) < today})
+
+
+def _read_earlier_lists(
+    deps: Deps,
+    read: SourceRead,
+    window: Sequence[WindowMatch],
+    now: datetime,
+    deadline: float,
+    cycle: CycleLog,
+) -> None:
+    """A match still on at Cairo's midnight leaves the plain list, so its own day's list is read until it closes.
+
+    Today's row wins an ID both lists have. As with a match page, a failed request costs only this read, and a
+    page that fails validation stops the whole source. An empty list stops nothing: it may be a quiet day.
+    """
+    source = BY_NAME[read.source]
+    if source.dated_list_path is None:
+        return
+    for day in _earlier_days(window, now):
+        name = f"{read.source}:list:{day.isoformat()}"
+        if deps.monotonic() >= deadline:
+            cycle.skipped.append(name)
+            return
+        try:
+            page = _guarded_get(deps, read.source, source.dated_list_path(day))
+        except OutOfTokens:
+            cycle.skipped.append(name)
+            return
+        except Retryable as exc:
+            deps.backoff.trip(source.host)
+            cycle.http_failures += 1
+            log.info("live_list_blocked", extra={"source": read.source, "why": str(exc)[:200]})
+            return
+        except (FetchError, httpx.HTTPError) as exc:
+            cycle.http_failures += 1
+            log.info("live_list_failed", extra={"source": read.source, "why": str(exc)[:200]})
+            continue
+        read.pages_read += 1
+        try:
+            rows = _parse_list(read.source, page.body, day)
+        except LayoutChanged as exc:
+            read.outcome, read.reason = "invalid", str(exc)[:200]
+            read.pages_to_save.append(page)
+            read.readings = {}
+            return
+        read.readings = {**{row.external_id: row for row in rows}, **read.readings}
+        read.unknown_statuses.update(row.unknown_status for row in rows if row.unknown_status)
+        if deps.hashes.changed(page.url, page.body):
+            read.pages_to_save.append(page)
 
 
 def _with_list_stage(page: SourceReading, row: SourceReading | None) -> SourceReading:
@@ -577,6 +633,9 @@ def _read_group(
         for source in sources
     ]
     cycle.reads += reads
+    for read in reads:
+        if read.outcome == "ok":
+            _read_earlier_lists(deps, read, window, now, deadline, cycle)
     window_ids = {match.id for match in window}
     links = {
         read.source: _link_all(deps, read, window_ids, now, cycle) if read.outcome == "ok" else {} for read in reads
