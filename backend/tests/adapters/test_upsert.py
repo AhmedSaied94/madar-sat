@@ -971,3 +971,138 @@ def test_the_other_importers_still_join_on_the_same_names(sync_session: Session,
 
     assert (outcome.created, outcome.waiting) == (0, [])
     assert _stored(sync_session, "ys-9").id == row.id
+
+
+# --- D6: sport on the record, sporteventz's text-only rows, API-Football's strict create (T044) ---
+
+OTHER_SPORT_NAMES = {"home": "شيكاغو بولز", "away": "نيويورك نيكس", "competition": "الدوري الأمريكي"}
+
+
+def _se(**overrides: Any) -> NormalizedFixture:
+    """A sporteventz record: other-sport names kept as text, never resolved (FR-032)."""
+    fields: dict[str, Any] = {
+        **OTHER_SPORT_NAMES,
+        "external_id": "se-1",
+        "url": "https://www.sporteventz.com/en/other-sport/basketball.html",
+        "sport": "basketball",
+    }
+    fields.update(overrides)
+    return fixture(**fields)
+
+
+def _af(**overrides: Any) -> NormalizedFixture:
+    """An API-Football record: English names that the resolver may or may not know."""
+    fields: dict[str, Any] = {"external_id": "af-1", "url": "https://v3.football.api-sports.io/fixtures?id=af-1"}
+    fields.update(overrides)
+    return fixture(**fields)
+
+
+def _sport_rows(sync_session: Session, home: str, away: str) -> list[Match]:
+    return list(
+        sync_session.execute(
+            select(Match).where(Match.home_team_name == home, Match.away_team_name == away).order_by(Match.id)
+        ).scalars()
+    )
+
+
+def test_a_record_sport_is_written_compared_and_defaults_to_football(sync_session: Session, loaded_snapshot) -> None:
+    first = pipeline(sync_session, "sporteventz").run([_se()])
+    assert first.created == 1
+    assert _stored(sync_session, "se-1").sport == "basketball"
+
+    same = pipeline(sync_session, "sporteventz").run([_se()])
+    assert (same.created, same.updated) == (0, 0)
+
+    moved = pipeline(sync_session, "sporteventz").run([_se(sport="handball")])
+    assert moved.updated == 1
+    sync_session.expire_all()
+    assert _stored(sync_session, "se-1").sport == "handball"
+
+    pipeline(sync_session).run([fixture(external_id="ys-sport-default")])
+    assert _stored(sync_session, "ys-sport-default").sport == "football"
+
+
+def test_a_football_and_a_basketball_row_with_the_same_names_and_date_never_merge(
+    sync_session: Session, loaded_snapshot
+) -> None:
+    pipeline(sync_session).run([fixture(**OTHER_SPORT_NAMES, external_id="ys-9001")])
+
+    outcome = pipeline(sync_session, "sporteventz").run([_se()])
+
+    # The text-only rule still joins rows of the same sport; another sport's names are its own.
+    assert outcome.created == 1
+    rows = _sport_rows(sync_session, OTHER_SPORT_NAMES["home"], OTHER_SPORT_NAMES["away"])
+    assert [row.sport for row in rows] == ["football", "basketball"]
+
+
+def test_a_near_row_of_another_sport_does_not_hold_a_strict_card_back(sync_session: Session, loaded_snapshot) -> None:
+    """A club plays one sport: a basketball row with those team ids is not this football fixture."""
+    home = sync_session.execute(select(Team).where(Team.legacy_id == "team-zamalek")).scalar_one()
+    away = sync_session.execute(select(Team).where(Team.legacy_id == "team-city")).scalar_one()
+    other = Match(
+        sport="basketball",
+        source="sporteventz",
+        match_date=DAY,
+        kickoff_at=KICKOFF,
+        competition_name="دوري السلة",
+        home_team_id=home.id,
+        home_team_name="الزمالك",
+        away_team_id=away.id,
+        away_team_name="مان سيتي",
+    )
+    sync_session.add(other)
+    sync_session.flush()
+
+    outcome = pipeline(sync_session, "api_football").run([_af()])
+
+    assert outcome.created == 1
+    created = _stored(sync_session, "af-1")
+    assert created.id != other.id
+    assert created.sport == "football"
+    assert other.sport == "basketball"
+
+
+def test_sporteventz_keeps_names_as_text_and_queues_nothing(sync_session: Session, loaded_snapshot) -> None:
+    before = versions(sync_session)["unresolved_names"]
+
+    pipeline(sync_session, "sporteventz").run([_se(home="فريق لا يوجد", away="آخر لا يوجد")])
+
+    row = _stored(sync_session, "se-1")
+    assert (row.home_team_id, row.away_team_id, row.competition_id) == (None, None, None)
+    assert (row.home_team_name, row.away_team_name) == ("فريق لا يوجد", "آخر لا يوجد")
+    assert _queued(sync_session) == []
+    assert versions(sync_session)["unresolved_names"] == before
+
+
+def test_api_football_waits_for_an_editor_when_a_team_is_unresolved(sync_session: Session, loaded_snapshot) -> None:
+    outcome = pipeline(sync_session, "api_football").run([_af(home="فريق لا يوجد")])
+
+    assert outcome.created == 0
+    assert outcome.waiting == [{"ref": "af-1", "reason": "unresolved_team"}]
+    assert sync_session.execute(select(MatchExternalId).where(MatchExternalId.source == "api_football")).first() is None
+    assert [(row["source"], row["kind"], row["name"]) for row in _queued(sync_session)] == [
+        ("api_football", "team", "فريق لا يوجد")
+    ]
+
+
+def test_api_football_freezes_the_fields_of_another_sources_row(sync_session: Session, loaded_snapshot) -> None:
+    pipeline(sync_session).run([fixture()])
+    owned = _stored(sync_session, "ys-1001")
+    before = (owned.home_team_name, owned.competition_stage, owned.competition_name)
+
+    outcome = pipeline(sync_session, "api_football").run(
+        [
+            _af(
+                home=owned.home_team_name,
+                away=owned.away_team_name,
+                stage="Group A",
+                competition="Egyptian Premier League",
+            )
+        ]
+    )
+
+    assert outcome.updated == 0
+    sync_session.expire_all()
+    kept = _stored(sync_session, "af-1")
+    assert kept.id == owned.id
+    assert (kept.home_team_name, kept.competition_stage, kept.competition_name) == before

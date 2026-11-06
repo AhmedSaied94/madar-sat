@@ -28,7 +28,7 @@ from typing import Any, cast
 from sqlalchemy import and_, func, or_, select, text, update
 from sqlalchemy.orm import Session
 
-from app.adapters.base import NormalizedFixture, ParsedFixture
+from app.adapters.base import NormalizedFixture, ParsedFixture, clean_text
 from app.adapters.health import bump_datasets
 from app.adapters.resolve import ResolveResult, resolve_competition, resolve_team
 from app.adapters.unresolved import Kind, record_unresolved
@@ -38,9 +38,11 @@ from app.db.models import (
     DatasetVersion,
     Match,
     MatchChannel,
+    MatchCustomBroadcast,
     MatchExternalId,
     Team,
 )
+from app.domain.content import find_card_sharing_label
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +51,14 @@ KICKOFF_TOLERANCE = timedelta(minutes=45)
 SAME_CLUB_GAP = timedelta(hours=12)
 # As A13's suggestions: close enough to make an editor look, and never enough to link on.
 NEAR_SPELLING = 0.3
-SOURCES = ("ysscores", "legacy", "manual", "yallakora")
+SOURCES = ("ysscores", "legacy", "manual", "yallakora", "sporteventz", "api_football")
+# The importers whose id reaches the live poller, so they link only on both teams, in order, and a
+# kickoff within 45 minutes; they also only fill another source's row, never rewrite it (D6 R22).
+STRICT_SOURCES = frozenset({"yallakora", "api_football"})
+# sporteventz's other-sport names have no catalog to match against, so they stay text (FR-032).
+NO_RESOLVE_SOURCES = frozenset({"sporteventz"})
+# The card-sharing screen and the admin schema's limit both apply to imported broadcaster labels.
+MAX_BROADCAST_LABEL = 80
 
 
 class SkipItem(Exception):
@@ -178,30 +187,36 @@ class UpsertPipeline:
         if item.external_id is None and item.legacy_id is None:
             raise SkipItem("missing_external_id")
 
-        competition = resolve_competition(
-            self.session, external_id=None, name=item.competition, sport=item.sport, source=self.source
-        )
-        home_team = resolve_team(
-            self.session,
-            external_id=item.home_external_id,
-            name=home,
-            sport=item.sport,
-            competition_name=item.competition,
-            source=self.source,
-        )
-        away_team = resolve_team(
-            self.session,
-            external_id=item.away_external_id,
-            name=away,
-            sport=item.sport,
-            competition_name=item.competition,
-            source=self.source,
-        )
-        for result in (home_team, away_team):
-            if result.entity_id is None and result.name:
-                outcome.unresolved.append(
-                    {"name": result.name, "competition": item.competition, "match_ref": _ref(item)}
-                )
+        if self.source in NO_RESOLVE_SOURCES:
+            # Another sport has no catalog yet: the names stay text and nothing is queued (FR-032).
+            competition = ResolveResult(None, item.competition, "unresolved")
+            home_team = ResolveResult(None, home, "unresolved")
+            away_team = ResolveResult(None, away, "unresolved")
+        else:
+            competition = resolve_competition(
+                self.session, external_id=None, name=item.competition, sport=item.sport, source=self.source
+            )
+            home_team = resolve_team(
+                self.session,
+                external_id=item.home_external_id,
+                name=home,
+                sport=item.sport,
+                competition_name=item.competition,
+                source=self.source,
+            )
+            away_team = resolve_team(
+                self.session,
+                external_id=item.away_external_id,
+                name=away,
+                sport=item.sport,
+                competition_name=item.competition,
+                source=self.source,
+            )
+            for result in (home_team, away_team):
+                if result.entity_id is None and result.name:
+                    outcome.unresolved.append(
+                        {"name": result.name, "competition": item.competition, "match_ref": _ref(item)}
+                    )
 
         try:
             match_id, created = self._find_or_create(item, competition, home_team, away_team)
@@ -210,13 +225,17 @@ class UpsertPipeline:
             outcome.waiting.append(_skipped(item, exc.reason))
             log.info("item_waiting", extra={"ref": _ref(item), "source": self.source, "why": exc.reason})
             return None
-        self._queue_unresolved(match_id, item, competition, home_team, away_team, outcome)
+        if self.source not in NO_RESOLVE_SOURCES:
+            self._queue_unresolved(match_id, item, competition, home_team, away_team, outcome)
         locked, changed_fields, kickoff_changed = self._write_fields(
             match_id, item, competition, home_team, away_team, created=created
         )
         broadcaster = self._write_broadcaster(match_id, item, locked)
         if broadcaster:
             changed_fields = {**changed_fields, "local_broadcaster_eg": broadcaster}
+        broadcasts = self._write_broadcasts(match_id, item, locked, outcome)
+        if broadcasts:
+            changed_fields = {**changed_fields, "broadcasts": broadcasts}
         # Only an adapter that supplied a link set may reconcile them (B2-R1-2, FR-022).
         link_changes: dict[str, Any] = {}
         if item.links is not None:
@@ -297,6 +316,50 @@ class UpsertPipeline:
         )
         return [before, wanted]
 
+    def _write_broadcasts(
+        self, match_id: int, item: NormalizedFixture, locked: frozenset[str], outcome: RunOutcome
+    ) -> list[Any] | None:
+        """Write the source's own broadcaster slots unless locked: ``[before, after]``, or ``None``.
+
+        Slots are text, so they go through the same checks the admin schema applies: a card-sharing
+        label is refused and counted, and no label passes 80 characters (FR-037, FR-038).
+        """
+        if item.broadcasts is None or "broadcasts" in locked:
+            return None
+        wanted: list[str] = []
+        for raw in item.broadcasts:
+            label = clean_text(raw)
+            if not label:
+                continue
+            if find_card_sharing_label(label) is not None:
+                outcome.skipped.append({"ref": _ref(item), "reason": "card_sharing_label"})
+                continue
+            wanted.append(label[:MAX_BROADCAST_LABEL].strip())
+            if len(wanted) == 2:
+                break
+        if not wanted:
+            # Every name was refused: a source's bad entry never clears an editor's slots.
+            return None
+        after = {slot: label for slot, label in enumerate(wanted, start=1)}
+        rows = {
+            row.slot: row
+            for row in self.session.execute(
+                select(MatchCustomBroadcast).where(MatchCustomBroadcast.match_id == match_id)
+            ).scalars()
+        }
+        before = {slot: row.label for slot, row in rows.items()}
+        if before == after:
+            return None
+        for slot, row in rows.items():
+            if slot not in after:
+                self.session.delete(row)
+            elif row.label != after[slot]:
+                row.label = after[slot]
+        for slot, label in after.items():
+            if slot not in rows:
+                self.session.add(MatchCustomBroadcast(match_id=match_id, slot=slot, label=label))
+        return [[before[slot] for slot in sorted(before)], [after[slot] for slot in sorted(after)]]
+
     def _find_or_create(
         self,
         item: NormalizedFixture,
@@ -321,6 +384,7 @@ class UpsertPipeline:
             away_team_name=item.away or "",
             stadium=None,
             legacy_id=item.legacy_id if self.source == "legacy" else None,
+            sport=item.sport,
         )
         self.session.add(match)
         self.session.flush()
@@ -342,7 +406,11 @@ class UpsertPipeline:
             ).scalar_one_or_none()
             if found is not None:
                 return found
-        if self.source == "yallakora":
+        if self.source in NO_RESOLVE_SOURCES:
+            # Its names are text with no catalog, and its id is the only identity it has: the tennis
+            # placeholders «WQF1 × WQF2» repeat, and they are different events, not one (D6 R21).
+            return None
+        if self.source in STRICT_SOURCES:
             return self._yallakora_probe(item, home_team_id, away_team_id)
         return self._duplicate_probe(item, home_team_id, away_team_id)
 
@@ -363,6 +431,7 @@ class UpsertPipeline:
                 self.session.execute(
                     select(Match.id)
                     .where(
+                        Match.sport == item.sport,
                         Match.home_team_id == home_team_id,
                         Match.away_team_id == away_team_id,
                         Match.kickoff_at.between(
@@ -410,7 +479,10 @@ class UpsertPipeline:
                     ),
                 ),
             )
-        return self.session.execute(select(Match.id).where(near).limit(1)).scalar_one_or_none() is not None
+        return (
+            self.session.execute(select(Match.id).where(Match.sport == item.sport, near).limit(1)).scalar_one_or_none()
+            is not None
+        )
 
     def _duplicate_probe(
         self, item: NormalizedFixture, home_team_id: int | None, away_team_id: int | None
@@ -421,6 +493,7 @@ class UpsertPipeline:
             return self.session.execute(
                 select(Match.id)
                 .where(
+                    Match.sport == item.sport,
                     Match.home_team_id == home_team_id,
                     Match.away_team_id == away_team_id,
                     Match.kickoff_at.is_not(None),
@@ -435,6 +508,7 @@ class UpsertPipeline:
             return self.session.execute(
                 select(Match.id)
                 .where(
+                    Match.sport == item.sport,
                     Match.match_date == item.match_date,
                     func.ar_normalize(Match.home_team_name) == home_norm,
                     func.ar_normalize(Match.away_team_name) == away_norm,
@@ -480,6 +554,7 @@ class UpsertPipeline:
         wanted: dict[str, Any] = {
             "kickoff_at": kickoff,
             "time_tbd": kickoff is None,
+            "sport": item.sport,
             "competition_id": competition.entity_id,
             "competition_name": item.competition or "",
             "competition_stage": item.stage,
@@ -508,10 +583,11 @@ class UpsertPipeline:
         return locked, diff, kickoff_changed
 
     def _fields_are_frozen(self, match: Match) -> bool:
-        if self.source == "yallakora":
-            # It adds the broadcaster and its id to a row another source holds, and leaves the rest:
-            # two importers rewriting each other's spelling would stale every open editor (D5).
-            return match.source != "yallakora"
+        if self.source in STRICT_SOURCES:
+            # It adds its id and (YallaKora) the Egyptian broadcaster to a row another source holds,
+            # and leaves the rest: two importers rewriting each other's spelling would stale every
+            # open editor (D5, D6 FR-036).
+            return match.source != self.source
         if self.source != "legacy":
             return False
         if match.source == "ysscores":

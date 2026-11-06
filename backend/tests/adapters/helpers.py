@@ -57,11 +57,12 @@ def new_match(
     away_team_id: int | None = None,
     status: str = "scheduled",
     time_tbd: bool = False,
+    sport: str = "football",
 ) -> Match:
     # ck_matches_time_tbd: no kickoff means the time is TBD, and the other way round.
     kickoff_at = None if time_tbd else kickoff_at
     match = Match(
-        sport="football",
+        sport=sport,
         source="ysscores",
         match_date=(kickoff_at.date() if kickoff_at else date(2026, 11, 7)),
         kickoff_at=kickoff_at,

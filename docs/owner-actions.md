@@ -21,6 +21,8 @@ The detailed steps stay in each spec's `tasks.md`, its quickstart and the [runbo
 | [006 D6 notifications and live center](#006-d6-notifications-and-live-center) | **Lane B1:** 3 items (the `0009` migration review, the contract diff, and the three audience queries) · **Lane B2:** T001's shared-parts PR | **Lane B1:** 4 items (the push deploy with the off switch to hand, the load-test window, the quickstart walk, and the sporteventz count and repair map) | **Written on `d06-b1` in `../madar-b1`:** revision `0009`, the widened public and admin contracts with both regenerated clients, the forced password change, A15's log/composer/test device, A16's accounts, A17's audit, A18's history, the pure goal bar with its replay (58 goals, 0 corrections), policy and the copy for every type, the producers and channel changes, the dispatcher with its claim order, page budget, audiences, lateness, reasons and off switch, the `push` problem, and `repair-matches sport`. The backend suite is 2652 passed; the four `test_homebox_acl.py` failures are this machine's Redis password. **Nothing is deployed.** |
 | [005 D5 live and discovery](#005-d5-live-and-discovery) | **Lane B1:** 3 items (the `0007` and contract review, merge order, the capture's match) · **Lane B2:** 2 items (T001, the shared-parts PR; VPS-1 can't be resized, so T048 is closed) · **Lane A:** 1 item (the screenshots against the boards) · **Lane M:** the device walk, the merge | **Lane B1:** 3 items (the live checks, the done-check match, the load re-run after B2's Caddy cache, T062) · **Lane B2:** 5 items (`worker-live` healthy, Telegram on VPS-2, the `celery-live` monitor, the YallaKora run on the live host, the disk check) · **Lane A:** 2 items (the WireGuard walk with SC-007's timing, on rows the importers have filled) · **Lane M:** the `features` switch, tags `app-v0.4.0` and `web-v0.2.0` | **All four lanes and their round 1 review fixes are merged on the spec branch**, which goes to `master` as one PR; nothing is deployed. The combined backend suite and 802 app tests are green locally. The capture waits on a deploy and a live match. |
 | [031 D5 follow-up: live sources](#031-d5-follow-up-live-sources) | **Before lanes:** bring #39 or `master` into `d05-b1` and `d05-b2` | **Lane B1:** the `0008` review, the capture night, the watched match. **Lane B2:** T033's host check, before the capture | Lanes B1 and B2 are merged into `005-d05-live-and-discovery`. Parsers, rules, Goal.com and the capture tool pass their tests. Deployed, with the production fixes (PR #40) and the duplicate merge done on 2026-11-05. **No released Android build can receive a push:** the fix is in PR `fix/android-push-token`, so merge it and [release `app-v0.2.2`](#android-push-fix). The [admin cleanup](#after-the-production-fixes-merge) is left. B1's fixes still need a round 3 review. B2's round 1 review approved with notes. The watched match waits for a match night |
+| [006 D6 notifications and live center](#006-d6-notifications-and-live-center) | **Lane B2:** the API-Football account and its five checks (T059); sporteventz's terms, and whether to keep it (T052) | **Lane B2:** the live sporteventz run and its evidence (T066); the old sporteventz rows and their repair; re-checking the site's `robots.txt` | Lane B2 is written. T050 waits on B1's `report_link_change`, and T061–T064 on your key (T059); nothing a fan sees changes until D7 |
+
 
 ## Every month
 
@@ -746,6 +748,25 @@ On 2026-11-05, 17 of the 18 matches that kicked off at 22:00 Cairo lost their re
 - [ ] **Run the repair for those 17 matches.** It doesn't depend on the PR. → [results-2026-11-05.sql](../specs/031-d05-live-sources/repair/results-2026-11-05.sql), [how to run it](runbooks/live-poller.md#repairing-a-lost-result)
 - [ ] **Review, merge and deploy the PR before 22:00 Cairo (20:00 UTC) on 2026-11-06.** Five matches that night cross midnight.
 - [ ] **The next morning, check nothing was lost.** The query in [the runbook](runbooks/live-poller.md#repairing-a-lost-result) should list no match from that night. If it lists some, repair them the same way.
+
+## 006 D6 notifications and live center
+
+Spec: [006](../specs/006-d06-notifications-and-live-center/spec.md) · [quickstart](../specs/006-d06-notifications-and-live-center/quickstart.md) · [tasks](../specs/006-d06-notifications-and-live-center/tasks.md). Lanes B1, B2, A and M. Each lane adds its own subsection when it finishes; B2's is below.
+
+### Lane B2
+
+Other-sport events and their broadcasters, collected for D7, plus API-Football behind its checks. No fan notices either until D7.
+
+#### Before merge
+
+- [ ] **T059 The API-Football account and the five checks.** Create the account, set `API_FOOTBALL_KEY` in VPS-2's `.env` (never on a command line), make one request and read the docs in a browser: current-season fixtures today, `date` alone, the daily reset's time and header, what a refusal looks like, and whether the terms allow showing fixtures in a free app. Save the response with no key in it, then copy it to `backend/tests/fixtures/api_football/`. **If check 1 fails**, say so: T060–T064 close with the decision recorded and the key stays unset. → [quickstart: before Lane B2 builds on API-Football](../specs/006-d06-notifications-and-live-center/quickstart.md#before-lane-b2-builds-on-api-football), [imports-and-sources](runbooks/imports-and-sources.md#api-football-and-stopped-runs)
+- [ ] **T052 sporteventz's terms.** The site's `robots.txt` allows both paths the adapter reads (checked 2026-11-06), but its terms aren't reviewed (system-design §13 R1). Decide whether to keep the source or drop it; dropping it is a one-line change to `SPORTS` and its beat entry, and nothing else depends on it. → [sporteventz](runbooks/imports-and-sources.md#sporteventz)
+
+#### After merge
+
+- [ ] **T066 Run `sporteventz` on the live host.** Put the evidence in the PR: the `import_runs` row, other-sport matches with their two slots, 0 new teams, competitions or channels, `/v1/matches` still football only, and the A13 card. If T059 passed, do the same for `api_football` and record that day's request count. → [imports-and-sources](runbooks/imports-and-sources.md#sporteventz)
+- [ ] **The old sporteventz rows.** `python -m app.cli repair-matches sport` lists rows holding a sporteventz id but labelled `football`, and changes nothing. Build the map from the snapshot's `sport` (never committed), copy it to VPS-2, and run it once dry, then with `--apply`. Rows with no sport in the snapshot stay out of the map and stay `football`. → [quickstart: on the host](../specs/006-d06-notifications-and-live-center/quickstart.md#on-the-host)
+- [ ] **Re-check `robots.txt`** when the source is reviewed, and replace the committed copy in `backend/tests/fixtures/sporteventz/` if it moved.
 
 ## Known for later features
 

@@ -107,6 +107,32 @@ def test_an_open_breaker_pauses_the_source(sync_session) -> None:
     assert source_is_paused(sync_session, "livesoccertv", now=NOW) is True
 
 
+def test_a_stopped_run_touches_neither_the_breaker_nor_the_zero_alarm(sync_session) -> None:
+    """FR-035: a run that stopped on purpose is not a failure and is not an empty source."""
+    alerts = Recorder()
+
+    health_outcome = record_run(
+        sync_session,
+        source="api_football",
+        status="stopped",
+        items_found=0,
+        finished_at=NOW,
+        pages=1,
+        alert=alerts,
+        now=NOW,
+    )
+
+    row = sync_session.execute(
+        text(
+            "SELECT consecutive_failures, breaker_opened_at, last_success_at, last_zero_alert_on "
+            "FROM sources WHERE name = 'api_football'"
+        )
+    ).one()
+    assert tuple(row) == (0, None, None, None)
+    assert alerts.sent == []
+    assert health_outcome.zero_alert_sent is False
+
+
 def test_zero_items_with_pages_alerts_once_per_cairo_day(sync_session, monkeypatch: pytest.MonkeyPatch) -> None:
     # Keep the breaker out of this test: it is the alarm that is being measured.
     monkeypatch.setenv("SOURCE_BREAKER_THRESHOLD", "10")

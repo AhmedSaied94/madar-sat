@@ -39,10 +39,15 @@ def _at(slots: list[Slot], source: str) -> list[datetime]:
 def test_the_slots_cover_the_window_at_the_schedule_rates() -> None:
     slots = expected_slots(T0, T0 + timedelta(hours=47, minutes=59))
 
-    # The full-listing entries of schedule.py: every 3 h, every 3 h from 01:00, every 2 h, and daily.
-    # `yallakora-today` re-reads one day of the same listing, so it is no slot, like the T−60 entry.
-    assert _sources(slots) == {"ysscores", "legacy", "livesoccertv", "yallakora"}
+    # The full-listing entries of schedule.py: every 3 h, every 3 h from 01:00, every 2 h, daily,
+    # and sporteventz every 6 h. `yallakora-today` re-reads one day of the same listing, so it is no
+    # slot, like the T−60 entry.
+    assert _sources(slots) == {"ysscores", "legacy", "livesoccertv", "yallakora", "sporteventz"}
     assert len(_at(slots, "yallakora")) == 2
+
+    sporteventz = _at(slots, "sporteventz")
+    assert len(sporteventz) == 8
+    assert sporteventz[0] == T0 + timedelta(minutes=10)
 
     ysscores = _at(slots, "ysscores")
     assert len(ysscores) == 16
@@ -61,6 +66,19 @@ def test_the_slots_cover_the_window_at_the_schedule_rates() -> None:
 def test_the_window_ends_are_inclusive_at_the_slot_minute() -> None:
     window = expected_slots(T0 + timedelta(hours=2, minutes=59), T0 + timedelta(hours=3))
     assert [slot.at for slot in window if slot.source == "ysscores"] == [T0 + timedelta(hours=3)]
+
+
+def test_a_stopped_run_fills_its_slot() -> None:
+    """FR-035: the daily report calls a run that stopped on purpose answered, not missing."""
+    slot = Slot("sporteventz-6h", "sporteventz", T0)
+    run = RunFacts(7, "sporteventz", T0, "stopped", 0, 0)
+
+    [result] = match_slots([slot], [run], [])
+
+    assert result.run == run
+    assert result.flagged is False
+    assert result.reason == "scheduled"
+    assert "stopped" in render_runs([result])[1]
 
 
 def test_the_t60_refresh_is_not_a_coverage_slot() -> None:

@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html xml:lang="en-gb" lang="en-gb" >
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="HandheldFriendly" content="true" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/templates/sportdigga/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="/templates/sportdigga/favicon.ico">
+    <link rel="shortcut icon" type="image/png" sizes="16x16" href="/templates/sportdigga/favicon-16x16.png">
+    <link rel="mask-icon" href="/templates/sportdigga/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+        <script type="text/javascript">
+        if(navigator.appVersion.indexOf("MSIE 9.")!=-1){
+            document.documentElement.className += " ie9";
+        } else if(navigator.appVersion.indexOf("MSIE 8.")!=-1){
+            document.documentElement.className += " ie8";
+        } else if(navigator.appVersion.indexOf("MSIE 7.")!=-1){
+            document.documentElement.className += " ie7";
+        }
+        </script>
+		<!-- Google Analytics opt-out. Must stay ABOVE the GTM snippet: the flag
+	     only takes effect if it is set before the GA4 tag fires. gaOptout() is
+	     linked from the privacy policy articles (de/en/tr/fr/it), so neither the
+	     function name nor the variable names may change. -->
+	<script>
+	(function () {
+		// G-F1Q82RC0FG is the live GA4 property, fired by our own container
+		// GTM-PTHSP49C. The other three are legacy, all fired by the previous
+		// container GTM-M6TNST7 which belonged to an account we had no access to:
+		// a GA4 test property it pulled in through analytics.js, and two retired
+		// UA properties. They are kept so that older opt-out cookies still count,
+		// and so an opt-out still holds if any of them ever resurfaces.
+		var properties = ['G-F1Q82RC0FG', 'G-2SDD3NWLQ0', 'UA-49874252-5', 'UA-49874252-1'];
+		var i;
+
+		function disableAll() {
+			for (i = 0; i < properties.length; i++) {
+				window['ga-disable-' + properties[i]] = true;
+			}
+		}
+
+		// Deleting the analytics cookies is not what switches measurement off -
+		// the ga-disable flags above do that - but an opt-out that leaves _ga
+		// sitting on the device for its full two years is hard to defend, so
+		// clear them as well.
+		function forgetCookie(name) {
+			var expired = '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+			document.cookie = name + expired;
+
+			// GA sets these on the registrable domain, so a delete without a
+			// matching domain attribute is silently ignored. Try each candidate
+			// from the current host upwards; the browser rejects public suffixes.
+			var parts = window.location.hostname.split('.');
+
+			while (parts.length > 1) {
+				document.cookie = name + expired + '; domain=' + parts.join('.');
+				document.cookie = name + expired + '; domain=.' + parts.join('.');
+				parts.shift();
+			}
+		}
+
+		// _ga, _ga_<measurement id>, and the retired _gid / _gat_* variants
+		function clearAnalyticsCookies() {
+			var all = document.cookie.split(';');
+			var j, name;
+
+			for (j = 0; j < all.length; j++) {
+				name = all[j].split('=')[0].replace(/^\s+/, '');
+
+				if (/^_ga($|_)/.test(name) || name === '_gid' || /^_gat/.test(name)) {
+					forgetCookie(name);
+				}
+			}
+		}
+
+		// an opt-out cookie for any one of them counts as an opt-out for all,
+		// so visitors who opted out before the GA4 switch stay opted out. Also
+		// clears anything GA left behind on an earlier visit, before the opt-out.
+		for (i = 0; i < properties.length; i++) {
+			if (document.cookie.indexOf('ga-disable-' + properties[i] + '=true') > -1) {
+				disableAll();
+				clearAnalyticsCookies();
+				break;
+			}
+		}
+
+		// linked from the privacy policy articles (de/en/tr/fr/it) - do not rename
+		window.gaOptout = function () {
+			for (i = 0; i < properties.length; i++) {
+				document.cookie = 'ga-disable-' + properties[i]
+					+ '=true; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/; SameSite=Lax';
+			}
+			disableAll();
+			clearAnalyticsCookies();
+		};
+
+		// kept in case anything still references the previous variable names
+		window.gaProperty = properties[0];
+		window.disableStr = 'ga-disable-' + properties[0];
+	})();
+	</script>
+	<!-- End Google Analytics opt-out -->
+
+	<!-- Google Consent Mode v2. Must stay ABOVE the GTM snippet: the default
+	     state has to reach the dataLayer before any tag fires. Source of truth is
+	     the web357 cookie bar's consent cookie. The ad_* signals stay denied
+	     permanently - the container holds a single GA4 tag and Google Signals is
+	     off on G-F1Q82RC0FG, so nothing consumes them. The gaOptout() block above
+	     is a harder block (ga-disable stops sending outright) and so takes
+	     precedence over whatever consent state is set here. -->
+	<script>
+	(function () {
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		if (!window.gtag) { window.gtag = gtag; }
+
+		var consentCookie = "cookiesDirective";
+
+		gtag('consent', 'default', {
+			'ad_storage': 'denied',
+			'ad_user_data': 'denied',
+			'ad_personalization': 'denied',
+			'analytics_storage': 'denied',
+			'functionality_storage': 'granted',
+			'security_storage': 'granted'
+		});
+
+		// the bar writes <name>=1 for 365 days once the visitor accepts
+		if (('; ' + document.cookie).indexOf('; ' + consentCookie + '=1') > -1) {
+			gtag('consent', 'update', { 'analytics_storage': 'granted' });
+		}
+
+		// On a normal page the bar sets its cookie without reloading, so bind
+		// alongside its own delegated handlers to catch the current pageview too.
+		// Binding on document rather than editing the plugin keeps this working
+		// across plugin updates.
+		document.addEventListener('click', function (e) {
+			var el = e.target;
+
+			if (!el || typeof el.closest !== 'function') {
+				return;
+			}
+
+			if (el.closest('.cpnb-allow-btn')) {
+				gtag('consent', 'update', { 'analytics_storage': 'granted' });
+			} else if (el.closest('.cpnb-button-decline')) {
+				gtag('consent', 'update', { 'analytics_storage': 'denied' });
+			}
+		}, true);
+	})();
+	</script>
+	<!-- End Google Consent Mode v2 -->
+
+		<!-- Google Tag Manager -->
+	<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+	new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+	j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+	'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+	})(window,document,'script','dataLayer','GTM-PTHSP49C');</script>
+	<!-- End Google Tag Manager -->
+
+	    <base href="https://www.sporteventz.com/en/other-sport/handball.html" />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="sport, live on sat, live on tv, live on sat alternative" />
+	<meta name="description" content="SportEventz provides TV and satellite sports schedules with broadcasting channel details such as frequency, channel - free and encrypted. SportEventz also provides detailed channel information for unencrypted (free) sport events. Get everything that's live on sat." />
+	<meta name="generator" content="Joomla! - Open Source Content Management" />
+	<title>Handball - SportEventz | Live sports schedule on TV</title>
+	<link href="/templates/sportdigga/favicon.ico" rel="shortcut icon" type="image/vnd.microsoft.icon" />
+	<link href="/components/com_magictable/js/jtable/themes/magictable/jtable_magictable.css" rel="stylesheet" type="text/css" />
+	<link href="/components/com_sporteventzads/sead.css" rel="stylesheet" type="text/css" />
+	<link href="/media/mod_languages/css/template.css?67f885073372520ee11e16036485b1ca" rel="stylesheet" type="text/css" />
+	<link href="/templates/sportdigga/css-compiled/menu-c9455d230ffbb5573dcda7f8e0e84171.css" rel="stylesheet" type="text/css" />
+	<link href="/libraries/gantry/css/grid-responsive.css" rel="stylesheet" type="text/css" />
+	<link href="/templates/sportdigga/css-compiled/bootstrap.css" rel="stylesheet" type="text/css" />
+	<link href="/templates/sportdigga/css-compiled/master-53b660f31c3196e387376bf3de1f4e40.css" rel="stylesheet" type="text/css" />
+	<link href="/templates/sportdigga/css-compiled/mediaqueries.css" rel="stylesheet" type="text/css" />
+	<link href="/templates/sportdigga/css/sportdigga-custom.css" rel="stylesheet" type="text/css" />
+	<link href="/plugins/system/cookiespolicynotificationbar/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<style type="text/css">
+
+h1,h2,h3,h4,h5,h6,.title { font-family: 'lucida', 'Helvetica', arial, sans-serif; font-weight: 200; }
+
+body { font-family: 'lucida', 'Helvetica', arial, sans-serif; font-weight: lighter; }
+
+.gf-menu, .gf-menu .item, .breadcrumb { font-family: 'lucida', 'Helvetica', arial, sans-serif; font-weight: lighter;}
+
+
+/* BEGIN: Cookies Policy Notification Bar - J! system plugin (Powered by: Web357.eu) */
+.cpnb-outer { border-color: rgba(32, 34, 38, 1); }
+.cpnb-outer.cpnb-top { border-bottom-width: 1px; }
+.cpnb-outer.cpnb-bottom { border-top-width: 1px; }
+.cpnb-message { color: #f1f1f3; }
+.cpnb-message a { color: #ffffff }
+.cpnb-button { -webkit-border-radius: 4px; -moz-border-radius: 4px; border-radius: 4px; font-size: 12px; color: #ffffff; background-color: rgba(59, 137, 199, 1); }
+.cpnb-button:hover, .cpnb-button:focus { color: #ffffff; background-color: rgba(49, 118, 175, 1); }
+.cpnb-button-decline, .cpnb-button-decline-modal { color: #ffffff; background-color: rgba(119, 31, 31, 1); }
+.cpnb-button-decline:hover, .cpnb-button-decline:focus, .cpnb-button-decline-modal:hover, .cpnb-button-decline-modal:focus { color: #ffffff; background-color: rgba(175, 38, 20, 1); }
+.cpnb-button-cancel, .cpnb-button-cancel-modal { color: #ffffff; background-color: rgba(90, 90, 90, 1); }
+.cpnb-button-cancel:hover, .cpnb-button-cancel:focus, .cpnb-button-cancel-modal:hover, .cpnb-button-cancel-modal:focus { color: #ffffff; background-color: rgba(54, 54, 54, 1); }
+.cpnb-button-more-default, .cpnb-button-more-modal { color: #ffffff; background-color: rgba(123, 138, 139, 1); }
+.cpnb-button-more-default:hover, .cpnb-button-more-modal:hover, .cpnb-button-more-default:focus, .cpnb-button-more-modal:focus { color: #ffffff; background-color: rgba(105, 118, 119, 1); }
+/* center alignment */
+.cpnb-message { text-align: center; float: none; display: inline-block; }
+.cpnb-buttons { display: inline-block; float: none; margin-left: 20px; }
+@media (max-width: 1580px) {
+  .cpnb-message { float: none; display: block; width: 100%; display: block; clear: both; margin-bottom: 15px; }
+  .cpnb-buttons { float: none; display: block; width: 100%; clear: both; text-align: center; margin-top: 0; margin-left: 0; margin-bottom: 10px; right: 0; position: relative; }
+}
+/* END: Cookies Policy Notification Bar - J! system plugin (Powered by: Web357.eu) */
+
+	</style>
+	<script type="application/json" class="joomla-script-options new">{"csrf.token":"eadc7dbc4b1c611e8607e9ef9bba19cf","system.paths":{"root":"","base":""},"system.keepalive":{"interval":3540000,"uri":"\/en\/component\/ajax\/?format=json"}}</script>
+	<script src="/media/system/js/core.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<!--[if lt IE 9]><script src="/media/system/js/polyfill.event.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script><![endif]-->
+	<script src="/media/system/js/keepalive.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<script src="/components/com_magictable/js/jquery/jq.min.js" type="text/javascript"></script>
+	<script src="/components/com_magictable/js/jquery/withinViewport.js" type="text/javascript"></script>
+	<script src="/components/com_magictable/js/jquery/jq.withinViewport.js" type="text/javascript"></script>
+	<script src="/components/com_magictable/js/jquery/jq-ui.min.js" type="text/javascript"></script>
+	<script src="/components/com_magictable/js/jtable/jq.jtable.min.js" type="text/javascript"></script>
+	<script src="/media/jui/js/jquery.min.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<script src="/media/jui/js/jquery-noconflict.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<script src="/media/jui/js/jquery-migrate.min.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<script src="/media/system/js/mootools-core.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<script src="/media/system/js/mootools-more.js?67f885073372520ee11e16036485b1ca" type="text/javascript"></script>
+	<script src="/libraries/gantry/js/browser-engines.js" type="text/javascript"></script>
+	<script src="/templates/sportdigga/js/rokmediaqueries.js" type="text/javascript"></script>
+	<script src="/modules/mod_roknavmenu/themes/default/js/rokmediaqueries.js" type="text/javascript"></script>
+	<script src="/modules/mod_roknavmenu/themes/default/js/sidemenu.js" type="text/javascript"></script>
+	<script src="/plugins/system/cookiespolicynotificationbar/assets/js/jquery.cookiesdirective.js" type="text/javascript"></script>
+	<script type="text/javascript">
+jQuery.noConflict();
+
+                        jQuery(document).ready(
+                            function(){
+                                if( jQuery("#rt-logo-img").get(0) ){ 
+                                    jQuery("#rt-logo-img").get(0).src="/images/headers/logo-small.png";
+                                }
+                        });
+                        
+
+
+// BEGIN: Cookies Policy Notification Bar - J! system plugin (Powered by: Web357.eu)
+var cpnb_config = {"w357_position":"bottom","w357_duration":"60","w357_animate_duration":"2000","w357_limit":"0","w357_message":"We use cookies to improve your experience on our website. By browsing this website, you agree to our use of cookies.","w357_buttonText":"Ok, I\u0027ve understood!","w357_display_decline_btn":"1","w357_buttonDeclineText":"Decline","w357_display_cancel_btn":"0","w357_buttonCancelText":"Cancel","w357_buttonMoreText":"More Info","w357_buttonMoreLink":"","w357_display_more_info_btn":"1","w357_fontColor":"#f1f1f3","w357_linkColor":"#ffffff","w357_fontSize":"12px","w357_backgroundColor":"rgba(50, 58, 69, 1)","w357_height":"auto","w357_line_height":"","w357_cookie_name":"cookiesDirective","w357_link_target":"_self","w357_popup_width":"800","w357_popup_height":"600","w357_customText":"\u003Ch1\u003ECookies Policy\u003C\/h1\u003E\u003Chr\u003E\u003Ch3\u003EGeneral Use\u003C\/h3\u003E\u003Cp\u003EWe use cookies, tracking pixels and related technologies on our website. Cookies are small data files that are served by our platform and stored on your device. Our site uses cookies dropped by us or third parties for a variety of purposes including to operate and personalize the website. Also, cookies may also be used to track how you use the site to target ads to you on other websites.\u003C\/p\u003E\u003Ch3\u003EThird Parties\u003C\/h3\u003E\u003Cp\u003EOur website employs the use the various third-party services. Through the use of our website, these services may place anonymous cookies on the Visitor\u0026apos;s browser and may send their own cookies to the Visitor\u0026apos;s cookie file. Some of these services include but are not limited to: Google, Facebook, Twitter, Adroll, MailChimp, Sucuri, Intercom and other social networks, advertising agencies, security firewalls, analytics companies and service providers. These services may also collect and use anonymous identifiers such as IP Address, HTTP Referrer, Unique Device Identifier and other non-personally identifiable information and server logs.\u003C\/p\u003E\u003Chr\u003E","w357_more_info_btn_type":"custom_text","w357_blockCookies":"0","w357_enableConfirmationAlerts":"1","w357_confirm_allow_msg":"Performing this action will enable all cookies set by this website. Are you sure that you want to enable all cookies on this website?","w357_confirm_delete_msg":"Performing this action will remove all cookies set by this website. Are you sure that you want to disable and delete all cookies from your browser?","w357_show_in_iframes":"0","w357_shortcode_is_enabled_on_this_page":0,"w357_base_url":"","w357_always_display":"0"};
+// END: Cookies Policy Notification Bar - J! system plugin (Powered by: Web357.eu)
+
+	</script>
+        <script type="text/javascript" src="/templates/sportdigga/js/vendor/jquery-ui.min.js"></script>
+        
+        <script type="text/javascript">
+        <!--
+            // windows phone IE10 snap mode fix
+            (function() {
+                    if ("-ms-user-select" in document.documentElement.style && ( navigator.userAgent.match(/IEMobile\/10\.0/) || navigator.userAgent.match(/IEMobile\/11\.0/) ) ) {
+                            var msViewportStyle = document.createElement("style");
+                            msViewportStyle.appendChild(
+                                    document.createTextNode("@-ms-viewport{width:auto!important}")
+                            );
+                            document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+                    }
+            })();
+        //-->
+        </script>
+
+        <script type="text/javascript">
+        <!--
+        jQuery(document).ready(function(){
+
+            setTimeout(function(){
+
+
+                    if(jQuery('#rt-showcase').size() !== 0){
+                        jQuery('#rt-mainbody-surround').css('margin-top','0');
+                        jQuery('#rt-mainbody-surround').css('padding-top','0');
+                    }
+                    if(jQuery('.gf-menu-device-wrapper-sidemenu').size() === 0){
+
+                        jQuery('.gf-menu-toggle').addClass('ct-toggle-disabled');
+                        jQuery('#ct-menu').prepend(jQuery('.responsive-type-selectbox'));
+
+                    }
+                }
+
+            ,1);
+
+            jQuery('.mod-languages').closest('[class^="item"]').css('display','none');
+            setTimeout(function(){
+                jQuery('#rt-footer .dropdown-toggle > img').after(' ');
+                jQuery('#rt-footer .mod-languages .dropdown-menu a > img').after(' ');
+                //jQuery('.mod-languages').closest('[class^="item"]').html('<div class="mod-languages">'+jQuery('.mod-languages').html()+'</div>');
+                //jQuery('.mod-languages').closest('[class^="item"]').css('display','block');
+
+                //if(jQuery('.rt-container').css('width') == '480px'){
+                    // jQuery('.mod-languages').css('display','block');
+                    // jQuery('.mod-languages').css('position','absolute');
+                    // jQuery('.mod-languages').css('top','10px');
+                    // jQuery('.mod-languages').css('right','10px');
+                    // jQuery('#ct-menu').append(jQuery('.mod-languages'));
+                //}
+
+            }, 1000);
+
+            
+            // keep the entire menu centered
+            jQuery.fn.sport_menu_center = function ()
+            {
+                var newWidth = 0;
+                jQuery('#ct-menu-surround .gf-menu.l1 > li').each(
+                        function(){
+                            newWidth += jQuery(this).width();
+                        }
+                );
+                if(newWidth > 0){
+                    jQuery('#ct-menu-surround .gf-menu').width(newWidth);
+                }
+                return this;
+            };
+
+            jQuery('#ct-menu-surround .gf-menu').sport_menu_center();
+            jQuery(window).resize(function(){
+                jQuery('#ct-menu-surround .gf-menu').sport_menu_center();
+            });
+            
+            // remove empty module menu items
+            jQuery('.gf-menu .module-content').each(
+                    function(){
+                        if(jQuery.trim(jQuery(this).html()) == ""){
+                            jQuery(this).closest('li').css("display","none");
+                        }
+                    }
+            );
+
+            // enable the menu if everything is setup
+            jQuery('#ct-menu').css("display","block");
+
+            // find closest rt-container and prepend the modules with class suffix ct-first
+            jQuery('.ct-first-showcase').closest('.rt-container').prepend(jQuery('.ct-first-showcase'));
+            jQuery('.ct-first-feature').closest('.rt-container').prepend(jQuery('.ct-first-feature'));
+            jQuery('.ct-first-bottom').closest('.rt-container').prepend(jQuery('.ct-first-bottom'));
+                        jQuery('body').append('<div id="toTop"><li class="icon-chevron-up"></li></div>');
+            var reachedBottom = 0;
+            var currentPos = 0;
+            jQuery(window).scroll(function () {
+                if (jQuery(this).scrollTop() != 0) {
+                    jQuery('#toTop').fadeIn();
+                    if (jQuery(window).width() < 620) {
+                        if ((Number(jQuery(this).scrollTop()) + Number(jQuery(window).height())) >  Number(jQuery(document).height()) - 20) {
+                            reachedBottom = 1;
+                            if (reachedBottom == 1 && currentPos == 0) {
+                                jQuery('#toTop').animate({
+                                    bottom: '90px'    
+                                }, 200);
+                                currentPos = 1;
+                            }
+                        } else {
+                            reachedBottom = 0;
+                            if (reachedBottom == 0 && currentPos == 1) {
+                                jQuery('#toTop').animate({
+                                    bottom: '20px'    
+                                }, 200);
+
+                                currentPos = 0;
+                            }
+                        }
+                    }                            
+                } else {
+                    jQuery('#toTop').fadeOut();
+                }
+            });
+            window.addEvent("domready",function(){var b=document.id("toTop");if(b){var a=new Fx.Scroll(window);b.setStyle("outline","none").addEvent("click",function(c){c.stop(); a.toTop();});}});
+                    });
+        //-->
+        </script>
+        		<script>
+		jQuery(document).ready(function() {
+			const slider = document.querySelector('.slider');
+			if (slider !== null) {
+				jQuery('.slider').slick({
+					accessibility: true,
+					autoplay: true,
+					arrows: true,
+					dots: true
+				});
+			}
+		});
+		</script>
+		<link rel="stylesheet" type="text/css" href="/templates/sportdigga/css/vendor/slick.css">
+		<link rel="stylesheet" type="text/css" href="/templates/sportdigga/css/slick-theme.css"/>
+        <style>
+            .desktop{}
+            .laptop{
+                display: none;
+            }
+            .mobile{
+                display: none;
+            }
+            .bet365{
+                 display: flex;
+                 justify-content: space-between;
+                 margin: 40px 0;
+            }
+            .rt-mobile{
+                padding: 40px 0 !important;
+            }
+            @media screen and (max-width: 1600px) {
+                        
+              .desktop {
+                display: none;
+              }
+              .laptop{
+                display: unset;                  
+                min-width: 300px;
+                height: 250px;
+                margin-right: -25px;
+                margin-left: 25px;
+                padding-bottom: 100px;
+
+              }
+              .bet365{
+                display: block;
+                 /* justify-content: space-between; */
+                 margin: 20px 0;
+                 padding-bottom: 100px;
+            }
+              /* .mobile{
+                  display: unset;                  
+                  min-width: 320px;
+                  height: 100px;
+                  margin-right: -25px;
+                  margin-left: 25px;
+              } */
+              .rt-mobile{
+                   padding-top: 270px  !important;
+               }
+            }
+            @media screen and (max-width: 766px) {               
+
+                .laptop{
+                    display: none;
+                }
+                .mobile{
+                  display: unset;                  
+                  min-width: 320px;
+                  height: 100px;
+                  margin-right: -25px;
+                  margin-left: 25px; */
+                }
+                .bet365{
+                    /* display: flex; */
+                    flex-direction: column;
+                    flex-wrap: wrap;
+                    margin: 40px 0;
+                }
+                .rt-mobile{
+
+                    padding: 150px 0 !important;
+                }
+            }
+            @media screen and (max-width: 480px) {
+                .bet365{
+                    display: flex;
+                    flex-direction: column;
+                    flex-wrap: wrap;
+                    margin: 0;
+                    gap: 70px;
+                }
+               .rt-mobile{
+                   padding: 150px 0 !important;
+               }
+               .laptop{
+                   display: none;
+               }
+               .mobile{
+                  display: unset;                  
+                  min-width: 320px;
+                  height: 100px;
+                  margin-right: -25px;
+                  margin-left: 60px;
+              }
+                
+            }
+
+        </style>
+		
+</head>
+<body  class="logo-type-custom logo_small-type-gantry font1-family1-s:lucida font1-weight1-200 font2-family2-s:lucida font2-weight2-lighter font3-family3-s:lucida font3-weight3-lighter menu-type-dropdownmenu layout-mode-responsive col12">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PTHSP49C"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+   
+   <!--<div id="apple-badge-desktop"><a href="https://itunes.apple.com/US/app/id979406502?mt=8"><img src="/images/download.png" /></a></div>
+    -->
+        <div id="ct-menu-surround">
+        <div id="ct-menu">
+            <div class="rt-container">
+                    <div class="rt-grid-12 rt-alpha rt-omega">
+            <div class="rt-block logo-block-small">
+            <a href="/" id="rt-logo-small"><img id="rt-logo-small-img" alt="" src="/media/SE_logo.svg" alt=""/></a>
+        </div>
+        
+           <div class="rt-block ">
+           	<div class="module-surround">
+	           		                	<div class="module-content">
+	                		<ul class="nav menu mod-list">
+<li class="item-438"><a href="/en/sport-eventz.html" >SportEventz</a></li><li class="item-439"><a href="/en/contact.html" >Contact</a></li></ul>
+	                	</div>
+                	</div>
+           </div>
+	
+</div>
+                    <div class="clear"></div>
+            </div>
+        </div>
+        <div id="ct-logo-block"></div>
+    </div>
+
+   
+    
+
+
+
+	        <div id="ct-showcase-divider"></div>
+
+	<div id="rt-transition">
+                <div id="rt-mainbody-surround">
+                                                <div id="rt-drawer">
+                            <div class="rt-container">
+                                                                <div class="clear"></div>
+                            </div>
+                        </div>
+                        																					<div class="rt-container rt-mobile">
+                              
+<div id="rt-main" class="sa3-mb9">
+                <div class="rt-container">
+                    <div class="rt-grid-9 rt-push-3">
+                                                						<div class="rt-block">
+	                        <div id="rt-mainbody">
+								<div class="component-content">
+	                            	        <script type="text/javascript">
+            let adCnt = 1;
+            $(document).on({
+                "contextmenu": function(e) {
+                    //e.preventDefault();
+                }
+            });
+
+            function magictable_closeAllSubs(e){
+                if(e == null || jQuery(e.target).is('.magictableSub, .MagicTableSubEntryRowWrap, .MagicTableSubEntryHeadline h3, .MagicTableSubEntryHeadline h3 .icon-remove')){
+                    jQuery('body').off('click', magictable_closeAllSubs);
+                    jQuery('body').off('touchstart', magictable_closeAllSubs);
+                    jQuery('.magictableSub').css("display","none");
+                    jQuery('.magictableSub').each(
+                        function(){
+                            if(jQuery(this).css("z-index") == '999999'){
+                                jQuery(this).css("position","relative");
+                            }
+                        }
+                    );
+                    setTimeout(function(){
+                        jQuery('.MagicTableRowMoreButton').each(function(){
+                            jQuery(this).get(0).disabled = false;
+                        });
+                    }, 500);
+                }
+            }
+
+            function magictable_openSub(id){
+                jQuery('.MagicTableRowMoreButton').css("display","inline-block");
+                if(jQuery('#'+id).css("z-index") == '999999'){
+                    if(jQuery('#'+id).css("position") != "fixed"){
+                        jQuery('.magictableSub').css("display","none");
+                        jQuery('#'+id).css("display","inline-block");
+                        jQuery('#'+id).css("position","fixed");
+                        setTimeout(function(){jQuery('body').on('click', magictable_closeAllSubs)}, 100);
+                        setTimeout(function(){jQuery('body').on('touchstart', magictable_closeAllSubs)}, 100);
+                        jQuery('.MagicTableRowMoreButton').attr('disabled', 'disabled');
+                    }
+                }else{
+                    if(jQuery('#'+id).css("display") != "inline-block"){
+                        jQuery('.magictableSub').css("display","none");
+                        jQuery('#'+id).css("display","inline-block");
+                        jQuery('#btn'+id).css("display","none");
+                    }else{
+                        magictable_closeAllSubs(null);
+                    }
+                }
+
+                magictable_keepNonFreeClosed();
+            }
+
+            function magictable_displayExpiredEvents(){
+                jQuery('.MagicTableRowHide').each(
+                    function(){
+                        if(jQuery(this).css('display') == 'none'){
+                            jQuery(this).css('display','block');
+                            jQuery('#MagicTableExpiredEvents').html("Hide Expired Eventz");
+                        }else{
+                            jQuery(this).css('display','none');
+                            jQuery('#MagicTableExpiredEvents').html("Display Expired Eventz");
+                        }
+                    }
+                );
+            }
+
+
+
+            var keep_channels_closed = 1;
+            function magictable_keepChannelsClosed(){
+                if(keep_channels_closed == 0){
+                    location.href = "/index.php?option=com_magictable&return=aHR0cHM6Ly93d3cuc3BvcnRldmVudHouY29tL2VuL290aGVyLXNwb3J0L2hhbmRiYWxsLmh0bWw=&keep_channels_closed=1&&Itemid=259";
+                } else {
+                    location.href = "/index.php?option=com_magictable&return=aHR0cHM6Ly93d3cuc3BvcnRldmVudHouY29tL2VuL290aGVyLXNwb3J0L2hhbmRiYWxsLmh0bWw=&keep_channels_closed=0&&Itemid=259";
+                }
+            }
+
+            var free_channels_only = 1;
+            function magictable_freeChannels(){
+                if(free_channels_only == 0){
+                    location.href = "/index.php?option=com_magictable&return=aHR0cHM6Ly93d3cuc3BvcnRldmVudHouY29tL2VuL290aGVyLXNwb3J0L2hhbmRiYWxsLmh0bWw=&free_channels_only=1&&Itemid=259";
+                } else {
+                    location.href = "/index.php?option=com_magictable&return=aHR0cHM6Ly93d3cuc3BvcnRldmVudHouY29tL2VuL290aGVyLXNwb3J0L2hhbmRiYWxsLmh0bWw=&free_channels_only=0&&Itemid=259";
+                }
+            }
+
+            function magictable_keepNonFreeClosed(){
+                if(free_channels_only == 0){
+                    jQuery('.MagicTableNonFreeChannel').css('display','none');
+                }
+            }
+
+            $(document).ready(function () {
+				
+				// var c_cipher = "zyxwvutsrqponmlkjihgfedcba";
+                // var c_plain = "abcdefghijklmnopqrstuvwxyz";
+				
+                // function encrypt(text) {
+                //     plain = c_plain + c_plain.toUpperCase();
+                //     cipher = c_cipher + c_cipher.toUpperCase();
+                //     var newText = '';
+                //     for(var i=0; i<text.length; i++) {
+                //         var c = text.charAt(i);
+                //         var index = plain.indexOf(c);
+                //         if(index >= 0 && index < cipher.length) {
+                //             newText += cipher.charAt(index);
+                //         } else {
+                //             newText += c;
+                //         }
+                //     }
+                //     return newText;
+                // }
+
+                /*
+                $('#jform_offset').val('UTC');
+                $('#jform_offset').on('change',
+                    function(){
+                        location.href = "/index.php?option=com_magictable&return=aHR0cHM6Ly93d3cuc3BvcnRldmVudHouY29tL2VuL290aGVyLXNwb3J0L2hhbmRiYWxsLmh0bWw=&set_timezone_offset=1&timezone_offset="+$('#jform_offset').val()+"&Itemid=259";
+                    }
+                );
+
+                $("#jform_offset option[value='Europe/Istanbul']").prependTo('#jform_offset');
+                $("#jform_offset option[value='Europe/Berlin']").prependTo('#jform_offset');
+                $("#jform_offset option[value='Europe/London']").prependTo('#jform_offset');
+                */
+
+                var client_tz_offset = new Date().toString().match(/([-\+][0-9]+)\s/)[1];
+
+                $('#MagicTableContainer').jtable({
+                    title: '',
+                    actions: {
+                        listAction: '/index.php?option=com_magictable&language_code=en&table=1&accesskey=1465636059&se_date=&se_module=&se_id=&Itemid=259&client_tz_offset=' + encodeURIComponent(client_tz_offset)
+                    },
+                    recordsLoaded: function(event, data){
+                           sport_name = "Football";length = 231;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Basketball";length = 77;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Ice Hockey";length = 45;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Tennis";length = 45;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Handball";length = 23;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Golf";length = 2;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Boxing";length = 10;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Rugby";length = 12;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "American Football";length = 11;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Snooker";length = 8;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Table Tennis";length = 2;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Volleyball";length = 28;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Waterpolo";length = 2;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Futsal";length = 5;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "Rink Hockey";length = 1;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        sport_name = "MMA";length = 16;                       $('.item').filter(function() {return $.trim($(this).text()) === sport_name;}).append('<span class="counter">' + length + '</span>');
+
+                        
+                        /*
+                         jQuery(window).on("resize scroll", function() {
+                         jQuery('.viewportCloned').remove();
+                         jQuery(".MagicTableBegin").each(
+                         function(i){
+                         if(withinViewport(jQuery(this).get(0))){
+                         jQuery('#toTop').css('width', '100%');
+                         jQuery('#toTop').css('height', 'auto');
+                         var cloned = jQuery(this).clone().addClass('viewportCloned').appendTo('#toTop'); //MagicTableBegin
+                         }
+                         }
+                         );
+                         });*/
+
+                        if(data.serverResponse.DateOut != ""){
+                            $("#DateOut").html(data.serverResponse.DateOut);
+                        } else {
+                            $("#ListTitle").html("All Events");
+                        }
+
+                        $('#MagicTableContainer').prepend('<button class="btn TopButton" id="MagicTableChannelButtonFreeChannels" onclick="magictable_freeChannels()">'+"<img src='/templates/sportdigga/images/icon_unlocked.png' style='width:10px;height:13px;vertical-align:text-top;' />&nbsp;&nbsp;"+"Free Channels Only"+'</button>');
+
+                        if(free_channels_only == 0){
+                            jQuery('.MagicTableNonFreeChannel').css('display','none');
+                            jQuery('#MagicTableChannelButtonFreeChannels').addClass('MagicTableChannelButtonFreeChannelsWider');
+                            jQuery('#MagicTableChannelButtonFreeChannels').html("<img src='/templates/sportdigga/images/icon_unlocked.png' style='width:12px;height:16px;vertical-align:text-top;' />&nbsp;&nbsp;" + "<img src='/templates/sportdigga/images/icon_locked.png' style='width:12px;height:16px;vertical-align:text-top;' />&nbsp;&nbsp;" + "Free and Crypted Channels");
+                        } else {
+                            jQuery('#MagicTableChannelButtonFreeChannels').removeClass('MagicTableChannelButtonFreeChannelsWider');
+                            jQuery('.MagicTableNonFreeChannel').css('display','inline-block');
+                            jQuery('#MagicTableChannelButtonFreeChannels').html("<img src='/templates/sportdigga/images/icon_unlocked.png' style='width:12px;height:16px;vertical-align:text-top;' />&nbsp;&nbsp;" + "Free Channels Only");
+                        }
+
+                        $('#MagicTableContainer').prepend('<button class="btn TopButton" id="MagicTableChannelButtonKeepClosed" onclick="magictable_keepChannelsClosed()">'+"Hide Channels"+'</button>');
+
+                        if(keep_channels_closed == 0){
+                            jQuery('.MagicTableChannels').css('display','none');
+                            jQuery('#MagicTableChannelButtonKeepClosed').html("Show Channels");
+                            $('.MagicTableChannelButton h3').html("Show Channels");
+                        } else {
+                            jQuery('.MagicTableChannels').css('display','block');
+                            jQuery('#MagicTableChannelButtonKeepClosed').html("Hide Channels");
+                            $('.MagicTableChannelButton h3').html("Hide Channels");
+                        }
+
+                        if(jQuery('.MagicTableRowHide').length > 0){
+                            $('#MagicTableContainer').prepend('<button class="btn TopButton" id="MagicTableExpiredEvents" onclick="magictable_displayExpiredEvents()">'+"Display Expired Eventz"+'</button>');
+                        }
+
+                        $('.MagicTableChannelButton').on('click',
+                            function(){
+                                if($(this).next('.MagicTableChannels').css('display') == 'block'){
+                                    $(this).next('.MagicTableChannels').css('display','none');
+                                    $(this).children('h3').html("Show Channels");
+                                } else {
+                                    $(this).next('.MagicTableChannels').css('display','block');
+                                    $(this).children('h3').html("Hide Channels");
+                                }
+                            }
+                        );
+                    },
+                    fields: {
+                        Begin: {
+                            title: '',
+                            width: '100%',
+                            display: function (data) {
+                                // console.log(data);
+                                var open = '<div class="MagicTableRow'+(typeof data.record.date_diff != "undefined" && data.record.date_diff >= 7200 && data.record.day_diff == 0 ? ' MagicTableRowHide' : '')+'">';
+                                var close = '</div>';
+								// old
+                                var res = '<div class="MagicTableRowHeadline">'+(typeof data.record.Category != "undefined" && typeof data.record.Category['#text'] != "undefined" && data.record.Category['#text'] != "" ? data.record.Category['#text'] + ', ' : '')+(typeof data.record.Tournament != "undefined" && data.record.Tournament['#text'] != "undefined" && data.record.Tournament['#text'] ? data.record.Tournament['#text'] : '')+'</div>';
+                               res += '<div class="MagicTableRowMainData"><h1><div class="MagicTableRowMainDataHolder"><div class="MagicTableRowMainHomeTeam"><div style="background: url(/components/com_magictable/flags/'+(!data.record.Team1CountryCode || typeof data.record.Team1CountryCode.toLowerCase == "undefined" ? 'redcross' : data.record.Team1CountryCode.toLowerCase())+'.png) no-repeat center center; width: 18px; height: 18px; white-space: nowrap; display: inline-block; margin-right: 10px; background-size: 100% 100%;" class="MagicTableLeftFlag"></div><span class="MagicTableRowMainHomeTeamName">'+ data.record.Team1['#text'] + '</span></div><span class="MagicTableRowMainVs"> vs. </span><div class="MagicTableRowMainAwayTeam"><span class="MagicTableRowMainAwayTeamName">' + data.record.Team2['#text']+'</span> <div style="background: url(/components/com_magictable/flags/'+(!data.record.Team2CountryCode || typeof data.record.Team2CountryCode.toLowerCase == "undefined" ? 'redcross' : data.record.Team2CountryCode.toLowerCase())+'.png) no-repeat center center; width: 18px; height: 18px; white-space: nowrap; display: inline-block; margin-left: 5px; background-size: 100% 100%;" class="MagicTableRightFlag"></div></div></div></h1></div>';
+                                // var res = '<div class="MagicTableRowHeadline"><span class="matchInfo">'+encrypt((typeof data.record.Category != "undefined" && typeof data.record.Category['#text'] != "undefined" && data.record.Category['#text'] != "" ? data.record.Category['#text'] + ', ' : '')+(typeof data.record.Tournament != "undefined" && data.record.Tournament['#text'] != "undefined" && data.record.Tournament['#text'] ? data.record.Tournament['#text'] : ''))+'</span></div>';
+                                // res += '<div class="MagicTableRowMainData"><h1><div style="background: url(/components/com_magictable/flags/'+(typeof data.record.Team1CountryCode == "undefined" || typeof data.record.Team1CountryCode.toLowerCase == "undefined" ? 'redcross' : data.record.Team1CountryCode.toLowerCase())+'.png) no-repeat center center; width: 18px; height: 18px; white-space: nowrap; display: inline-block; margin-right: 10px; background-size: 100% 100%;" class="MagicTableLeftFlag"></div><span class="matchInfo" >'+encrypt(data.record.Team1['#text'] + " vs " + data.record.Team2['#text'])+'</span> <div style="background: url(/components/com_magictable/flags/'+(typeof data.record.Team2CountryCode == "undefined" || typeof data.record.Team2CountryCode.toLowerCase == "undefined" ? 'redcross' : data.record.Team2CountryCode.toLowerCase())+'.png) no-repeat center center; width: 18px; height: 18px; white-space: nowrap; display: inline-block; margin-left: 5px; background-size: 100% 100%;" class="MagicTableRightFlag"></div></h1></div>';
+                                res += '<div class="MagicTableRowFootline MagicTableBegin"><h3>'+data.record.Begin+'</h3></div>';
+
+                                var resCompound = {};
+
+                                var channelz = data.record.Channels.Channel;
+                                var filterChannelsIds = ["30430", "30431", "30432", "30433", "30434", "30435", "30436", "30437", "30438", "30439", "30440", "30441", "30442", "30622", "30623", "30624", "30920", "30921", "30974", "30975", "30976", "30977", "30979", "31125",  "31171", "31172", "31173", "31177", "31178", "31327", "30428", "31126", "31170", "31688", "31689", "31690", "31692"];
+                                var filterChannelsNames = ["Channel49", "Channel12","Channel13", "Channel14","Channel15","Channel16", "Channel17","Channel18","Channel21","Channel22","Channel23","Channel24","Channel25","Channel26","Channel27","Channel28","Channel31","Channel32","Channel33","Channel34","Channel35","Channel36","Channel37","Channel38","Channel39","Channel40","Channel41","Channel44","Channel45","Channel46","Channel47","Channel48","Channel50","Channel11","Channel42","Channel43","Channel52","Channel53","Channel54","Channel51"];
+                                if(typeof data.record.Channels.Channel != "undefined" && typeof data.record.Channels.Channel.length != "undefined"){
+                                    for(var i = 0; i < data.record.Channels.Channel.length; i++){
+                                        if(!filterChannelsIds.includes(channelz[i]["@id"]) && !filterChannelsNames.includes(channelz[i].Name))
+                                        populateChannel(data, resCompound, channelz[i]);
+                                    }
+                                } else {
+                                    if(typeof data.record.Channels.Channel != "undefined"){
+                                        if(!filterChannelsIds.includes(channelz["@id"]) && !filterChannelsNames.includes(channelz.Name))
+                                        populateChannel(data, resCompound, channelz);
+                                    }
+                                }
+
+                                if( keep_channels_closed == 0 ) {
+                                    res += '<button class="btn MagicTableChannelButton"><h3>'+"Hide Channels"+'</h3></button>';
+                                }
+
+                                res += '<div class="MagicTableChannels">';
+                                for(var key in resCompound){
+
+                                    res += resCompound[key]['head'];
+                                    res += '<div class="MagicTableSubEntryRowWrap">';
+                                    for(var j = 0; j < resCompound[key]['subentries'].length; j++){
+                                        res += resCompound[key]['subentries'][j];
+                                    }
+                                                                        res += '</div>';
+                                    res += resCompound[key]['foot'];
+                                }
+                                res += '</div>';
+                                ad = '';
+                                                                if (typeof data.record.date_diff != 'undefined' && data.record.date_diff >= 10800) {
+                                    adCnt--;
+                                }
+                                adCnt++;
+                                return open+res+close+ad;
+                            }
+                        },
+                    }
+                });
+                $('#MagicTableContainer').jtable('load');
+            });
+
+            function populateChannel(data, resCompound, channelz){
+                var isFirst = false;
+
+                if(!resCompound[channelz.Name]){
+
+                    isFirst = true;
+                    resCompound[channelz.Name] = {};
+
+                    resCompound[channelz.Name]['head']  = '<div id="sub'+data.record['@id']+channelz['@id']+'" style="display:none;" class="magictableSub">';
+                    resCompound[channelz.Name]['head'] += '<div onclick="magictable_openSub(\'sub'+data.record['@id']+channelz['@id']+'\');" class="MagicTableSubEntryHeadline"><h3>'+channelz.Name+' <span class="icon-remove"></span></h3></div>';
+
+                }
+
+                if(!resCompound[channelz.Name]['subentries']){
+                    resCompound[channelz.Name]['subentries'] = new Array();
+                }
+
+                var subentry = '<div class="MagicTableSubEntryRow">';
+                subentry += '<div style="width: 20%;" class="MagicTableSubEntry"><strong>'+"Name"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.Name == "undefined" ? 'not available' : channelz.Satellite.Name)+'</div></div>';
+                subentry += '<div style="width: 10%;" class="MagicTableSubEntry"><strong>'+"Position"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.Pos == "undefined" ? 'not available' : channelz.Satellite.Pos)+'</div></div>';
+                subentry += '<div style="width: 10%;" class="MagicTableSubEntry"><strong>'+"Frequency"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.SatFreq == "undefined" ? 'not available' : channelz.Satellite.SatFreq)+'</div></div>';
+                subentry += '<div style="width: 10%;" class="MagicTableSubEntry"><strong>'+"Polarisation"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.Polarisation == "undefined" ? 'not available' : channelz.Satellite.Polarisation)+'</div></div>';
+                subentry += '<div class="MagicTableSubEntry"><strong>'+"SR"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.SR == "undefined" ? 'not available' : channelz.Satellite.SR)+'</div></div>';
+                subentry += '<div class="MagicTableSubEntry"><strong>'+"FEC"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.FEC == "undefined" ? 'not available' : channelz.Satellite.FEC)+'</div></div>';
+                subentry += '<div class="MagicTableSubEntry"><strong>'+"System"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.System == "undefined" ? 'not available' : channelz.Satellite.System)+'</div></div>';
+                subentry += '<div class="MagicTableSubEntry"><strong>'+"Modulation"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.Modulation == "undefined" ? 'not available' : channelz.Satellite.Modulation)+'</div></div>';
+                subentry += '<div class="MagicTableSubEntry"><strong>'+"Crypt"+'</strong>';
+                subentry += '<div>'+(typeof channelz.Satellite.Crypt == "undefined" ? 'not available' : channelz.Satellite.Crypt)+'</div></div>';
+                subentry += '</div>';
+
+                resCompound[channelz.Name]['subentries'].push(subentry);
+
+                var freeClass = 'MagicTableNonFreeChannel';
+                if(channelz.Satellite.Crypt != "undefined" && typeof channelz.Satellite.Crypt != "undefined" && channelz.Satellite.Crypt.length && ( channelz.Satellite.Crypt.toLowerCase() == 'frei' || channelz.Satellite.Crypt.toLowerCase() == 'free' ) ){
+                    freeClass = 'MagicTableFreeChannel';
+                }
+
+                if(isFirst){
+                    resCompound[channelz.Name]['foot']  = '</div>';
+                    resCompound[channelz.Name]['foot'] += '<button onclick="magictable_openSub(\'sub'+data.record['@id']+channelz['@id']+'\');" id="btnsub'+data.record['@id']+channelz['@id']+'" class="btn MagicTableRowMoreButton '+freeClass+'">';
+                    resCompound[channelz.Name]['foot'] += "<div><img src='/templates/sportdigga/images/"+(freeClass == 'MagicTableFreeChannel' ? 'icon_unlocked.png' : 'icon_locked.png')+"' style='width:10px;height:13px;vertical-align:text-top;' />&nbsp;&nbsp;"+channelz.Name+"</div>";
+                    resCompound[channelz.Name]['foot'] += '</button>';
+
+                }
+            }
+        </script>
+
+        <!--<div id="apple-badge-mobile"><a href="https://itunes.apple.com/US/app/id979406502?mt=8"><img src="/images/download.png" /></a></div>
+        -->
+
+
+        <h1 class="SportEventzTitle"><span id="SportOut"></span><span>Live Schedule on Sat-TV</span> <span id="DateOut"></span></h1>
+        <h2 style="font-weight:400;font-size:12px;line-height:1.2;">
+            SportEventz provides TV and livestream sport schedules with broadcasting channel details. Check where you can watch your favorite sport live!        </h2>
+
+        <div id="MagicTableContainer" style="margin-top:0px;"><br /></div>
+        <div style="clear:both;"></div>
+
+        
+								</div>
+	                        </div>
+						</div>
+                                                                    </div>
+                                <div class="rt-grid-3 rt-pull-9">
+                <div id="rt-sidebar-a">
+                    	<div class="rt-block menu-block">
+		<div class="gf-menu-device-container responsive-type-panel"></div>
+<ul class="gf-menu l1 " >
+                    <li class="item213 parent" >
+
+            <a class="item" href="javascript:void(0);"  >
+
+                                Football Schedule on TV                                <span class="border-fixer"></span>
+                            </a>
+
+
+            
+                                    <div class="dropdown columns-1 " style="width:180px;">
+                                                <div class="column col1"  style="width:180px;">
+                            <ul class="l2">
+                                                                                                            <li class="modules">
+                                                                                        <div class="module-content">
+                                                <div class="day_links "><a id="11/06/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-06%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Friday, 06 November 2026</a></div><div class="day_links "><a id="11/07/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-07%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Saturday, 07 November 2026</a></div><div class="day_links "><a id="11/08/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-08%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Sunday, 08 November 2026</a></div><div class="day_links "><a id="11/09/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-09%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Monday, 09 November 2026</a></div><div class="day_links "><a id="11/11/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-11%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Wednesday, 11 November 2026</a></div><div class="day_links "><a id="11/12/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-12%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Thursday, 12 November 2026</a></div><div class="day_links "><a id="11/13/2026" class="item ModuleMenuInline" href="/en/component/magictable/?Itemid=0&amp;se_date=2026-11-13%2000:00:00&amp;se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&amp;se_id=U2NoZWR1bGU=">Friday, 13 November 2026</a></div><div id="schedule_picker"></div><script type="text/javascript">
+    
+        jQuery( function() { 
+            let pathArray = window.location.pathname.split("/");
+            let language = pathArray[0];
+            // No Itemid here: the navigation line below already sets it, and having
+            // it in both produced ?Itemid=0&...&Itemid=0 on every datepicker click.
+            let parameters = "se_module=bW9kX3Nwb3J0ZXZlbnRzX2ZpbHRlcg==&se_id=U2NoZWR1bGU=";
+            let selectedDate = "11/06/2026";
+            let availableDates = ["11-06-2026","11-07-2026","11-08-2026","11-09-2026","11-11-2026","11-12-2026","11-13-2026"];
+            
+            var options = $.extend(
+                {},                                  // empty object
+                $.datepicker.regional[location.pathname[1]+location.pathname[2]],         // regional
+                {                 minDate: "0m",
+                    maxDate: "+2m",
+                    prevText: "",
+                    nextText: "",
+                    todayHighlight: true,
+                    defaultDate: selectedDate,
+                    showOtherMonths: true,
+                    firstDay: 1,
+                    onSelect: (dateText ) => {
+                        // No leading slash on the path: JURI::root() already ends in one,
+                        // and concatenating both sent every click to //component/magictable/
+                        window.location.href = "https://www.sporteventz.com/" + "component/magictable/?Itemid=0&se_date=" + dateText + "%2000:00:00&" + parameters;
+                    }, 
+                    beforeShowDay: function(d) {
+                        var curDate = new Date();
+                        var dmy = (d.getMonth()+1); 
+                        if(d.getMonth()<9) 
+                            dmy="0"+dmy; 
+                        dmy+= "-"; 
+                
+                        if(d.getDate()<10) dmy+="0"; 
+                            dmy+=d.getDate() + "-" + d.getFullYear();   
+                            (dmy+` : `+($.inArray(dmy, availableDates)));          
+                        if ($.inArray(dmy, availableDates) != -1) {
+                            if(d.getDate()<10)
+                            return [true, "datesWithEventsSmall", ""];
+                            else
+                            return [true, "datesWithEvents",""]; 
+                        } 
+                        else if((curDate.getMonth()-1) == d.getMonth()){
+                            return [true,"",""]; 
+                        }
+                        else if((curDate.getMonth()-2) == d.getMonth()){
+                            return [false,"",""]; 
+                        }
+                        else{
+                             return [true,"",""]; 
+                        }
+                    }
+     } // your custom options
+            );
+            $("#schedule_picker").datepicker(options);
+            
+                
+          $( document ).ready(function() {
+                var curDate = new Date();
+                var element = document.getElementsByClassName("ui-datepicker-prev")[0];
+                element.style.cursor = "not-allowed";
+                element.style.pointerEvents = "none";
+
+            $( "#schedule_picker" ).click(function() {
+                if(document.getElementsByClassName("ui-datepicker-calendar")[0].rows[3].cells[1].attributes[3].value > curDate.getMonth() && parseInt(document.getElementsByClassName("ui-datepicker-year")[0].innerHTML) == curDate.getFullYear()){
+                    var element = document.getElementsByClassName("ui-datepicker-next")[0];
+                    element.style.cursor = "not-allowed";
+                    element.style.pointerEvents = "none";
+                }
+                else{
+                    var element = document.getElementsByClassName("ui-datepicker-next")[0];
+                    element.style.cursor = "pointer";
+                    element.style.pointerEvents = "auto";
+                }
+                });
+              
+        });  
+        });
+
+        
+        </script><style>
+        #schedule_picker {
+            margin-top: 1em;
+            -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none; /* Safari */
+             -khtml-user-select: none; /* Konqueror HTML */
+               -moz-user-select: none; /* Firefox */
+                -ms-user-select: none; /* Internet Explorer/Edge */
+                    user-select: none; /* Non-prefixed version, currently
+                                          supported by Chrome and Opera */
+            width: 88%;
+        }
+        .ui-datepicker-calendar { 
+            width: 100%;
+        }
+        .ui-datepicker-calendar tbody tr td a {
+            font-size: 13px;
+        }
+        .ui-datepicker-calendar thead th {
+            text-align: center;
+            font-weight: normal;
+            color: #8F8F9A;
+        }
+        .ui-datepicker-calendar tbody tr {
+        }
+        .ui-datepicker-current-day {
+            background-color: #0d80b6;
+            border-radius: 50%;
+            position: relative !important;
+            left:  0px !important;
+        }
+        .ui-datepicker-prev {
+            float:left;
+            cursor: pointer;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 5px 8.7px 5px 0;;
+            border-color: transparent #000000 transparent transparent;
+            margin-top: 4px;
+            margin-left: 6px;
+
+        }
+        .ui-datepicker-next {
+            float: right;
+            cursor: pointer;
+            margin-right: 8px;
+            border-style: solid;
+            border-width: 5px 0 5px 8.7px;
+            border-color: transparent transparent transparent #000000;
+            margin-top: 4px;
+         }
+        .ui-datepicker-title {
+            text-align: center;
+            font-size: 1em;
+            font-weight: 600;
+            padding-bottom: 10px;
+        }
+        .hasGame:after {
+            contents: "+";
+        }
+        .a.ui-state-default.ui-priority-secondary {
+            color: #8F8F9A !important;
+        }
+        .ui-state-disabled {
+            color: #8F8F9A !important;
+        }
+    </style>                                            </div>
+                                        </li>
+                                                                                                </ul>
+                        </div>
+                                            </div>
+
+                                    </li>
+                            <li class="item214 parent" >
+
+            <a class="item" href="javascript:void(0);"  >
+
+                                Top Leagues on Sat-TV                                <span class="border-fixer"></span>
+                            </a>
+
+
+            
+                                    <div class="dropdown columns-1 " style="width:180px;">
+                                                <div class="column col1"  style="width:180px;">
+                            <ul class="l2">
+                                                                                                                    <li class="item607" >
+
+            <a class="item image" href="/en/top/cl.html"  >
+
+                                    <img class="menu-image" src="/templates/sportdigga/images/icons/Uefa-Championship.png" alt="Uefa-Championship.png" />
+                                Champions League                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item608" >
+
+            <a class="item image" href="/en/top/el.html"  >
+
+                                    <img class="menu-image" src="/templates/sportdigga/images/icons/Europ-League.png" alt="Europ-League.png" />
+                                Europa League                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item254" >
+
+            <a class="item image" href="/en/top/england.html"  >
+
+                                    <img class="menu-image" src="/templates/sportdigga/images/icons/England.png" alt="England.png" />
+                                England                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item252" >
+
+            <a class="item image" href="/en/top/germany.html"  >
+
+                                    <img class="menu-image" src="/templates/sportdigga/images/icons/Germany.png" alt="Germany.png" />
+                                Germany                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item253" >
+
+            <a class="item image" href="/en/top/spain.html"  >
+
+                                    <img class="menu-image" src="/templates/sportdigga/images/icons/Spain.png" alt="Spain.png" />
+                                Spain                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item255" >
+
+            <a class="item image" href="/en/top/italy.html"  >
+
+                                    <img class="menu-image" src="/templates/sportdigga/images/icons/Italy.png" alt="Italy.png" />
+                                Italy                            </a>
+
+
+                    </li>
+                                                                                                        </ul>
+                        </div>
+                                            </div>
+
+                                    </li>
+                            <li class="item218 parent active" >
+
+            <a class="item" href="javascript:void(0);"  >
+
+                                Live Sports on Sat-TV                                <span class="border-fixer"></span>
+                            </a>
+
+
+            
+                                    <div class="dropdown columns-1 " style="width:180px;">
+                                                <div class="column col1"  style="width:180px;">
+                            <ul class="l2">
+                                                                                                                    <li class="item263" >
+
+            <a class="item" href="/en/other-sport/american-football.html"  >
+
+                                American Football                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item421" >
+
+            <a class="item" href="/en/other-sport/aussie-rules.html"  >
+
+                                Aussie Rules                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item262" >
+
+            <a class="item" href="/en/other-sport/baseball.html"  >
+
+                                Baseball                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item257" >
+
+            <a class="item" href="/en/other-sport/basketball.html"  >
+
+                                Basketball                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item420" >
+
+            <a class="item" href="/en/other-sport/beach-soccer.html"  >
+
+                                Beach Soccer                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item591" >
+
+            <a class="item" href="/en/other-sport/beachvolleyball.html"  >
+
+                                Beachvolleyball                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item587" >
+
+            <a class="item" href="/en/other-sport/badminton.html"  >
+
+                                Badminton                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item300" >
+
+            <a class="item" href="/en/other-sport/boxing-2.html"  >
+
+                                Boxing                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item404" >
+
+            <a class="item" href="/en/other-sport/curling.html"  >
+
+                                Curling                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item416" >
+
+            <a class="item" href="/en/other-sport/cricket.html"  >
+
+                                Cricket                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item407" >
+
+            <a class="item" href="/en/other-sport/cycling.html"  >
+
+                                Cycling                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item411" >
+
+            <a class="item" href="/en/other-sport/darts.html"  >
+
+                                Darts                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item394" >
+
+            <a class="item" href="/en/other-sport/esport-cs-en.html"  >
+
+                                ESport Counter-Strike                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item397" >
+
+            <a class="item" href="/en/other-sport/futsal-en.html"  >
+
+                                Futsal                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item617" >
+
+            <a class="item" href="/en/other-sport/fieldhockey.html"  >
+
+                                Field hockey                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item358" >
+
+            <a class="item" href="/en/other-sport/gaelic-sports.html"  >
+
+                                Gaelic Sports                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item400" >
+
+            <a class="item" href="/en/other-sport/golf.html"  >
+
+                                Golf                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item259 active last se-sid-6" >
+
+            <a class="item" href="/en/other-sport/handball.html"  >
+
+                                Handball                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item256" >
+
+            <a class="item" href="/en/other-sport/ice-hockey.html"  >
+
+                                Ice Hockey                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item260" >
+
+            <a class="item" href="/en/other-sport/motorsport.html"  >
+
+                                Motorsport                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item382" >
+
+            <a class="item" href="/en/other-sport/mixed-martial-arts.html"  >
+
+                                MMA                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item264" >
+
+            <a class="item" href="/en/other-sport/rugby.html"  >
+
+                                Rugby                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item593" >
+
+            <a class="item" href="/en/other-sport/skialpin.html"  >
+
+                                Ski Alpin                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item414" >
+
+            <a class="item" href="/en/other-sport/snooker.html"  >
+
+                                Snooker                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item258" >
+
+            <a class="item" href="/en/other-sport/tennis.html"  >
+
+                                Tennis                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item261" >
+
+            <a class="item" href="/en/other-sport/volleyball.html"  >
+
+                                Volleyball                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item391" >
+
+            <a class="item" href="/en/other-sport/waterpolo.html"  >
+
+                                Waterpolo                            </a>
+
+
+                    </li>
+                                                                                                                                                                <li class="item380" >
+
+            <a class="item" href="/en/other-sport/wintersport.html"  >
+
+                                Wintersport                            </a>
+
+
+                    </li>
+                                                                                                        </ul>
+                        </div>
+                                            </div>
+
+                                    </li>
+                            <li class="item223 parent" >
+
+            <a class="item" href="javascript:void(0);"  >
+
+                                Switch Language                                <span class="border-fixer"></span>
+                            </a>
+
+
+            
+                                    <div class="dropdown columns-1 " style="width:180px;">
+                                                <div class="column col1"  style="width:180px;">
+                            <ul class="l2">
+                                                                                                            <li class="modules">
+                                                                                        <div class="module-content">
+                                                <div class="mod-languages">
+
+	<div class="btn-group">
+				<ul class="lang-inline dropdown-menu" dir="ltr">
+				</ul>
+	</div>
+
+</div>
+                                            </div>
+                                        </li>
+                                                                                                </ul>
+                        </div>
+                                            </div>
+
+                                    </li>
+                            <li class="item219" >
+
+            <a class="item" href="/en/sport-eventz.html"  >
+
+                                SportEventz                            </a>
+
+
+                    </li>
+                            <li class="item236" >
+
+            <a class="item" href="/en/contact.html"  >
+
+                                Contact                            </a>
+
+
+                    </li>
+            </ul>		<div class="clear"></div>
+	</div>
+	
+                </div>
+            </div>
+
+                    <div class="clear"></div>
+                </div>
+            </div>
+                    <div class="se-ad-custom" style="position: fixed; top: 150px; height: 600px; width: 160px; left: -150px;">
+                                            </div>
+                </div>
+											</div>
+	</div>
+			<footer id="rt-footer-surround">
+						<div id="rt-copyright">
+			<div class="rt-container">
+								<div class="clear"></div>
+			</div>
+		</div>
+				<div id="rt-footer">
+			<div class="rt-container">
+				<div class="rt-grid-4 rt-alpha">
+               <div class="rt-block ">
+           	<div class="module-surround">
+	           		                	<div class="module-content">
+	                		<div class="mod-languages">
+
+	<div class="btn-group">
+				<ul class="lang-inline dropdown-menu" dir="ltr">
+				</ul>
+	</div>
+
+</div>
+	                	</div>
+                	</div>
+           </div>
+	
+</div>
+<div class="rt-grid-4">
+               <div class="rt-block ">
+           	<div class="module-surround">
+	           		                	<div class="module-content">
+	                		
+
+<div class="custom"  >
+	<p class="copyright-text-footer" style="text-align: center; padding-top: 5px;"><span style="font-size: 14px;">SportEventz&nbsp;© 2026<br /></span></p></div>
+	                	</div>
+                	</div>
+           </div>
+	
+</div>
+<div class="rt-grid-4 rt-omega">
+               <div class="rt-block ">
+           	<div class="module-surround">
+	           		                	<div class="module-content">
+	                		
+
+<div class="custom"  >
+	<p style="text-align: right;"><span class="social-button" style="height: 24px !important;"><a href="https://www.facebook.com/sporteventz/" target="_new" rel="publisher"><img src="/templates/sportdigga/images/facebook-logo.svg" alt="" height="24px" style="height: 24px !important;" /></a></span><span class="social-button" style="height: 24px !important;"><a href="https://www.instagram.com/sporteventz" target="_new" rel="publisher"><img src="/templates/sportdigga/images/instagram-logo.svg" alt="" height="24px" style="height: 24px !important;" /></a></span><span class="social-button" style="height: 24px !important;"><a href="https://twitter.com/sporteventz" target="_new" rel="publisher"><img src="/templates/sportdigga/images/twitter-logo.svg" alt="" height="24px" style="height: 24px !important;" /></a></span></p></div>
+	                	</div>
+                	</div>
+           </div>
+	
+</div>
+				<div class="clear"></div>
+			</div>
+		</div>
+			</footer>
+			
+    <!-- do not remove: bad-bot trap, see blackhole/index.php -->
+    <a rel="nofollow" style="display:none;" href="/blackhole/">Do not follow this link</a>
+
+    <script type="text/javascript" src="/templates/sportdigga/js/vendor/slick.min.js"></script>
+    <script src="/templates/sportdigga/js/vendor/popper.min.js"></script>
+    <script src="/templates/sportdigga/js/vendor/bootstrap.min.js"></script>
+	</body>
+</html>
+
