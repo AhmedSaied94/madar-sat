@@ -17,20 +17,20 @@ from app.services.live import SETTLED_STATUSES, poll_window_query
 
 # A match's own problems can't recover once it has left the window, so they close some time after.
 PROBLEM_GRACE = timedelta(hours=1)
-MATCH_PROBLEM_PREFIXES = ("disagree:", "stale:", "stuck:")
+MATCH_PROBLEM_PREFIXES = ("disagree:", "stale:", "stuck:", "fulltime:")
 # The length of a match, not something to tune: a source below it may still be playing (FR-009).
 FULL_MATCH_MINUTES = 90
 USABLE_STATES = ("ok", "failing")
 FINISHED_LABEL = "انتهت"
 
 
-def _finish(session: Session, match: Match, now: datetime) -> str | None:
+def _finish(session: Session, match: Match, now: datetime, *, problem: str = "stuck") -> str | None:
     """Finished on its last score, unless a person has answered for the status (FR-009)."""
     match.status = "finished"
     match.period = match.minute = None
     match.status_label = FINISHED_LABEL
     match.status_updated_at = now
-    return open_problem(session, f"stuck:{match.id}", now)
+    return open_problem(session, f"{problem}:{match.id}", now)
 
 
 def _status_locked(match: Match) -> bool:
@@ -81,8 +81,8 @@ def run_watchdog(session: Session, now: datetime, settings: LiveSettings) -> lis
     """Finishes stuck rows, moves stale ones to the clock and opens their problems; the alerts for after commit."""
     alerts, moved = _finish_stuck(session, now, settings)
     session.flush()
-    rows = session.scalars(
-        select(Match)
+    rows = session.execute(
+        select(Match, MatchLiveState.fulltime_since, MatchLiveState.last_reading_at)
         .outerjoin(MatchLiveState, MatchLiveState.match_id == Match.id)
         .where(
             Match.status_source == "feed",
@@ -95,11 +95,19 @@ def run_watchdog(session: Session, now: datetime, settings: LiveSettings) -> lis
         )
         .with_for_update(of=Match, skip_locked=True)
     ).all()
-    for match in rows:
+    for match, fulltime_since, last_reading_at in rows:
         alert: str | None = None
         past_limit = match.kickoff_at is not None and match.kickoff_at < now - settings.hard_limit
+        quiet = last_reading_at is None or last_reading_at < now - settings.stale_after
+        # A source's last word was full time: clearing the score now could leave no result for good (FR-010).
+        held_for = now - fulltime_since if quiet and fulltime_since and not _status_locked(match) else None
         if past_limit and reached_second_half(match) and not _status_locked(match):
             alert = _finish(session, match, now)
+            moved = True
+        elif held_for is not None and held_for < settings.fulltime_hold:
+            continue  # a quiet source can't end a match sooner than one still reading (FR-008)
+        elif held_for is not None:
+            alert = _finish(session, match, now, problem="fulltime")
             moved = True
         elif to_clock(match, now, stuck_after=settings.stuck_after):
             alert = open_problem(session, f"stale:{match.id}", now)

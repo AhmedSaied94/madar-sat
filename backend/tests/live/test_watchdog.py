@@ -587,3 +587,119 @@ def test_a_stuck_problem_closes_once_the_match_is_long_gone(sync_session):
 
     assert len(alerts) == 1
     assert sync_session.get(LiveProblem, f"stuck:{match.id}").closed_at == NOW
+
+
+# ------------------------------------------------------------- a source said full time, then went quiet
+
+
+def _called_over(session, match, *, read_at=None, since=SETTINGS.fulltime_hold + timedelta(minutes=1)):
+    _with_reading(session, match, read_at or NOW - timedelta(seconds=SETTINGS.stale_after_s + 1))
+    state = session.get(MatchLiveState, match.id)
+    state.fulltime_source, state.fulltime_since = "yallakora", NOW - since
+    session.flush()
+
+
+def test_a_match_a_source_called_over_finishes_on_its_score_when_readings_stop(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), **SECOND_HALF)
+    _called_over(sync_session, match)
+    before = version(sync_session, "live")
+
+    alerts = run_watchdog(sync_session, NOW, SETTINGS)
+    sync_session.flush()
+
+    assert (match.status_source, match.status, match.home_score, match.away_score) == ("feed", "finished", 1, 0)
+    assert (match.period, match.minute, match.status_updated_at) == (None, None, NOW)
+    assert sync_session.get(LiveProblem, f"fulltime:{match.id}").closed_at is None
+    assert sync_session.get(LiveProblem, f"stale:{match.id}") is None
+    assert len(alerts) == 1
+    assert str(match.id) in alerts[0]
+    assert version(sync_session, "live") == before + 1
+
+
+def test_a_match_a_source_called_over_keeps_waiting_out_the_hold_when_readings_stop(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), **SECOND_HALF)
+    since = SETTINGS.fulltime_hold - timedelta(minutes=3)
+    _called_over(sync_session, match, since=since)
+    before = version(sync_session, "live")
+
+    assert run_watchdog(sync_session, NOW, SETTINGS) == []
+    sync_session.flush()
+
+    # A level cup match may be going to extra time, so a quiet source can't end it any sooner than a talking one.
+    assert (match.status_source, match.status, match.period, match.home_score) == ("feed", "live", "2H", 1)
+    assert sync_session.get(LiveProblem, f"stale:{match.id}") is None
+    assert version(sync_session, "live") == before
+
+    later = NOW + timedelta(minutes=3)
+    assert len(run_watchdog(sync_session, later, SETTINGS)) == 1
+    assert (match.status, match.home_score, match.away_score) == ("finished", 1, 0)
+
+
+def test_a_match_a_source_called_over_alerts_once(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), **SECOND_HALF)
+    _called_over(sync_session, match)
+    assert len(run_watchdog(sync_session, NOW, SETTINGS)) == 1
+    sync_session.flush()
+
+    assert run_watchdog(sync_session, NOW + timedelta(minutes=2), SETTINGS) == []
+
+
+def test_past_the_hard_limit_with_fresh_readings_a_held_full_time_is_a_stuck_match(sync_session):
+    match = make_match(sync_session, HARD, **SECOND_HALF)
+    _called_over(sync_session, match, read_at=FRESH)
+
+    alerts = run_watchdog(sync_session, NOW, SETTINGS)
+
+    assert match.status == "finished"
+    assert len(alerts) == 1
+    assert sync_session.get(LiveProblem, f"stuck:{match.id}").closed_at is None
+    assert sync_session.get(LiveProblem, f"fulltime:{match.id}") is None
+
+
+def test_past_the_hard_limit_with_fresh_readings_a_first_half_row_still_goes_to_the_clock(sync_session):
+    match = make_match(sync_session, HARD, **{**FEED, "period": "1H"})
+    _called_over(sync_session, match, read_at=FRESH)
+
+    run_watchdog(sync_session, NOW, SETTINGS)
+
+    assert (match.status_source, match.status) == ("clock", "scheduled")
+    assert sync_session.get(LiveProblem, f"fulltime:{match.id}") is None
+
+
+def test_a_match_a_source_called_over_waits_while_readings_still_come(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), **SECOND_HALF)
+    _called_over(sync_session, match, read_at=FRESH)
+
+    assert run_watchdog(sync_session, NOW, SETTINGS) == []
+    assert match.status == "live"
+
+
+def test_a_match_no_source_called_over_still_goes_to_the_clock_when_readings_stop(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), **SECOND_HALF)
+    _with_reading(sync_session, match, NOW - timedelta(seconds=SETTINGS.stale_after_s + 1))
+
+    run_watchdog(sync_session, NOW, SETTINGS)
+
+    assert (match.status_source, match.status, match.home_score) == ("clock", "scheduled", None)
+
+
+def test_a_person_wins_over_a_source_calling_it_over(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), locked_fields=["status"], **SECOND_HALF)
+    _called_over(sync_session, match)
+
+    assert run_watchdog(sync_session, NOW, SETTINGS) == []
+    assert (match.status_source, match.status) == ("feed", "live")
+    assert sync_session.get(LiveProblem, f"fulltime:{match.id}") is None
+
+
+def test_the_full_time_problem_closes_once_the_match_is_long_gone(sync_session):
+    match = make_match(sync_session, NOW - timedelta(minutes=125), **SECOND_HALF)
+    _called_over(sync_session, match)
+    run_watchdog(sync_session, NOW, SETTINGS)
+    sync_session.flush()
+
+    later = match.kickoff_at + SETTINGS.hard_limit + timedelta(hours=1, minutes=1)
+    alerts = run_watchdog(sync_session, later, SETTINGS)
+
+    assert len(alerts) == 1
+    assert sync_session.get(LiveProblem, f"fulltime:{match.id}").closed_at == later
