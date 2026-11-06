@@ -124,6 +124,8 @@ Madar Sat is an Arabic-first guide for football fans who watch on a satellite di
 
 The PWA shows a banner from AdSense, because AdMob doesn't run on the web. It has no interstitial, because the web formats can't be fired at our transition points (system-design D16). Every layout must still look complete without a banner, because AdSense may refuse the site or send no ad.
 
+The app draws on a canvas, so the site has almost no text a reviewer or search engine can read. D9 adds real HTML pages next to it that any visitor can open: an about page and satellite and frequency guides (system-design §5.3). The AdSense application waits until they're live.
+
 Once Android production is live, Android browsers get a store screen instead of the PWA (S0, system-design D17), so Android users stay on the app, where the full ad set runs. The APK is also on Uptodown and APKPure for phones without Google Play. AdMob gives limited ad serving to apps listed only in stores it doesn't support, so these listings go up after the Play listing is linked to AdMob.
 
 **Costs**

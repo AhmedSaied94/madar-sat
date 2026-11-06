@@ -11,7 +11,7 @@ Deploys are automatic. A push to `master` that changes `backend/**` (or `backend
 | `test` | ruff, `mypy --strict`, pytest with PostgreSQL 16 and Redis 7 services | Yes |
 | `openapi` | Exports both OpenAPI documents and fails if the committed ones differ; once `contract-v1` exists, fails on a breaking change | Yes |
 | `clients` | Regenerates the admin and app clients and fails if they're stale. Skipped until `admin/orval.config.ts` and `app/swagger_parser.yaml` both exist. | Yes |
-| `build` | Builds `linux/arm64` with buildx and QEMU (or on `vars.ARM_RUNNER`) and pushes `ghcr.io/ahmedsaied94/madar-backend:<sha>` | No |
+| `build` | Builds `linux/arm64` with buildx on `vars.ARM_RUNNER` (under QEMU if it's unset) and pushes `ghcr.io/ahmedsaied94/madar-backend:<sha>` | No |
 | `build-amd64` | Builds `linux/amd64` natively on `ubuntu-24.04` and pushes `ghcr.io/ahmedsaied94/madar-backend-amd64:<sha>`, the home box's image | No |
 | `deploy` | Joins WireGuard as `ci`, pins VPS-1's host key, `rsync`s `infra/` to `/srv/madar/infra/`, then runs `deploy.sh <sha>` as `deploy@10.8.0.1`, with the job's `GITHUB_TOKEN` on stdin | No |
 | `deploy-vps2` | Same WireGuard step, then rsyncs `infra/` and runs `deploy.sh --host vps2 <sha>` through the ssh config's `vps1` jump (`ProxyJump`, no `-J` on the command line) ([workers.md](workers.md)) | No |
@@ -35,7 +35,7 @@ VPS-1 — rolls back to the previous tag when the start or the check fails ([wor
 
 Deploys never overlap. Every job that joins the CI WireGuard peer through `.github/actions/vps1-sync` — `backend.yml`'s `deploy`, `infra.yml`'s `sync`, `admin.yml`'s `deploy` and `pwa.yml`'s `release` — shares the concurrency group `deploy-vps1` (`infra.yml` checks this). `deploy-vps2` has its own group and starts only after `deploy` has left `deploy-vps1`. Only `backend.yml` and `infra.yml`, which run on `master`, rsync `infra/` to `/srv/madar/infra/`; the admin deploy and the PWA release pass `sync-infra: "false"`, and a `web-v*` tag that isn't on `master` is refused. `deploy.sh` holds `/srv/madar/.deploy.lock` while it runs. GitHub keeps one running and one waiting job per group: a third job that queues **cancels the waiting one**, even with `cancel-in-progress: false` (review B2-R2-1). Between two backend deploys or two syncs the newest commit wins and nothing is lost, but the four jobs ship different things, so a cancelled admin deploy or PWA release means that change is not live. After a merge or a `web-v*` tag, check each of them in the Actions tab, and re-run any job that shows "cancelled".
 
-The `build` job, under QEMU, is the slow part. SC-005 asks for a change to be live within 15 minutes.
+The `build` job is the slow part, and much slower under QEMU. SC-005 asks for a change to be live within 15 minutes.
 
 ## Working on VPS-1
 
@@ -231,7 +231,7 @@ Do these before the first merge of Lanes B1 and B2.
    | `DEPLOY_KNOWN_HOSTS` | Secret | provision-host.md §8 |
    | `FIREBASE_SERVICE_ACCOUNT` | Secret | [firebase-hosting.md §2](firebase-hosting.md#2-service-account-and-key) |
    | `VPS1_IP`, `VPS2_IP` | Variables | The reserved IPs. No workflow reads them today; they are a record. |
-   | `ARM_RUNNER` | Variable, optional | The label of a native arm64 runner. Leave it unset to build with QEMU. |
+   | `ARM_RUNNER` | Variable, optional | The label of a native arm64 runner: `ubuntu-24.04-arm` (set 2026-11-06). If it's unset, the build runs under QEMU. |
 
    Always set secrets from a file or a pipe, so the value never shows on screen or in shell history:
 
@@ -240,9 +240,10 @@ Do these before the first merge of Lanes B1 and B2.
    gh secret set <NAME> -R "$R" < <file>
    gh variable set VPS1_IP -R "$R" --body <VPS1_IP>
    gh variable set VPS2_IP -R "$R" --body <VPS2_IP>
+   gh variable set ARM_RUNNER -R "$R" --body ubuntu-24.04-arm
    ```
 
-2. **Actions minutes.** The repository is public (checked 2026-11-06), so standard runners are free. `ARM_RUNNER` isn't set, so every backend build runs under QEMU and takes many minutes. The minutes start to count when the repository goes private: see [Making the repository private](#making-the-repository-private).
+2. **Actions minutes.** The repository is public (checked 2026-11-06), so standard runners are free. That includes `ubuntu-24.04-arm`, which `ARM_RUNNER` selects for the arm64 image builds (`backend.yml` `build`, `infra.yml` `build-backup`). If one of those builds fails on it, go back to QEMU with `gh variable delete ARM_RUNNER -R "$R"`. The minutes start to count when the repository goes private: see [Making the repository private](#making-the-repository-private).
 3. **Failure emails:** GitHub → Settings → Notifications → Actions: turn on email for failed workflows. That email is the deploy alert until Uptime Kuma (D3).
 4. **Who can reach the secrets.** `master` isn't protected and the secrets aren't tied to an Environment, so a workflow pushed to any branch of this repository can read them. Keep write access to yourself. Pull requests from forks don't receive the secrets, and no workflow uses `pull_request_target`; keep it that way while the repository is public.
 
@@ -250,7 +251,7 @@ Do these before the first merge of Lanes B1 and B2.
 
 The repository stays public until every development phase is done, then goes private (decided 2026-11-06). Do this after V3, at a time when no deploy is running.
 
-1. **Check that the minutes fit.** For private repositories, GitHub Free includes about 2,000 minutes a month on standard Linux runners. Add up the job times for the last 30 days:
+1. **Check that the minutes fit.** For private repositories, GitHub Free includes about 2,000 minutes a month on standard Linux runners, and `ubuntu-24.04-arm` draws on the same allowance. Add up the job times for the last 30 days:
 
    ```bash
    R=AhmedSaied94/madar-sat
