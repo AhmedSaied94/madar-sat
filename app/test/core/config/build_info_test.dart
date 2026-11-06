@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/config/build_info.dart';
 
-/// `pubspec.yaml` is the release's version; [BuildInfo] repeats it because nothing reads the
-/// manifest at run time. This test is what keeps the two from drifting apart (S16's about
-/// card and S0's forced update both show it).
+/// A build that isn't given a version falls back to `pubspec.yaml`'s, which [BuildInfo] repeats
+/// because nothing reads the manifest at run time. The release workflows give it the real one.
+/// S16's about card and S0's forced update both show it.
 void main() {
-  test('BuildInfo repeats pubspec.yaml\'s version and build number', () {
+  test('without a version from the build, BuildInfo repeats pubspec.yaml', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final match = RegExp(r'^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$', multiLine: true)
         .firstMatch(pubspec);
@@ -18,4 +18,19 @@ void main() {
     expect(BuildInfo.buildNumber, build, reason: 'update lib/core/config/build_info.dart');
     expect(BuildInfo.label, '$version ($build)');
   });
+
+  // A release build that isn't given these reports pubspec's values, so every phone looks like
+  // build 1 and raising `min_supported_build` above 1 blocks even the newest build.
+  for (final workflow in const ['app-release.yml', 'pwa.yml']) {
+    test('$workflow gives the build its version and build number', () {
+      final file = File('../.github/workflows/$workflow');
+      if (!file.existsSync()) {
+        markTestSkipped('$workflow is not synced to this checkout; CI has it');
+        return;
+      }
+      final text = file.readAsStringSync();
+      expect(text, contains('--dart-define=APP_VERSION='));
+      expect(text, contains('--dart-define=APP_BUILD_NUMBER='));
+    });
+  }
 }

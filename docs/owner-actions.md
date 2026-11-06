@@ -669,6 +669,13 @@ Six bugs from the first deployed day, 2026-11-05: duplicate rows from YallaKora,
 - The first capture's raw data and scripts are on your laptop in `~/madar-capture/2026-11-04/`, outside the repo.
 - `LIVE_CONFIRM_WAIT_S` is removed by this spec. If you set it on VPS-2, delete it after merge.
 
+### App version fix
+
+Every release build so far reports version 1.0.0, build 1, whatever its tag says. The fix is in PR `fix/app-version-in-builds`.
+
+- [ ] **Merge it before tagging `app-v0.2.2`.** Then check S16 shows that version and the run number, for example `0.2.2 (3)`. → [store releases](runbooks/store-releases.md#check)
+- [ ] **Keep `min_supported_build` at 1 or below until a new web release is live.** The current web release reports build 1, so a higher floor would block it with nothing newer to reload into. → [raise the floor](runbooks/remote-config.md#raise-the-floor-forced-update)
+
 ### Lane B2
 
 Nothing here blocks the merge. These run after the deploy that carries the capture, before T026.
