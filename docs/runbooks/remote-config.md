@@ -50,10 +50,14 @@ If the value fails validation the app keeps the bundled host, which is the addre
 
 ## Raise the floor (forced update)
 
-`min_supported_build` compares with the build number the app reports (`app/lib/core/config/build_info.dart`, which repeats `pubspec.yaml`'s version). Raising it above a build **blocks that build behind S0's forced-update screen**: no tab, no cache, only «تحديث الآن».
+`min_supported_build` compares with the build number the app reports (`app/lib/core/config/build_info.dart`). Raising it above a build **blocks that build behind S0's forced-update screen**: no tab, no cache, only «تحديث الآن».
 
-1. Release the new build first and confirm Play serves it.
-2. Set `min_supported_build` to that build's number and publish.
+Android's build number is the `app-release.yml` run number, and web's is the `pwa.yml` run number, so the two count separately while one floor covers both. Web's numbers are the higher ones today, so set the floor from an Android build: a web number would block every Android build.
+
+**The first raise needs a new web release.** Builds from before this was fixed (`app-v0.2.1` and `web-v0.1.1` or older) all report build 1, so any floor above 1 blocks them. That's what you want on Android, but a PWA user would reload into the same blocked build if no newer web release exists.
+
+1. Release the new build first and confirm Play serves it. Check the live web release has a higher build number: S16 shows it.
+2. Set `min_supported_build` to the Android build's number and publish.
 3. Watch the first day: a phone still on the old build sees the update screen at its next launch. The Android button opens Play; the installed PWA reloads.
 4. **Do not** raise it in the same hour as the release: a phone that updates through Play between the two steps is fine, but a publish ahead of the store listing blocks everyone with nowhere to go.
 

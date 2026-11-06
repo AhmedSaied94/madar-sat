@@ -69,6 +69,7 @@ jobs:
         run: >
           flutter build appbundle --release --flavor prod -t lib/main_prod.dart
           --dart-define-from-file=env/prod.json
+          --dart-define=APP_VERSION="$BUILD_NAME" --dart-define=APP_BUILD_NUMBER="$BUILD_NUMBER"
           --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
       - name: Check the AAB is signed with the upload key, not the debug key
         run: |

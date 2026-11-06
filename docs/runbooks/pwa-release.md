@@ -53,7 +53,7 @@ admin deploy, and it never rsyncs `infra/` to the host ([deploy-and-rollback](de
 
 | Step | Effect |
 | --- | --- |
-| Build | `flutter build web --release --no-web-resources-cdn --pwa-strategy=none` with `APP_ENV_PROD`, then the stage script with `env/prod.json` |
+| Build | `flutter build web --release --no-web-resources-cdn --pwa-strategy=none` with `APP_ENV_PROD`, `APP_BUILD_NUMBER` (the run number) and `APP_VERSION` (the tag without `web-v`), then the stage script with `env/prod.json` |
 | Mirror copy | `rsync` of `build/web_release/r/<hash>/` to `vps1:/srv/app-mirror/r/<hash>/`, and `/srv/app-mirror/release-check.txt` gets the hash. `--delete` stays inside that hash; the parent `r/` is never deleted from |
 | Mirror check | The mirror comes from the artifact's `release.json` (`.mirror`), the origin from `infra/firebase/.firebaserc`'s default project. `curl` of `main.dart.js` and its `.br` with `Origin: https://<FIREBASE_PROJECT_ID>.web.app`: `200`, `cache-control: …immutable`, the CORS header, `content-encoding: br`, `nosniff`. **A failure here stops before the live deploy** |
 | Live deploy | `action-hosting-deploy` with `channelId: live`, deploying the shell and the full copy |

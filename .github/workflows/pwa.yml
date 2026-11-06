@@ -68,7 +68,17 @@ jobs:
       - run: ./tool/write_firebase_config.sh env/prod.json
       # --no-web-resources-cdn bundles CanvasKit instead of loading it from www.gstatic.com (FR-042).
       # --pwa-strategy=none keeps Flutter's own service worker out: `web/sw.js` owns the page (R12).
-      - run: flutter build web --release --no-web-resources-cdn --pwa-strategy=none -t lib/main_prod.dart --dart-define-from-file=env/prod.json
+      # The run number is the build number. A tag also names the version; a preview keeps pubspec's.
+      - name: Build the web app
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          set -euo pipefail
+          version=()
+          if [[ -n $TAG ]]; then version=("--dart-define=APP_VERSION=${TAG#web-v}"); fi
+          flutter build web --release --no-web-resources-cdn --pwa-strategy=none -t lib/main_prod.dart \
+            --dart-define-from-file=env/prod.json --dart-define=APP_BUILD_NUMBER="$BUILD_NUMBER" "${version[@]}"
       - name: Validate the release tag
         if: github.ref_type == 'tag'
         run: |

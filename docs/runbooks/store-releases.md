@@ -36,7 +36,7 @@ git tag app-v0.2.0
 git push origin app-v0.2.0
 ```
 
-`app-release.yml` runs on the push. `versionName` is the tag without `app-v`, and `versionCode` is the run number, so it only ever goes up.
+`app-release.yml` runs on the push. `versionName` is the tag without `app-v`, and `versionCode` is the run number, so it only ever goes up. The build also gets both as `APP_VERSION` and `APP_BUILD_NUMBER`, which is what S16 shows and what the [forced update](remote-config.md#raise-the-floor-forced-update) compares.
 
 **Never re-run a finished run to get a new build.** A re-run keeps the same run number, so it produces the same `versionCode`, and Play refuses an upload whose `versionCode` it already has. Push a new tag (`app-v0.2.1`) instead.
 
@@ -84,6 +84,7 @@ Play App Signing makes Google hold the key that signs what users install, and yo
 - The track shows your version name and code with the status "Available to testers".
 - A tester can install from the opt-in link, and the app opens and shows today's matches from VPS-1 (SC-009).
 - `adb shell dumpsys package com.madarsat.app | grep versionCode` on a tester's phone shows the run number of the build you uploaded.
+- S16 («المزيد») shows the same version and run number, for example `0.2.2 (3)`.
 
 ## If it fails
 
