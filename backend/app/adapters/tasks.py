@@ -39,6 +39,7 @@ from app.adapters.livesoccertv import (
 from app.adapters.messages import KIND_BROADCASTS, KIND_FIXTURES, Kind, MessageTooLarge, ScrapeResult
 from app.adapters.ratelimit import RateLimiter
 from app.adapters.satair_bridge import BridgeNotConfigured, SatairBridgeAdapter
+from app.adapters.sporteventz import SporteventzAdapter
 from app.adapters.yallakora import YallakoraAdapter
 from app.adapters.ysscores import YsscoresAdapter
 from app.domain.time import CAIRO
@@ -64,6 +65,8 @@ MAX_LOG_ITEMS = 20
 # Run detail reads a raw page over Redis, so the admin API needs no way into VPS-2's disk (D5 R13).
 MAX_RAW_VIEW_BYTES = 512 * 1024
 RAW_VIEW_TTL = 5 * 60
+# A run that stopped on purpose, with its reason in ``error`` (D6 FR-035, R22).
+STOP_REASONS = frozenset({"budget_reached", "not_configured"})
 
 
 class IngestionRouter:
@@ -86,7 +89,7 @@ class IngestionRouter:
     ) -> dict[str, str] | None:
         if name == "adapters.fetch":
             source = (args[0] if args else (kwargs or {}).get("source")) or ""
-            if source in {"legacy", "yallakora"}:
+            if source in {"legacy", "yallakora", "sporteventz"}:
                 return {"queue": "scrape"}
             if source == "ysscores":
                 return {"queue": get_adapter_settings().ysscores_fetch_queue}
@@ -141,6 +144,8 @@ def adapter_for(source: str, fetcher: HttpFetcher | None = None) -> SourceAdapte
         return LivesoccertvAdapter(fetcher=fetcher)
     if source == "yallakora":
         return YallakoraAdapter(fetcher=fetcher)
+    if source == "sporteventz":
+        return SporteventzAdapter(fetcher=fetcher)
     raise ValueError(f"unknown source {source!r}")
 
 
@@ -382,8 +387,10 @@ def ingest(self: Any, result: dict[str, Any]) -> dict[str, Any]:
                 )
                 run.raw_path = str(run_dir)
 
-                adapter = adapter_for(data.source)
-                if data.error or (not data.pages and data.kind == "fixtures"):
+                if data.error:
+                    # A stop on purpose is not a failure: no key, or the budget is spent (FR-035).
+                    run.status = "stopped" if data.error in STOP_REASONS else "failed"
+                elif not data.pages and data.kind == "fixtures":
                     run.status = "failed"
                 elif _source_is_paused(session, data.source):
                     run.status = "succeeded"
@@ -391,6 +398,7 @@ def ingest(self: Any, result: dict[str, Any]) -> dict[str, Any]:
                 elif data.kind == KIND_BROADCASTS:
                     links = _ingest_broadcasts(session, data, run)
                 else:
+                    adapter = adapter_for(data.source)
                     pipeline = UpsertPipeline(
                         session, source=data.source, media_hosts=settings.media_rehost_allowed_hosts
                     )
@@ -693,6 +701,7 @@ def schedule_fetch(self: Any, source: str, manual: bool = False, window: str = "
         "ysscores": get_adapter_settings().ysscores_fetch_queue,
         "legacy": "scrape",
         "yallakora": "scrape",
+        "sporteventz": "scrape",
     }.get(source)
     if source_queue is None:
         raise ValueError(f"unknown source {source!r}")

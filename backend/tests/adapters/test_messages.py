@@ -50,9 +50,9 @@ def _page(body: bytes = b"<html>ok</html>") -> RawPage:
     )
 
 
-def _result(pages: list[RawPage] | None = None) -> ScrapeResult:
+def _result(pages: list[RawPage] | None = None, source: str = "ysscores") -> ScrapeResult:
     return ScrapeResult.build(
-        source="ysscores",
+        source=source,
         run_id="2026-10-31T03:00:00Z-ysscores-7f3a",
         started_at=NOW,
         finished_at=NOW,
@@ -152,12 +152,23 @@ def test_a_gzip_bomb_is_refused_before_it_is_decompressed() -> None:
 
 def test_many_small_pages_are_refused_before_the_run_inflates_them() -> None:
     """250 pages of 5 MB zeros fit under 2 MB compressed and inflate to gigabytes (B2-R2-16)."""
-    from app.adapters.messages import MAX_PAGES
+    from app.adapters.messages import MAX_PAGES, MAX_SOURCE_PAGES
 
     pages = [_page(b"\0" * (5 * 1024 * 1024)) for _ in range(250)]
     with pytest.raises(MessageTooLarge):
         _result(pages)
     assert MAX_PAGES == 4
+    # D6 T046: sporteventz reads a page and its data for four sports in one run.
+    assert MAX_SOURCE_PAGES["sporteventz"] == 8
+
+
+def test_sporteventz_carries_eight_pages_and_no_more() -> None:
+    pages = [_page(b"{}") for _ in range(8)]
+
+    assert len(_result(pages, source="sporteventz").pages) == 8
+
+    with pytest.raises(MessageTooLarge):
+        _result([_page(b"{}") for _ in range(9)], source="sporteventz")
 
 
 def test_a_run_over_the_total_inflate_budget_is_refused() -> None:

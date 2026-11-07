@@ -10,7 +10,7 @@ Alerts go through :func:`app.adapters.alerts.send_alert`: logged and swallowed, 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, text, update
@@ -53,6 +53,13 @@ LIVE_POLLER = "live_poller"
 LIVE_FAILURE_SQL = """
 UPDATE sources SET consecutive_failures = consecutive_failures + 1, updated_at = now()
  WHERE name = 'live_poller'
+"""
+# sporteventz lists about 40 events in two weeks, so a valid empty response is normal there and
+# only alarms after a week with no records at all (D6 R21, FR-039).
+ZERO_ITEMS_GRACE_DAYS: dict[str, int] = {"sporteventz": 7}
+GRACE_BASELINE_SQL = """
+SELECT max(finished_at) FILTER (WHERE items_found > 0), min(started_at)
+  FROM import_runs WHERE source = :source
 """
 
 
@@ -124,7 +131,16 @@ def record_run(
     outcome = HealthOutcome()
 
     zero_items = status != "failed" and items_found == 0 and (pages > 0 or targets > 0)
+    if zero_items and source in ZERO_ITEMS_GRACE_DAYS:
+        zero_items = not _within_zero_grace(session, source, when, ZERO_ITEMS_GRACE_DAYS[source])
     failure = status == "failed" or zero_items
+
+    if status == "stopped":
+        # A run that stopped on purpose (no key, an exhausted budget) is neither a failure nor a
+        # quiet source: it touches neither the breaker nor the zero-items alarm (FR-035).
+        if bump:
+            bump_datasets(session, ["sources"])
+        return outcome
 
     if failure:
         before = session.execute(text(HEALTH_COLUMNS_SQL), {"name": source}).first()
@@ -151,6 +167,17 @@ def record_run(
     if bump:
         bump_datasets(session, ["sources"])
     return outcome
+
+
+def _within_zero_grace(session: Any, source: str, now: datetime, days: int) -> bool:
+    """Whether the source is still inside its quiet window: 7 days from its last run with records.
+
+    A source that has never brought a record counts from its first run, so a brand-new adapter is
+    not accused on its first quiet day, and a source that stays empty for a week is.
+    """
+    last_records, first_run = session.execute(text(GRACE_BASELINE_SQL), {"source": source}).one()
+    baseline = last_records or first_run
+    return baseline is None or now - baseline < timedelta(days=days)
 
 
 def record_live_cycle(session: Any, *, status: str, items_found: int, finished_at: datetime) -> None:

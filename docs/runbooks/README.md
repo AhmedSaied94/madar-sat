@@ -28,8 +28,8 @@ Madar Sat runs on two Oracle Cloud Always Free VMs in one VCN, plus the owner's 
 | [remote-config.md](remote-config.md) | The app's Remote Config keys and their bundled defaults, changing a host safely, raising `min_supported_build`, the live poll interval |
 | [database-migrations.md](database-migrations.md) | How migrations run in a deploy, reading the state, a failed migration, the expand/contract rules |
 | [snapshot-load.md](snapshot-load.md) | Loading the Sat Air snapshot into VPS-1 and rehosting its media |
-| [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs`, `log` and `run.json`, pausing a source, the breaker, LiveSoccerTV and its placeholders, switching a fetch queue, the bridge's configuration |
-| [source-alerts.md](source-alerts.md) | The Telegram bot and chat, what "⛔ المصدر متوقف" and "⚠️ لم يجد أي عناصر" mean, and what to do |
+| [imports-and-sources.md](imports-and-sources.md) | The import schedule, starting a run, reading `import_runs`, `log` and `run.json`, pausing a source, the breaker, sporteventz and other sports, API-Football and stopped runs, LiveSoccerTV and its placeholders, switching a fetch queue, the bridge's configuration |
+| [source-alerts.md](source-alerts.md) | The Telegram bot and chat, what "⛔ المصدر متوقف" and "⚠️ لم يجد أي عناصر" mean, the quiet-day rules, and why a stopped run is not an alert |
 | [backups.md](backups.md) | Nightly database and media backups, retention, running one by hand, restoring the database and one media file, the monthly restore drill |
 | [uptime-kuma.md](uptime-kuma.md) | Reaching Kuma over WireGuard, the first account, the exact four HTTP and eight push monitors, the Telegram notification, what each alert means |
 | [home-box.md](home-box.md) | Joining the scrape box to `wg0`, its `.env`, the update timer, checking it, taking it offline |
