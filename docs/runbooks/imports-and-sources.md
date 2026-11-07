@@ -223,6 +223,8 @@ A waiting card is listed under `waiting` in `run.json` and in A13's run detail, 
 
 `ysscores` and `legacy` still join on the same names on the same day.
 
+**Why so much waits.** On 2026-11-05 the first run made 75 rows, 73 of them copies of fixtures we held under other spellings. A copy has no channels, and a polled copy takes the score away from the row that has them. So a fixture only YallaKora knows gets its row after its names are mapped, which is a smaller cost than a copy. Compare `report coverage` before and after a first run on a new host.
+
 ## sporteventz
 
 Other-sport fixtures and their broadcasters for D7 (FR-037–FR-039). Four sport pages —
@@ -263,9 +265,10 @@ dc exec postgres psql -U madar -d madar -c "select sport, count(*) from matches 
 
 ## API-Football and stopped runs
 
-`v3.football.api-sports.io`, one request per date for today to +3, allowlisted by league id. It ships
-off until the owner's five checks pass (D6 T059): the key stays unset, and each scheduled run records
-`stopped` / `not_configured` and sends nothing.
+`v3.football.api-sports.io`, one request per date for today to +3, allowlisted by league id. **It is not
+built yet:** the adapter and its budget are T060–T064, and the plan starts them only after the owner's
+five checks pass (T059). Until then the names below are placeholders in `example.env`, the key stays
+unset, and nothing is scheduled for this source.
 
 | Setting (VPS-2 `.env`) | Means |
 | --- | --- |
@@ -273,20 +276,18 @@ off until the owner's five checks pass (D6 T059): the key stays unset, and each 
 | `API_FOOTBALL_DAILY_BUDGET` | Requests allowed per UTC day (default 90) |
 | `API_FOOTBALL_LEAGUES` | The league ids the parse keeps (default `233,39,2`) |
 
-The budget is one Redis key per day (`budget:api_football:<date>`, 48 h): every attempt counts before
-it is sent, retries and «تشغيل الآن» included. Over it, the run is `stopped` with `budget_reached`.
-Redis unavailable is a fault, not a stop: `failed` with `budget_unreadable`. A non-empty `errors` in a
-200 is `failed` with the provider's message.
+When it is built, the budget is one Redis key per day (`budget:api_football:<date>`, 48 h): every
+attempt counts before it is sent, retries and «تشغيل الآن» included. Over it, the run is `stopped` with
+`budget_reached`. Redis unavailable is a fault, not a stop: `failed` with `budget_unreadable`. A
+non-empty `errors` in a 200 is `failed` with the provider's message.
 
 ```sh
 dc exec worker-imports celery -A app.workers call adapters.schedule_fetch --args '["api_football"]' --queue imports
 dc exec postgres psql -U madar -d madar -c "select id, status, items_found, error from import_runs where source = 'api_football' order by id desc limit 3"
 ```
 
-Changing the budget or a league needs a restarted `worker-scrape`: the settings are read when the
+Changing the budget or a league will need a restarted `worker-scrape`: the settings are read when the
 module loads. The daily reset's time is the provider's, confirmed by the owner's check 3.
-
-**Why so much waits.** On 2026-11-05 the first run made 75 rows, 73 of them copies of fixtures we held under other spellings. A copy has no channels, and a polled copy takes the score away from the row that has them. So a fixture only YallaKora knows gets its row after its names are mapped, which is a smaller cost than a copy. Compare `report coverage` before and after a first run on a new host.
 
 ## Relabelling a sporteventz row's sport
 
