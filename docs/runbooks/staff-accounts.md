@@ -66,6 +66,23 @@ account: new temporary password, `must_change_password = true`, every refresh to
 The CLI stays for the first account and for a lost admin app; there is no `--password` option, so the
 password comes from the terminal or stdin and never reaches shell history or `ps`.
 
+### Through the screen (A16)
+
+On `wg0`, open the admin and pick **المستخدمون** in the sidebar. It is an admin-only screen: an editor
+doesn't see it, and typing `/users` shows «صلاحيتك لا تسمح بهذا الإجراء».
+
+- **«مستخدم جديد»** opens the drawer: name, email, and the role, with the board's two lines
+  («المباريات والقنوات والفرق والمحتوى» for an editor, and everything plus accounts, sources,
+  announcements and bulk deletes for an admin). **«إنشاء الحساب»** shows the temporary password once,
+  with **«نسخ»**. It is held in the drawer only: closing it, or reloading, leaves no copy anywhere.
+  Hand it over the way you would hand over a CLI-created one.
+- The row's **«خيارات»** menu has **تعديل**, **إعادة تعيين كلمة المرور**, and **تعطيل** or **إعادة تنشيط**
+  by the account's state. Reset and deactivate ask first; reset shows the new temporary password once.
+  Your own account can't be demoted or deactivated (`cannot_change_self`), and the last active admin
+  can't be deactivated (`last_admin`), from the screen and from the server alike.
+- **الحالة** reads «نشط», «مقفل مؤقتاً · N د» (from the login limiter's TTL, so it needs no action), or
+  «معطّل». Role changes apply on that account's next request, because every request reads the row.
+
 ## Check an account works
 
 From a WireGuard peer ([private-network.md](private-network.md#the-admin-site) has the CA root):
@@ -116,6 +133,21 @@ Every admin edit writes an `audit_log` row with the admin's id, and the account 
 SELECT created_at, entity, entity_id, action, diff
 FROM audit_log WHERE entity = 'admin_users' ORDER BY id DESC LIMIT 20;
 ```
+
+### Through the screen (A17)
+
+**سجل التغييرات** in the sidebar shows the same rows, newest first, with the actor's name (or the
+importer's `sources.name`, or «النظام» for a CLI action). Pick an entry to see its **قبل / بعد** columns:
+
+- A field stored as `[old, new]` shows the two values side by side. Any other shape — a reset's
+  `{"password": "changed"}`, an older row — is shown as stored rather than hidden, and the screen never
+  fails on it.
+- When the entry produced a push, a line under the diff says how many devices it reached and links to
+  **صندوق الإرسال**, where A15 shows the same row with its counts and its error.
+- The log is read-only: there is no restore, by design (FR-045). To undo an edit, open the entity and
+  edit it again, which writes its own entry.
+- The filters — user, entity, period — live in the URL, so a view can be sent to someone else over
+  WireGuard. **قناة** finds the frequency saves, and each one links to its channel's «سجل التردد».
 
 ## A token or password may have leaked
 
