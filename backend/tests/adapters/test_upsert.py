@@ -973,6 +973,53 @@ def test_the_other_importers_still_join_on_the_same_names(sync_session: Session,
     assert _stored(sync_session, "ys-9").id == row.id
 
 
+# --- D6: a link change fans could see, recorded in the ingest's transaction (T050, FR-038) --------
+
+
+def _link_changes(session: Session, match_id: int) -> list[tuple[int, str, str]]:
+    from app.db.models import MatchChannelChange
+
+    return [
+        (row[0], row[1], row[2])
+        for row in session.execute(
+            select(MatchChannelChange.channel_id, MatchChannelChange.action, MatchChannelChange.source)
+            .where(MatchChannelChange.match_id == match_id)
+            .order_by(MatchChannelChange.id)
+        ).all()
+    ]
+
+
+def test_an_added_and_a_removed_link_are_reported_once_each(sync_session: Session, loaded_snapshot) -> None:
+    now = datetime(2026, 11, 7, 16, 0, tzinfo=UTC)
+    run = UpsertPipeline(sync_session, source="legacy", now=lambda: now)
+    cyr = channel_id(sync_session, "ch-cyr")
+
+    run.run([fixture(**source_legacy(links=(FixtureLink(channel_ref="ch-cyr"),)))])
+    match_id = sync_session.execute(select(Match.id).where(Match.legacy_id == "sat-1")).scalar_one()
+    assert _link_changes(sync_session, match_id) == [(cyr, "added", "legacy")]
+
+    run.run([fixture(**source_legacy(links=()))])
+    assert _link_changes(sync_session, match_id) == [(cyr, "added", "legacy"), (cyr, "removed", "legacy")]
+
+
+def test_a_rolled_back_ingest_leaves_no_change_row(sync_session: Session, loaded_snapshot) -> None:
+    from app.db.models import MatchChannelChange
+
+    now = datetime(2026, 11, 7, 16, 0, tzinfo=UTC)
+    other = Session(bind=sync_session.connection(), join_transaction_mode="create_savepoint")
+    try:
+        UpsertPipeline(other, source="legacy", now=lambda: now).run(
+            [fixture(**source_legacy(links=(FixtureLink(channel_ref="ch-cyr"),)))]
+        )
+        other.flush()
+        assert other.execute(select(func.count()).select_from(MatchChannelChange)).scalar_one() == 1
+        other.rollback()
+    finally:
+        other.close()
+
+    assert sync_session.execute(select(func.count()).select_from(MatchChannelChange)).scalar_one() == 0
+
+
 # --- D6: sport on the record, sporteventz's text-only rows, API-Football's strict create (T044) ---
 
 OTHER_SPORT_NAMES = {"home": "شيكاغو بولز", "away": "نيويورك نيكس", "competition": "الدوري الأمريكي"}

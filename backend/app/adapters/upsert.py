@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 from sqlalchemy import and_, func, or_, select, text, update
@@ -43,6 +43,7 @@ from app.db.models import (
     Team,
 )
 from app.domain.content import find_card_sharing_label
+from app.notifications.channel_changes import report_link_change
 
 log = logging.getLogger(__name__)
 
@@ -113,12 +114,21 @@ class RunOutcome:
 class UpsertPipeline:
     """``run`` applies a run's fixtures; the caller owns the transaction and the run row."""
 
-    def __init__(self, session: Session, *, source: str, media_hosts: Iterable[str] = ()) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        source: str,
+        media_hosts: Iterable[str] = (),
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         if source not in SOURCES:
             raise ValueError(f"unknown source {source!r}")
         self.session = session
         self.source = source
         self.media_hosts = frozenset(media_hosts)
+        # The clock a change is dated and windowed by; tests pass a frozen one.
+        self.now = now if now is not None else lambda: datetime.now(UTC)
 
     # --- the run ------------------------------------------------------------------------
 
@@ -240,6 +250,7 @@ class UpsertPipeline:
         link_changes: dict[str, Any] = {}
         if item.links is not None:
             link_changes = self._reconcile_links(match_id, item, created=created, outcome=outcome)
+            self._report_link_changes(match_id, link_changes)
         self._record_external_ids(match_id, item)
 
         changed = created or bool(changed_fields) or bool(link_changes)
@@ -647,6 +658,19 @@ class UpsertPipeline:
         if not (added or removed or changed):
             return {}
         return {"added": sorted(added), "removed": sorted(removed), "changed": sorted(changed)}
+
+    def _report_link_changes(self, match_id: int, changes: dict[str, Any]) -> None:
+        """Every link this source added or removed is a change fans may be told about (FR-038).
+
+        It is written in the ingest's own transaction, so a failed or rolled-back run leaves no row
+        and the next run reports the change once.
+        """
+        if not changes:
+            return
+        moment = self.now()
+        for action in ("added", "removed"):
+            for channel_id in changes.get(action, ()):
+                report_link_change(self.session, match_id, int(channel_id), action, self.source, moment)
 
     def _desired_links(
         self, item: NormalizedFixture, outcome: RunOutcome
