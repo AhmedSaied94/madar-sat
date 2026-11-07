@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ReactElement } from 'react';
@@ -89,7 +89,7 @@ const testSend: Outbox = {
   id: 9016,
   type: 'announcement',
   is_test: true,
-  target: { kind: 'match', label: 'ميلان × بولونيا', id: 48215 },
+  target: { kind: 'match_core', label: 'ميلان × بولونيا', id: 48215 },
 };
 
 const cancelled: Outbox = {
@@ -183,22 +183,24 @@ describe('A15 the log', () => {
     });
     renderLog();
 
-    expect(within(await rowOf('متأخر')).getByText('فشل · متأخر عن الموعد')).toBeInTheDocument();
-    expect(within(await rowOf('انتهت')).getByText('ملغى · انتهت المباراة')).toBeInTheDocument();
-    expect(within(await rowOf('انخفضت')).getByText('ملغى · انخفضت النتيجة')).toBeInTheDocument();
-    expect(within(await rowOf('بلا تغيير')).getByText('ملغى · لم يتغيّر شيء')).toBeInTheDocument();
-    expect(within(await rowOf('متوقف')).getByText('ملغى · نوع الإشعار متوقف')).toBeInTheDocument();
+    expect(within(await rowOf('متأخر')).getByText('متأخر عن الموعد')).toBeInTheDocument();
+    expect(within(await rowOf('انتهت')).getByText('انتهت المباراة')).toBeInTheDocument();
+    expect(within(await rowOf('انخفضت')).getByText('انخفضت النتيجة')).toBeInTheDocument();
+    expect(within(await rowOf('بلا تغيير')).getByText('لم يتغيّر شيء')).toBeInTheDocument();
+    expect(within(await rowOf('متوقف')).getByText('نوع الإشعار متوقف')).toBeInTheDocument();
 
-    const raw = within(await rowOf('خدمة')).getByText('فشل · FCM 503');
-    expect(raw).toBeInTheDocument();
-    expect(raw.querySelector('[dir="ltr"]') ?? raw).toHaveAttribute('dir', 'ltr');
+    // The push service's own text is never translated: it stays exactly as it came, in an LTR island.
+    const raw = within(await rowOf('خدمة')).getByText('FCM 503');
+    expect(raw).toHaveAttribute('dir', 'ltr');
   });
 
   it('shows «ملغى · أُلغي من الإدارة» for a cancelled announcement', async () => {
     serveLog({ '': { rows: [cancelled], next: null } });
     renderLog();
 
-    expect(within(await rowOf('جميع الأجهزة')).getByText('ملغى · أُلغي من الإدارة')).toBeInTheDocument();
+    const row = within(await rowOf('جميع الأجهزة'));
+    expect(row.getByText('ملغى')).toBeInTheDocument();
+    expect(row.getByText('أُلغي من الإدارة')).toBeInTheDocument();
   });
 
   it('reads the filters from the URL and sends them to the server', async () => {
@@ -305,8 +307,53 @@ describe('A15 the log', () => {
     expect(screen.getByRole('button', { name: 'إعادة المحاولة' })).toBeInTheDocument();
   });
 
-  it('gives an editor the log and no composer', async () => {
-    serveLog({ '': { rows: [goal], next: null } });
+  it('cancels a pending announcement with the version the list carried', async () => {
+    const cancelled: { url: string; ifMatch: string | null }[] = [];
+    server.use(
+      http.get('*/admin/api/notifications', () =>
+        HttpResponse.json(envelope([pendingAnnouncement], { next_cursor: null }), { headers: { ETag: '"outbox-1"' } }),
+      ),
+      http.post('*/admin/api/notifications/:id/cancel', ({ request, params }) => {
+        cancelled.push({ url: String(params['id']), ifMatch: request.headers.get('If-Match') });
+        return HttpResponse.json(envelope({ ...pendingAnnouncement, status: 'cancelled', error: 'admin' }));
+      }),
+    );
+    restoreAs('admin');
+    renderRtl(<NotificationsPage />, { route: '/notifications', wrapper: Providers });
+
+    const row = within(await rowOf('جميع الأجهزة'));
+    await userEvent.click(row.getByRole('button', { name: 'إلغاء الإعلان' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إلغاء الإعلان' }));
+
+    await waitFor(() => expect(cancelled).toHaveLength(1));
+    expect(cancelled[0]).toEqual({ url: '9013', ifMatch: '"outbox-1"' });
+  });
+
+  it('opens ConflictDialog when the cancel loses a race', async () => {
+    server.use(
+      http.get('*/admin/api/notifications', () =>
+        HttpResponse.json(envelope([pendingAnnouncement], { next_cursor: null }), { headers: { ETag: '"outbox-1"' } }),
+      ),
+      http.post('*/admin/api/notifications/:id/cancel', () =>
+        HttpResponse.json(
+          refusal('edit_conflict', { changed_by: { kind: 'admin', name: 'سارة حسن' }, changed_at: '2026-11-06T18:00:00Z' }),
+          { status: 409 },
+        ),
+      ),
+    );
+    restoreAs('admin');
+    renderRtl(<NotificationsPage />, { route: '/notifications', wrapper: Providers });
+
+    const row = within(await rowOf('جميع الأجهزة'));
+    await userEvent.click(row.getByRole('button', { name: 'إلغاء الإعلان' }));
+    const confirm = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'إلغاء الإعلان' }));
+
+    expect(await screen.findByText(/حُفظت نسخة أحدث من/)).toBeInTheDocument();
+  });
+
+  it('gives an editor the log and no composer', async () => {    serveLog({ '': { rows: [goal], next: null } });
     renderLog('editor');
 
     expect(await screen.findByText('البنك الأهلي × المصري')).toBeInTheDocument();

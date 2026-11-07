@@ -20,6 +20,7 @@ const statusTone: Record<ImportRunDetail['status'], string> = {
   succeeded: 'bg-free-container text-free',
   partial: 'bg-postponed-container text-postponed',
   failed: 'bg-error-container text-error',
+  stopped: 'bg-surface-2 text-text-tertiary',
 };
 
 /** How often a `pending` page is asked again, and how many answers it may take (10 s, per contract). */

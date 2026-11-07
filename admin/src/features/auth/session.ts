@@ -24,6 +24,8 @@ interface SessionValue {
   session: Session | null;
   /** True until the first restore from the refresh cookie settles: the guard must wait, not redirect. */
   restoring: boolean;
+  /** A `403 password_change_required` was seen: the form is the only thing the shell renders. */
+  mustChangePassword: boolean;
   signIn: (session: Session) => void;
   signOut: () => void;
 }
@@ -36,6 +38,9 @@ export const REFRESH_LEAD_S = 60;
 export function SessionProvider({ children }: { children: ReactNode }): ReactElement {
   const [session, setSession] = useState<Session | null>(null);
   const [restoring, setRestoring] = useState(true);
+  // Set by the mutator's `403 password_change_required`. A change-password keeps this session and
+  // clears it; the account's own flag comes from the server in every `Session` (contract admin-api).
+  const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The cache belongs to the session: a second editor on the same tab must never see the first
   // editor's data or versions (A-R2-10).
@@ -53,6 +58,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
           setSession(null);
           queryClient.clear();
         }
+      },
+      onPasswordChangeRequired: () => {
+        if (!cancelled) setPasswordChangeRequired(true);
       },
     });
 
@@ -73,11 +81,13 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
 
   const signIn = useCallback((next: Session) => {
     setAccessToken(next.access_token);
+    setPasswordChangeRequired(false);
     setSession(next);
   }, []);
 
   const signOut = useCallback(() => {
     setSession(null);
+    setPasswordChangeRequired(false);
     queryClient.clear();
     void endSession();
   }, [queryClient]);
@@ -102,8 +112,14 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactEle
   }, [session]);
 
   const value = useMemo<SessionValue>(
-    () => ({ session, restoring, signIn, signOut }),
-    [session, restoring, signIn, signOut],
+    () => ({
+      session,
+      restoring,
+      mustChangePassword: passwordChangeRequired || session?.admin.must_change_password === true,
+      signIn,
+      signOut,
+    }),
+    [session, restoring, passwordChangeRequired, signIn, signOut],
   );
   return createElement(SessionContext.Provider, { value }, children);
 }

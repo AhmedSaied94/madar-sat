@@ -25,7 +25,7 @@ interface Row {
 }
 
 const admin: Row = {
-  id: 3,
+  id: 1,
   email: 'mohamed@example.com',
   name: 'محمد علي',
   role: 'admin',
@@ -138,7 +138,9 @@ describe('A16 the accounts', () => {
     expect(within(await rowOf('سارة حسن')).getByText('نشط')).toBeInTheDocument();
     expect(within(await rowOf('يوسف عمر')).getByText('مقفل مؤقتاً · 11 د')).toBeInTheDocument();
     expect(within(await rowOf('نور كمال')).getByText('معطّل')).toBeInTheDocument();
-    expect(within(await rowOf('نور كمال')).getByText('V2')).toBeInTheDocument();
+    // The board's TOTP mark is the «V2» chip; a deactivated account shows a dash instead.
+    expect(within(await rowOf('محمد علي')).getByText('V2')).toBeInTheDocument();
+    expect(within(await rowOf('نور كمال')).getByText('—')).toBeInTheDocument();
   });
 
   it('creates an account and shows its temporary password once, with a copy button', async () => {
@@ -206,7 +208,7 @@ describe('A16 the accounts', () => {
     await userEvent.click(within(await rowOf('يوسف عمر')).getByRole('button', { name: 'خيارات' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'إعادة تعيين كلمة المرور' }));
 
-    const confirm = await screen.findByRole('dialog');
+    const confirm = await screen.findByRole('alertdialog');
     expect(within(confirm).getByText(/كلمة مرور مؤقتة جديدة/)).toBeInTheDocument();
     await userEvent.click(within(confirm).getByRole('button', { name: 'إعادة تعيين' }));
 
@@ -222,7 +224,7 @@ describe('A16 the accounts', () => {
     await screen.findByText('يوسف عمر');
     await userEvent.click(within(await rowOf('يوسف عمر')).getByRole('button', { name: 'خيارات' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'تعطيل' }));
-    const confirm = await screen.findByRole('dialog');
+    const confirm = await screen.findByRole('alertdialog');
     await userEvent.click(within(confirm).getByRole('button', { name: 'تعطيل' }));
 
     await waitFor(() => expect(served.patches.at(-1)).toMatchObject({ body: { is_active: false } }));
@@ -274,7 +276,7 @@ describe('A16 the accounts', () => {
     await screen.findByText('محمد علي');
     await userEvent.click(within(await rowOf('محمد علي')).getByRole('button', { name: 'خيارات' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'تعطيل' }));
-    const confirm = await screen.findByRole('dialog');
+    const confirm = await screen.findByRole('alertdialog');
     await userEvent.click(within(confirm).getByRole('button', { name: 'تعطيل' }));
 
     expect(await screen.findByText('لا يمكن تعطيل آخر مدير نشط. أضف مديراً آخر أولاً')).toBeInTheDocument();

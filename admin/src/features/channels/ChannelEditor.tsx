@@ -27,6 +27,7 @@ import { uploadAsset } from '../../lib/media';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
 import '../../lib/validation';
 import { useSatelliteOptions } from './queries';
+import { FrequencyHistory } from './FrequencyHistory';
 
 // A8's editor drawer: every field of PB A8 — matching and display name, carriage (frequency or a
 // platform without a satellite), access, category, country, "shown on match pages" and the logo.
@@ -486,6 +487,9 @@ export function ChannelEditor({
           />
           {copy.editor.showInMatch}
         </label>
+
+        {/* «سجل التردد»: an existing carriage's last changes, edit mode only (contract A8). */}
+        {channelId === null ? null : <FrequencyHistory channelId={channelId} />}
 
         <LogoField
           label={copy.editor.logo}

@@ -443,10 +443,10 @@ describe('A8 frequency history', () => {
     expect(readouts[3]).toHaveAccessibleName(/11766/);
     for (const readout of readouts) expect(readout).toHaveAttribute('dir', 'ltr');
 
-    const first = readouts[0]?.closest('[data-history-id]') as HTMLElement | null;
-    if (!first) throw new Error('expected a history row');
-    expect(first).toHaveTextContent('محمد علي');
-    expect(within(first).getByText('سارة حسن')).toBeInTheDocument();
+    const rowsInOrder = Array.from(drawer.querySelectorAll('[data-history-id]')) as HTMLElement[];
+    expect(rowsInOrder).toHaveLength(2);
+    expect(rowsInOrder[0]).toHaveTextContent('محمد علي');
+    expect(rowsInOrder[1]).toHaveTextContent('سارة حسن');
   });
 
   it('says so in one line when the frequency never changed', async () => {

@@ -5,18 +5,13 @@ import { dialogs } from '../../i18n/ar';
 import { Button } from '../Button/Button';
 import { Icon } from '../Icon/Icon';
 import { Modal } from './Modal';
+import { DiffView, type ConflictChange } from './DiffView';
 
 // A 409 edit_conflict (contract admin-api D2): who saved first, what their version changed, and the
 // two ways out — reload their version into the form, or drop my own edits. Nothing is re-sent blind.
+// The diff itself is `DiffView`'s, so A17 shows the same changes in its قبل / بعد columns.
 
-export interface ConflictChange {
-  /** The API field name, shown as a mono LTR key. */
-  field: string;
-  /** Its Arabic label. */
-  label: string;
-  before: string | null;
-  after: string | null;
-}
+export type { ConflictChange };
 
 export interface ConflictParty {
   kind: 'admin' | 'source';
@@ -78,29 +73,8 @@ export function ConflictDialog({
       </div>
 
       {showing && changes.length > 0 ? (
-        <div data-testid="conflict-diff" className="flex flex-col gap-3 rounded-lg bg-bg p-4">
-          {changes.map((change) => (
-            <div key={change.field} className="flex flex-col gap-1">
-              <span className="text-caption flex items-center gap-2 font-semibold text-text-secondary">
-                {change.label}
-                <bdi dir="ltr" className="text-micro font-mono text-text-tertiary">
-                  {change.field}
-                </bdi>
-              </span>
-              <p className="text-label rounded-xs bg-error-container px-2 py-1 text-error">
-                <span aria-hidden="true" className="me-2 font-mono">
-                  −
-                </span>
-                <bdi data-change="before">{change.before ?? '—'}</bdi>
-              </p>
-              <p className="text-label rounded-xs bg-free-container px-2 py-1 text-free">
-                <span aria-hidden="true" className="me-2 font-mono">
-                  +
-                </span>
-                <bdi data-change="after">{change.after ?? '—'}</bdi>
-              </p>
-            </div>
-          ))}
+        <div data-testid="conflict-diff">
+          <DiffView changes={changes} layout="stacked" />
         </div>
       ) : null}
 

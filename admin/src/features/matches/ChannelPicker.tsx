@@ -7,12 +7,16 @@ import { editor as copy } from '../../i18n/ar';
 
 // A4's channel picker: search, then filter by category, satellite or platform, and add the channel to
 // this match's links. The satellite and frequency are on every row: two channels can share a name
-// across positions (A-R1-7).
+// across positions (A-R1-7). A15's composer asks for the same search with one choice instead of many,
+// so `onSelect` turns each row into a selectable option rather than an «أضف» button.
 interface ChannelPickerProps {
-  onAdd: (channel: ChannelItem) => void;
+  onAdd?: (channel: ChannelItem) => void;
+  /** Single-select mode: the row picks this channel and nothing is added. */
+  onSelect?: (channel: ChannelItem) => void;
+  selectedId?: number | null;
 }
 
-export function ChannelPicker({ onAdd }: ChannelPickerProps): ReactElement {
+export function ChannelPicker({ onAdd, onSelect, selectedId = null }: ChannelPickerProps): ReactElement {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<AdminChannelCategory | ''>('');
   const [satelliteId, setSatelliteId] = useState<string>('');
@@ -91,8 +95,13 @@ export function ChannelPicker({ onAdd }: ChannelPickerProps): ReactElement {
                   ) : null}
                 </span>
               </span>
-              <Button size="xs" variant="outline" onClick={() => onAdd(channel)}>
-                {copy.add}
+              <Button
+                size="xs"
+                variant={selectedId === channel.id ? 'primary' : 'outline'}
+                aria-pressed={onSelect ? selectedId === channel.id : undefined}
+                onClick={() => (onSelect ? onSelect(channel) : onAdd?.(channel))}
+              >
+                {onSelect ? (selectedId === channel.id ? copy.selected : copy.choose) : copy.add}
               </Button>
             </li>
           ))

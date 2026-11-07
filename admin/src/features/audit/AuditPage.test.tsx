@@ -164,18 +164,20 @@ describe('A17 the audit log', () => {
   });
 
   it('shows {"password": "changed"} raw on both sides, without throwing', async () => {
-    serve({ diff: { password: 'changed' } });
+    const served = serve({ diff: { password: 'changed' } });
     renderAudit();
 
+    await waitFor(() => expect(served.details.length).toBeGreaterThan(0));
     const detail = await screen.findByTestId('audit-detail');
     expect(within(detail).getByTestId('diff-before')).toHaveTextContent('changed');
     expect(within(detail).getByTestId('diff-after')).toHaveTextContent('changed');
   });
 
   it('links to the push with its counts when the entry produced one', async () => {
-    serve();
+    const served = serve();
     renderAudit();
 
+    await waitFor(() => expect(served.details.length).toBeGreaterThan(0));
     const detail = await screen.findByTestId('audit-detail');
 
     expect(within(detail).getByText(/1,233/)).toBeInTheDocument();

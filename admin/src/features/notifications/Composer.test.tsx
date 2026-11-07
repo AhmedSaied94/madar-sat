@@ -119,7 +119,7 @@ interface Served {
 /** Everything the composer reads and writes, so a test can assert what reached the API. */
 function serve(overrides: { device?: unknown; reachDevices?: number; conflict?: boolean; testRefused?: string } = {}): Served {
   const served: Served = { posts: [], tests: [], reach: [], devicePuts: [], deviceReads: 0 };
-  const savedDevice = 'device' in overrides ? overrides.device : device;
+  let savedDevice: unknown = 'device' in overrides ? overrides.device : device;
 
   server.use(
     http.get('*/admin/api/matches', () => HttpResponse.json(envelope(matches, { next_cursor: null }))),
@@ -140,6 +140,8 @@ function serve(overrides: { device?: unknown; reachDevices?: number; conflict?: 
       if (overrides.conflict === true) {
         return HttpResponse.json(refusal('edit_conflict', { current_etag: '"dev-2"' }), { status: 409 });
       }
+      // The saved device answers the next read, as the real API does once the write commits.
+      savedDevice = device;
       return HttpResponse.json(envelope(device), { headers: { ETag: '"dev-2"' } });
     }),
     http.post('*/admin/api/notifications/announcements', async ({ request }) => {
@@ -214,7 +216,7 @@ describe('the composer', () => {
     await waitFor(() => expect(screen.getByText(/48,200/)).toBeInTheDocument());
     await userEvent.click(screen.getByRole('button', { name: 'إرسال الآن' }));
 
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getByText(/48,200/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'إرسال' }));
 
@@ -281,6 +283,9 @@ describe('the composer', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'إرسال الآن' }));
 
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إرسال' }));
+
     await waitFor(() => expect(served.posts).toHaveLength(1));
     expect(served.posts[0]).toMatchObject({ target: { type: 'match', id: 48213 } });
   });
@@ -301,6 +306,9 @@ describe('the composer', () => {
 
     fireEvent.change(when, { target: { value: '2031-01-01T10:00' } });
     await userEvent.click(screen.getByRole('button', { name: 'جدولة الإرسال' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إرسال' }));
 
     await waitFor(() => expect(served.posts).toHaveLength(1));
     expect(served.posts[0]).toMatchObject({ send_at: '2031-01-01T08:00:00.000Z' });

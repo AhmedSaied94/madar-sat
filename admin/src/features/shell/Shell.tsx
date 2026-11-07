@@ -5,7 +5,7 @@ import { Icon } from '../../components/Icon/Icon';
 import { SidebarNav, type SidebarUser } from '../../components/SidebarNav/SidebarNav';
 import { RoleChip } from '../../components/StatusChip/StatusChip';
 import { shell } from '../../i18n/ar';
-import { activeSection, navigation } from './navigation';
+import { activeSection, navigationFor } from './navigation';
 
 interface ShellProps {
   user: SidebarUser;
@@ -32,7 +32,7 @@ export function Shell({ user, onLogout }: ShellProps): ReactElement {
 
   return (
     <div data-testid="shell" className="flex min-h-screen bg-bg text-text-primary">
-      <SidebarNav groups={navigation} active={activeSection(pathname)} user={user} onLogout={onLogout} />
+      <SidebarNav groups={navigationFor(user.role)} active={activeSection(pathname)} user={user} onLogout={onLogout} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center gap-3 border-b border-divider px-6 py-3">
