@@ -116,6 +116,22 @@ void main() {
     expect(types.keys, isNot(contains(null)));
   });
 
+  test('the master switch reaches the server, keeping each type', () async {
+    await launch();
+    adapter.enqueueData(deviceBody);
+    await choose(NotificationType.goal, false);
+    adapter.enqueueData(deviceBody);
+
+    final notifier = container.read(appSettingsProvider.notifier);
+    await notifier.setNotifications(notifier.value.notificationChoices.withEnabled(false));
+    await container.read(appSettingsProvider.future);
+    await pumpEventQueue();
+
+    final prefs = prefsOf(puts().last)!;
+    expect(prefs['enabled'], isFalse);
+    expect((prefs['types']! as Map<String, Object?>)['goal'], {'on': false});
+  });
+
   test('a change made offline stays flagged and reaches the server on reconnect', () async {
     await launch();
     adapter.enqueueOffline();

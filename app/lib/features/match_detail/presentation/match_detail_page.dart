@@ -164,7 +164,11 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
     final before = _lastLive;
     _lastLive = next;
     if (before == null || !ref.read(liveCenterEnabledProvider)) return;
-    if (before.score != next.score || before.status != next.status) _revalidate();
+    if (before.score != next.score ||
+        before.status != next.status ||
+        before.eventCount != next.eventCount) {
+      _revalidate();
+    }
   }
 
   /// Once the page first has a match: scrolls to «أين تشاهد», building it first if a long

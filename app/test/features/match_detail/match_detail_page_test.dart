@@ -1246,8 +1246,15 @@ void main() {
     );
     final flagOn = [remoteConfigProvider.overrideWithValue(on)];
 
-    LiveState liveAt(int home, {Status status = Status.live, String minute = '67'}) => LiveState(
+    LiveState liveAt(
+      int home, {
+      Status status = Status.live,
+      String minute = '67',
+      int eventCount = 0,
+    }) =>
+        LiveState(
           matchId: _matchId,
+          eventCount: eventCount,
           status: status,
           estimated: false,
           minute: minute,
@@ -1325,6 +1332,34 @@ void main() {
       await poll(tester);
 
       expect(api.requestsTo(_matchPath).length, before + 1);
+    });
+
+    testWidgets('a new event with the same score reads the match once', (tester) async {
+      liveAnswer = [liveAt(1, eventCount: 1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      answerDetail(
+        withEvents(
+          events: const [
+            goal,
+            MatchEvent(
+              type: MatchEventType.redCard,
+              side: MatchEventSide.away,
+              minute: '60',
+              player: 'حسين الشحات',
+            ),
+          ],
+        ),
+        etag: '"v2"',
+      );
+      await open(tester, overrides: flagOn);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [liveAt(1, eventCount: 2)];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before + 1);
+      expect(find.text('حسين الشحات'), findsOneWidget);
     });
 
     testWidgets('a clock that moves alone reads nothing', (tester) async {

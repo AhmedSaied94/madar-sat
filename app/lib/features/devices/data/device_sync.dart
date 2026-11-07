@@ -226,6 +226,7 @@ class DeviceSync extends _$DeviceSync {
   static NotificationPrefs? _prefs(NotificationChoices? choices) => choices == null
       ? null
       : NotificationPrefs(
+          enabled: choices.enabled,
           types: {
             for (final type in NotificationType.$valuesDefined)
               type.json!: NotificationPref(onValue: choices.isOn(type)),
