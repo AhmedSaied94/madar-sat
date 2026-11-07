@@ -35,6 +35,7 @@ from app.live.sources import filgoal, goal, yallakora
 from app.live.sources.common import safe_path
 from app.live.types import LayoutChanged, SideInput, SourceReading
 from app.live.watchdog import pause_feed_rows
+from app.notifications.producers import record_poll
 from app.services.live import FEED_WINDOW_BEFORE, WINDOW_AFTER, poll_window_query
 from app.workers.base import Retryable
 
@@ -70,6 +71,9 @@ class Deps:
     record_live_cycle: Callable[..., Any]
     clock: Callable[[], datetime]
     monotonic: Callable[[], float]
+    # Queues ``notifications.dispatch_due`` after a poll that wrote a row (research R3). ``None`` in
+    # tests and in a process with no broker: the beat's own dispatch picks the row up a minute later.
+    kick_dispatch: Callable[[], None] | None = None
 
 
 @dataclass
@@ -534,8 +538,18 @@ def _apply_match(
         closed = list(decision.close_problems)
         if readings:
             closed.append(f"stale:{match_id}")
+        # The push producers run in their own savepoint: a bug in copy or memory rolls back only the
+        # push work, and the score still commits (FR-008, research R3).
+        produced = 0
+        try:
+            with session.begin_nested():
+                produced = record_poll(session, match, readings, now)
+        except Exception:  # noqa: BLE001 - never let a push bug stop the live score
+            log.exception("push_producers_failed", extra={"match_id": match_id})
         texts = sync_problems(session, opened=decision.open_problems, closed=closed, now=now, raw_ref=raw_ref)
     _send(deps, texts)
+    if produced and deps.kick_dispatch is not None:
+        deps.kick_dispatch()
     return changed
 
 

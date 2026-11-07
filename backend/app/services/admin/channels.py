@@ -242,6 +242,12 @@ async def update(
 
     state = {key: getattr(channel, key) for key in (*PLAIN_COLUMNS, "frequency_mhz")}
     await _check(session, channel.kind, state, changes, needs_tuning=became_satellite)
+    from app.notifications.producers import frequency_hold
+
+    async def then(audit: Any) -> None:
+        # Keyed on the save's audit row, which the writer flushed just before this (R6).
+        await frequency_hold(session, channel, before, audit.id, now)
+
     await writer.save_update(
         session,
         admin,
@@ -251,6 +257,7 @@ async def update(
         datasets=writer.CHANNEL_CHANGED,
         now=now,
         lockable=CHANNEL_LOCKABLE,
+        then=then,
     )
     return channel
 

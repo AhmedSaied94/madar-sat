@@ -3,6 +3,8 @@
  * Do not edit manually.
  * Madar Sat Admin API
  * Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` needs `Authorization: Bearer <access_token>` and the role in its row of the contract. Writes need `If-Match` with the entity's `ETag`.
+
+Error codes added on D6: `password_change_required` (a flagged account may only read `auth/me` and change its password), `notification_not_cancellable` (only a pending announcement cancels), `send_at_in_past`, `text_not_allowed` (a card-sharing label), `test_device_not_set`, `test_device_no_token`, `device_not_found`, `email_taken`, `cannot_change_self`, `last_admin`, `password_too_short`, `password_unchanged`.
  * OpenAPI spec version: 1.0.0
  */
 export type Access = typeof Access[keyof typeof Access];

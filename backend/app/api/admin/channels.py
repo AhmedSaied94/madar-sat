@@ -154,6 +154,10 @@ async def patch_channel(
 ) -> Envelope[a.AdminChannel]:
     channel = await service.update(session, admin, channel_id, body, if_match, now)
     await session.commit()
+    # A frequency hold is queued five minutes out; a row due now (an edit already held) goes at once.
+    from app.notifications.kick import kick_if_due_async
+
+    await kick_if_due_async(session, now)
     set_etag(response, await service.version(session, channel))
     return ok(await service.view(session, channel))
 

@@ -26,6 +26,17 @@ BADGE_PATH = "/icons/Icon-maskable-192.png"
 RETRY_DELAYS = (1.0, 2.0, 4.0)
 
 
+class PushRetryable(Retryable):
+    """A whole-call failure with the short reason A15 shows: ``FCM 503`` or ``FCM <code>``.
+
+    Never a token and never ``repr(exc)``: the reason reaches ``notification_outbox.error`` (R9).
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 @dataclass(frozen=True)
 class SendOutcome:
     """One page's result: delivered, failed, the tokens FCM says no longer exist, and the tokens it
@@ -35,6 +46,8 @@ class SendOutcome:
     failed: int = 0
     unregistered: tuple[str, ...] = ()
     retryable: tuple[str, ...] = ()
+    # The last non-transient failure's short reason, so a failed row says why (R9).
+    last_error: str | None = None
 
 
 class PushSender(Protocol):
@@ -112,6 +125,7 @@ class FcmSender:
                 failed += 1
                 log.error("fcm_message_unencodable", extra={"why": repr(exc)})
         sent = 0
+        last_error: str | None = None
         unregistered: list[str] = []
         pending = encoded
         for attempt in range(len(RETRY_DELAYS) + 1):
@@ -124,7 +138,7 @@ class FcmSender:
             except Exception as exc:  # noqa: BLE001 - a whole-call failure is transient
                 log.warning("fcm_call_failed", extra={"messages": len(pending), "why": repr(exc)})
                 if attempt == 0:
-                    raise Retryable(f"send_each failed: {exc!r}") from exc
+                    raise PushRetryable(failure_reason(exc)) from exc
                 # A re-send cannot fail the page: raising now would re-send it whole to the devices
                 # the earlier calls already reached. What is still pending is reported ``retryable``.
                 break
@@ -140,6 +154,7 @@ class FcmSender:
                     unsent.append((message, wire))
                 else:
                     failed += 1
+                    last_error = failure_reason(problem)
                     log.error("fcm_message_failed", extra={"why": repr(problem)})
             pending = unsent
         if pending:
@@ -149,7 +164,20 @@ class FcmSender:
             failed=failed,
             unregistered=tuple(unregistered),
             retryable=tuple(message.token for message, _ in pending),
+            last_error=last_error,
         )
+
+
+def failure_reason(exc: BaseException | None) -> str:
+    """``FCM <http status>`` when the call answered, else ``FCM <code>``, else ``FCM failed`` (R9)."""
+    response = getattr(exc, "http_response", None)
+    status = getattr(response, "status_code", None)
+    if isinstance(status, int):
+        return f"FCM {status}"
+    code = getattr(exc, "code", None)
+    if isinstance(code, str) and code:
+        return f"FCM {code}"
+    return "FCM failed"
 
 
 def _is_usable(message: PushMessage) -> bool:

@@ -249,9 +249,16 @@ async def update(
             # or an importer would wipe an editor's entries (research R23).
             match.locked_fields = sorted({*(match.locked_fields or []), "broadcasts"})
     if body.channels is not None:
-        links = await match_links.reconcile_links(session, match.id, body.channels)
+        links = await match_links.reconcile_links(session, match.id, body.channels, now)
         if links:
             extra["channels"] = links
+
+    from app.notifications.producers import record_editor_status
+
+    async def then(_audit: Any) -> None:
+        # Only a save that sent a status can correct or finish a pushed score (FR-009, R3).
+        if body.status is not None:
+            await record_editor_status(session, match, now)
 
     await writer.save_update(
         session,
@@ -263,6 +270,7 @@ async def update(
         now=now,
         lockable=MATCH_LOCKABLE - unlock,
         extra_diff=extra,
+        then=then,
     )
     if unlock:
         match.locked_fields = [name for name in (match.locked_fields or []) if name not in unlock]
@@ -311,7 +319,7 @@ async def create(session: AsyncSession, admin: AuthedAdmin, body: a.MatchCreate,
     extra: dict[str, Any] = {"locked_fields": [None, list(match.locked_fields)]} if match.locked_fields else {}
     if slots:
         extra["broadcasts"] = slots
-    links = await match_links.reconcile_links(session, match.id, body.channels)
+    links = await match_links.reconcile_links(session, match.id, body.channels, now)
     if links:
         extra["channels"] = links
     await writer.save_create(session, admin, entity=ENTITY, row=match, datasets=("matches", "live"), extra_diff=extra)

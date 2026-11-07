@@ -414,21 +414,20 @@ def test_a_device_that_got_the_message_is_never_sent_it_again_when_another_stays
     assert dispatch_due(sync_session, sender, frozen_now).claimed == []
 
 
-def test_the_claim_leaves_newer_types_to_the_d6_dispatcher(sync_session, frozen_now):
-    """T015's PR deploys before the dispatcher understands announcements, so it never claims one (T032)."""
+def test_a_live_type_is_claimed_before_an_older_announcement(sync_session, frozen_now):
+    """R8: a big send must not hold a goal, so priority beats due time in the claim order."""
     session = sync_session
     session.execute(
         text(
             "INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status) VALUES "
-            "('kickoff_reminder', 'kickoff_reminder:1', '{}', '{}', :now, 'pending'), "
-            "('announcement', 'announcement:x', '{}', '{}', :now, 'pending')"
+            "('announcement', 'announcement:old', '{}', '{}', :earlier, 'pending'), "
+            "('goal', 'goal:1:0:home:1', '{}', '{}', :now, 'pending')"
         ),
-        {"now": frozen_now},
+        {"now": frozen_now, "earlier": frozen_now - timedelta(minutes=5)},
     )
     session.flush()
 
-    claimed = claim(session, frozen_now)
+    claimed = claim(session, frozen_now, limit=1)
 
-    assert len(claimed) == 1
     row = session.get(NotificationOutbox, claimed[0])
-    assert row is not None and row.type == "kickoff_reminder"
+    assert row is not None and row.type == "goal"

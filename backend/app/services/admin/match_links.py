@@ -14,6 +14,7 @@ Links to soft-deleted channels are not shown in the editor, so they are never to
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -77,9 +78,16 @@ async def slot_errors(session: AsyncSession, slots: Sequence[a.BroadcastSlotInpu
 
 
 async def reconcile_links(
-    session: AsyncSession, match_id: int, desired: Sequence[a.ChannelLinkInput]
+    session: AsyncSession,
+    match_id: int,
+    desired: Sequence[a.ChannelLinkInput],
+    now: datetime | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Apply the desired links; returns the audit diff (``added``, ``removed``, ``changed``; empty when none)."""
+    """Apply the desired links; returns the audit diff (``added``, ``removed``, ``changed``; empty when none).
+
+    Each add and remove, and each change of ``is_hidden``, is also reported to the push producers, which
+    keep their own pending row (FR-010, research R5).
+    """
     stored = {
         link.channel_id: link
         for link in (await session.scalars(select(MatchChannel).where(MatchChannel.match_id == match_id))).all()
@@ -138,7 +146,33 @@ async def reconcile_links(
         if edits:
             changed.append({"channel_id": channel_id, "fields": edits})
 
+    await _report_changes(session, match_id, added, removed, changed, now)
     return {key: value for key, value in (("added", added), ("removed", removed), ("changed", changed)) if value}
+
+
+async def _report_changes(
+    session: AsyncSession,
+    match_id: int,
+    added: Sequence[dict[str, Any]],
+    removed: Sequence[dict[str, Any]],
+    changed: Sequence[dict[str, Any]],
+    now: datetime | None,
+) -> None:
+    """One row per direction per channel; a hidden flag moving counts as one too (research R5)."""
+    from app.notifications.channel_changes import report_link_change_async
+
+    moment = now or datetime.now(UTC)
+    for item in added:
+        await report_link_change_async(session, match_id, int(item["channel_id"]), "added", "admin", moment)
+    for item in removed:
+        await report_link_change_async(session, match_id, int(item["channel_id"]), "removed", "admin", moment)
+    for item in changed:
+        edits = item.get("fields") or {}
+        if "is_hidden" not in edits:
+            continue
+        hidden = edits["is_hidden"][1]
+        action = "removed" if hidden else "added"
+        await report_link_change_async(session, match_id, int(item["channel_id"]), action, "admin", moment)
 
 
 async def remove_all_visible(

@@ -695,7 +695,65 @@ def test_a_match_page_replaces_the_list_reading_and_brings_events_and_lineups(wo
     assert (row.status, row.home_score, row.away_score) == ("finished", 3, 2)
     assert {event.type for event in world.rows(MatchEvent)} == {"goal", "penalty", "red_card"}
     assert {lineup.side for lineup in world.rows(MatchLineup)} == {"home", "away"}
-    assert world.rows(NotificationOutbox) == []  # FR-014
+    # D6 supersedes D5's FR-014: the poller produces the finish. The first evaluation is a baseline,
+    # so a match that arrived finished sends no goal (FR-002), only ``final_score`` (FR-007).
+    [produced] = world.rows(NotificationOutbox)
+    assert produced.type == "final_score"
+    assert produced.payload == {"match_id": match_id}
+
+
+def test_a_push_bug_does_not_stop_the_score_and_the_next_poll_sends(world, monkeypatch):
+    """FR-008: the producers run in a savepoint; their failure leaves the score committed."""
+    from app.db.models import NotificationOutbox
+    from app.notifications import producers
+
+    match_id = world.add_match()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 0, 0, LIVE))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 0, 0, LIVE))
+    world.run()  # the baseline
+
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 1, 0, LIVE))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 0, LIVE))
+    original = producers.evaluate
+    calls = {"count": 0}
+
+    def raise_once(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("a copy bug")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(producers, "evaluate", raise_once)
+    world.run()
+
+    row = world.match(match_id)
+    assert (row.home_score, row.away_score) == (1, 0)
+    assert world.rows(NotificationOutbox) == []
+
+    world.run()
+
+    [goal] = world.rows(NotificationOutbox)
+    assert goal.type == "goal"
+    assert goal.payload["home"] == 1
+
+
+def test_a_poll_that_wrote_a_row_queues_the_dispatch(world):
+    from app.db.models import NotificationOutbox
+
+    match_id = world.add_match()
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 0, 0, LIVE))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 0, 0, LIVE))
+    kicked: list[int] = []
+    world.run(kick_dispatch=lambda: kicked.append(1))
+    assert kicked == []  # a baseline writes no row
+
+    world.fetch.pages[FILGOAL_LIST] = filgoal_list(("f1", 1, 0, LIVE))
+    world.fetch.pages[YALLAKORA_LIST] = yallakora_list(("y1", 1, 0, LIVE))
+    world.run(kick_dispatch=lambda: kicked.append(1))
+
+    assert len(world.rows(NotificationOutbox)) == 1
+    assert kicked == [1]
+    assert world.match(match_id).home_score == 1
 
 
 def test_a_page_that_fails_validation_stops_the_whole_source(world):

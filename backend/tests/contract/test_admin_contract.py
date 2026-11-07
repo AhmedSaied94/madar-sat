@@ -107,3 +107,43 @@ def test_committed_contract_matches_app() -> None:
     live["info"]["version"] = get_settings().contract_version
     committed = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
     assert json.loads(json.dumps(live, sort_keys=True)) == committed
+
+
+D6_ERROR_CODES = {
+    "password_change_required",
+    "notification_not_cancellable",
+    "send_at_in_past",
+    "text_not_allowed",
+    "test_device_not_set",
+    "test_device_no_token",
+    "device_not_found",
+    "email_taken",
+    "cannot_change_self",
+    "last_admin",
+    "password_too_short",
+    "password_unchanged",
+}
+
+
+def test_every_d6_error_code_is_documented():
+    """Each code A15/A16 has to handle appears in the committed admin document (admin-api)."""
+    import json
+    from pathlib import Path
+
+    document = json.loads(Path("openapi/admin.json").read_text(encoding="utf-8"))
+    documented: set[str] = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            code = node.get("code")
+            if isinstance(code, str):
+                documented.add(code)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(document)
+    description = document.get("info", {}).get("description", "")
+    assert D6_ERROR_CODES <= (documented | {code for code in D6_ERROR_CODES if code in description})
