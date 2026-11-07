@@ -40,6 +40,12 @@ Also set on the hosts, and **not** secrets: `FCM_CREDENTIALS_FILE` (the path `/s
 
 Not secrets: the public and private IPs, the hostnames, the Firebase project ID, the WireGuard hub's public key, and `DEPLOY_KNOWN_HOSTS` (VPS-1's public host key, kept as a secret only for convenience).
 
+## `PUSH_TYPES_OFF` is a setting, not a secret
+
+`PUSH_TYPES_OFF=goal,match_started` in VPS-2's `/srv/madar/.env` is a plain list of notification types
+to stop sending, so it does not belong in `/srv/secrets` and is not rotated. Recreating `worker-notify`
+(`dc up -d worker-notify`) applies it; see [push-notifications.md](push-notifications.md#the-off-switch-under-a-minute).
+
 ## Rotate the PostgreSQL password
 
 `POSTGRES_PASSWORD` only takes effect when the data volume is first created. Changing the `.env` alone breaks every client, so change it in the database first. In the "Working on VPS-1" shell ([deploy-and-rollback.md](deploy-and-rollback.md#working-on-vps-1)):

@@ -3,6 +3,8 @@
  * Do not edit manually.
  * Madar Sat Admin API
  * Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` needs `Authorization: Bearer <access_token>` and the role in its row of the contract. Writes need `If-Match` with the entity's `ETag`.
+
+Error codes added on D6: `password_change_required` (a flagged account may only read `auth/me` and change its password), `notification_not_cancellable` (only a pending announcement cancels), `send_at_in_past`, `text_not_allowed` (a card-sharing label), `test_device_not_set`, `test_device_no_token`, `device_not_found`, `email_taken`, `cannot_change_self`, `last_admin`, `password_too_short`, `password_unchanged`.
  * OpenAPI spec version: 1.0.0
  */
 export type Access = typeof Access[keyof typeof Access];
@@ -415,8 +417,180 @@ export interface AdminTeam {
 export interface AdminUser {
   email: string;
   id: number;
+  must_change_password?: boolean;
   name: string;
   role: AdminRole;
+}
+
+export type AdminUserRowLastLoginAt = string | null;
+
+export type AdminUserRowLockedForS = number | null;
+
+export interface AdminUserRow {
+  email: string;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  is_active: boolean;
+  last_login_at: AdminUserRowLastLoginAt;
+  locked_for_s: AdminUserRowLockedForS;
+  must_change_password: boolean;
+  name: string;
+  role: AdminRole;
+}
+
+export type AnnouncementAudienceId = number | null;
+
+export type AnnouncementAudienceKind = typeof AnnouncementAudienceKind[keyof typeof AnnouncementAudienceKind];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const AnnouncementAudienceKind = {
+  all: 'all',
+  team: 'team',
+  competition: 'competition',
+  match: 'match',
+  channel: 'channel',
+} as const;
+
+export interface AnnouncementAudience {
+  id?: AnnouncementAudienceId;
+  kind: AnnouncementAudienceKind;
+}
+
+export type AnnouncementCreateSendAt = string | null;
+
+/**
+ * A15's composer; the route is built here, never sent as text (admin-api).
+ */
+export interface AnnouncementCreate {
+  audience: AnnouncementAudience;
+  /**
+   * @minLength 1
+   * @maxLength 180
+   */
+  body: string;
+  send_at?: AnnouncementCreateSendAt;
+  target: AnnouncementTarget;
+  /**
+   * @minLength 1
+   * @maxLength 65
+   */
+  title: string;
+}
+
+export type AnnouncementTargetId = number | null;
+
+export type AnnouncementTargetType = typeof AnnouncementTargetType[keyof typeof AnnouncementTargetType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const AnnouncementTargetType = {
+  none: 'none',
+  match: 'match',
+  channel: 'channel',
+} as const;
+
+export interface AnnouncementTarget {
+  id?: AnnouncementTargetId;
+  type: AnnouncementTargetType;
+}
+
+export type AuditActorId = number | null;
+
+export type AuditActorKind = typeof AuditActorKind[keyof typeof AuditActorKind];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const AuditActorKind = {
+  admin: 'admin',
+  importer: 'importer',
+  system: 'system',
+} as const;
+
+export type AuditActorName = string | null;
+
+export interface AuditActor {
+  id: AuditActorId;
+  kind: AuditActorKind;
+  name: AuditActorName;
+}
+
+export type AuditDetailDiff = { [key: string]: unknown };
+
+export type AuditDetailEntityId = number | null;
+
+export type AuditDetailNotification = AuditNotification | null;
+
+/**
+ * ``diff`` exactly as stored, old shapes included, and the outbox row that links to this entry.
+ */
+export interface AuditDetail {
+  action: string;
+  actor: AuditActor;
+  created_at: string;
+  diff: AuditDetailDiff;
+  entity: string;
+  entity_id: AuditDetailEntityId;
+  has_notification: boolean;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  notification: AuditDetailNotification;
+  summary_fields: string[];
+}
+
+export type AuditNotificationStatus = typeof AuditNotificationStatus[keyof typeof AuditNotificationStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const AuditNotificationStatus = {
+  pending: 'pending',
+  sending: 'sending',
+  sent: 'sent',
+  failed: 'failed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface AuditNotification {
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  failed: number;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  sent: number;
+  status: AuditNotificationStatus;
+  type: NotificationType;
+}
+
+export type AuditRowEntityId = number | null;
+
+export interface AuditRow {
+  action: string;
+  actor: AuditActor;
+  created_at: string;
+  entity: string;
+  entity_id: AuditRowEntityId;
+  has_notification: boolean;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  summary_fields: string[];
 }
 
 export type Beam = typeof Beam[keyof typeof Beam];
@@ -539,6 +713,22 @@ export const Category = {
   sports: 'sports',
   entertainment: 'entertainment',
 } as const;
+
+/**
+ * A flagged account's own change; the length rules answer ``422 password_too_short`` (admin-api).
+ */
+export interface ChangePasswordRequest {
+  /**
+   * @minLength 1
+   * @maxLength 256
+   */
+  current_password: string;
+  /**
+   * @minLength 1
+   * @maxLength 256
+   */
+  new_password: string;
+}
 
 export type ChangedByKind = typeof ChangedByKind[keyof typeof ChangedByKind];
 
@@ -920,6 +1110,19 @@ export interface EnvelopeAdminTeam {
   success: boolean;
 }
 
+export type EnvelopeAdminUserRowData = AdminUserRow | null;
+
+export type EnvelopeAdminUserRowError = ErrorBody | null;
+
+export type EnvelopeAdminUserRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeAdminUserRow {
+  data: EnvelopeAdminUserRowData;
+  error: EnvelopeAdminUserRowError;
+  meta: EnvelopeAdminUserRowMeta;
+  success: boolean;
+}
+
 export type EnvelopeAdminUserData = AdminUser | null;
 
 export type EnvelopeAdminUserError = ErrorBody | null;
@@ -930,6 +1133,19 @@ export interface EnvelopeAdminUser {
   data: EnvelopeAdminUserData;
   error: EnvelopeAdminUserError;
   meta: EnvelopeAdminUserMeta;
+  success: boolean;
+}
+
+export type EnvelopeAuditDetailData = AuditDetail | null;
+
+export type EnvelopeAuditDetailError = ErrorBody | null;
+
+export type EnvelopeAuditDetailMeta = { [key: string]: unknown };
+
+export interface EnvelopeAuditDetail {
+  data: EnvelopeAuditDetailData;
+  error: EnvelopeAuditDetailError;
+  meta: EnvelopeAuditDetailMeta;
   success: boolean;
 }
 
@@ -1022,6 +1238,32 @@ export interface EnvelopeNoneType {
   success: boolean;
 }
 
+export type EnvelopeNotificationReachData = NotificationReach | null;
+
+export type EnvelopeNotificationReachError = ErrorBody | null;
+
+export type EnvelopeNotificationReachMeta = { [key: string]: unknown };
+
+export interface EnvelopeNotificationReach {
+  data: EnvelopeNotificationReachData;
+  error: EnvelopeNotificationReachError;
+  meta: EnvelopeNotificationReachMeta;
+  success: boolean;
+}
+
+export type EnvelopeNotificationRowData = NotificationRow | null;
+
+export type EnvelopeNotificationRowError = ErrorBody | null;
+
+export type EnvelopeNotificationRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeNotificationRow {
+  data: EnvelopeNotificationRowData;
+  error: EnvelopeNotificationRowError;
+  meta: EnvelopeNotificationRowMeta;
+  success: boolean;
+}
+
 export type EnvelopeRawPageData = RawPage | null;
 
 export type EnvelopeRawPageError = ErrorBody | null;
@@ -1074,6 +1316,19 @@ export interface EnvelopeSourceRunQueued {
   success: boolean;
 }
 
+export type EnvelopeUnionTestDeviceRowNoneTypeData = TestDeviceRow | null;
+
+export type EnvelopeUnionTestDeviceRowNoneTypeError = ErrorBody | null;
+
+export type EnvelopeUnionTestDeviceRowNoneTypeMeta = { [key: string]: unknown };
+
+export interface EnvelopeUnionTestDeviceRowNoneType {
+  data: EnvelopeUnionTestDeviceRowNoneTypeData;
+  error: EnvelopeUnionTestDeviceRowNoneTypeError;
+  meta: EnvelopeUnionTestDeviceRowNoneTypeMeta;
+  success: boolean;
+}
+
 export type EnvelopeUnresolvedNameRowData = UnresolvedNameRow | null;
 
 export type EnvelopeUnresolvedNameRowError = ErrorBody | null;
@@ -1084,6 +1339,19 @@ export interface EnvelopeUnresolvedNameRow {
   data: EnvelopeUnresolvedNameRowData;
   error: EnvelopeUnresolvedNameRowError;
   meta: EnvelopeUnresolvedNameRowMeta;
+  success: boolean;
+}
+
+export type EnvelopeUserWithPasswordData = UserWithPassword | null;
+
+export type EnvelopeUserWithPasswordError = ErrorBody | null;
+
+export type EnvelopeUserWithPasswordMeta = { [key: string]: unknown };
+
+export interface EnvelopeUserWithPassword {
+  data: EnvelopeUserWithPasswordData;
+  error: EnvelopeUserWithPasswordError;
+  meta: EnvelopeUserWithPasswordMeta;
   success: boolean;
 }
 
@@ -1152,6 +1420,32 @@ export interface EnvelopeListAdminSatellite {
   success: boolean;
 }
 
+export type EnvelopeListAdminUserRowData = AdminUserRow[] | null;
+
+export type EnvelopeListAdminUserRowError = ErrorBody | null;
+
+export type EnvelopeListAdminUserRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeListAdminUserRow {
+  data: EnvelopeListAdminUserRowData;
+  error: EnvelopeListAdminUserRowError;
+  meta: EnvelopeListAdminUserRowMeta;
+  success: boolean;
+}
+
+export type EnvelopeListAuditRowData = AuditRow[] | null;
+
+export type EnvelopeListAuditRowError = ErrorBody | null;
+
+export type EnvelopeListAuditRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeListAuditRow {
+  data: EnvelopeListAuditRowData;
+  error: EnvelopeListAuditRowError;
+  meta: EnvelopeListAuditRowMeta;
+  success: boolean;
+}
+
 export type EnvelopeListBroadcastPresetData = BroadcastPreset[] | null;
 
 export type EnvelopeListBroadcastPresetError = ErrorBody | null;
@@ -1178,6 +1472,19 @@ export interface EnvelopeListChannelItem {
   success: boolean;
 }
 
+export type EnvelopeListFrequencyHistoryRowData = FrequencyHistoryRow[] | null;
+
+export type EnvelopeListFrequencyHistoryRowError = ErrorBody | null;
+
+export type EnvelopeListFrequencyHistoryRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeListFrequencyHistoryRow {
+  data: EnvelopeListFrequencyHistoryRowData;
+  error: EnvelopeListFrequencyHistoryRowError;
+  meta: EnvelopeListFrequencyHistoryRowMeta;
+  success: boolean;
+}
+
 export type EnvelopeListHiddenChannelNameData = HiddenChannelName[] | null;
 
 export type EnvelopeListHiddenChannelNameError = ErrorBody | null;
@@ -1201,6 +1508,19 @@ export interface EnvelopeListImportRunRow {
   data: EnvelopeListImportRunRowData;
   error: EnvelopeListImportRunRowError;
   meta: EnvelopeListImportRunRowMeta;
+  success: boolean;
+}
+
+export type EnvelopeListNotificationRowData = NotificationRow[] | null;
+
+export type EnvelopeListNotificationRowError = ErrorBody | null;
+
+export type EnvelopeListNotificationRowMeta = { [key: string]: unknown };
+
+export interface EnvelopeListNotificationRow {
+  data: EnvelopeListNotificationRowData;
+  error: EnvelopeListNotificationRowError;
+  meta: EnvelopeListNotificationRowMeta;
   success: boolean;
 }
 
@@ -1271,6 +1591,24 @@ export interface Frequency {
   sr: number;
 }
 
+export type FrequencyHistoryRowActor = string | null;
+
+/**
+ * What followers of a carriage were told; ``actor`` from the row's own audit id (research R6, R20).
+ */
+export interface FrequencyHistoryRow {
+  actor: FrequencyHistoryRowActor;
+  detected_at: string;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  new: string;
+  old: string;
+  source: string;
+}
+
 export const HealthStatusValue = {
   db: 'ok',
   redis: 'ok',
@@ -1313,6 +1651,7 @@ export const ImportRunDetailStatus = {
   succeeded: 'succeeded',
   partial: 'partial',
   failed: 'failed',
+  stopped: 'stopped',
 } as const;
 
 export type ImportRunDetailWorker = string | null;
@@ -1366,6 +1705,7 @@ export const ImportRunRowStatus = {
   succeeded: 'succeeded',
   partial: 'partial',
   failed: 'failed',
+  stopped: 'stopped',
 } as const;
 
 export interface ImportRunRow {
@@ -1575,6 +1915,107 @@ export interface MediaAsset {
   url: string;
   width: MediaAssetWidth;
 }
+
+export interface NotificationReach {
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  devices: number;
+}
+
+export type NotificationRowError = string | null;
+
+export type NotificationRowSentAt = string | null;
+
+export type NotificationRowStatus = typeof NotificationRowStatus[keyof typeof NotificationRowStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const NotificationRowStatus = {
+  pending: 'pending',
+  sending: 'sending',
+  sent: 'sent',
+  failed: 'failed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface NotificationRow {
+  created_at: string;
+  due_at: string;
+  error: NotificationRowError;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  failed: number;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  id: number;
+  is_correction: boolean;
+  is_test: boolean;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  recipients: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  sent: number;
+  sent_at: NotificationRowSentAt;
+  status: NotificationRowStatus;
+  target: NotificationTarget;
+  type: NotificationType;
+}
+
+export type NotificationTargetId = number | null;
+
+export type NotificationTargetKind = typeof NotificationTargetKind[keyof typeof NotificationTargetKind];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const NotificationTargetKind = {
+  match_followers: 'match_followers',
+  match_core: 'match_core',
+  match_only: 'match_only',
+  channel: 'channel',
+  team: 'team',
+  competition: 'competition',
+  all: 'all',
+  device: 'device',
+} as const;
+
+export type NotificationTargetLabel = string | null;
+
+/**
+ * Where a row went, built from current data; ``label`` is null for ``all`` (admin-api).
+ */
+export interface NotificationTarget {
+  id: NotificationTargetId;
+  kind: NotificationTargetKind;
+  label: NotificationTargetLabel;
+}
+
+/**
+ * The seven types of SD §6.8; unknown types are refused (research R4).
+ */
+export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const NotificationType = {
+  kickoff_reminder: 'kickoff_reminder',
+  goal: 'goal',
+  final_score: 'final_score',
+  match_started: 'match_started',
+  channels_updated: 'channels_updated',
+  frequency_changed: 'frequency_changed',
+  announcement: 'announcement',
+} as const;
 
 /**
  * The row's current ETag. Required.
@@ -2040,6 +2481,44 @@ export interface TeamRef {
   name: string;
 }
 
+export interface TestDevicePatch {
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  device_id: number;
+}
+
+export type TestDeviceRowAppVersion = string | null;
+
+export interface TestDeviceRow {
+  app_version: TestDeviceRowAppVersion;
+  /**
+   * @minimum 1
+   * @maximum 9223372036854776000
+   */
+  device_id: number;
+  has_push_token: boolean;
+  platform: string;
+}
+
+/**
+ * A test send goes to the admin's saved device, prefs ignored (admin-api).
+ */
+export interface TestSendCreate {
+  /**
+   * @minLength 1
+   * @maxLength 180
+   */
+  body: string;
+  target: AnnouncementTarget;
+  /**
+   * @minLength 1
+   * @maxLength 65
+   */
+  title: string;
+}
+
 export type UnresolvedContextAway = string | null;
 
 export type UnresolvedContextCompetition = string | null;
@@ -2127,6 +2606,53 @@ export interface UnresolvedSuggestion {
   name: string;
 }
 
+export interface UserCreate {
+  /** @maxLength 254 */
+  email: string;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  name: string;
+  role: AdminRole;
+}
+
+export type UserPatchIsActive = boolean | null;
+
+export type UserPatchName = string | null;
+
+export type UserPatchRole = AdminRole | null;
+
+export interface UserPatch {
+  is_active?: UserPatchIsActive;
+  name?: UserPatchName;
+  role?: UserPatchRole;
+}
+
+/**
+ * The temporary password is returned once, with ``Cache-Control: no-store``, and never stored in clear.
+ */
+export interface UserWithPassword {
+  temporary_password: string;
+  user: AdminUserRow;
+}
+
+export type ListAuditEntriesParams = {
+admin_user_id?: number | null;
+source?: string | null;
+entity?: string | null;
+entity_id?: number | null;
+from?: string | null;
+to?: string | null;
+cursor?: string | null;
+/**
+ * Page size; the default is 50
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
 export type ListChannelsParams = {
 q?: string | null;
 satellite_id?: number | null;
@@ -2192,6 +2718,25 @@ status?: Status | null;
 };
 
 export type BulkBody = BulkChangeCompetition | BulkRemoveChannels;
+
+export type ListNotificationsParams = {
+type?: string | null;
+status?: string | null;
+cursor?: string | null;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type GetReachParams = {
+/**
+ * @pattern ^(all|team|competition|match|channel)$
+ */
+kind?: string;
+id?: number | null;
+};
 
 export type ListSourceRunsParams = {
 cursor?: string | null;

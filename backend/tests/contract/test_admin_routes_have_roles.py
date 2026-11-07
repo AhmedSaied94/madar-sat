@@ -59,12 +59,42 @@ def test_every_route_but_auth_and_healthz_has_the_role_dependency():
     assert missing == []
 
 
+# D6's staff-only routes: reading the outbox log is open to an editor, everything else is an admin's.
+ADMIN_ONLY_PREFIXES = (
+    "/admin/api/notifications/reach",
+    "/admin/api/notifications/announcements",
+    "/admin/api/notifications/test",
+    "/admin/api/users",
+    "/admin/api/audit",
+)
+
+
 def test_every_contract_route_asks_for_the_editor_role():
     # `admin` covers `editor`; the admin-only actions (bulk remove_channels, deleting a rights holder) are
-    # checked in their handlers.
-    wrong = [f"{method} {path}: {roles}" for method, path, roles in _protected() if roles != {"editor"}]
+    # checked in their handlers. A route may add a stronger role on top of the router's `editor`.
+    wrong = [
+        f"{method} {path}: {roles}" for method, path, roles in _protected() if not roles or roles - {"editor", "admin"}
+    ]
 
     assert wrong == []
+
+
+def test_the_staff_only_routes_require_the_admin_role():
+    admin_only = [
+        f"{method} {path}"
+        for method, path, roles in _protected()
+        if path.startswith(ADMIN_ONLY_PREFIXES) and "admin" not in roles
+    ]
+
+    assert admin_only == []
+
+
+def test_the_exempt_auth_routes_still_carry_their_role():
+    """``EXEMPT_PREFIXES`` skips all of ``auth/``, so the two signed-in routes are checked here (admin-api)."""
+    by_path = {(method, path): roles for method, path, roles in _admin_routes()}
+
+    assert by_path[("GET", "/admin/api/auth/me")] == {"editor"}
+    assert by_path[("POST", "/admin/api/auth/change-password")] == {"editor"}
 
 
 @pytest.mark.parametrize(("method", "path"), sorted({(m, _concrete(p)) for m, p, _ in _protected()}))

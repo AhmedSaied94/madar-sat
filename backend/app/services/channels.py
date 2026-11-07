@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Channel, Match, MatchChannel, MediaAsset, Satellite
+from app.db.models import Channel, ChannelFrequencyChange, Match, MatchChannel, MediaAsset, Satellite
 from app.schemas import public as s
 from app.services.matches import summaries_for_ids
 from app.services.satellites import _carriage
@@ -55,9 +55,29 @@ async def get_channel_detail(session: AsyncSession, channel_id: int, now: dateti
     )
     upcoming = await summaries_for_ids(session, now, [r[0] for r in match_id_rows])
 
+    # Only what followers were told: the history row is written when a hold ends (contracts/push-pipeline).
+    history_rows = await session.execute(
+        select(ChannelFrequencyChange)
+        .where(ChannelFrequencyChange.channel_id == channel_id)
+        .order_by(ChannelFrequencyChange.detected_at.desc(), ChannelFrequencyChange.id.desc())
+        .limit(5)
+    )
+    recent = [
+        s.FrequencyChange(
+            old=s.FrequencyChangeTuning(
+                frequency_mhz=h.old_frequency_mhz, polarization=h.old_polarization, symbol_rate=h.old_symbol_rate
+            ),
+            new=s.FrequencyChangeTuning(
+                frequency_mhz=h.new_frequency_mhz, polarization=h.new_polarization, symbol_rate=h.new_symbol_rate
+            ),
+            detected_at=h.detected_at,
+        )
+        for h in history_rows.scalars()
+    ]
+
     return s.ChannelDetail(
         **_carriage(ch, sat, logo_path).model_dump(),
         other_carriages=other_carriages,
         upcoming_matches=upcoming,
-        recent_frequency_changes=[],
+        recent_frequency_changes=recent,
     )

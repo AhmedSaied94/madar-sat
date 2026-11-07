@@ -85,6 +85,26 @@ async def get_channel(channel_id: IdPath, response: Response, session: Db) -> En
     return ok(await service.view(session, channel))
 
 
+@router.get(
+    "/{channel_id}/frequency-changes",
+    response_model=Envelope[list[a.FrequencyHistoryRow]],
+    responses={
+        200: {
+            "description": "The newest 100 changes, with the list's `ETag`",
+            **ETAG_HEADER,
+            **_docs.ok_example("frequency_changes_ok", [ex.FREQUENCY_HISTORY_ROW], _docs.LIST_META),
+        },
+        **_docs.AUTHED,
+        304: _docs.NOT_MODIFIED,
+        404: _NOT_FOUND,
+    },
+    summary="A8: the frequency changes followers were told about, newest first",
+    dependencies=[Depends(ETag("admin_channel_frequency_changes", ("channels",), bucket_s=30))],
+)
+async def channel_frequency_changes(channel_id: IdPath, session: Db) -> Envelope[list[a.FrequencyHistoryRow]]:
+    return ok(await service.frequency_changes(session, channel_id))
+
+
 @router.post(
     "",
     status_code=201,
@@ -134,6 +154,10 @@ async def patch_channel(
 ) -> Envelope[a.AdminChannel]:
     channel = await service.update(session, admin, channel_id, body, if_match, now)
     await session.commit()
+    # A frequency hold is queued five minutes out; a row due now (an edit already held) goes at once.
+    from app.notifications.kick import kick_if_due_async
+
+    await kick_if_due_async(session, now)
     set_etag(response, await service.version(session, channel))
     return ok(await service.view(session, channel))
 

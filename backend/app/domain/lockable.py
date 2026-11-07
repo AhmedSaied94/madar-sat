@@ -26,6 +26,8 @@ MATCH_LOCKABLE = frozenset(
         "home_pen",
         "away_pen",
         "local_broadcaster_eg",
+        # 0009: A4's broadcaster slots aren't columns, so ``matches.py`` adds this by hand (R23).
+        "broadcasts",
     }
 )
 

@@ -15,6 +15,7 @@ from app.db.session import get_session
 from app.domain.time import validate_window
 from app.schemas import public as s
 from app.services import match_detail, matches
+from app.services.matches import MATCH_SPORT
 
 router = APIRouter(prefix="/v1/matches", tags=["matches"])
 
@@ -47,7 +48,7 @@ async def list_matches(
         now=now,
         from_dt=from_dt,
         to_dt=to_dt,
-        sport=sport.value if sport else None,
+        sport=sport.value if sport else MATCH_SPORT,
         competition_id=competition_id,
         team_id=team_id,
         satellite_ids=parse_id_list(satellite_ids, "satellite_ids"),

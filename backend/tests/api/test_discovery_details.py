@@ -130,3 +130,68 @@ async def test_competition_etag_changes_when_a_match_changes(public_client, sess
     response = await public_client.get(url, headers={"If-None-Match": before})
     assert response.status_code == 200
     assert response.headers["etag"] != before
+
+
+async def test_recent_frequency_changes_are_the_last_five_newest_first(public_client, session, frozen_now):
+    from app.db.models import ChannelFrequencyChange
+
+    channel = Channel(kind="platform", name="قناة الترددات", locked_fields=[])
+    session.add(channel)
+    await session.flush()
+    session.add_all(
+        ChannelFrequencyChange(
+            channel_id=channel.id,
+            old_frequency_mhz=11000 + index,
+            new_frequency_mhz=11001 + index,
+            old_polarization="H",
+            new_polarization="V",
+            old_symbol_rate=27500,
+            new_symbol_rate=27500,
+            source="admin",
+            detected_at=frozen_now - timedelta(minutes=index),
+        )
+        for index in range(7)
+    )
+    await session.flush()
+
+    data = (await public_client.get(f"/v1/channels/{channel.id}")).json()["data"]
+
+    changes = data["recent_frequency_changes"]
+    assert len(changes) == 5
+    assert [row["new"]["frequency_mhz"] for row in changes] == [11001, 11002, 11003, 11004, 11005]
+    assert changes[0]["old"] == {"frequency_mhz": 11000, "polarization": "H", "symbol_rate": 27500}
+    assert changes[0]["new"] == {"frequency_mhz": 11001, "polarization": "V", "symbol_rate": 27500}
+    assert changes[0]["detected_at"].startswith(frozen_now.strftime("%Y-%m-%dT%H:%M"))
+
+
+async def test_a_new_history_row_moves_the_etag(public_client, session, frozen_now):
+    from app.db.models import ChannelFrequencyChange
+
+    channel = Channel(kind="platform", name="قناة الترددات الثانية", locked_fields=[])
+    session.add(channel)
+    await session.flush()
+    url = f"/v1/channels/{channel.id}"
+    before = (await public_client.get(url)).headers["etag"]
+
+    session.add(
+        ChannelFrequencyChange(
+            channel_id=channel.id,
+            old_frequency_mhz=11766,
+            new_frequency_mhz=11843,
+            old_polarization="H",
+            new_polarization="H",
+            old_symbol_rate=27500,
+            new_symbol_rate=27500,
+            source="admin",
+            detected_at=frozen_now,
+        )
+    )
+    await session.execute(
+        update(DatasetVersion).where(DatasetVersion.name == "channels").values(version=DatasetVersion.version + 1)
+    )
+    await session.flush()
+
+    after = await public_client.get(url, headers={"If-None-Match": before})
+    assert after.status_code == 200
+    assert after.headers["etag"] != before
+    assert len(after.json()["data"]["recent_frequency_changes"]) == 1

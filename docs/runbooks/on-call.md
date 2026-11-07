@@ -95,6 +95,20 @@ dc exec worker-imports python -m app.adapters.report coverage --days 4
 A slot is `missing` when no `import_runs` row started within five minutes of it, and `manual` when
 an audited «تشغيل الآن» or resume queued that run. Both are explained in [imports-and-sources.md](imports-and-sources.md#read-what-a-run-did).
 
+## 3b. A push row failed
+
+A notification delivery problem opens the `push` problem in `live_problems`, so it reaches the same
+alert channel: one alert when it opens, one when it closes. It opens when a row ends `failed`, or when
+a finished row with at least 10 devices had more than 20 % failures, and closes on the next finished row
+under that rate. A test send and a cancelled row never alert, and a dead token is not a failure.
+
+Read the row first: `SELECT id, type, status, error, sent, failed FROM notification_outbox ORDER BY id DESC LIMIT 10;`
+`error` is a short reason (`late`, `type_off`, `no_net_change`, `score_fell`, `match_finished`) or the push
+service's text, such as `FCM 503`. A service-level error is the FCM path: check the key and
+`dc logs worker-notify` ([push-notifications.md](push-notifications.md)), then use the safe re-send there.
+A reason that names a behaviour (`late`, `type_off`) means nothing is broken: the switch or the clock
+stopped it, and the row's presence is the answer to "why did nothing go out?".
+
 ## 4. A source is blocked
 
 "Blocked" means the source answers 403/429 or a captcha from the machine that fetched it. The fix is

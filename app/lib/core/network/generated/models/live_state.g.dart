@@ -21,6 +21,7 @@ _LiveState _$LiveStateFromJson(Map<String, dynamic> json) => _LiveState(
   statusUpdatedAt: json['status_updated_at'] == null
       ? null
       : DateTime.parse(json['status_updated_at'] as String),
+  eventCount: (json['event_count'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$LiveStateToJson(_LiveState instance) =>
@@ -33,6 +34,7 @@ Map<String, dynamic> _$LiveStateToJson(_LiveState instance) =>
       'status': _$StatusEnumMap[instance.status]!,
       'status_label': ?instance.statusLabel,
       'status_updated_at': ?instance.statusUpdatedAt?.toIso8601String(),
+      'event_count': instance.eventCount,
     };
 
 const _$PeriodEnumMap = {

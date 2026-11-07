@@ -17,7 +17,7 @@ An update that changes nothing writes nothing: no audit row, no lock, no dataset
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from datetime import datetime
 from typing import Any, TypeVar
 
@@ -161,17 +161,18 @@ def add_audit(
     entity_id: int | None,
     action: str,
     diff: Mapping[str, Any],
-) -> None:
-    session.add(
-        AuditLog(
-            admin_user_id=admin.id if admin is not None else None,
-            source=None,
-            entity=entity,
-            entity_id=entity_id,
-            action=action,
-            diff=dict(diff),
-        )
+) -> AuditLog:
+    """Add the audit row and return it, so a ``then`` step can key a push on its id (R20)."""
+    row = AuditLog(
+        admin_user_id=admin.id if admin is not None else None,
+        source=None,
+        entity=entity,
+        entity_id=entity_id,
+        action=action,
+        diff=dict(diff),
     )
+    session.add(row)
+    return row
 
 
 async def bump_datasets(session: AsyncSession, names: Iterable[str]) -> None:
@@ -204,11 +205,14 @@ async def save_update(
     lockable: frozenset[str] = frozenset(),
     extra_diff: Mapping[str, Any] | None = None,
     action: str = "update",
+    then: Callable[[AuditLog], Awaitable[None]] | None = None,
 ) -> bool:
     """Step 4: returns whether anything changed.
 
     ``before`` is ``versions.row_state(row)`` taken before the edit. ``datasets`` is the list to bump, or a
     function of the changed diff keys (a match bumps ``live`` only when its kickoff or status changed).
+    ``then`` runs after the audit row is flushed and before the bump, so a push keyed on that audit row
+    exists before the datasets move, and never runs when nothing changed.
     """
     await flush(session)
     diff: dict[str, Any] = diff_state(before, versions.row_state(row))
@@ -219,7 +223,10 @@ async def save_update(
 
     lock_changed_fields(row, changed_columns, lockable)
     _touch(row, now)
-    add_audit(session, admin, entity, row.id, action, diff)  # type: ignore[attr-defined]
+    audit = add_audit(session, admin, entity, row.id, action, diff)  # type: ignore[attr-defined]
+    await flush(session)
+    if then is not None:
+        await then(audit)
     await bump_datasets(session, datasets(set(diff)) if callable(datasets) else datasets)
     return True
 

@@ -38,7 +38,13 @@ async def test_a_good_login_returns_the_session_and_sets_both_cookies(
     assert body["data"]["token_type"] == "Bearer"
     assert body["data"]["expires_in"] == 900
     assert body["data"]["access_token"]
-    assert body["data"]["admin"] == {"id": editor.id, "email": EMAIL, "name": "محرر", "role": "editor"}
+    assert body["data"]["admin"] == {
+        "id": editor.id,
+        "email": EMAIL,
+        "name": "محرر",
+        "role": "editor",
+        "must_change_password": False,
+    }
 
     cookies = {c.split("=", 1)[0]: c for c in resp.headers.get_list("set-cookie")}
     assert set(cookies) == {"madar_refresh", "madar_csrf"}
@@ -290,3 +296,25 @@ async def test_a_login_does_not_block_another_request(committed_editor, monkeypa
     assert login_response.status_code == 200
     assert me_response.status_code == 200
     assert me_seconds < 0.3, f"the other request waited {me_seconds:.2f}s for the login"
+
+
+async def test_the_fifth_failure_also_sets_the_account_lock(anon_admin_client, redis_client, editor):
+    """A16 reads ``auth:locked:<h>``'s TTL to show an account as locked (research R19)."""
+    from app.auth.limits import LOCK_S, LoginLimiter
+
+    for _ in range(5):
+        await _login(anon_admin_client, EMAIL, "wrong wrong wrong")
+
+    ttl = await redis_client.ttl(LoginLimiter.account_lock_key(EMAIL))
+    assert 0 < ttl <= LOCK_S
+
+
+async def test_the_session_body_carries_the_change_password_flag(
+    anon_admin_client, redis_client, editor, session, admin_password
+):
+    editor.must_change_password = True
+    await session.flush()
+
+    resp = await _login(anon_admin_client, EMAIL, admin_password)
+    assert resp.status_code == 200
+    assert resp.json()["data"]["admin"]["must_change_password"] is True

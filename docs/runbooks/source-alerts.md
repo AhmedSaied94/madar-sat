@@ -77,6 +77,13 @@ If the site blocks the host, move the fetch rather than disabling the source:
 
 The queue name is the only thing that changes: `schedule_fetch` reads it on every pass.
 
+## The `push` problem
+
+`live_problems` carries one problem key, `push`, with the copy in `app/live/problems.py` `_OPENED` and
+`_CLOSED`. It is not about a source: it opens on a failed push row (or a finished row over the 20 % rate
+with at least 10 devices), closes on the next good one, and is read in A13 with the other problems. Test
+sends and cancelled rows are ignored, and dead tokens are not failures.
+
 ## Alerts that are not about a source
 
 | Message | From | Meaning |

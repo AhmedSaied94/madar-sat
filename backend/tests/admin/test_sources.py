@@ -169,3 +169,20 @@ async def test_the_run_detail_carries_the_log(editor_client, session, frozen_now
 
 
 _ = DatasetVersion
+
+
+async def test_a_stopped_run_serialises_with_its_reason(editor_client, session, frozen_now):
+    """A run that stopped on purpose keeps its reason in ``error`` (research R22, admin-api)."""
+    run = _run(session, frozen_now, minutes_ago=30)
+    run.status = "stopped"
+    run.error = "budget_reached"
+    await session.flush()
+
+    listed = await editor_client.get("/admin/api/sources/ysscores/runs")
+    assert listed.status_code == 200, listed.text
+    [row] = [item for item in listed.json()["data"] if item["id"] == run.id]
+    assert row["status"] == "stopped"
+    assert row["error"] == "budget_reached"
+
+    detail = await editor_client.get(f"/admin/api/import-runs/{run.id}")
+    assert detail.json()["data"]["status"] == "stopped"

@@ -298,3 +298,92 @@ async def test_dataset_bumps_are_the_last_statement_so_a_refused_write_bumps_not
     assert await dataset_versions(session) == before
     stored = await session.scalar(select(Match.status).where(Match.id == match["id"]))
     assert stored == "scheduled"
+
+
+# --- D6: ``add_audit``'s row and ``save_update``'s ``then`` (T010, contracts/push-pipeline.md) ---------
+
+
+from datetime import UTC, datetime  # noqa: E402
+
+
+async def test_add_audit_returns_the_row_it_adds(session, make_admin):
+    from app.services.admin import writer
+
+    admin = await make_admin()
+    from app.auth.roles import AuthedAdmin
+
+    authed = AuthedAdmin(id=admin.id, email=admin.email, name=admin.name, role="editor")
+    row = writer.add_audit(session, authed, "matches", 1, "update", {"stadium": [None, "ملعب"]})
+    await session.flush()
+
+    assert row.id is not None
+    assert (row.entity, row.entity_id, row.action) == ("matches", 1, "update")
+
+
+async def test_save_update_runs_then_once_with_the_flushed_audit_row_before_the_bump(editor_client, session):
+    from app.services.admin import versions, writer
+
+    channel = await create(editor_client, f"{ADMIN}/channels", {"kind": "platform", "name": "قناة الإشعار"})
+    row = await session.get(Channel, channel["id"])
+    assert row is not None
+    before = versions.row_state(row)
+    versions_before = await dataset_versions(session)
+    calls: list[tuple[int, dict[str, int]]] = []
+
+    from app.auth.roles import AuthedAdmin
+
+    authed = AuthedAdmin(id=editor_client.admin.id, email=editor_client.admin.email, name="محرر", role="editor")
+
+    async def then(audit):
+        calls.append((audit.id, await dataset_versions(session)))
+
+    row.sort_order = 7
+    changed = await writer.save_update(
+        session,
+        authed,
+        entity="channel",
+        row=row,
+        before=before,
+        datasets=writer.CHANNEL_CHANGED,
+        now=datetime.now(UTC),
+        then=then,
+    )
+
+    assert changed is True
+    assert len(calls) == 1
+    audit_id, versions_during = calls[0]
+    assert audit_id is not None
+    # The bump is the last statement, so the datasets hadn't moved when ``then`` ran.
+    assert versions_during == versions_before
+    assert await changed_datasets(session, versions_before) == {"channels", "satellites", "matches"}
+
+
+async def test_save_update_never_runs_then_when_nothing_changed(editor_client, session):
+    from app.services.admin import versions, writer
+
+    channel = await create(editor_client, f"{ADMIN}/channels", {"kind": "platform", "name": "قناة بلا تغيير"})
+    row = await session.get(Channel, channel["id"])
+    assert row is not None
+    before = versions.row_state(row)
+    calls: list[int] = []
+
+    from app.auth.roles import AuthedAdmin
+
+    authed = AuthedAdmin(id=editor_client.admin.id, email=editor_client.admin.email, name="محرر", role="editor")
+
+    async def then(audit):
+        calls.append(audit.id)
+
+    changed = await writer.save_update(
+        session,
+        authed,
+        entity="channel",
+        row=row,
+        before=before,
+        datasets=writer.CHANNEL_CHANGED,
+        now=datetime.now(UTC),
+        then=then,
+    )
+
+    assert changed is False
+    assert calls == []

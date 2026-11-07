@@ -223,3 +223,78 @@ async def test_the_a4_view_of_a_clock_match_shows_the_estimated_state_without_a_
 
     assert data["status"]["status_source"] == "clock"
     assert (data["status"]["status"], data["status"]["estimated"], data["status"]["score"]) == ("live", True, None)
+
+
+# --- D6: an editor's save produces the push rows (T024, FR-009) ---------------------------------------
+
+
+async def test_finishing_a_match_by_hand_queues_final_score(editor_client, session):
+    from app.db.models import NotificationOutbox
+
+    match = await _started_match(editor_client)
+    resp = await patch_match(
+        editor_client,
+        match,
+        {"status": {"set": {"status": "live", "score": {"home": 1, "away": 0}}}},
+    )
+    assert resp.status_code == 200, resp.text
+    match = {**match, "_etag": resp.headers["etag"]}
+    resp = await patch_match(
+        editor_client, match, {"status": {"set": {"status": "finished", "score": {"home": 2, "away": 1}}}}
+    )
+    assert resp.status_code == 200, resp.text
+
+    rows = list(await session.scalars(select(NotificationOutbox)))
+    assert [row.type for row in rows] == ["final_score"]
+    assert rows[0].dedupe_key == f"final_score:{match['id']}"
+
+
+async def test_lowering_a_pushed_score_by_hand_queues_a_correction(editor_client, session, frozen_now):
+    from app.db.models import MatchLiveState, NotificationOutbox
+
+    match = await _started_match(editor_client)
+    resp = await patch_match(
+        editor_client, match, {"status": {"set": {"status": "live", "score": {"home": 2, "away": 0}}}}
+    )
+    assert resp.status_code == 200, resp.text
+    match = {**match, "_etag": resp.headers["etag"]}
+    session.add(MatchLiveState(match_id=match["id"], push_memory={"home": 2, "away": 0, "generation": 0}))
+    session.add(
+        NotificationOutbox(
+            type="goal",
+            dedupe_key=f"goal:{match['id']}:0:home:2",
+            payload={"match_id": match["id"], "side": "home", "home": 2, "away": 0, "generation": 0},
+            audience={"kind": "match_core", "match_id": match["id"]},
+            due_at=frozen_now,
+            status="sent",
+            sent=5,
+        )
+    )
+    await session.flush()
+
+    resp = await patch_match(
+        editor_client, match, {"status": {"set": {"status": "live", "score": {"home": 1, "away": 0}}}}
+    )
+    assert resp.status_code == 200, resp.text
+
+    rows = list(await session.scalars(select(NotificationOutbox)))
+    corrections = [row for row in rows if row.payload.get("kind") == "correction"]
+    assert [row.dedupe_key for row in corrections] == [f"goal_correction:{match['id']}:0"]
+
+
+async def test_adding_and_removing_a_link_queues_one_channel_change_row(editor_client, session, frozen_now):
+    from app.db.models import NotificationOutbox
+
+    match = await new_match(editor_client, kickoff_at="2026-10-28T20:00:00Z", match_date="2026-10-28")
+    channel_id = await session.scalar(select(Match.id))  # any id the picker accepts is checked by the API
+    del channel_id
+    from app.db.models import Channel
+
+    channel = await session.scalar(select(Channel).limit(1))
+
+    resp = await patch_match(editor_client, match, {"channels": [{"channel_id": channel.id}]})
+    assert resp.status_code == 200, resp.text
+
+    rows = list(await session.scalars(select(NotificationOutbox)))
+    assert [row.type for row in rows] == ["channels_updated"]
+    assert rows[0].audience == {"kind": "match_followers", "match_id": match["id"]}

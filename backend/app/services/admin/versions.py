@@ -38,7 +38,9 @@ from app.db.models import (
     UnresolvedName,
 )
 
-NOT_HASHED = frozenset({"created_at", "updated_at"})
+# ``frequency_changed_at`` moves when a hold ends, which is the dispatcher's doing, not an editor's:
+# hashing it would make an open A8 stale for something nobody there did (research R6).
+NOT_HASHED = frozenset({"created_at", "updated_at", "frequency_changed_at"})
 # The poller writes these every minute; hashing them would fail any open editor's save (research R14).
 MATCH_CLOCK_COLUMNS = frozenset({"minute", "period", "status_updated_at"})
 # An unresolved name is seen again on every run; only a decision about it makes a copy stale.

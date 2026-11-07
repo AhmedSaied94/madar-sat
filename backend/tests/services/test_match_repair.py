@@ -457,3 +457,99 @@ def test_fill_teams_with_no_apply_changes_nothing(sync_session, run_cli):
     assert str(match.id) in out
     sync_session.expire_all()
     assert sync_session.get(Match, match.id).away_team_id is None
+
+
+# --- ``repair-matches sport`` (T038, research R23) ----------------------------------------------------
+
+
+def _sporteventz(session: Session, *, sport: str = "football", external_id: str | None = None) -> Match:
+    match = _row(session, source="sporteventz", sport=sport)
+    session.add(MatchExternalId(source="sporteventz", external_id=external_id or uuid4().hex, match_id=match.id))
+    session.flush()
+    return match
+
+
+def test_sport_with_no_map_lists_football_sporteventz_rows_and_changes_nothing(sync_session):
+    from app.services.match_repair import repair_sports
+
+    listed = _sporteventz(sync_session)
+    basketball = _sporteventz(sync_session, sport="basketball")
+    handball = _sporteventz(sync_session, sport="handball")
+
+    result = repair_sports(sync_session, {}, NOW)
+
+    assert (listed.id, "football") in result.listed
+    assert result.changed == []
+    assert sync_session.get(Match, listed.id).sport == "football"
+    assert sync_session.get(Match, basketball.id).sport == "basketball"
+    assert sync_session.get(Match, handball.id).sport == "handball"
+
+
+def test_sport_applies_only_the_map_and_audits_each_change(sync_session):
+    from app.services.match_repair import repair_sports
+
+    mapped = _sporteventz(sync_session)
+    left = _sporteventz(sync_session)
+    already = _sporteventz(sync_session, sport="basketball")
+
+    result = repair_sports(sync_session, {mapped.id: "handball", already.id: "basketball"}, NOW)
+    sync_session.flush()
+
+    assert result.changed == [(mapped.id, "football", "handball")]
+    assert result.unchanged == [already.id]
+    assert mapped.id in {match_id for match_id, _ in result.listed}
+    assert sync_session.get(Match, mapped.id).sport == "handball"
+    assert sync_session.get(Match, left.id).sport == "football"
+    assert sync_session.get(Match, already.id).sport == "basketball"
+    audits = list(
+        sync_session.scalars(select(AuditLog).where(AuditLog.entity == "matches", AuditLog.entity_id == mapped.id))
+    )
+    assert [row.diff for row in audits] == [{"sport": ["football", "handball"]}]
+    assert sync_session.get(Match, mapped.id) is not None  # nothing is deleted
+
+
+def test_sport_refuses_the_whole_run_for_an_id_that_is_not_such_a_row(sync_session):
+    from app.services.match_repair import repair_sports
+
+    good = _sporteventz(sync_session)
+    other = _row(sync_session, source="ysscores")
+
+    with pytest.raises(RepairRefused):
+        repair_sports(sync_session, {good.id: "handball", other.id: "handball"}, NOW)
+
+    assert good.sport == "football"
+
+
+def test_sport_a_re_run_with_the_same_map_changes_nothing(sync_session):
+    from app.services.match_repair import repair_sports
+
+    mapped = _sporteventz(sync_session)
+    repair_sports(sync_session, {mapped.id: "handball"}, NOW)
+    sync_session.flush()
+
+    result = repair_sports(sync_session, {mapped.id: "handball"}, NOW)
+    sync_session.flush()
+
+    assert result.changed == []
+    assert result.unchanged == [mapped.id]
+    audits = list(sync_session.scalars(select(AuditLog).where(AuditLog.entity_id == mapped.id)))
+    assert len(audits) == 1
+
+
+def test_the_cli_wires_the_map_and_prints_what_it_did(sync_session, monkeypatch, capsys, tmp_path):
+    from contextlib import contextmanager
+
+    mapped = _sporteventz(sync_session)
+    pairs = tmp_path / "sport.json"
+    pairs.write_text(json.dumps({str(mapped.id): "handball"}), encoding="utf-8")
+
+    @contextmanager
+    def _session():
+        yield sync_session
+
+    monkeypatch.setattr(cli, "SyncSession", _session)
+    assert cli.main(["repair-matches", "sport", str(pairs), "--apply"]) == 0
+
+    out = [json.loads(line) for line in capsys.readouterr().out.splitlines() if line.startswith("{")]
+    assert any(row.get("changed") == mapped.id for row in out)
+    assert sync_session.get(Match, mapped.id).sport == "handball"

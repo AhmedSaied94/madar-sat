@@ -409,6 +409,9 @@ class AdminUser(Base):
     password_hash: Mapped[str] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 0009: set by a temporary password, and the device a test send goes to (research R19).
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    test_device_id: Mapped[int | None] = mapped_column(ForeignKey("devices.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -492,6 +495,9 @@ class NotificationOutbox(Base):
     cursor_device_id: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
     # 0006: whole-call failures so far, counted on the row so the beat cannot retry it for ever.
     attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # 0009: the short reason a row failed or was cancelled, and the save behind it (research R9, R20).
+    error: Mapped[str | None] = mapped_column(Text)
+    audit_log_id: Mapped[int | None] = mapped_column(ForeignKey("audit_log.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -565,6 +571,8 @@ class MatchLiveState(Base):
     finish_wait_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     has_page_slot: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_reading_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 0009: the goal bar's memory, read and written only by the pure function (research R2).
+    push_memory: Mapped[Any] = mapped_column(JSONB, default=dict, server_default="{}")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -661,6 +669,47 @@ class UnresolvedName(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+# --- 0009: notification history, staff accounts and the broadcast lock (D6) ----------------------
+
+
+class ChannelFrequencyChange(Base):
+    """What followers of a carriage were told; written when the hold ends (research R6)."""
+
+    __tablename__ = "channel_frequency_changes"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id", ondelete="CASCADE"))
+    old_frequency_mhz: Mapped[int] = mapped_column(Integer)
+    new_frequency_mhz: Mapped[int] = mapped_column(Integer)
+    old_polarization: Mapped[str] = mapped_column(String(1))
+    new_polarization: Mapped[str] = mapped_column(String(1))
+    old_symbol_rate: Mapped[int] = mapped_column(Integer)
+    new_symbol_rate: Mapped[int] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(Text)
+    # Unique: a retry can't write the same history twice.
+    outbox_id: Mapped[int | None] = mapped_column(
+        ForeignKey("notification_outbox.id", ondelete="SET NULL"), unique=True
+    )
+    audit_log_id: Mapped[int | None] = mapped_column(ForeignKey("audit_log.id", ondelete="SET NULL"))
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MatchChannelChange(Base):
+    """Append-only record of links fans could see being added or removed (research R5)."""
+
+    __tablename__ = "match_channel_changes"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"))
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id", ondelete="CASCADE"))
+    action: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    announced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("match_id", "channel_id", "action"),)
+
+
 DATASET_NAMES = (
     "matches",
     "live",
@@ -673,4 +722,7 @@ DATASET_NAMES = (
     "broadcast_presets",
     "sources",
     "unresolved_names",
+    # 0009
+    "outbox",
+    "admin_users",
 )

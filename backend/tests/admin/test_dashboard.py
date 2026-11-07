@@ -98,3 +98,18 @@ async def test_the_etag_follows_the_data_and_a_minute(editor_client, session, fr
 
 
 _ = AuditLog
+
+
+async def test_another_sport_is_never_counted_as_missing_a_channel(editor_client, session, frozen_now):
+    """FR-039: a basketball match has its own channels and doesn't belong on the football list."""
+    football = await support.create_match(session, frozen_now, links=False, kickoff_in=timedelta(minutes=30))
+    basketball = await support.create_match(session, frozen_now, links=False, kickoff_in=timedelta(minutes=30))
+    basketball.match.sport = "basketball"
+    await session.flush()
+
+    resp = await editor_client.get("/admin/api/dashboard", params=_window(frozen_now))
+    assert resp.status_code == 200, resp.text
+
+    ids = [row["id"] for group in resp.json()["data"]["missing_channels"] for row in group["matches"]]
+    assert football.match.id in ids
+    assert basketball.match.id not in ids

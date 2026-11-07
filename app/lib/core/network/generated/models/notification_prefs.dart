@@ -13,6 +13,8 @@ part 'notification_prefs.g.dart';
 abstract class NotificationPrefs with _$NotificationPrefs {
   const factory NotificationPrefs({
     Map<String, NotificationPref>? types,
+    @Default(true)
+    bool enabled,
   }) = _NotificationPrefs;
   
   factory NotificationPrefs.fromJson(Map<String, Object?> json) => _$NotificationPrefsFromJson(json);

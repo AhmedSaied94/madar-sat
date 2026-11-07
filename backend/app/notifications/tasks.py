@@ -74,7 +74,16 @@ def dispatch_due(self: Any) -> dict[str, Any]:
                     raise Retryable("a page failed to send; retrying from the cursor")
                 mark_failed(session, report.retry_row_id)
                 log.error("dispatch_failed", extra={"row": report.retry_row_id})
-        return {"claimed": len(report.claimed), "sent": report.sent, "failed": report.failed}
+        # The turn ended with work still due (its budget or its 50 s): take the next turn now (R8).
+        if report.requeued:
+            dispatch_due.apply_async(queue="notifications")
+        return {
+            "claimed": len(report.claimed),
+            "sent": report.sent,
+            "failed": report.failed,
+            "cancelled": report.cancelled,
+            "deferred": report.deferred,
+        }
 
 
 @task(name="notifications.prune_outbox")

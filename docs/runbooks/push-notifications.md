@@ -2,7 +2,7 @@
 
 How the reminder gets made and sent, how to set up and rotate the FCM service account, how to read the outbox, and what to do when a row fails. Background: system-design §6.8, constitution VII, `specs/003-d03-follow-push-sources/` research R6–R9, and `backend/app/notifications/`.
 
-The kickoff reminder is the only push today: one message, 15 minutes before kickoff. Kickoff, goal, result and frequency alerts arrive with D6 (delivery-plan). So following a match that has already started sends nothing, and the app says so when you follow it (`MatchFollowButton`).
+Since D6 every type goes out: kickoff reminder, match started, goal, final score, channels updated, frequency changed and announcements (composer). The goal bar, the five-minute holds, lateness and the off switch are in the sections below; the pipeline is `backend/app/notifications/`.
 
 ## How a reminder is made
 
@@ -69,6 +69,84 @@ Only `app/notifications/sender.py` talks to FCM. Producers only insert outbox ro
 
 `FCM_DRY_RUN=true` uses FCM's own dry run: messages are validated and no notification is delivered. Use it on a staging check, then set it back and restart.
 
+## The types the producers write
+
+| Row | Comes from | `due_at` | Audience |
+|---|---|---|---|
+| `match_started` | the poller, when a feed match turns live within 15 min of kickoff | now | `match_core` |
+| `goal` | the poller's goal bar, one per side per rise | now | `match_core` |
+| `goal` with `payload.kind = correction` | accepted score below what was pushed | now | `match_core` |
+| `final_score` | a feed finish with a real score, or an editor's `finished` | now | `match_core` |
+| `channels_updated` | a link added or removed (A4 or an importer) | first change + 5 min | `match_followers`, `match_only` for a first channel |
+| `frequency_changed` | A8's frequency save | first save + 5 min | `channel` |
+| `announcement` | A15's composer, or a test send | now or `send_at` | as chosen, or one `device` |
+
+Every row is inserted in the transaction of the change behind it, with `ON CONFLICT (dedupe_key) DO NOTHING`:
+
+```text
+match_started:<match>
+goal:<match>:<generation>:<side>:<value>
+goal_correction:<match>:<generation>
+final_score:<match>
+channels_updated:<match>:<first change id>
+frequency_changed:<channel>:<first save's audit id>
+announcement:<uuid>            test:<uuid>
+```
+
+A push written by an admin save carries `audit_log_id`, which is how A17 shows the counts behind that
+save. After commit the poller or the save queues `dispatch_due`; nothing waits for the next beat.
+
+## The goal bar, the holds and lateness
+
+The bar is pure (`app/notifications/goal_bar.py`, judged per side, never on the shoot-out). A value
+above what was pushed goes out only when either two sources agree on it (second-highest, capped at the
+accepted score and never below what was pushed), or one source has shown it without a break for three
+minutes. The first evaluation of a match stores the baseline and says nothing, so a match that was
+already in play when we started following it never sends a backfill.
+
+`channels_updated` and `frequency_changed` wait five minutes from the first change. At dispatch the
+frequency hold compares the stored `old` value with the channel now: equal or incomplete cancels with
+`no_net_change`. A typo fixed inside the hold therefore leaves no history row and no badge.
+
+Lateness (FR-019): a `goal` or `match_started` older than 15 minutes or whose match finished,
+`final_score` or a correction older than 2 hours, `channels_updated` whose match finished, and a
+scheduled announcement more than 2 hours late are all cancelled with a reason instead of sent. A goal
+whose side has since fallen below the pushed value is cancelled with `score_fell`. A test send never
+goes late.
+
+## The off switch (under a minute)
+
+`PUSH_TYPES_OFF` in VPS-2's `/srv/madar/.env` is a comma-separated list of types; a listed type's rows
+are cancelled with `error = type_off` and nothing is sent. An unknown name logs an error and is
+ignored. `kickoff_reminder` can be listed too.
+
+```bash
+ssh madar-vps2
+cd /srv/madar
+sudo sed -i 's/^PUSH_TYPES_OFF=.*/PUSH_TYPES_OFF=goal,match_started/' .env || \
+  echo 'PUSH_TYPES_OFF=goal,match_started' | sudo tee -a .env
+dc up -d worker-notify          # restart does not re-read .env
+dc exec worker-notify printenv PUSH_TYPES_OFF
+```
+
+History still happens while the switch is on: a frequency hold that ends writes its
+`channel_frequency_changes` row and is only then cancelled, so turning pushes back off and on never
+loses what followers were told.
+
+## The composer and the test device
+
+A15 composes from the admin app; the API is `POST /admin/api/notifications/announcements`, and a test
+send is `POST /admin/api/notifications/test`. The route is built by the server from the chosen target
+(`/`, `/match/<id>`, `/channel/<id>`) and a route as text is refused, as is a card-sharing label
+(`422 text_not_allowed`) or a `send_at` in the past (`422 send_at_in_past`).
+
+Before a test send, save the device in A15's "test device" row (`PUT /admin/api/notifications/test-device`,
+`If-Match` required). The test send ignores that device's preferences, so it proves the FCM path
+without messaging fans; a `422 test_device_not_set` or `test_device_no_token` means exactly that.
+
+Cancelling a pending announcement (`POST /admin/api/notifications/{id}/cancel`, `If-Match` required)
+sets `status = cancelled` and `error = admin`; a sent row cannot be cancelled (`409 notification_not_cancellable`).
+
 ## The owner's audience review
 
 The audience query is `AUDIENCE` in `backend/app/notifications/dispatcher.py`. It is one statement, bound parameters only, and reads as:
@@ -78,6 +156,12 @@ The audience query is `AUDIENCE` in `backend/app/notifications/dispatcher.py`. I
 - `COALESCE((prefs #>> '{types,kickoff_reminder,on}')::boolean, true)`: a device that switched the reminder off is not sent to. A device that never sent prefs is on (the D3 default).
 
 What to check when you review it: no string interpolation, no write, one device per row, and that it cannot return a device twice (the `DISTINCT`).
+
+## The failure alert
+
+When a row finishes `failed`, or a finished row with at least 10 devices had more than 20 % failures,
+the `push` problem opens in `live_problems` (A13 and the alert channel). The next finished row under
+that rate closes it. Test sends and cancelled rows never alert, and dead tokens are not failures.
 
 ## Read the outbox
 
@@ -91,6 +175,10 @@ SELECT status, count(*) FROM notification_outbox
 -- the newest rows, with how many devices each reached
 SELECT id, dedupe_key, status, due_at, attempts, sent, failed, cursor_device_id, sent_at
   FROM notification_outbox ORDER BY id DESC LIMIT 20;
+
+-- why rows were cancelled or failed (error, with the short reason)
+SELECT id, type, status, error, sent, failed FROM notification_outbox
+ WHERE status IN ('failed', 'cancelled') AND created_at > now() - interval '1 day' ORDER BY id DESC;
 
 -- stuck in sending: the worker died mid-row
 SELECT id, claimed_at, cursor_device_id FROM notification_outbox

@@ -31,7 +31,7 @@ LOCK_S = 15 * 60
 
 # One attempt, counted and locked atomically: five failures in the window lock the email + IP.
 _RESERVE = """
-local fail_key, lock_key = KEYS[1], KEYS[2]
+local fail_key, lock_key, account_lock_key = KEYS[1], KEYS[2], KEYS[3]
 local now = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
 local max_failures = tonumber(ARGV[3])
@@ -42,6 +42,8 @@ local count = redis.call('ZCARD', fail_key)
 redis.call('EXPIRE', fail_key, window)
 if count >= max_failures then
   redis.call('SET', lock_key, '1', 'EX', lock_s)
+  -- The account-level key A16 reads, with the same expiry (research R19).
+  redis.call('SET', account_lock_key, '1', 'EX', lock_s)
 end
 local ttl = redis.call('TTL', lock_key)
 if ttl < 0 then ttl = lock_s end
@@ -106,6 +108,11 @@ class LoginLimiter:
         suffix = f"{email_hash(email)}:{ip}"
         return f"auth:fail:{suffix}", f"auth:lock:{suffix}"
 
+    @staticmethod
+    def account_lock_key(email: str) -> str:
+        """``auth:locked:<h>``: set with ``auth:lock:`` so A16 can show an account as locked (R19)."""
+        return f"auth:locked:{email_hash(email)}"
+
     async def locked_for(self, email: str, ip: str) -> int | None:
         """Seconds until the lock ends, or ``None`` when this email + IP isn't locked."""
         _, lock_key = self._keys(email, ip)
@@ -124,9 +131,10 @@ class LoginLimiter:
         count, ttl = await self._redis.execute_command(  # type: ignore[no-untyped-call]  # redis' stubs
             "EVAL",
             _RESERVE,
-            2,
+            3,
             fail_key,
             lock_key,
+            self.account_lock_key(email),
             f"{now:.6f}",
             str(WINDOW_S),
             str(MAX_FAILURES),

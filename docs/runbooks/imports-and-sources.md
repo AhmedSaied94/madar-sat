@@ -218,6 +218,26 @@ A waiting card is listed under `waiting` in `run.json` and in A13's run detail, 
 
 **Why so much waits.** On 2026-11-05 the first run made 75 rows, 73 of them copies of fixtures we held under other spellings. A copy has no channels, and a polled copy takes the score away from the row that has them. So a fixture only YallaKora knows gets its row after its names are mapped, which is a smaller cost than a copy. Compare `report coverage` before and after a first run on a new host.
 
+## Relabelling a sporteventz row's sport
+
+Sporteventz carries other sports under English names, and an early row could be stored as football. The
+command takes a map the owner reviews, never a guess from the snapshot, and changes nothing without
+`--apply`:
+
+```bash
+# what the command sees today: sporteventz rows labelled football, and nothing changed
+docker compose -f /srv/madar/compose.yml exec -T worker-imports \
+  python -m app.cli repair-matches sport
+
+# the map is {"<match id>": "<sport>"}, built by the owner where old_app/migration/data/ is kept
+cat sport-map.json | docker compose -f /srv/madar/compose.yml exec -T worker-imports \
+  python -m app.cli repair-matches sport - --apply
+```
+
+It sets only the mapped sports, writes one `audit_log` row per change (`{"sport": [old, new]}`), and
+prints the rows the map left alone. An id in the map that isn't a sporteventz row refuses the whole run,
+and a second run changes nothing. No match is ever deleted.
+
 ## Merging duplicate matches
 
 `repair-matches` is for one incident: YallaKora's first runs on 2026-11-05 made 74 copies of fixtures we held, listed in [the reviewed pairs](../../specs/031-d05-live-sources/repair/duplicate-pairs-2026-11-05.md). The older row keeps its channels and takes the copy's score, links, readings, events and broadcaster.

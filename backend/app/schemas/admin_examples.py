@@ -305,3 +305,72 @@ MEDIA_ASSET: dict[str, Any] = {
     "bytes": 18432,
 }
 BULK_RESULT: dict[str, Any] = {"updated": [{"id": 48213, "etag": '"3f9a0c1d5b7e2a64c8d01f93be5a7d20"'}]}
+
+# --- D6: notifications, staff accounts, audit and channel history --------------------------------
+
+NOTIFICATION_ROW: dict[str, Any] = {
+    "id": 9012,
+    "type": "goal",
+    "status": "sent",
+    "error": None,
+    "target": {"kind": "match_core", "label": "الأهلي × الزمالك", "id": 48213},
+    "is_test": False,
+    "is_correction": False,
+    "recipients": 2410,
+    "sent": 2398,
+    "failed": 12,
+    "due_at": "2026-11-06T18:40:00Z",
+    "sent_at": "2026-11-06T18:40:09Z",
+    "created_at": "2026-11-06T18:40:00Z",
+}
+NOTIFICATION_REACH: dict[str, Any] = {"devices": 41230}
+ANNOUNCEMENT_BODY: dict[str, Any] = {
+    "title": "مباراة الليلة",
+    "body": "الأهلي × الزمالك في الثامنة مساءً",
+    "target": {"type": "match", "id": 48213},
+    "audience": {"kind": "all", "id": None},
+    "send_at": None,
+}
+TEST_DEVICE: dict[str, Any] = {
+    "device_id": 812,
+    "platform": "android",
+    "app_version": "0.6.0+60",
+    "has_push_token": True,
+}
+ADMIN_USER_ROW: dict[str, Any] = {
+    "id": 3,
+    "email": "editor@example.com",
+    "name": "محرر",
+    "role": "editor",
+    "is_active": True,
+    "locked_for_s": 660,
+    "last_login_at": "2026-11-06T09:12:00Z",
+    "must_change_password": False,
+}
+USER_WITH_PASSWORD: dict[str, Any] = {
+    "user": ADMIN_USER_ROW,
+    "temporary_password": "a temporary passphrase",
+}
+AUDIT_ROW: dict[str, Any] = {
+    "id": 7711,
+    "created_at": "2026-11-06T17:00:00Z",
+    "actor": {"kind": "admin", "id": 3, "name": "محرر"},
+    "entity": "channel",
+    "entity_id": 412,
+    "action": "update",
+    "summary_fields": ["frequency_mhz"],
+    "has_notification": True,
+}
+AUDIT_DETAIL: dict[str, Any] = {
+    **AUDIT_ROW,
+    "diff": {"frequency_mhz": [11766, 11843]},
+    "notification": {"id": 9012, "type": "frequency_changed", "status": "sent", "sent": 118, "failed": 0},
+}
+FREQUENCY_HISTORY_ROW: dict[str, Any] = {
+    "id": 55,
+    "old": "11766 H 27500",
+    "new": "11843 H 27500",
+    "source": "admin",
+    "actor": "محرر",
+    "detected_at": "2026-11-06T17:05:00Z",
+}
