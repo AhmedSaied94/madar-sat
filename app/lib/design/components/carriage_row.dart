@@ -32,6 +32,7 @@ class CarriageRow extends StatefulWidget {
     this.onFollow,
     this.onOpenChannel,
     this.onWatchReception,
+    this.changedAt,
   });
 
   final ChannelCarriage carriage;
@@ -44,6 +45,9 @@ class CarriageRow extends StatefulWidget {
 
   /// Opens the satellite's reception video; the action shows only when this is given.
   final VoidCallback? onWatchReception;
+
+  /// When given, the row shows `ChangedBadge` beside the readout. Only S5.2 passes it (FR-061).
+  final DateTime? changedAt;
 
   @override
   State<CarriageRow> createState() => _CarriageRowState();
@@ -70,6 +74,21 @@ class _CarriageRowState extends State<CarriageRow> {
     final expanded = widget.expanded;
     final satellite = carriage.satellite;
     final frequency = carriage.frequency;
+    final changedAt = widget.changedAt;
+    final Widget? readout = frequency != null
+        ? FrequencyReadout(
+            mhz: frequency.mhz,
+            polarization: frequency.pol,
+            symbolRate: frequency.sr,
+            state: _copied ? FrequencyReadoutState.good : FrequencyReadoutState.ok,
+            onTap: () => _copyFrequency(context, frequency),
+          )
+        : carriage.frequencyNote != null
+            ? FrequencyReadout(
+                note: carriage.frequencyNote,
+                state: FrequencyReadoutState.note,
+              )
+            : null;
 
     return Material(
       color: expanded ? colors.surface2 : colors.surface1,
@@ -131,27 +150,26 @@ class _CarriageRowState extends State<CarriageRow> {
                     // screen exists for, and tapping it copies (CarriageRow README).
                     if (satellite != null || frequency != null || carriage.frequencyNote != null) ...[
                       const SizedBox(height: MadarSpace.s1),
-                      Row(
-                        children: [
-                          if (satellite != null) SatelliteBadge(name: satellite.nameAr),
-                          const Spacer(),
-                          if (frequency != null)
-                            FrequencyReadout(
-                              mhz: frequency.mhz,
-                              polarization: frequency.pol,
-                              symbolRate: frequency.sr,
-                              state: _copied
-                                  ? FrequencyReadoutState.good
-                                  : FrequencyReadoutState.ok,
-                              onTap: () => _copyFrequency(context, frequency),
-                            )
-                          else if (carriage.frequencyNote != null)
-                            FrequencyReadout(
-                              note: carriage.frequencyNote,
-                              state: FrequencyReadoutState.note,
-                            ),
-                        ],
-                      ),
+                      if (changedAt == null)
+                        Row(
+                          children: [
+                            if (satellite != null) SatelliteBadge(name: satellite.nameAr),
+                            const Spacer(),
+                            ?readout,
+                          ],
+                        )
+                      else
+                        // Two badges and a readout can pass a phone's width at 1.3×.
+                        Wrap(
+                          spacing: MadarSpace.s2,
+                          runSpacing: MadarSpace.s1,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (satellite != null) SatelliteBadge(name: satellite.nameAr),
+                            ?readout,
+                            ChangedBadge(changedAt: changedAt),
+                          ],
+                        ),
                     ],
                     if (expanded) ...[
                       const SizedBox(height: MadarSpace.s3),

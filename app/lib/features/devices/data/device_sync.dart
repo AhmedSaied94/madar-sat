@@ -33,6 +33,7 @@ part 'device_sync.g.dart';
 class DeviceSync extends _$DeviceSync {
   bool _running = false;
   bool _again = false;
+  bool _idFetched = false;
 
   @override
   Future<void> build() async {
@@ -59,6 +60,7 @@ class DeviceSync extends _$DeviceSync {
       final finished = !before.onboardingDone && value.onboardingDone;
       if (!finished &&
           before.zone == value.zone &&
+          before.notifications == value.notifications &&
           setEquals(before.satelliteIds, value.satelliteIds)) {
         return;
       }
@@ -121,6 +123,7 @@ class DeviceSync extends _$DeviceSync {
       await _sendDevice(repository, database);
       key = 'follows';
       await _sendFollows(repository, database);
+      await _fetchMissingDeviceId(repository, database);
     } on ApiFailure catch (failure) {
       if (failure.statusCode == 401) {
         // The token the server knows is gone (a rotated install, a deleted device): keep the
@@ -182,6 +185,27 @@ class DeviceSync extends _$DeviceSync {
     // Before the data: a change that lands from here on is seen at the clear.
     final revision = database.syncRevision('device');
     if (!await _isDirty(database, 'device')) return;
+    await _putDevice(repository);
+    await _clear(database, 'device', revision);
+  }
+
+  /// An install from before the ID was kept returns early from `ensureRegistered`, so its ID is
+  /// missing with nothing to send: one send brings it (FR-062, R18). It only feeds S15's row, so
+  /// it runs last, a failure flags nothing and holds up nothing, and the next trigger tries
+  /// again. An answer that still has no ID isn't asked for again until the next launch.
+  Future<void> _fetchMissingDeviceId(DeviceRepository repository, AppDatabase database) async {
+    if (_idFetched || await database.readSetting(SettingsKeys.deviceId) != null) return;
+    try {
+      await _putDevice(repository);
+      _idFetched = true;
+    } on ApiFailure {
+      // The next trigger tries again.
+    } on DioException {
+      // The next trigger tries again.
+    }
+  }
+
+  Future<void> _putDevice(DeviceRepository repository) async {
     final identity = await repository.identity();
     final settings = ref.read(appSettingsProvider).value ?? const AppSettingsValue();
     final satellites = settings.satelliteIds.toList()..sort();
@@ -189,13 +213,24 @@ class DeviceSync extends _$DeviceSync {
       DeviceUpdate(
         appVersion: currentAppVersion(),
         locale: 'ar',
+        prefs: _prefs(settings.notifications),
         pushToken: identity.pushToken,
         satelliteIds: satellites.isEmpty ? null : satellites,
         tz: ianaTimeZoneName(),
       ),
     );
-    await _clear(database, 'device', revision);
   }
+
+  /// S15's choices as the contract takes them, every type at once, or null to leave the
+  /// server's copy alone.
+  static NotificationPrefs? _prefs(NotificationChoices? choices) => choices == null
+      ? null
+      : NotificationPrefs(
+          types: {
+            for (final type in NotificationType.$valuesDefined)
+              type.json!: NotificationPref(onValue: choices.isOn(type)),
+          },
+        );
 
   /// `PUT /v1/devices/me/follows`: the whole set, every kind, so the server's copy is
   /// exactly this device's. An empty set clears the server's follows.

@@ -69,7 +69,7 @@ final class DeviceSyncProvider
   DeviceSync create() => DeviceSync();
 }
 
-String _$deviceSyncHash() => r'dc52ba6b5d81017c4c9ed5014de1402970f077cb';
+String _$deviceSyncHash() => r'73b15ce3710fd53be70a822bee20aa94f11c34d3';
 
 /// Brings the server's copy of this device up to date (US2 scenarios 4, 6, 7; FR-041).
 ///

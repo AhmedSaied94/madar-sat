@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audio/clip_controller.dart';
+import '../../../core/config/remote_config.dart';
 import '../../../core/format/clock.dart';
 import '../../../core/l10n/error_copy.dart';
 import '../../../core/links/url_opener.dart';
 import '../../../core/network/api_failure.dart';
+import '../../../core/network/generated/models/live_state.dart';
 import '../../../core/network/generated/models/match_detail.dart';
 import '../../../core/network/generated/models/satellite_ref.dart';
 import '../../../core/network/swr_snapshot.dart';
@@ -26,6 +28,7 @@ import '../../my_satellites/data/my_satellites_provider.dart';
 import '../data/match_detail_providers.dart';
 import '../domain/carriage_order.dart';
 import '../domain/match_detail_live.dart';
+import 'live_center/live_center.dart';
 import 'match_follow_button.dart';
 import 'match_hero.dart';
 import 'match_info_cards.dart';
@@ -38,6 +41,12 @@ const int _backToTopScreens = 2;
 /// Room under the last card, so the back-to-top button never covers it.
 const double _endPadding = MadarSpace.s8 * 2;
 
+/// How many screens a push's `?section=channels` may scroll while «أين تشاهد» isn't built yet.
+const int _maxRevealSteps = 40;
+
+/// The section name that scrolls S3 to its channels.
+const String _channelsSection = 'channels';
+
 /// S3 Match detail: the hero, where to watch (my satellites, other satellites, platforms),
 /// the manual broadcasters, and the stadium and Egyptian broadcaster.
 ///
@@ -45,9 +54,12 @@ const double _endPadding = MadarSpace.s8 * 2;
 /// it is on screen. Live state comes only from `/v1/live` (SC-008). It is always pushed, so
 /// it has a back arrow; leaving it stops any clip that is playing.
 class MatchDetailPage extends ConsumerStatefulWidget {
-  const MatchDetailPage({super.key, required this.matchId});
+  const MatchDetailPage({super.key, required this.matchId, this.section});
 
   final int matchId;
+
+  /// `channels` when a push opens S3 at its channels; anything else opens it from the top.
+  final String? section;
 
   @override
   ConsumerState<MatchDetailPage> createState() => _MatchDetailPageState();
@@ -56,6 +68,14 @@ class MatchDetailPage extends ConsumerStatefulWidget {
 class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<bool> _showBackToTop = ValueNotifier(false);
+  final GlobalKey _channelsKey = GlobalKey();
+
+  /// `?section=channels` scrolls once per opening, so a re-read never moves the fan.
+  bool _revealed = false;
+
+  /// The last live state seen. A state expiring to null doesn't clear it, so a change across
+  /// that gap still reads the match once.
+  LiveState? _lastLive;
 
   /// Kept so [dispose] can stop the clip: a `ref` cannot be used there.
   ProviderContainer? _container;
@@ -64,6 +84,18 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void didUpdateWidget(MatchDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // go_router keeps this state when only the path's ID or the query changes.
+    if (oldWidget.matchId != widget.matchId) {
+      _revealed = false;
+      _lastLive = null;
+    } else if (oldWidget.section != widget.section) {
+      _revealed = false;
+    }
   }
 
   @override
@@ -124,6 +156,42 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
     }
   }
 
+  /// Reads the match once when what the timeline shows may have changed (FR-055, R13): the
+  /// score or the status. Live values still come only from `/v1/live`, and the 60 s timer
+  /// stays. Nothing here runs with the flag off, so S3 asks for no more than it did.
+  void _onLiveState(LiveState? next) {
+    if (next == null) return;
+    final before = _lastLive;
+    _lastLive = next;
+    if (before == null || !ref.read(liveCenterEnabledProvider)) return;
+    if (before.score != next.score || before.status != next.status) _revalidate();
+  }
+
+  /// Once the page first has a match: scrolls to «أين تشاهد», building it first if a long
+  /// timeline keeps its sliver out of range.
+  Future<void> _revealChannels() async {
+    final animate = !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+    for (var step = 0; step < _maxRevealSteps; step++) {
+      if (!mounted || !_scroll.hasClients) return;
+      final target = _channelsKey.currentContext;
+      if (target != null) {
+        if (!target.mounted) return;
+        await Scrollable.ensureVisible(
+          target,
+          duration: animate ? const Duration(milliseconds: 300) : Duration.zero,
+          curve: Curves.easeOut,
+        );
+        return;
+      }
+      final position = _scroll.position;
+      if (position.pixels >= position.maxScrollExtent) return;
+      _scroll.jumpTo(
+        (position.pixels + position.viewportDimension).clamp(0, position.maxScrollExtent),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
+
   void _back() => context.canPop() ? context.pop() : context.go('/');
 
   /// The poll and «تحديث»: the provider owns the cycle, including asking the catalogue
@@ -142,6 +210,15 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
     // not rebuild for matches it does not show (`LiveState` has value equality).
     final live = ref.watch(liveStatesProvider.select((states) => states[widget.matchId]));
     final shown = match == null ? null : detailWithLiveState(match, live);
+    _lastLive ??= live;
+    ref.listen(
+      liveStatesProvider.select((states) => states[widget.matchId]),
+      (_, next) => _onLiveState(next),
+    );
+    if (shown != null && widget.section == _channelsSection && !_revealed) {
+      _revealed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_revealChannels()));
+    }
 
     final Widget body;
     if (shown != null && snapshot != null) {
@@ -153,6 +230,7 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
         showBackToTop: _showBackToTop,
         onBackToTop: _scrollToTop,
         onRefresh: _revalidate,
+        channelsKey: _channelsKey,
       );
     } else if (detail.hasError) {
       body = _FailureView(error: detail.error, onRetry: _revalidate);
@@ -171,7 +249,12 @@ class _MatchDetailPageState extends ConsumerState<MatchDetailPage> {
               actions: shown == null
                   ? const []
                   : [
-                      MatchFollowButton(matchId: widget.matchId, kickoffAt: shown.kickoffAt),
+                      MatchFollowButton(
+                        matchId: widget.matchId,
+                        kickoffAt: shown.kickoffAt,
+                        status: shown.status,
+                        estimated: shown.estimated,
+                      ),
                     ],
             ),
             Expanded(
@@ -199,6 +282,7 @@ class _Loaded extends ConsumerWidget {
     required this.showBackToTop,
     required this.onBackToTop,
     required this.onRefresh,
+    required this.channelsKey,
   });
 
   final MatchDetail match;
@@ -208,6 +292,7 @@ class _Loaded extends ConsumerWidget {
   final ValueListenable<bool> showBackToTop;
   final VoidCallback onBackToTop;
   final VoidCallback onRefresh;
+  final GlobalKey channelsKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -240,6 +325,8 @@ class _Loaded extends ConsumerWidget {
       l: l,
       matchId: match.id,
       kickoffAt: match.kickoffAt,
+      status: match.status,
+      estimated: match.estimated,
       showChooseSatellites: ref.watch(usesDefaultSatellitesProvider),
       onChooseSatellites: () => context.push('/settings/satellites'),
       all: all,
@@ -251,6 +338,7 @@ class _Loaded extends ConsumerWidget {
           satellite == null ? null : receptionUrls[satellite.id],
       onWatchReception: (url) => _open(context, ref, url),
       onRefresh: onRefresh,
+      toolbarKey: channelsKey,
     );
 
     return Stack(
@@ -275,11 +363,13 @@ class _Loaded extends ConsumerWidget {
               child: MatchHero(
                 match: match,
                 now: now,
+                highlightScore: ref.watch(liveCenterEnabledProvider),
                 onOpenTeam: (teamId) => context.push('/team/$teamId'),
                 onOpenCompetition: (competitionId) =>
                     context.push('/competition/$competitionId'),
               ),
             ),
+            LiveCenterSliver(match: match, age: age),
             if (manual.isNotEmpty) SliverToBoxAdapter(child: ManualBroadcasterCards(entries: manual)),
             ...whereToWatch.build(),
             if (MatchInfoSection.hasContent(match))

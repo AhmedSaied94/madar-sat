@@ -37,6 +37,12 @@ class _FakePushService implements PushService {
   final StreamController<String?> _changes = StreamController<String?>.broadcast();
 
   @override
+  Future<PushPermissionState> permission() async => PushPermissionState.allowed;
+
+  @override
+  Stream<ForegroundPush> get foregroundMessages => const Stream.empty();
+
+  @override
   bool get canRequestPermission => true;
 
   @override

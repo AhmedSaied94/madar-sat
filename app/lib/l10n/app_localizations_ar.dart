@@ -1082,4 +1082,125 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get lcTabEvents => 'الأحداث';
+
+  @override
+  String get lcTabLineups => 'التشكيل';
+
+  @override
+  String get lcEstimatedNote => 'بدون نتيجة';
+
+  @override
+  String get lcTabsLabel => 'مركز المباراة';
+
+  @override
+  String get tlGoal => 'هدف';
+
+  @override
+  String tlGoalWithScore(String score) {
+    return 'هدف · $score';
+  }
+
+  @override
+  String get tlOwnGoal => 'عكسي';
+
+  @override
+  String get tlPenalty => 'ركلة جزاء';
+
+  @override
+  String get tlMissedPenalty => 'ركلة جزاء ضائعة';
+
+  @override
+  String get tlRedCard => 'بطاقة حمراء';
+
+  @override
+  String get tlKickoff => 'بداية المباراة';
+
+  @override
+  String get tlSecondHalf => 'الشوط الثاني';
+
+  @override
+  String tlMinuteLabel(String minute) {
+    return 'الدقيقة $minute';
+  }
+
+  @override
+  String get lineupStarters => 'الأساسيون';
+
+  @override
+  String get lineupSubstitutes => 'البدلاء';
+
+  @override
+  String lineupPitchSide(String team, String formation) {
+    return '$team $formation';
+  }
+
+  @override
+  String lineupPitchLabel(String home, String away) {
+    return 'التشكيل الأساسي: $home في الأسفل، $away في الأعلى';
+  }
+
+  @override
+  String get lineupGoalMark => 'سجّل هدفاً';
+
+  @override
+  String get lineupRedMark => 'بطاقة حمراء';
+
+  @override
+  String get pushBannerView => 'عرض';
+
+  @override
+  String get pushBannerDismiss => 'إغلاق';
+
+  @override
+  String get s3FollowStartedAlertsNote =>
+      'بدأت المباراة، ستصلك تنبيهاتها حسب إعداداتك';
+
+  @override
+  String get s15SectionNotifications => 'الإشعارات';
+
+  @override
+  String get s15AllowNotifications => 'السماح بالإشعارات';
+
+  @override
+  String get s15AllowedHere => 'مسموح على هذا الجهاز';
+
+  @override
+  String get s15NotifReminder => 'تذكير قبل المباراة';
+
+  @override
+  String get s15NotifStarted => 'بداية المباراة';
+
+  @override
+  String get s15NotifGoals => 'الأهداف';
+
+  @override
+  String get s15NotifFinal => 'النتيجة النهائية';
+
+  @override
+  String get s15NotifChannels => 'تحديث القنوات';
+
+  @override
+  String get s15NotifFrequency => 'تغيير التردد';
+
+  @override
+  String get s15NotifAnnouncements => 'إعلانات التطبيق';
+
+  @override
+  String get s15DeniedTitle => 'الإشعارات متوقفة لهذا التطبيق';
+
+  @override
+  String get s15DeniedBody =>
+      'لن تصلك التنبيهات حتى تسمح بها من إعدادات الجهاز.';
+
+  @override
+  String get s15DeniedAction => 'تفعيل';
+
+  @override
+  String get s15DeviceId => 'معرّف الجهاز';
+
+  @override
+  String get s15DeviceIdCopied => 'تم نسخ معرّف الجهاز';
 }

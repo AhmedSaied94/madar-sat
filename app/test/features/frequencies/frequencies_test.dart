@@ -848,4 +848,25 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('the changed badge on S5.2 (FR-061)', () {
+    testWidgets('shows within 30 days of a change, and not after', (tester) async {
+      final env = _Env();
+      addTearDown(env.database.close);
+      env.serve(
+        channels: [
+          channelEntry(id: 1, name: 'Fresh', changedAt: sampleNow().subtract(const Duration(days: 30))),
+          channelEntry(id: 2, name: 'Old', changedAt: sampleNow().subtract(const Duration(days: 31))),
+          channelEntry(id: 3, name: 'Never'),
+        ],
+      );
+
+      await _pumpDetail(tester, env);
+
+      final fresh = find.widgetWithText(CarriageRow, 'Fresh');
+      expect(find.descendant(of: fresh, matching: find.byType(ChangedBadge)), findsOneWidget);
+      expect(find.byType(ChangedBadge), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

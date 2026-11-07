@@ -3,7 +3,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/db/database_provider.dart';
 import '../../../core/platform/secure_store.dart';
+import '../../../core/settings/app_settings.dart';
 
 part 'device_identity_provider.g.dart';
 
@@ -88,6 +90,7 @@ class DeviceIdentityController extends _$DeviceIdentityController {
     await store.delete(SecureKeys.deviceToken);
     await store.delete(SecureKeys.pushToken);
     await store.delete(SecureKeys.installId);
+    await ref.read(appDatabaseProvider).writeSetting(SettingsKeys.deviceId, null);
     ref.invalidateSelf();
   }
 

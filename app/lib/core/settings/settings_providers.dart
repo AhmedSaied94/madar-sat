@@ -55,6 +55,10 @@ class AppSettings extends _$AppSettings {
         ids.isEmpty ? null : (ids.toList()..sort()).join(','),
       );
 
+  /// S15's الإشعارات group. `DeviceSync` sees the change and sends it.
+  Future<void> setNotifications(NotificationChoices choices) =>
+      _write(SettingsKeys.notificationPrefs, choices.encode());
+
   Future<void> _write(String key, String? value) async {
     await ref.read(appDatabaseProvider).writeSetting(key, value);
     ref.invalidateSelf();

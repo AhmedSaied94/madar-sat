@@ -74,6 +74,53 @@ void main() {
     }
   });
 
+  group('features', () {
+    test('is bundled with live_center and lineups off', () {
+      expect(RemoteConfigValues.bundled.features.liveCenter, isFalse);
+      expect(RemoteConfigValues.bundled.features.lineups, isFalse);
+      final values = RemoteConfigValues.fromRaw(const {}, bundled: bundled);
+      expect(values.features, const AppFeatures());
+    });
+
+    test('reads each flag on its own from the JSON', () {
+      final both = RemoteConfigValues.fromRaw(
+        const {'features': '{"live_center": true, "lineups": true}'},
+        bundled: bundled,
+      );
+      expect(both.features, const AppFeatures(liveCenter: true, lineups: true));
+
+      final one = RemoteConfigValues.fromRaw(
+        const {'features': '{"live_center": true}'},
+        bundled: bundled,
+      );
+      expect(one.features, const AppFeatures(liveCenter: true));
+    });
+
+    test('bad JSON, or a value of the wrong type, keeps the bundle', () {
+      const on = RemoteConfigValues(
+        apiBaseUrl: 'https://api.example.test',
+        mediaBaseUrl: 'https://media.example.test',
+        minSupportedBuild: 0,
+        latestBuild: 0,
+        livePollIntervalSeconds: 30,
+        features: AppFeatures(liveCenter: true, lineups: true),
+      );
+      for (final bad in ['', 'true', '[]', 'null', '{live_center: false}', '{"live_center": false']) {
+        expect(
+          RemoteConfigValues.fromRaw({'features': bad}, bundled: on).features,
+          on.features,
+          reason: bad,
+        );
+      }
+      // One bad flag does not take the good one with it.
+      final mixed = RemoteConfigValues.fromRaw(
+        const {'features': '{"live_center": "false", "lineups": false}'},
+        bundled: on,
+      );
+      expect(mixed.features, const AppFeatures(liveCenter: true));
+    });
+  });
+
   test('the bundled value is the flavor file\'s own host', () {
     // No dart-define in a test, so the bundled host is empty; the app refuses to start on it
     // rather than guessing one.

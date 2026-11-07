@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/db/app_database.dart';
 import 'package:madar_sat/core/db/database_provider.dart';
+import 'package:madar_sat/core/format/clock.dart';
+import 'package:madar_sat/core/network/generated/models/status.dart';
+import 'package:madar_sat/features/match_detail/presentation/match_follow_button.dart';
 import 'package:madar_sat/features/follows/data/follows_repository.dart';
 import 'package:madar_sat/features/match_detail/domain/carriage_order.dart';
 import 'package:madar_sat/features/match_detail/presentation/where_to_watch_slivers.dart';
@@ -21,7 +24,10 @@ void main() {
   setUp(() {
     database = AppDatabase(NativeDatabase.memory(), now: () => DateTime.utc(2026, 11, 1, 9));
     container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(database)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        clockProvider.overrideWithValue(() => DateTime.utc(2026, 11, 1, 9)),
+      ],
     );
   });
 
@@ -49,6 +55,8 @@ void main() {
       onRefresh: () {},
       matchId: int.parse(matchId),
       kickoffAt: null,
+      status: Status.scheduled,
+      estimated: false,
       showChooseSatellites: showChooseSatellites,
       onChooseSatellites: onChooseSatellites,
     ).build();
@@ -110,8 +118,85 @@ void main() {
     await pump(tester, matchId: '7');
     expect(find.text('حدد أقمارك'), findsNothing);
   });
+
+  group('following a started match (FR-060)', () {
+    final kickoff = DateTime.utc(2026, 11, 1, 8);
+
+    Future<void> tapFollow(
+      WidgetTester tester, {
+      required Status status,
+      required bool estimated,
+      DateTime? kickoffAt,
+    }) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: const Locale('ar'),
+            supportedLocales: const [Locale('ar')],
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            theme: MadarTheme.dark,
+            home: Scaffold(
+              body: MatchFollowButton(
+                matchId: 7,
+                kickoffAt: kickoffAt ?? kickoff,
+                status: status,
+                estimated: estimated,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('تابع المباراة'));
+      await tester.pump();
+    }
+
+    const alerts = 'بدأت المباراة، ستصلك تنبيهاتها حسب إعداداتك';
+    const noReminder = 'بدأت المباراة، فلن يصلك تذكير بها';
+
+    for (final status in [Status.live, Status.halftime, Status.extraTime, Status.penalties]) {
+      testWidgets('in play as $status with a feed: the alerts note', (tester) async {
+        await tapFollow(tester, status: status, estimated: false);
+        expect(find.text(alerts), findsOneWidget);
+        await tester.pump(const Duration(seconds: 5));
+      });
+    }
+
+    testWidgets('estimated: today\'s note, because no alert will come', (tester) async {
+      await tapFollow(tester, status: Status.live, estimated: true);
+      expect(find.text(noReminder), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('finished: today\'s note', (tester) async {
+      await tapFollow(tester, status: Status.finished, estimated: false);
+      expect(find.text(noReminder), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('no live state, so shown as scheduled after kickoff: today\'s note',
+        (tester) async {
+      await tapFollow(tester, status: Status.scheduled, estimated: false);
+      expect(find.text(noReminder), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('before kickoff there is no note', (tester) async {
+      await tapFollow(
+        tester,
+        status: Status.scheduled,
+        estimated: false,
+        kickoffAt: DateTime.utc(2026, 11, 1, 20),
+      );
+      expect(find.text(alerts), findsNothing);
+      expect(find.text(noReminder), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
+    });
+  });
 }
 
+/// FR-060: following a started match says what will really come.
 Future<AppLocalizations> _localizations() async {
   final delegate = AppLocalizations.delegate;
   return delegate.load(const Locale('ar'));

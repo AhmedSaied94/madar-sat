@@ -5,6 +5,7 @@ import '../../../core/format/time.dart';
 import '../../../core/l10n/dates.dart';
 import '../../../core/network/generated/models/competition_ref.dart';
 import '../../../core/network/generated/models/match_detail.dart';
+import '../../../core/network/generated/models/score.dart';
 import '../../../core/network/generated/models/sport.dart';
 import '../../../core/network/generated/models/status.dart';
 import '../../../core/theme/madar_line.dart';
@@ -29,6 +30,7 @@ class MatchHero extends StatelessWidget {
     this.now,
     this.onOpenTeam,
     this.onOpenCompetition,
+    this.highlightScore = false,
   });
 
   final MatchDetail match;
@@ -40,6 +42,9 @@ class MatchHero extends StatelessWidget {
 
   /// Opens S8 for the competition named above the teams. Null draws it as plain text.
   final ValueChanged<int>? onOpenCompetition;
+
+  /// Whether a rising score draws the eye: the live center's flag (FR-054, SC-013).
+  final bool highlightScore;
 
   @override
   Widget build(BuildContext context) {
@@ -90,14 +95,18 @@ class MatchHero extends StatelessWidget {
                     child: SizedBox(
                       width: MadarSpace.s12 + MadarSpace.s8,
                       child: Center(
-                        child: StatusBlock(
-                          status: match.status,
-                          kickoff: match.kickoffAt,
+                        child: ScoreFlash(
                           score: match.score,
-                          minute: match.minute,
-                          estimated: match.estimated,
-                          timeTbd: match.timeTbd,
-                          now: now,
+                          enabled: highlightScore,
+                          child: StatusBlock(
+                            status: match.status,
+                            kickoff: match.kickoffAt,
+                            score: match.score,
+                            minute: match.minute,
+                            estimated: match.estimated,
+                            timeTbd: match.timeTbd,
+                            now: now,
+                          ),
                         ),
                       ),
                     ),
@@ -351,6 +360,71 @@ class _Team extends StatelessWidget {
           padding: const EdgeInsetsDirectional.symmetric(vertical: MadarSpace.s1),
           child: content,
         ),
+      ),
+    );
+  }
+}
+
+/// Highlights the score once when a side rises while it's on screen (FR-054), as `.big-sc.flash`
+/// does: `accent-container` fading out over 1.2 s.
+///
+/// No highlight on first paint, on a fall, or when a score appears where there was none, and
+/// none under reduced motion. At rest it paints nothing, so S3 looks as it did (SC-013).
+class ScoreFlash extends StatefulWidget {
+  const ScoreFlash({super.key, required this.score, required this.enabled, required this.child});
+
+  /// The highlight's surface, for a test to read.
+  @visibleForTesting
+  static const Key surfaceKey = ValueKey('score-flash-surface');
+
+  final Score? score;
+  final bool enabled;
+  final Widget child;
+
+  @override
+  State<ScoreFlash> createState() => _ScoreFlashState();
+}
+
+class _ScoreFlashState extends State<ScoreFlash> with SingleTickerProviderStateMixin {
+  static const Duration _duration = Duration(milliseconds: 1200);
+
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: _duration,
+    value: 1,
+  );
+  bool _reducedMotion = false;
+
+  @override
+  void didUpdateWidget(ScoreFlash oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final before = oldWidget.score;
+    final now = widget.score;
+    if (!widget.enabled || _reducedMotion || before == null || now == null) return;
+    if (now.home > before.home || now.away > before.away) _flash.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _reducedMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final start = context.madarColors.accentContainer;
+    final end = start.withValues(alpha: 0);
+    return AnimatedBuilder(
+      animation: _flash,
+      child: widget.child,
+      builder: (context, child) => DecoratedBox(
+        key: ScoreFlash.surfaceKey,
+        decoration: BoxDecoration(
+          color: Color.lerp(start, end, Curves.easeOut.transform(_flash.value)),
+          borderRadius: BorderRadius.circular(MadarRadii.md),
+        ),
+        child: child,
       ),
     );
   }

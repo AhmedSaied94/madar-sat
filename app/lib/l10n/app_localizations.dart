@@ -1899,6 +1899,228 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'{count, plural, =1{بطولة واحدة} =2{بطولتان} few{{count} بطولات} other{{count} بطولة}}'**
   String s8CompetitionsCount(int count);
+
+  /// No description provided for @lcTabEvents.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأحداث'**
+  String get lcTabEvents;
+
+  /// No description provided for @lcTabLineups.
+  ///
+  /// In ar, this message translates to:
+  /// **'التشكيل'**
+  String get lcTabLineups;
+
+  /// No description provided for @lcEstimatedNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون نتيجة'**
+  String get lcEstimatedNote;
+
+  /// No description provided for @lcTabsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مركز المباراة'**
+  String get lcTabsLabel;
+
+  /// No description provided for @tlGoal.
+  ///
+  /// In ar, this message translates to:
+  /// **'هدف'**
+  String get tlGoal;
+
+  /// No description provided for @tlGoalWithScore.
+  ///
+  /// In ar, this message translates to:
+  /// **'هدف · {score}'**
+  String tlGoalWithScore(String score);
+
+  /// No description provided for @tlOwnGoal.
+  ///
+  /// In ar, this message translates to:
+  /// **'عكسي'**
+  String get tlOwnGoal;
+
+  /// No description provided for @tlPenalty.
+  ///
+  /// In ar, this message translates to:
+  /// **'ركلة جزاء'**
+  String get tlPenalty;
+
+  /// No description provided for @tlMissedPenalty.
+  ///
+  /// In ar, this message translates to:
+  /// **'ركلة جزاء ضائعة'**
+  String get tlMissedPenalty;
+
+  /// No description provided for @tlRedCard.
+  ///
+  /// In ar, this message translates to:
+  /// **'بطاقة حمراء'**
+  String get tlRedCard;
+
+  /// No description provided for @tlKickoff.
+  ///
+  /// In ar, this message translates to:
+  /// **'بداية المباراة'**
+  String get tlKickoff;
+
+  /// No description provided for @tlSecondHalf.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشوط الثاني'**
+  String get tlSecondHalf;
+
+  /// No description provided for @tlMinuteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدقيقة {minute}'**
+  String tlMinuteLabel(String minute);
+
+  /// No description provided for @lineupStarters.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأساسيون'**
+  String get lineupStarters;
+
+  /// No description provided for @lineupSubstitutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'البدلاء'**
+  String get lineupSubstitutes;
+
+  /// No description provided for @lineupPitchSide.
+  ///
+  /// In ar, this message translates to:
+  /// **'{team} {formation}'**
+  String lineupPitchSide(String team, String formation);
+
+  /// No description provided for @lineupPitchLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التشكيل الأساسي: {home} في الأسفل، {away} في الأعلى'**
+  String lineupPitchLabel(String home, String away);
+
+  /// No description provided for @lineupGoalMark.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل هدفاً'**
+  String get lineupGoalMark;
+
+  /// No description provided for @lineupRedMark.
+  ///
+  /// In ar, this message translates to:
+  /// **'بطاقة حمراء'**
+  String get lineupRedMark;
+
+  /// No description provided for @pushBannerView.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض'**
+  String get pushBannerView;
+
+  /// No description provided for @pushBannerDismiss.
+  ///
+  /// In ar, this message translates to:
+  /// **'إغلاق'**
+  String get pushBannerDismiss;
+
+  /// No description provided for @s3FollowStartedAlertsNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدأت المباراة، ستصلك تنبيهاتها حسب إعداداتك'**
+  String get s3FollowStartedAlertsNote;
+
+  /// No description provided for @s15SectionNotifications.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات'**
+  String get s15SectionNotifications;
+
+  /// No description provided for @s15AllowNotifications.
+  ///
+  /// In ar, this message translates to:
+  /// **'السماح بالإشعارات'**
+  String get s15AllowNotifications;
+
+  /// No description provided for @s15AllowedHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسموح على هذا الجهاز'**
+  String get s15AllowedHere;
+
+  /// No description provided for @s15NotifReminder.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكير قبل المباراة'**
+  String get s15NotifReminder;
+
+  /// No description provided for @s15NotifStarted.
+  ///
+  /// In ar, this message translates to:
+  /// **'بداية المباراة'**
+  String get s15NotifStarted;
+
+  /// No description provided for @s15NotifGoals.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأهداف'**
+  String get s15NotifGoals;
+
+  /// No description provided for @s15NotifFinal.
+  ///
+  /// In ar, this message translates to:
+  /// **'النتيجة النهائية'**
+  String get s15NotifFinal;
+
+  /// No description provided for @s15NotifChannels.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث القنوات'**
+  String get s15NotifChannels;
+
+  /// No description provided for @s15NotifFrequency.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير التردد'**
+  String get s15NotifFrequency;
+
+  /// No description provided for @s15NotifAnnouncements.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعلانات التطبيق'**
+  String get s15NotifAnnouncements;
+
+  /// No description provided for @s15DeniedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات متوقفة لهذا التطبيق'**
+  String get s15DeniedTitle;
+
+  /// No description provided for @s15DeniedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لن تصلك التنبيهات حتى تسمح بها من إعدادات الجهاز.'**
+  String get s15DeniedBody;
+
+  /// No description provided for @s15DeniedAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل'**
+  String get s15DeniedAction;
+
+  /// No description provided for @s15DeviceId.
+  ///
+  /// In ar, this message translates to:
+  /// **'معرّف الجهاز'**
+  String get s15DeviceId;
+
+  /// No description provided for @s15DeviceIdCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ معرّف الجهاز'**
+  String get s15DeviceIdCopied;
 }
 
 class _AppLocalizationsDelegate

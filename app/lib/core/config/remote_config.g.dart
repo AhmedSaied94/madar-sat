@@ -200,3 +200,94 @@ final class LivePollIntervalProvider
 }
 
 String _$livePollIntervalHash() => r'b4d998e88674e9c518d6f6dc660242e9438aeb09';
+
+/// Whether S3's live center is on (FR-050). It applies from the next launch.
+
+@ProviderFor(liveCenterEnabled)
+final liveCenterEnabledProvider = LiveCenterEnabledProvider._();
+
+/// Whether S3's live center is on (FR-050). It applies from the next launch.
+
+final class LiveCenterEnabledProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether S3's live center is on (FR-050). It applies from the next launch.
+  LiveCenterEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'liveCenterEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$liveCenterEnabledHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return liveCenterEnabled(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$liveCenterEnabledHash() => r'c6b8b4cf0437dff69a14bc44332ea3fa4550aceb';
+
+/// Whether the التشكيل tab may show (FR-056).
+
+@ProviderFor(lineupsEnabled)
+final lineupsEnabledProvider = LineupsEnabledProvider._();
+
+/// Whether the التشكيل tab may show (FR-056).
+
+final class LineupsEnabledProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether the التشكيل tab may show (FR-056).
+  LineupsEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'lineupsEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$lineupsEnabledHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return lineupsEnabled(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$lineupsEnabledHash() => r'efbf8a71741dc677b553193a24b18fe44fae3621';
