@@ -801,6 +801,7 @@ export const notifications = {
     sent: 'أُرسل الإعلان',
     scheduledDone: 'جُدول الإعلان',
     preview: {
+      title: 'معاينة',
       android: 'Android',
       iphone: 'iPhone (PWA مثبّت)',
       appName: 'مدار',

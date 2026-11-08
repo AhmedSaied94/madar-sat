@@ -192,6 +192,9 @@ export function Composer(): ReactElement | null {
         {copy.composer.title}
       </h2>
 
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
+
       <Field
         label={copy.composer.titleField}
         value={title}
@@ -216,7 +219,7 @@ export function Composer(): ReactElement | null {
           maxLength={BODY_MAX}
           value={body}
           onChange={(event) => setBody(event.target.value)}
-          className="text-body min-w-0 rounded-md bg-bg px-3 py-2 text-text-primary ring-1 ring-inset ring-divider-strong focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className="text-body min-w-0 resize-none rounded-md bg-bg px-3 py-2 text-text-primary ring-1 ring-inset ring-divider-strong focus-visible:ring-2 focus-visible:ring-focus-ring"
         />
       </div>
 
@@ -352,9 +355,19 @@ export function Composer(): ReactElement | null {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <Preview platform={copy.composer.preview.android} title={title} body={body} />
-        <Preview platform={copy.composer.preview.iphone} title={title} body={body} />
+        </div>
+
+        <aside
+          aria-label={copy.composer.preview.title}
+          className="flex min-w-0 flex-col gap-3 self-start rounded-xl bg-bg p-3 ring-1 ring-inset ring-divider xl:col-span-1"
+        >
+          <h3 className="text-label flex items-center gap-2 font-semibold text-text-secondary">
+            <Icon name="eye" size="sm" />
+            {copy.composer.preview.title}
+          </h3>
+          <Preview platform={copy.composer.preview.android} title={title} body={body} />
+          <Preview platform={copy.composer.preview.iphone} title={title} body={body} />
+        </aside>
       </div>
 
       <ConfirmDialog
