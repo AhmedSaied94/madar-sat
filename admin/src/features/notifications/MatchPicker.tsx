@@ -3,6 +3,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import { useListMatches } from '../../api/generated/admin';
 import { Icon } from '../../components/Icon/Icon';
 import { focusRing } from '../../components/focus';
+import { cairoDayBounds } from '../../lib/cairoTime';
 import { notifications as copy } from '../../i18n/ar';
 
 // A15's match picker (contract admin-screens "Composer"): the composer needs two of them — one for the
@@ -24,7 +25,6 @@ interface MatchPickerProps {
 }
 
 const MAX_SHOWN = 8;
-const WINDOW_DAYS = 7;
 
 const isoDay = (offset: number): string => {
   const date = new Date();
@@ -34,8 +34,9 @@ const isoDay = (offset: number): string => {
 
 export function MatchPicker({ trigger, onPick }: MatchPickerProps): ReactElement {
   const [open, setOpen] = useState(trigger === undefined);
-  const from = useMemo(() => isoDay(-1), []);
-  const to = useMemo(() => isoDay(WINDOW_DAYS), []);
+  // The window is the list's own rule: instants, Cairo midnights, at most 8 days apart (admin-api).
+  const from = useMemo(() => cairoDayBounds(isoDay(-1)).from, []);
+  const to = useMemo(() => cairoDayBounds(isoDay(6)).to, []);
   const { data, isFetching } = useListMatches({ from, to });
   const matches = useMemo(() => (data?.data ?? []).slice(0, MAX_SHOWN), [data]);
 
