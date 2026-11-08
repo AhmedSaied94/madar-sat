@@ -12,12 +12,16 @@ import type { ErrorBody, Session } from './generated/admin.schemas';
 import {
   addHiddenChannelNameResponse,
   bulkResponse,
+  cancelNotificationResponse,
+  changePasswordResponse,
+  channelFrequencyChangesResponse,
   deleteChannelResponse,
   deleteCommentatorResponse,
   deleteCompetitionResponse,
   deleteRightsHolderResponse,
   deleteSatelliteResponse,
   deleteTeamResponse,
+  getAuditEntryResponse,
   getChannelResponse,
   getCommentatorResponse,
   getCompetitionResponse,
@@ -25,11 +29,14 @@ import {
   getImportRunRawResponse,
   getImportRunResponse,
   getMatchResponse,
+  getReachResponse,
   getRightsHolderResponse,
   getSatelliteResponse,
   getTeamResponse,
+  getTestDeviceResponse,
   healthEndpointResponse,
   ignoreNameResponse,
+  listAuditEntriesResponse,
   listBroadcastPresetsResponse,
   listChannelsResponse,
   listCommentatorsResponse,
@@ -37,11 +44,13 @@ import {
   listHiddenChannelNamesResponse,
   listMatchesResponse,
   listNamesResponse,
+  listNotificationsResponse,
   listRightsHoldersResponse,
   listSatellitesResponse,
   listSourcesResponse,
   listSourceRunsResponse,
   listTeamsResponse,
+  listUsersResponse,
   loginResponse,
   logoutResponse,
   mapNameResponse,
@@ -55,10 +64,13 @@ import {
   patchRightsHolderResponse,
   patchSatelliteResponse,
   patchTeamResponse,
+  patchUserResponse,
   pauseSourceResponse,
+  putTestDeviceResponse,
   refreshResponse,
   removeHiddenChannelNameResponse,
   reorderRightsHoldersResponse,
+  resetPasswordResponse,
   resumeSourceResponse,
   uploadMediaResponse,
 } from './generated/admin.zod';
@@ -184,6 +196,25 @@ const responseSchemas: Readonly<Record<string, z.ZodTypeAny>> = {
   'GET /admin/api/teams/{}': getTeamResponse,
   'PATCH /admin/api/teams/{}': patchTeamResponse,
   'DELETE /admin/api/teams/{}': deleteTeamResponse,
+  // D6's admin API (contract admin-api): the outbox, the composer, accounts and the audit log.
+  'GET /admin/api/notifications': listNotificationsResponse,
+  // The two sends answer `201` with the same `Envelope<NotificationRow>` the cancel returns, so
+  // Orval emits no response schema for them; this is the same body, checked against the spec.
+  'POST /admin/api/notifications/announcements': cancelNotificationResponse,
+  'POST /admin/api/notifications/test': cancelNotificationResponse,
+  'POST /admin/api/notifications/{}/cancel': cancelNotificationResponse,
+  'GET /admin/api/notifications/reach': getReachResponse,
+  'GET /admin/api/notifications/test-device': getTestDeviceResponse,
+  'PUT /admin/api/notifications/test-device': putTestDeviceResponse,
+  'GET /admin/api/users': listUsersResponse,
+  // A create answers `201` with the `{user, temporary_password}` body reset returns.
+  'POST /admin/api/users': resetPasswordResponse,
+  'PATCH /admin/api/users/{}': patchUserResponse,
+  'POST /admin/api/users/{}/reset-password': resetPasswordResponse,
+  'GET /admin/api/audit': listAuditEntriesResponse,
+  'GET /admin/api/audit/{}': getAuditEntryResponse,
+  'GET /admin/api/channels/{}/frequency-changes': channelFrequencyChangesResponse,
+  'POST /admin/api/auth/change-password': changePasswordResponse,
 };
 
 /** True when `url` matches a `<METHOD> <path>` key, with `{}` matching one path segment. */
@@ -216,7 +247,12 @@ const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 let accessToken: string | null = null;
 let refreshInFlight: Promise<Session> | null = null;
-let handlers: { onRefreshed?: (session: Session) => void; onExpired?: () => void } = {};
+let handlers: {
+  onRefreshed?: (session: Session) => void;
+  onExpired?: () => void;
+  /** The account must change its password before any of the admin works (contract admin-api). */
+  onPasswordChangeRequired?: () => void;
+} = {};
 
 /** Records the in-memory access token (`null` clears it). */
 export function setAccessToken(token: string | null): void {
@@ -228,7 +264,11 @@ export function getAccessToken(): string | null {
 }
 
 /** Lets the session provider follow a refresh done behind its back, and learn when it expired. */
-export function bindSession(next: { onRefreshed?: (session: Session) => void; onExpired?: () => void }): void {
+export function bindSession(next: {
+  onRefreshed?: (session: Session) => void;
+  onExpired?: () => void;
+  onPasswordChangeRequired?: () => void;
+}): void {
   handlers = next;
 }
 
@@ -378,6 +418,12 @@ async function requestWithRetry<T>(
     return withEtag(body.data as T, typeof etag === 'string' ? etag : null);
   } catch (error) {
     const apiError = toApiError(error);
+    // A flagged account can read and write nothing but its own password: report it and stop. It is not
+    // an expired token, so nothing refreshes or retries (contract admin-screens "Change password").
+    if (apiError.code === 'password_change_required') {
+      handlers.onPasswordChangeRequired?.();
+      throw apiError;
+    }
     // An expired token is refreshed once, shared by every waiting request, then the call retries once.
     if (!retried && apiError.code === 'token_expired' && url !== REFRESH_URL) {
       try {

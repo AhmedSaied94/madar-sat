@@ -54,6 +54,9 @@ export const shell = {
   comingSoonTitle: 'هذا القسم قيد البناء',
   comingSoonBody: 'تصل شاشات الإدارة تباعاً خلال الأيام القادمة.',
   restoring: 'جارٍ استعادة الجلسة',
+  /** What a role can't open: the server refuses it too, and the shell never draws a link to it. */
+  notPermittedBody: 'هذا القسم للمديرين فقط. ارجع إلى لوحة المتابعة.',
+  notPermittedBack: 'لوحة المتابعة',
 } as const;
 
 export const login = {
@@ -100,6 +103,8 @@ export const statusChips = {
   healthOk: 'سليم',
   healthNearLimit: 'قرب الحد',
   healthOpen: 'مفتوحة',
+  healthNeutral: 'متوقف',
+  stopped: 'متوقف',
 } as const;
 
 export const table = {
@@ -299,6 +304,8 @@ export const editor = {
   searching: 'جارٍ البحث…',
   noChannels: 'لا قنوات بهذا البحث',
   add: 'إضافة',
+  choose: 'اختيار',
+  selected: 'مختارة',
   remove: 'إزالة',
   hideFromMatch: 'إخفاء من هذا الماتش فقط',
   hideAlways: 'إخفاء دائماً',
@@ -607,6 +614,7 @@ export const sources = {
     succeeded: 'نجح',
     partial: 'جزئي',
     failed: 'فشل',
+    stopped: 'متوقف',
   },
   columns: {
     started: 'البداية',
@@ -683,6 +691,242 @@ export const sources = {
     url: 'العنوان',
     inert: 'نص خامل: لا يُنفَّذ أي شيء بداخله',
   },
+  /** A13's stopped runs: the scheduler chose not to start, so it is not a fault (contract A13). */
+  stopped: {
+    not_configured: 'غير مُعدّ',
+    budget_reached: 'بلغ الحد اليومي',
+    status: 'متوقف',
+  },
+} as const;
+
+/** The forced password change (contract admin-screens "Change password"): no board, so A1's form. */
+export const changePassword = {
+  title: 'تغيير كلمة المرور',
+  lead: 'يجب تغيير كلمة المرور قبل متابعة العمل.',
+  current: 'كلمة المرور الحالية',
+  next: 'كلمة المرور الجديدة',
+  confirm: 'تأكيد كلمة المرور الجديدة',
+  hint: '12 حرفاً على الأقل',
+  submit: 'حفظ كلمة المرور',
+  submitting: 'جارٍ الحفظ',
+  mismatch: 'كلمتا المرور غير متطابقتين',
+  tooShort: 'كلمة المرور الجديدة أقل من 12 حرفاً',
+} as const;
+
+/** A15 (admin board "Notifications"): the outbox, its reasons, and the composer beside it. */
+export const notifications = {
+  title: 'الإشعارات',
+  subtitle: 'صندوق الإرسال وإنشاء إعلان · الإرسال للمديرين فقط',
+  logTitle: 'صندوق الإرسال',
+  columns: {
+    type: 'النوع',
+    target: 'الهدف',
+    recipients: 'المستقبلون',
+    sent: 'نجح',
+    failed: 'فشل',
+    time: 'الوقت',
+    status: 'الحالة',
+  },
+  allDevices: 'جميع الأجهزة',
+  correction: 'تصحيح',
+  test: 'تجريبي',
+  filters: {
+    type: 'النوع',
+    status: 'الحالة',
+    all: 'الكل',
+  },
+  status: {
+    pending: 'مجدول',
+    sending: 'جارٍ الإرسال',
+    sent: 'أُرسل',
+    failed: 'فشل',
+    cancelled: 'ملغى',
+  },
+  /** The outbox `error` in Arabic; anything else is the push service's text and shows raw. */
+  reason: {
+    late: 'متأخر عن الموعد',
+    match_finished: 'انتهت المباراة',
+    score_fell: 'انخفضت النتيجة',
+    no_net_change: 'لم يتغيّر شيء',
+    type_off: 'نوع الإشعار متوقف',
+    admin: 'أُلغي من الإدارة',
+  } as Record<string, string>,
+  loadMore: 'المزيد',
+  previous: 'السابق',
+  empty: {
+    title: 'لا إشعارات بعد',
+    body: 'سيظهر هنا كل ما يُرسل، مع عدّاده وسببه.',
+  },
+  cancel: 'إلغاء الإعلان',
+  cancelTitle: 'إلغاء الإعلان؟',
+  cancelBody: 'لن يصل إلى أي جهاز. لا يمكن التراجع.',
+  cancelConfirm: 'إلغاء الإعلان',
+  cancelDone: 'أُلغي الإعلان',
+  composer: {
+    title: 'إعلان جديد',
+    titleField: 'العنوان',
+    bodyField: 'النص',
+    target: 'يفتح',
+    targetNone: 'بلا رابط',
+    pickMatch: 'اختر مباراة',
+    pickChannel: 'اختر قناة',
+    clearTarget: 'إزالة الرابط',
+    when: 'الموعد',
+    now: 'الآن',
+    scheduled: 'مجدول',
+    whenLabel: 'الموعد بتوقيت القاهرة',
+    whenPast: 'اختر موعداً بعد الآن',
+    whenRequired: 'اختر الموعد',
+    audience: 'الجمهور',
+    kinds: {
+      all: 'كل الأجهزة',
+      team: 'فريق',
+      competition: 'بطولة',
+      match: 'مباراة',
+      channel: 'قناة',
+    },
+    team: 'الفريق',
+    competition: 'البطولة',
+    chooseMatch: 'المباراة',
+    chooseChannel: 'القناة',
+    reach: (devices: string): string => `≈ ${devices} جهاز`,
+    reachAge: (seconds: number): string => `حُسب قبل ${seconds} ث`,
+    reachUnavailable: 'تعذّر حساب عدد الأجهزة',
+    send: 'إرسال الآن',
+    schedule: 'جدولة الإرسال',
+    sending: 'جارٍ الإرسال',
+    confirmTitle: 'إرسال إلى كل الأجهزة؟',
+    confirmBody: (devices: string): string => `سيصل إلى ${devices} جهازاً. لا يمكن التراجع بعد الإرسال.`,
+    confirm: 'إرسال',
+    sent: 'أُرسل الإعلان',
+    scheduledDone: 'جُدول الإعلان',
+    preview: {
+      title: 'معاينة',
+      android: 'Android',
+      iphone: 'iPhone (PWA مثبّت)',
+      appName: 'مدار',
+    },
+    testSend: 'إرسال تجريبي لجهازي',
+    testSent: (device: string): string => `أُرسل التجريبي إلى ${device}`,
+    noDevice: 'لا جهاز محفوظ بعد',
+    deviceId: 'معرّف الجهاز',
+    saveDevice: 'حفظ الجهاز',
+    deviceSaved: 'حُفظ الجهاز',
+    deviceNoToken: 'الجهاز المحفوظ بلا رمز إشعار',
+    platforms: { android: 'Android', ios: 'iOS', web: 'ويب' } as Record<string, string>,
+    emptyBody: 'اكتب عنواناً ونصاً قبل الإرسال',
+  },
+} as const;
+
+/** A16 (admin board "Users"): the accounts, their status, and the temporary password shown once. */
+export const users = {
+  title: 'المستخدمون',
+  subtitle: (count: number): string => `${count} حسابات · كل حساب له سجل تغييرات مستقل`,
+  add: 'مستخدم جديد',
+  newTitle: 'مستخدم جديد',
+  editTitle: 'تعديل مستخدم',
+  columns: {
+    user: 'المستخدم',
+    role: 'الدور',
+    status: 'الحالة',
+    lastLogin: 'آخر دخول',
+    totp: 'التحقق بخطوتين',
+  },
+  totpPlanned: 'V2',
+  status: {
+    active: 'نشط',
+    locked: (minutes: number): string => `مقفل مؤقتاً · ${minutes} د`,
+    disabled: 'معطّل',
+  },
+  options: 'خيارات',
+  menu: {
+    edit: 'تعديل',
+    reset: 'إعادة تعيين كلمة المرور',
+    deactivate: 'تعطيل',
+    reactivate: 'إعادة تنشيط',
+  },
+  fields: {
+    name: 'الاسم',
+    email: 'البريد الإلكتروني',
+    role: 'الدور',
+  },
+  roleHints: {
+    editor: 'المباريات والقنوات والفرق والمحتوى',
+    admin: 'كل ما سبق + المستخدمون والمصادر وإرسال الإعلانات والحذف الجماعي',
+  },
+  tempPassword: 'كلمة مرور مؤقتة',
+  tempPasswordHint: '12 حرفاً على الأقل · تُغيَّر عند أول دخول',
+  copy: 'نسخ',
+  copied: 'نُسخت كلمة المرور',
+  create: 'إنشاء الحساب',
+  save: 'حفظ',
+  resetTitle: 'إعادة تعيين كلمة المرور؟',
+  resetBody: 'ستُلغى كلمة المرور الحالية وتُسلَّم كلمة مرور مؤقتة جديدة مرة واحدة.',
+  resetConfirm: 'إعادة تعيين',
+  deactivateTitle: 'تعطيل الحساب؟',
+  deactivateBody: 'يُرفض كل طلب منها فوراً، وتُلغى جلساتها. يمكنك تنشيطها مرة أخرى.',
+  deactivateConfirm: 'تعطيل',
+  reactivateTitle: 'إعادة تنشيط الحساب؟',
+  reactivateBody: 'تدخل من جديد بعد أن تسجّل الدخول بكلمة مرورها.',
+  reactivateConfirm: 'إعادة تنشيط',
+  /** The two refusals the drawer says before the server has to (contract A16). */
+  cannotChangeSelf: 'لا يمكنك تغيير دورك أو تعطيل حسابك',
+  lastAdmin: 'لا يمكن تعطيل آخر مدير نشط. أضف مديراً آخر أولاً',
+  disabledForSelf: 'لا يمكنك تغيير دورك أو تعطيل حسابك',
+  neverLoggedIn: 'لم يدخل بعد',
+  empty: {
+    title: 'لا حسابات بعد',
+    body: 'أضف أول محرر ليعمل معك على المحتوى.',
+  },
+} as const;
+
+/** A17 (admin board "Audit"): the log, the diff, and the push an entry produced. */
+export const audit = {
+  title: 'سجل التغييرات',
+  subtitle: 'كل تعديل يُسجَّل باسم صاحبه مع الفرق قبل وبعد',
+  filters: {
+    user: 'المستخدم',
+    entity: 'النوع',
+    period: 'الفترة',
+    all: 'الكل',
+    last7: 'آخر 7 أيام',
+    today: 'اليوم',
+    last30: 'آخر 30 يوماً',
+  },
+  entities: {
+    match: 'مباراة',
+    channel: 'قناة',
+    team: 'فريق',
+    competition: 'بطولة',
+    satellite: 'قمر',
+    commentator: 'معلق',
+    rights_holder: 'حقوق بث',
+    admin_user: 'مستخدم',
+  } as Record<string, string>,
+  actor: {
+    importer: 'مستورد',
+    system: 'النظام',
+  },
+  detailTitle: 'تفاصيل التغيير',
+  empty: {
+    title: 'لا تغييرات في هذه الفترة',
+    body: 'جرّب فترة أطول أو أزل الفلاتر.',
+  },
+  emptyDetail: 'اختر تغييراً من القائمة لعرض الفرق قبل وبعد.',
+  openChannel: 'فتح القناة',
+  openMatch: 'فتح المباراة',
+  outbox: 'صندوق الإرسال',
+  notificationLine: (sent: string, recipients: string): string =>
+    `أُرسل تنبيه من صندوق الإرسال إلى ${sent} جهازاً من ${recipients} متابعاً`,
+  loadMore: 'المزيد',
+  previous: 'السابق',
+  readOnly: 'السجل للقراءة فقط. لا استرجاع من هنا.',
+} as const;
+
+/** A8's frequency history, under the frequency field (contract A8). */
+export const frequencyHistory = {
+  title: 'سجل التردد',
+  empty: 'لم يتغيّر تردد هذه القناة بعد',
 } as const;
 
 /** A2 (admin board "Main"): today's work, the sources' health and the last changes. */
@@ -859,7 +1103,19 @@ export type ErrorCode =
   | 'source_not_runnable'
   | 'source_not_found'
   | 'import_run_not_found'
-  | 'alias_conflict';
+  | 'alias_conflict'
+  | 'password_change_required'
+  | 'notification_not_cancellable'
+  | 'send_at_in_past'
+  | 'text_not_allowed'
+  | 'test_device_not_set'
+  | 'test_device_no_token'
+  | 'device_not_found'
+  | 'email_taken'
+  | 'cannot_change_self'
+  | 'last_admin'
+  | 'password_too_short'
+  | 'password_unchanged';
 
 export const errorCopy: Record<ErrorCode, string> = {
   invalid_credentials: 'إيميل أو باسوورد غلط',
@@ -893,6 +1149,18 @@ export const errorCopy: Record<ErrorCode, string> = {
   source_not_found: 'هذا المصدر غير موجود',
   import_run_not_found: 'سجل هذه التشغيلة غير موجود. ربما حُذف بعد خمسة أيام',
   alias_conflict: 'هذا الاسم مرتبط بجهة أخرى. حدّث الصفحة ثم حاول مرة أخرى',
+  password_change_required: 'يجب تغيير كلمة المرور قبل المتابعة',
+  notification_not_cancellable: 'لا يمكن إلغاء هذا الإشعار',
+  send_at_in_past: 'الموعد في الماضي. اختر وقتاً قادماً',
+  text_not_allowed: 'العنوان أو النص يحتوي كلاماً غير مسموح',
+  test_device_not_set: 'لا جهاز تجريبي محفوظ. احفظ جهازك أولاً',
+  test_device_no_token: 'الجهاز المحفوظ بلا رمز إشعار. أعد تسجيل الجهاز',
+  device_not_found: 'هذا الجهاز غير موجود',
+  email_taken: 'هذا البريد مستخدم لحساب آخر',
+  cannot_change_self: 'لا يمكنك تغيير دورك أو تعطيل حسابك',
+  last_admin: 'لا يمكن تعطيل آخر مدير نشط. أضف مديراً آخر أولاً',
+  password_too_short: 'كلمة المرور الجديدة أقل من 12 حرفاً',
+  password_unchanged: 'كلمة المرور الجديدة مثل الحالية. اختر كلمة أخرى',
 };
 
 const unknownErrorCopy = 'حدث خطأ غير متوقع. حاول مرة أخرى';

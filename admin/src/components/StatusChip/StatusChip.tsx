@@ -78,7 +78,7 @@ export function RoleChip({ role }: { role: AdminRoleName }): ReactElement {
   );
 }
 
-export type SourceHealth = 'ok' | 'near_limit' | 'open';
+export type SourceHealth = 'ok' | 'near_limit' | 'open' | 'neutral';
 
 const healthStyles = cva('text-caption inline-flex items-center gap-2 whitespace-nowrap font-semibold', {
   variants: {
@@ -86,6 +86,8 @@ const healthStyles = cva('text-caption inline-flex items-center gap-2 whitespace
       ok: 'text-success',
       near_limit: 'text-postponed',
       open: 'text-error',
+      // A run the scheduler chose not to start is not a fault (contract A13): no red, no amber.
+      neutral: 'text-text-tertiary',
     },
   },
 });
@@ -94,6 +96,7 @@ const healthLabels: Record<SourceHealth, string> = {
   ok: statusChips.healthOk,
   near_limit: statusChips.healthNearLimit,
   open: statusChips.healthOpen,
+  neutral: statusChips.healthNeutral,
 };
 
 interface HealthChipProps {

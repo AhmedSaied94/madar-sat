@@ -386,3 +386,86 @@ describe('ChannelsPage (A8)', () => {
     });
   });
 });
+
+// A8's «سجل التردد» (contract admin-screens "A8: frequency history", board "Channels"): the last
+// changes under the frequency, in edit mode only, each readout dark and LTR — the board's
+// «20 أكتوبر · 11766 H → 11013 H · محمد علي».
+describe('A8 frequency history', () => {
+  const history = [
+    {
+      id: 55,
+      old: '11766 H 27500',
+      new: '11013 H 27500',
+      source: 'admin',
+      actor: 'محمد علي',
+      detected_at: '2026-10-20T09:30:00Z',
+    },
+    {
+      id: 54,
+      old: '11843 H 27500',
+      new: '11766 H 27500',
+      source: 'admin',
+      actor: 'سارة حسن',
+      detected_at: '2026-09-02T11:00:00Z',
+    },
+  ];
+
+  /** The A8 page with the drawer's own read added. */
+  function renderWithHistory(rows: readonly Record<string, unknown>[]): URL[] {
+    const asked: URL[] = [];
+    renderPage();
+    server.use(
+      mswHttp.get('*/admin/api/channels/:id/frequency-changes', ({ request, params }) => {
+        asked.push(new URL(request.url));
+        expect(params['id']).toBe('501');
+        return HttpResponse.json(envelope(rows));
+      }),
+    );
+    return asked;
+  }
+
+  it('shows each change with its old and new readout, and who saved it', async () => {
+    const asked = renderWithHistory(history);
+    await waitForRows();
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل beIN SPORTS 1' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
+
+    expect(await within(drawer).findByText('سجل التردد')).toBeInTheDocument();
+    expect(asked).toHaveLength(1);
+
+    const readouts = within(drawer).getAllByRole('img');
+    // Two changes, each with its old and new readout, all of them the dark LTR well.
+    expect(readouts).toHaveLength(4);
+    expect(readouts[0]).toHaveAccessibleName(/11766/);
+    expect(readouts[1]).toHaveAccessibleName(/11013/);
+    expect(readouts[2]).toHaveAccessibleName(/11843/);
+    expect(readouts[3]).toHaveAccessibleName(/11766/);
+    for (const readout of readouts) expect(readout).toHaveAttribute('dir', 'ltr');
+
+    const rowsInOrder = Array.from(drawer.querySelectorAll('[data-history-id]')) as HTMLElement[];
+    expect(rowsInOrder).toHaveLength(2);
+    expect(rowsInOrder[0]).toHaveTextContent('محمد علي');
+    expect(rowsInOrder[1]).toHaveTextContent('سارة حسن');
+  });
+
+  it('says so in one line when the frequency never changed', async () => {
+    renderWithHistory([]);
+    await waitForRows();
+
+    await userEvent.click(screen.getByRole('button', { name: 'تعديل beIN SPORTS 1' }));
+    const drawer = await screen.findByRole('dialog', { name: 'تعديل القناة' });
+
+    expect(await within(drawer).findByText('لم يتغيّر تردد هذه القناة بعد')).toBeInTheDocument();
+  });
+
+  it('is not in a new channel’s drawer', async () => {
+    renderWithHistory(history);
+    await waitForRows();
+
+    await userEvent.click(screen.getByRole('button', { name: 'قناة جديدة' }));
+    const drawer = await screen.findByRole('dialog', { name: 'قناة جديدة' });
+
+    expect(within(drawer).queryByText('سجل التردد')).not.toBeInTheDocument();
+  });
+});
