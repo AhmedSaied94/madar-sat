@@ -175,6 +175,7 @@ def test_the_beat_schedule_has_every_entry_and_calls_no_fetch_directly() -> None
         "livesoccertv-t60",
         "yallakora-daily",
         "yallakora-today",
+        "sporteventz-6h",
         "prune-raw-pages",
         "heartbeat-maintenance",
         "heartbeat-imports",

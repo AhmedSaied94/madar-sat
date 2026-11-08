@@ -12,7 +12,7 @@ import gzip
 import json
 import warnings
 import zlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any, Literal, Self
 
@@ -29,6 +29,9 @@ MAX_PAGE_BYTES = 5 * 1024 * 1024
 # A window (today to +3) is at most four pages, and the whole run is bounded too: 250 small pages
 # fit under 2 MB compressed and still inflate to gigabytes (B2-R2-16).
 MAX_PAGES = 4
+# sporteventz reads one page and then its data for each of four sports, so its run carries 8 pages
+# (D6 R21, T046). Every other fixture source keeps the window's four.
+MAX_SOURCE_PAGES: Mapping[str, int] = {"sporteventz": 8}
 # LiveSoccerTV fetches a team page and a match page per planned match, so a run carries many more
 # pages than a fixture window. Planning caps a run at MAX_TARGETS targets (12 => 24 pages, about
 # 1.2 MB compressed), which keeps the 2 MB and 16 MB caps below reachable (R14).
@@ -161,9 +164,11 @@ with warnings.catch_warnings():
             return data
 
         @classmethod
-        def page_cap(cls, kind: Kind) -> int:
-            """A fixtures window carries four pages; a broadcast run carries up to 24 (R14)."""
-            return MAX_BROADCAST_PAGES if kind == "broadcasts" else MAX_PAGES
+        def page_cap(cls, kind: Kind, source: str | None = None) -> int:
+            """A fixtures window carries four pages (eight for sporteventz); broadcasts 24 (R14)."""
+            if kind == "broadcasts":
+                return MAX_BROADCAST_PAGES
+            return MAX_SOURCE_PAGES.get(source or "", MAX_PAGES)
 
         @classmethod
         def build(
@@ -182,7 +187,7 @@ with warnings.catch_warnings():
             targets: int | None = None,
             unmatched: Sequence[UnmatchedMatch] = (),
         ) -> ScrapeResult:
-            cap = cls.page_cap(kind)
+            cap = cls.page_cap(kind, source)
             if len(pages) > cap:
                 raise MessageTooLarge(
                     f"the message carries {len(pages)} pages; a {kind} run carries at most {cap} (B2-R2-16)"
@@ -233,7 +238,7 @@ with warnings.catch_warnings():
             )
 
         def raw_pages(self) -> list[RawPage]:
-            cap = self.page_cap(self.kind)
+            cap = self.page_cap(self.kind, self.source)
             if len(self.pages) > cap:
                 raise MessageTooLarge(f"the message carries {len(self.pages)} pages; at most {cap} are expected")
             pages: list[RawPage] = []

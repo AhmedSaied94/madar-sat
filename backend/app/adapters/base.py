@@ -93,6 +93,8 @@ class ParsedFixture(BaseModel):
     away_external_id: str | None = None
     wall_time: str = ""
     match_date: date
+    # The domain's five sports; a source that says nothing is a football page (D6 T047).
+    sport: str = "football"
     # None means "this source says nothing about links", which is not the same as an empty list
     # (B2-R1-2): the upsert must not delete links it did not bring.
     links: tuple[FixtureLink, ...] | None = None
@@ -102,6 +104,9 @@ class ParsedFixture(BaseModel):
     postponed: bool = False
     # YallaKora's channel text, which is what an Egyptian viewer watches it on (D5 FR-020).
     local_broadcaster_eg: str | None = None
+    # The source's own broadcaster slots, in its own words (sporteventz, D6 FR-037). None means
+    # "this source says nothing about broadcasters", so a stored slot is never cleared by it.
+    broadcasts: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +133,7 @@ class NormalizedFixture:
     legacy_id: str | None = None
     postponed: bool = False
     local_broadcaster_eg: str | None = None
+    broadcasts: tuple[str, ...] | None = None  # None: no broadcaster information from this source
 
 
 @runtime_checkable
@@ -202,8 +208,10 @@ def normalize_fixture(item: ParsedFixture) -> NormalizedFixture:
         url=item.url,
         home_external_id=item.home_external_id,
         away_external_id=item.away_external_id,
+        sport=item.sport,
         links=item.links,
         ys_match_id=item.ys_match_id,
         legacy_id=item.legacy_id,
         local_broadcaster_eg=clean_text(item.local_broadcaster_eg),
+        broadcasts=item.broadcasts,
     )

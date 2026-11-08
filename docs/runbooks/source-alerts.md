@@ -66,6 +66,19 @@ plan is a quiet result, not a fault.
 matches («لا يوجد مباريات اليوم») counts as a failure on each of its three runs, and the third opens
 the breaker. That is rare, because the list covers many leagues. Check the page, then resume in A13.
 
+**sporteventz's quiet days.** It lists about 40 events in two weeks, so a valid answer with no
+records is normal: its zero-items alarm waits 7 days after the last run that had records (D6
+FR-039). A missing access key or `Records` key is a changed page and alarms at once. If the alarm
+does fire, check the four sport pages in a browser before touching the parser.
+
+## A stopped run is not an alert
+
+`status = 'stopped'` with `error = budget_reached` or `not_configured` means the run stopped on
+purpose and sent nothing (D6 FR-035). It sends no Telegram alert, does not touch the breaker, and
+`report runs` counts its slot as answered. `not_configured` is the normal state while
+`API_FOOTBALL_KEY` is unset; `budget_reached` clears at the provider's daily reset.
+`budget_unreadable` is different: Redis was unavailable, the run is `failed`, and it counts.
+
 ## Moving a fetch to the other host
 
 If the site blocks the host, move the fetch rather than disabling the source:

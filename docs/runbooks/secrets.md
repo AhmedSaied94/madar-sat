@@ -22,6 +22,7 @@ The rules:
 | FCM service account JSON | VPS-2 only: `/srv/secrets/fcm.json`, mode 600, owned by uid 10001 (the image's user), in a directory 700 owned by the same uid; mounted read-only into `worker-notify` and no other service. `FCM_CREDENTIALS_FILE` in `/srv/madar/.env` points at it. Installed as root, once: [push-notifications.md](push-notifications.md#the-fcm-service-account) | `firebase_admin` in the notifications worker | [Below](#rotate-the-fcm-service-account) |
 | `FLOWER_BASIC_AUTH` | VPS-2's `.env` | Flower (from D3) | Edit it, then recreate `flower` |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | VPS-2's `.env` only | The importer alerts ([source-alerts.md](source-alerts.md)) and Uptime Kuma's notifications | [Below](#rotate-the-telegram-bot) |
+| `API_FOOTBALL_KEY` | VPS-2's `.env` only, read by `worker-scrape`. Never in the repo, a log line, a raw page or `import_runs.log` | The API-Football adapter (D6, FR-034) | [Below](#rotate-the-api-football-key) |
 | `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` | Both VMs' `.env` (the database backup runs on VPS-2, the weekly media snapshot on VPS-1) | `backup-db.sh`, `backup-media.sh` ([backups.md](backups.md)) | [Below](#rotate-the-backup-keys) |
 | `RCLONE_CONFIG_OCI_*` (`_TYPE=s3`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`, `_ENDPOINT`, `_REGION`) | VPS-1's `.env` only | The nightly media mirror | [Below](#rotate-the-backup-keys) |
 | `KUMA_PUSH_URL_*` (six) | VPS-2's `.env` (`_MAINTENANCE`, `_IMPORTS`, `_NOTIFICATIONS`, `_BACKUP_DB`) and VPS-1's (`_BACKUP_MEDIA`, `_BACKUP_MEDIA_WEEKLY`) | `ops.heartbeat` and the backup scripts ([uptime-kuma.md](uptime-kuma.md)) | Recreate the monitor in Kuma and replace the value; they are not secrets, but they are bearer URLs |
@@ -116,6 +117,19 @@ The bridge reads the old Sat Air project's public web configuration. It lives on
 
 If the key was exposed, revoke it in the old project and issue a new one first. A `403` from
 `firestore.googleapis.com` in the run's log means the key or its restrictions are wrong.
+
+## Rotate the API-Football key
+
+The key is one header (`x-apisports-key`) read from VPS-2's `.env` as `API_FOOTBALL_KEY`, and it is
+added at send time so it reaches no log, raw page or `import_runs.log` (D6 T061's test).
+
+1. In the API-Football dashboard, revoke the old key and create a new one.
+2. Put it in VPS-2's `/srv/madar/.env` as `API_FOOTBALL_KEY` (empty means the source stops on
+   purpose with `not_configured`).
+3. Recreate `worker-scrape`, which fetches the source:
+   `IMAGE_TAG=$(cat /srv/madar/current_tag) docker compose --env-file /srv/madar/.env -f /srv/madar/infra/compose/vps2.yml --profile workers up -d worker-scrape`.
+4. Run it by hand and read the run row: `stopped`/`not_configured` means the worker still reads the
+   old value, and a `401` means the key is wrong ([imports-and-sources.md](imports-and-sources.md#api-football-and-stopped-runs)).
 
 ## Rotate the home box's GHCR token
 

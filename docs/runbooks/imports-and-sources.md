@@ -6,7 +6,7 @@ FR-020 to FR-028, research R14–R18). The code is in `backend/app/adapters/`; t
 [`specs/002-d02-core-flows/contracts/ingestion.md`](../../specs/002-d02-core-flows/contracts/ingestion.md)
 and [`specs/003-d03-follow-push-sources/contracts/pipelines-and-ops.md`](../../specs/003-d03-follow-push-sources/contracts/pipelines-and-ops.md).
 
-Four sources run after D5:
+Four sources run after D5, and sporteventz joins them on D6:
 
 | Source | `sources.name` | Where it fetches | What it brings |
 | --- | --- | --- | --- |
@@ -14,6 +14,11 @@ Four sources run after D5:
 | Sat Air, through Firestore | `legacy` | `scrape` on VPS-2 | The same days from the old app: channel links, hidden flags, per-channel commentators, a second name when ysscores misses one |
 | LiveSoccerTV | `livesoccertv` | `scrape_home` by default (`LIVESOCCERTV_FETCH_QUEUE`) | The broadcasters of the matches Madar already has in the next 48 h, and hidden placeholders for names Madar lacks |
 | YallaKora | `yallakora` | `scrape` on VPS-2 | Today … +3 Cairo days of Egyptian and Arab fixtures, and the Egyptian broadcaster (`matches.local_broadcaster_eg`). On a row another source holds it adds only the broadcaster and its id |
+| sporteventz | `sporteventz` | `scrape` on VPS-2 | Basketball, handball, volleyball and tennis for today to +3, with their broadcasters as two custom slots (D6 FR-037). Names stay text; nothing is resolved or queued |
+
+API-Football (`api_football`) is built behind the owner's checks and ships off until they pass
+([below](#api-football-and-stopped-runs)); until then its key is unset and a scheduled run stops on
+purpose. Nothing a fan sees depends on either other-sport source before D7.
 
 Nothing writes a status or a score: importers bring fixtures and channels only (constitution II). The
 live poller writes those ([workers.md](workers.md)), and shares `www.yallakora.com`'s rate bucket with
@@ -34,6 +39,7 @@ them (R17).
 | `livesoccertv-t60` | every 10 min (`*/10 * * * *`) | `adapters.schedule_fetch("livesoccertv", window="t60")`: only kickoffs 55–70 minutes away |
 | `yallakora-daily` | daily at 02:20 (`20 2 * * *`) | `adapters.schedule_fetch("yallakora")` on `imports`: today to +3 |
 | `yallakora-today` | at 08:20, 14:20 and 20:20 (`20 8,14,20 * * *`) | `adapters.schedule_fetch("yallakora", window="today")`: today only |
+| `sporteventz-6h` | every 6 h at :10 (`10 */6 * * *`) | `adapters.schedule_fetch("sporteventz")` on `imports`: today to +3, eight pages a run |
 | `prune-raw-pages` | daily at 03:15 (`15 3 * * *`) | `adapters.prune_raw_pages()` on `maintenance` |
 | `heartbeat-maintenance`, `-imports`, `-notifications`, `-live` | every 5 min (`*/5 * * * *`) | `ops.heartbeat(<queue>)` on that queue (R20, [uptime-kuma.md](uptime-kuma.md)) |
 
@@ -106,6 +112,7 @@ dc exec postgres psql -U madar -d madar -c "
 | `succeeded` | every item was upserted, or the source is paused |
 | `partial` | some items failed in their savepoint, or LiveSoccerTV could not find every planned match; the reasons are in `log` and `run.json` |
 | `failed` | the fetch or the layout failed; `error` holds a short reason: `layout_changed`, `retries_exhausted` (403/429/5xx after six attempts), `fetch_failed` (a 404 or another non-retryable answer), `bridge_not_configured`, or `TypeError: …` from an ingest that crashed |
+| `stopped` | the run stopped on purpose and sent nothing: `error` is `budget_reached` (API-Football's daily allowance is spent) or `not_configured` (its key is unset). It is neither a failure nor a quiet source: it does not touch the breaker or the zero-items alarm, and `report runs` counts it as a filled slot (D6 FR-035) |
 
 `items_upserted` counts rows created or changed. A second run on unchanged fixtures reports `0`
 (SC-004), which is the normal quiet result. A LiveSoccerTV run counts a match only when its links
@@ -217,6 +224,70 @@ A waiting card is listed under `waiting` in `run.json` and in A13's run detail, 
 `ysscores` and `legacy` still join on the same names on the same day.
 
 **Why so much waits.** On 2026-11-05 the first run made 75 rows, 73 of them copies of fixtures we held under other spellings. A copy has no channels, and a polled copy takes the score away from the row that has them. So a fixture only YallaKora knows gets its row after its names are mapped, which is a smaller cost than a copy. Compare `report coverage` before and after a first run on a new host.
+
+## sporteventz
+
+Other-sport fixtures and their broadcasters for D7 (FR-037–FR-039). Four sport pages —
+`/en/other-sport/basketball.html`, `handball`, `volleyball`, `tennis` — and one data answer each:
+`/index.php?option=com_magictable&…&table=1&accesskey=<n>`, a JSON `Result`/`Records` with
+`Sport, Begin, Team1, Team2, Tournament, Category, @id, Channels`. One request every 700 ms, eight
+pages a run, every 6 h.
+
+- **The access key dies on the next page load.** The adapter reads the page fresh, uses its link at
+  once, and on an empty answer re-reads the page once before failing with `layout_changed`. Never
+  cache the page or the link.
+- **Times** are the site's, in the offset the request sent (`+0300`). The adapter converts with that
+  same offset, so the UTC kickoff is right in winter too. Do not change it to Cairo's own clock.
+- **Robots:** on 2026-11-06 `robots.txt` allowed both paths for `*`. Re-check it whenever the source
+  is reviewed (the adapter's docstring records the reading), and keep the committed copy in
+  `backend/tests/fixtures/sporteventz/` in step with it.
+- **What it writes:** its own rows only. Team and competition names stay text, with no id and no
+  `unresolved_names` entry, because no other-sport catalog exists. Broadcasters go to
+  `match_custom_broadcasts` slots 1 and 2, ranked Arabic name → Arab country → the rest; a name with
+  a card-sharing label is refused and counted, and no label passes 80 characters. A match with
+  `broadcasts` in `locked_fields` is left alone, which is what A4's save sets.
+- **Empty days are normal** at ~40 events in two weeks: a valid answer with no records alarms only
+  after 7 days without any, while a missing `Records` key or access key alarms at once.
+- **No fan sees it yet.** `/v1` lists football only, so these rows wait for D7.
+
+```sh
+# VPS-2, as deploy: one run now
+ssh madar-vps2
+cd /srv/madar/infra
+export IMAGE_TAG=$(cat /srv/madar/current_tag)
+dc() { docker compose --env-file /srv/madar/.env -f compose/vps2.yml "$@"; }
+dc exec worker-imports celery -A app.workers call adapters.schedule_fetch --args '["sporteventz"]' --queue imports
+
+# VPS-1, which has the database (`dc` is the vps1.yml helper of deploy-and-rollback.md)
+dc exec postgres psql -U madar -d madar -c "select id, status, items_found, items_upserted, error from import_runs where source = 'sporteventz' order by id desc limit 3"
+dc exec postgres psql -U madar -d madar -c "select sport, count(*) from matches where source = 'sporteventz' group by sport"
+```
+
+## API-Football and stopped runs
+
+`v3.football.api-sports.io`, one request per date for today to +3, allowlisted by league id. **It is not
+built yet:** the adapter and its budget are T060–T064, and the plan starts them only after the owner's
+five checks pass (T059). Until then the names below are placeholders in `example.env`, the key stays
+unset, and nothing is scheduled for this source.
+
+| Setting (VPS-2 `.env`) | Means |
+| --- | --- |
+| `API_FOOTBALL_KEY` | The `x-apisports-key` header, added at send time. Empty means `stopped`, `not_configured`. Never appears in a log, a raw page or `import_runs.log` |
+| `API_FOOTBALL_DAILY_BUDGET` | Requests allowed per UTC day (default 90) |
+| `API_FOOTBALL_LEAGUES` | The league ids the parse keeps (default `233,39,2`) |
+
+When it is built, the budget is one Redis key per day (`budget:api_football:<date>`, 48 h): every
+attempt counts before it is sent, retries and «تشغيل الآن» included. Over it, the run is `stopped` with
+`budget_reached`. Redis unavailable is a fault, not a stop: `failed` with `budget_unreadable`. A
+non-empty `errors` in a 200 is `failed` with the provider's message.
+
+```sh
+dc exec worker-imports celery -A app.workers call adapters.schedule_fetch --args '["api_football"]' --queue imports
+dc exec postgres psql -U madar -d madar -c "select id, status, items_found, error from import_runs where source = 'api_football' order by id desc limit 3"
+```
+
+Changing the budget or a league will need a restarted `worker-scrape`: the settings are read when the
+module loads. The daily reset's time is the provider's, confirmed by the owner's check 3.
 
 ## Relabelling a sporteventz row's sport
 

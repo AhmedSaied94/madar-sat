@@ -9,7 +9,7 @@ from sqlalchemy import select, text
 
 from app.adapters.livesoccertv_links import apply_broadcasts
 from app.adapters.messages import BroadcastChannel
-from app.db.models import AuditLog, Channel, MatchChannel
+from app.db.models import AuditLog, Channel, MatchChannel, MatchChannelChange
 from tests.adapters.helpers import dataset_versions, new_channel, new_match
 
 COUNTRIES = ("Egypt", "Saudi Arabia", "Algeria", "Middle East")
@@ -48,12 +48,13 @@ def test_an_existing_channel_is_linked_whatever_country_lists_it(sync_session, m
 
 
 def test_a_channel_is_found_by_its_display_name_too(sync_session, match) -> None:
-    channel = new_channel(sync_session, "قناة الاختبار", display_name="Test HD")
+    # A name the snapshot does not hold: with it loaded, an existing channel would match too.
+    channel = new_channel(sync_session, "قناة B2 الاختبارية", display_name="B2 Test HD")
 
     apply_broadcasts(
         sync_session,
         match_id=match.id,
-        channels=[BroadcastChannel(name="Test HD", country="Egypt")],
+        channels=[BroadcastChannel(name="B2 Test HD", country="Egypt")],
         countries=COUNTRIES,
     )
 
@@ -176,14 +177,14 @@ def test_a_name_from_an_unlisted_country_is_skipped_and_counted(sync_session, ma
 
 
 def test_a_duplicate_name_is_linked_once(sync_session, match) -> None:
-    channel = new_channel(sync_session, "ON Sport 1")
+    channel = new_channel(sync_session, "ON Sport B2")
 
     outcome = apply_broadcasts(
         sync_session,
         match_id=match.id,
         channels=[
-            BroadcastChannel(name="ON Sport 1", country="Egypt"),
-            BroadcastChannel(name="ON Sport 1", country="Saudi Arabia"),
+            BroadcastChannel(name="ON Sport B2", country="Egypt"),
+            BroadcastChannel(name="ON Sport B2", country="Saudi Arabia"),
         ],
         countries=COUNTRIES,
     )
@@ -255,6 +256,38 @@ def test_the_matches_dataset_moves_when_a_link_changes(sync_session, match) -> N
     )
 
     assert dataset_versions(sync_session)["matches"] == before["matches"] + 1
+
+
+def test_an_added_and_a_removed_link_are_reported_for_this_source(sync_session, match) -> None:
+    """FR-038: the ingest writes the change fans may be told about, in its own transaction."""
+    now = datetime(2026, 11, 7, 16, 0, tzinfo=UTC)
+    channel = new_channel(sync_session, "قناة B2 الاختبارية")
+
+    apply_broadcasts(
+        sync_session,
+        match_id=match.id,
+        channels=[BroadcastChannel(name="قناة B2 الاختبارية", country="Egypt")],
+        countries=COUNTRIES,
+        now=now,
+    )
+    assert _changes(sync_session, match.id) == [(channel.id, "added", "livesoccertv")]
+
+    apply_broadcasts(sync_session, match_id=match.id, channels=[], countries=COUNTRIES, now=now)
+    assert _changes(sync_session, match.id) == [
+        (channel.id, "added", "livesoccertv"),
+        (channel.id, "removed", "livesoccertv"),
+    ]
+
+
+def _changes(session, match_id: int) -> list[tuple[int, str, str]]:
+    return [
+        (row[0], row[1], row[2])
+        for row in session.execute(
+            select(MatchChannelChange.channel_id, MatchChannelChange.action, MatchChannelChange.source)
+            .where(MatchChannelChange.match_id == match_id)
+            .order_by(MatchChannelChange.id)
+        ).all()
+    ]
 
 
 # --- D5: the unresolved queue and channel aliases (T054, R11) ------------------------------------
