@@ -70,8 +70,8 @@ the breaker. That is rare, because the list covers many leagues. Check the page,
 records is normal: its zero-items alarm waits 7 days after the last run that had records (D6
 FR-039). The grace covers only an answer with no records. A changed page fails the run with
 `error = layout_changed`, which counts toward the breaker at once, grace or not: a missing access
-key or `Records` key, or a sport's answer whose records all fail to read (a renamed `Team1`/`Team2`,
-a new `Begin` format). Records skipped as another sport (`football`, `other_sport`) or as a team
+key or `Records` key, or a sport's answer whose records all fail to read (a renamed `Team1`/`Team2`
+or `Sport`, a new `Begin` format; a record with no sport text is `missing_sport`, never another sport). Records skipped as another sport (`football`, `other_sport`) or as a team
 playing itself (`same_team_twice`) never fail a run. Every run's `import_runs.log` and `run.json`
 carry `parse_skipped`, the refused records counted by reason, so A13 shows why a run failed or came
 back light. If the alarm does fire, check the four sport pages in a browser before touching the parser.

@@ -249,11 +249,12 @@ pages a run, every 6 h.
 - **Empty days are normal** at ~40 events in two weeks: a valid answer with no records alarms only
   after 7 days without any. A changed page fails the run (`layout_changed`) and counts toward the
   breaker at once: a missing `Records` key or access key, or a sport whose records are there but none
-  reads (a renamed `Team1`/`Team2`, a new `Begin` format). Another sport and a team playing itself are
+  reads (a renamed `Team1`/`Team2` or `Sport`, a new `Begin` format). Another sport and a team playing itself are
   skipped without failing the run.
 - **Skips are counted by reason** in `import_runs.log` (`parse_skipped`, also under `counts`) and in
-  `run.json`: `football`, `other_sport`, `same_team_twice`, `missing_teams`, `unreadable_begin`,
-  `not_an_object`. A run that comes back light with `missing_teams` or `unreadable_begin` counts means
+  `run.json`: `football`, `other_sport`, `same_team_twice`, `missing_sport`, `missing_teams`,
+  `unreadable_begin`, `not_an_object`. A run that comes back light with `missing_sport`, `missing_teams`
+  or `unreadable_begin` counts means
   part of the answer changed shape: update the parser and its saved pages.
 - **No fan sees it yet.** `/v1` lists football only, so these rows wait for D7.
 
