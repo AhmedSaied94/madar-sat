@@ -322,6 +322,7 @@ NOTIFICATION_ROW: dict[str, Any] = {
     "due_at": "2026-11-06T18:40:00Z",
     "sent_at": "2026-11-06T18:40:09Z",
     "created_at": "2026-11-06T18:40:00Z",
+    "etag": '"5d0e8a3b71c94f26b0a1d7e3c94b2f18"',
 }
 NOTIFICATION_REACH: dict[str, Any] = {"devices": 41230}
 ANNOUNCEMENT_BODY: dict[str, Any] = {
@@ -346,6 +347,7 @@ ADMIN_USER_ROW: dict[str, Any] = {
     "locked_for_s": 660,
     "last_login_at": "2026-11-06T09:12:00Z",
     "must_change_password": False,
+    "etag": '"a41c7e09b3d25f86c1e0947d2b6a3f5e"',
 }
 USER_WITH_PASSWORD: dict[str, Any] = {
     "user": ADMIN_USER_ROW,

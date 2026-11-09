@@ -31,9 +31,12 @@ Query: `type`, `status`, `cursor`, `limit`. ETag: `ETag("admin_notifications", (
   "target": { "kind": "match_core", "label": "الأهلي × الزمالك", "id": 48213 },
   "is_test": false, "is_correction": false,
   "recipients": 2410, "sent": 2398, "failed": 12,
-  "due_at": "2026-11-06T18:40:00Z", "sent_at": "2026-11-06T18:40:09Z", "created_at": "2026-11-06T18:40:00Z"
+  "due_at": "2026-11-06T18:40:00Z", "sent_at": "2026-11-06T18:40:09Z", "created_at": "2026-11-06T18:40:00Z",
+  "etag": "\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\""
 }
 ```
+
+- `etag` is the row's own version, the one `POST notifications/{id}/cancel` compares with `If-Match`. The list's `ETag` header is the list's tag, never a row's version (B1-R1-2).
 
 - `recipients` is `sent + failed` once sending has begun. A pending row shows the live count from the reach query.
 - `label` is built from current data, and is `null` for `all`. The client's copy supplies «جميع الأجهزة».
@@ -99,9 +102,13 @@ The account list is small, so `GET users` has no cursor.
 ```json
 {
   "id": 3, "email": "x@example.com", "name": "...", "role": "editor", "is_active": true,
-  "locked_for_s": 660, "last_login_at": "2026-11-06T09:12:00Z", "must_change_password": false
+  "locked_for_s": 660, "last_login_at": "2026-11-06T09:12:00Z", "must_change_password": false,
+  "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\""
 }
 ```
+
+- `etag` is the account's own version, the one `PATCH users/{id}` and `reset-password` compare with `If-Match`. It hashes the whole stored row, so a sign-in by that account (`last_login_at`) makes an open copy stale: refetch on `409 edit_conflict`. A write's response carries the new value in `data.etag` and in its `ETag` header (B1-R1-2).
+- `POST users` creates the account with `must_change_password: true`: its first sign-in reaches only `auth/me` and `auth/change-password` (FR-025, B1-R1-3).
 
 - `locked_for_s` is the TTL of `auth:locked:<h>`, or null ([R19](../research.md#r19-admin-accounts)).
 - A response with `temporary_password` carries `Cache-Control: no-store`. The password is at least 12 characters from `secrets` and stored as argon2id only. It's never logged, and never in `audit_log`.

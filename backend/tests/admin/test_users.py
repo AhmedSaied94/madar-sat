@@ -87,7 +87,7 @@ async def test_creating_an_account_returns_a_temporary_password_once(admin_clien
     assert data["user"]["email"] == "new.editor@example.com"
     assert data["user"]["role"] == "editor"
     assert data["user"]["is_active"] is True
-    assert data["user"]["must_change_password"] is False
+    assert data["user"]["must_change_password"] is True  # B1-R1-3: the temporary password must be changed
     assert data["user"]["locked_for_s"] is None
 
     user = await session.scalar(select(AdminUser).where(AdminUser.id == data["user"]["id"]))
@@ -270,3 +270,59 @@ async def test_an_editor_may_not_read_or_write_accounts(editor_client, make_admi
     assert (await editor_client.patch(f"{USERS}/{target.id}", json={"name": "x"}, headers=headers)).status_code == 403
     reset = await editor_client.post(f"{USERS}/{target.id}/reset-password", headers=headers)
     assert reset.status_code == 403
+
+
+async def test_each_listed_account_carries_the_version_its_writes_check(admin_client, session, make_admin):
+    """B1-R1-2: a client only has the list, so each row's ``etag`` must be what PATCH and reset compare."""
+    target = await make_admin("row-version@example.com", "نسخة", "editor")
+
+    listed = await admin_client.get(USERS)
+    assert listed.status_code == 200, listed.text
+    row = next(item for item in listed.json()["data"] if item["id"] == target.id)
+    assert row["etag"] == account_version(target)
+    assert row["etag"] != listed.headers["etag"]
+
+    renamed = await admin_client.patch(f"{USERS}/{target.id}", json={"name": "اسم آخر"}, headers=if_match(row["etag"]))
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["data"]["etag"] == renamed.headers["etag"]
+
+    relisted = await admin_client.get(USERS)
+    fresh = next(item for item in relisted.json()["data"] if item["id"] == target.id)
+    assert fresh["etag"] == renamed.headers["etag"]
+
+    reset = await admin_client.post(f"{USERS}/{target.id}/reset-password", headers=if_match(fresh["etag"]))
+    assert reset.status_code == 200, reset.text
+    assert reset.json()["data"]["user"]["etag"] == reset.headers["etag"]
+
+    # The list's own (dataset) ETag is not a row version and is still refused.
+    stale = await admin_client.patch(
+        f"{USERS}/{target.id}", json={"name": "ثالث"}, headers=if_match(relisted.headers["etag"])
+    )
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "edit_conflict"
+
+
+async def test_a_new_account_must_change_its_temporary_password_first(
+    admin_client, anon_admin_client, session, redis_client
+):
+    """B1-R1-3 (FR-025, US3 scenario 7): signing in with the temporary password only reaches the change step."""
+    created = await admin_client.post(USERS, json={"email": "fresh@example.com", "name": "جديد", "role": "editor"})
+    assert created.status_code == 201, created.text
+    password = created.json()["data"]["temporary_password"]
+    user = await session.scalar(select(AdminUser).where(AdminUser.email == "fresh@example.com"))
+    assert user.must_change_password is True
+
+    login = await anon_admin_client.post(
+        "/admin/api/auth/login", json={"email": "fresh@example.com", "password": password}
+    )
+    assert login.status_code == 200, login.text
+    assert login.json()["data"]["admin"]["must_change_password"] is True
+    headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+
+    refused = await anon_admin_client.get("/admin/api/channels", headers=headers)
+    assert refused.status_code == 403
+    assert refused.json()["error"]["code"] == "password_change_required"
+
+    me = await anon_admin_client.get("/admin/api/auth/me", headers=headers)
+    assert me.status_code == 200, me.text
+    assert me.json()["data"]["must_change_password"] is True

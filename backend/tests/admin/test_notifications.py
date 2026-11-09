@@ -324,6 +324,28 @@ async def test_cancel_sets_cancelled_and_admin(admin_client, session, frozen_now
     assert again.json()["error"]["code"] == "notification_not_cancellable"
 
 
+async def test_cancel_takes_the_version_from_the_log_row(admin_client, session, frozen_now):
+    """B1-R1-2: A15 only has the log, so each row's ``etag`` must be the version cancel compares."""
+    created = await admin_client.post(ANNOUNCEMENT, json=_announcement())
+    assert created.status_code == 201, created.text
+    notification_id = created.json()["data"]["id"]
+
+    log = await admin_client.get(LOG)
+    assert log.status_code == 200, log.text
+    row = next(item for item in log.json()["data"] if item["id"] == notification_id)
+    assert row["etag"] != log.headers["etag"]
+    assert created.json()["data"]["etag"] == row["etag"]
+
+    refused = await admin_client.post(f"{LOG}/{notification_id}/cancel", headers=if_match(log.headers["etag"]))
+    assert refused.status_code == 409
+    assert refused.json()["error"]["code"] == "edit_conflict"
+
+    cancelled = await admin_client.post(f"{LOG}/{notification_id}/cancel", headers=if_match(row["etag"]))
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["data"]["status"] == "cancelled"
+    assert cancelled.json()["data"]["etag"] == cancelled.headers["etag"]
+
+
 async def test_cancel_refuses_a_sent_row(admin_client, session, frozen_now):
     session.add(
         NotificationOutbox(

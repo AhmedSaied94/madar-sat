@@ -74,7 +74,7 @@ async def list_users(session: Db, redis: aioredis.Redis = Depends(get_redis)) ->
         409: _docs.error_response("The email is already used", email_taken=_docs.error_value("email_taken")),
         422: _docs.VALIDATION,
     },
-    summary="A16: create an account; it gets a temporary password and can sign in at once",
+    summary="A16: create an account; it gets a temporary password it must change at the first sign-in",
 )
 async def create_user(
     body: a.UserCreate, response: Response, session: Db, admin: Admin

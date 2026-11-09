@@ -516,6 +516,8 @@ def _apply_match(
         match = session.get(Match, match_id, with_for_update=True)
         if match is None:
             return False
+        # The producers write ``final_score`` only when this poll is the one that finished the row.
+        status_before = match.status
         state = load_state(session, match)
         decision = decide(
             state,
@@ -543,7 +545,7 @@ def _apply_match(
         produced = 0
         try:
             with session.begin_nested():
-                produced = record_poll(session, match, readings, now)
+                produced = record_poll(session, match, readings, now, status_before=status_before)
         except Exception:  # noqa: BLE001 - never let a push bug stop the live score
             log.exception("push_producers_failed", extra={"match_id": match_id})
         texts = sync_problems(session, opened=decision.open_problems, closed=closed, now=now, raw_ref=raw_ref)

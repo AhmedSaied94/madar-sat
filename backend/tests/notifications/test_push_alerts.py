@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.db.models import Device, LiveProblem, NotificationOutbox
 from app.notifications.dispatcher import dispatch_due
@@ -193,3 +193,64 @@ def test_the_failure_reason_reads_the_http_status_then_the_code():
     assert failure_reason(WithResponse()) == "FCM 503"
     assert failure_reason(WithCode()) == "FCM UNAVAILABLE"
     assert failure_reason(None) == "FCM failed"
+
+
+def _alerts_after_commit(monkeypatch, session) -> list[tuple[str, bool, bool]]:
+    """Each alert, with whether the dispatcher's transaction was still open and the problem row stored.
+
+    The check reads through the test's connection (``session.bind``), so it opens nothing on the session.
+    """
+    seen: list[tuple[str, bool, bool]] = []
+
+    def record(message: str) -> bool:
+        in_transaction = session.in_transaction()
+        stored = session.bind.execute(text("SELECT count(*) FROM live_problems WHERE key = 'push'")).scalar_one()
+        seen.append((message, in_transaction, bool(stored)))
+        return True
+
+    monkeypatch.setattr("app.adapters.alerts.send_alert", record)
+    return seen
+
+
+def test_a_sender_refusing_every_send_alerts_once_after_commit(sync_session, frozen_now, monkeypatch):
+    """B1-R1-5 (FR-029, SC-014): every device refused, one alert, sent once the row is committed."""
+    bag = support.create_match_sync(sync_session, frozen_now)
+    devices = _devices(sync_session, bag, 12)
+    refused = {str(device.push_token): "failed" for device in devices}
+    row = _row(sync_session, bag, frozen_now)
+    seen = _alerts_after_commit(monkeypatch, sync_session)
+
+    dispatch_due(sync_session, FakePushSender(refused), frozen_now)
+
+    sync_session.refresh(row)
+    assert (row.status, row.sent, row.failed) == ("sent", 0, 12)
+    assert len(seen) == 1
+    [(_text, in_transaction, stored)] = seen
+    assert in_transaction is False, "the alert went out before the dispatcher committed"
+    assert stored is True
+
+
+def test_a_row_failed_at_max_attempts_alerts_once_after_commit(sync_session, frozen_now, monkeypatch):
+    """B1-R1-5: the ``MAX_ATTEMPTS`` -> ``failed`` path opens the problem and alerts, after its commit."""
+    from app.notifications.dispatcher import MAX_ATTEMPTS
+
+    bag = support.create_match_sync(sync_session, frozen_now)
+    _devices(sync_session, bag, 2)
+    row = _row(sync_session, bag, frozen_now)
+    seen = _alerts_after_commit(monkeypatch, sync_session)
+
+    for _ in range(MAX_ATTEMPTS - 1):
+        dispatch_due(sync_session, FakePushSender(fail_every_page=True), frozen_now)
+    assert seen == []
+
+    report = dispatch_due(sync_session, FakePushSender(fail_every_page=True), frozen_now)
+
+    assert report.failed_row_id == row.id
+    sync_session.refresh(row)
+    assert row.status == "failed"
+    problem = _problem(sync_session)
+    assert problem is not None and problem.closed_at is None
+    assert len(seen) == 1
+    [(_text, in_transaction, stored)] = seen
+    assert in_transaction is False, "the alert went out before the failed row was committed"
+    assert stored is True

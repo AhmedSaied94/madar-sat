@@ -720,11 +720,12 @@ def dispatch_due(
         except Retryable as exc:
             reason = getattr(exc, "reason", None)
             attempts = int(session.execute(text(_BUMP_ATTEMPTS), {"id": outbox_id}).scalar_one())
+            texts: list[str] = []
             if attempts >= MAX_ATTEMPTS:
                 session.execute(text(_MARK_FAILED), {"ids": [outbox_id], "error": reason})
                 row = session.get(NotificationOutbox, outbox_id, populate_existing=True)
                 if row is not None:
-                    _send_alerts(_alert(session, row, now))
+                    texts = _alert(session, row, now)
                 report.failed_row_id = outbox_id
                 report.failed += 1
                 log.error("dispatch_failed", extra={"row": outbox_id, "attempts": attempts})
@@ -732,6 +733,8 @@ def dispatch_due(
                 session.execute(text(_RELEASE), {"ids": [outbox_id]})
                 report.retry_row_id = outbox_id
             session.commit()
+            # The alert goes out only once the failed row and the open problem are committed (SC-014).
+            _send_alerts(texts)
             break
 
         if outcome == "cancelled":

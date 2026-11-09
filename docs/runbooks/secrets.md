@@ -45,7 +45,7 @@ Not secrets: the public and private IPs, the hostnames, the Firebase project ID,
 
 `PUSH_TYPES_OFF=goal,match_started` in VPS-2's `/srv/madar/.env` is a plain list of notification types
 to stop sending, so it does not belong in `/srv/secrets` and is not rotated. Recreating `worker-notify`
-(`dc up -d worker-notify`) applies it; see [push-notifications.md](push-notifications.md#the-off-switch-under-a-minute).
+(`dc up -d --no-deps --force-recreate worker-notify`) applies it; see [push-notifications.md](push-notifications.md#the-off-switch-under-a-minute).
 
 ## Rotate the PostgreSQL password
 
