@@ -210,9 +210,11 @@ def fetch(
                 kind=kind,
                 targets=len(planned) if source == LIVESOCCERTV else None,
                 unmatched=unmatched,
+                parse_skipped=_skip_counts_of(adapter),
             )
         except LayoutChanged as exc:
-            # Every adapter's layout change lands here, with the pages it did fetch (B2-R1-9).
+            # Every adapter's layout change lands here, with the pages it did fetch (B2-R1-9), and
+            # what the parser refused before it gave up, so the run says why (B2-R1-1).
             result = _failed(
                 source,
                 started,
@@ -221,6 +223,7 @@ def fetch(
                 error="layout_changed",
                 kind=kind,
                 targets=len(planned),
+                parse_skipped=_skip_counts_of(adapter),
             )
             log.warning("layout_changed", extra={"source": source, "why": str(exc), "pages": len(_pages_of(adapter))})
         except BridgeNotConfigured:
@@ -290,6 +293,17 @@ def _http_errors_of(fetcher: HttpFetcher | None) -> int:
     return fetcher.http_errors if fetcher is not None else 0
 
 
+def _skip_counts_of(adapter: SourceAdapter | None) -> dict[str, int]:
+    """The parser's refusals by reason, for an adapter that counts them (sporteventz, B2-R1-1)."""
+    counts = getattr(adapter, "skip_counts", None)
+    return dict(counts()) if callable(counts) else {}
+
+
+def _parse_skipped_log(data: ScrapeResult) -> dict[str, Any]:
+    """``{"count", "by_reason"}`` of the records ``parse`` refused, for A13 and ``run.json`` (FR-030)."""
+    return {"count": sum(data.parse_skipped.values()), "by_reason": dict(sorted(data.parse_skipped.items()))}
+
+
 def _failed(
     source: str,
     started: datetime,
@@ -299,6 +313,7 @@ def _failed(
     error: str,
     kind: Kind = KIND_FIXTURES,
     targets: int = 0,
+    parse_skipped: dict[str, int] | None = None,
 ) -> ScrapeResult:
     """A failed fetch still travels, with the pages it did collect, so the run row records it (R15).
 
@@ -319,6 +334,7 @@ def _failed(
                 error=error,
                 kind=kind,
                 targets=targets if kind == KIND_BROADCASTS else None,
+                parse_skipped=parse_skipped,
             )
         except MessageTooLarge:
             log.warning(
@@ -538,7 +554,9 @@ def _write_run_json(
             "unchanged": outcome.unchanged if outcome is not None else 0,
             "links_added": len(links.added) if links is not None else 0,
             "links_removed": len(links.removed) if links is not None else 0,
+            "parse_skipped": sum(data.parse_skipped.values()),
         },
+        "parse_skipped": _parse_skipped_log(data),
         "skipped": (outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []),
         "unresolved": outcome.unresolved if outcome is not None else [],
         "waiting": outcome.waiting if outcome is not None else [],
@@ -569,7 +587,9 @@ def _compact_log(
             "targets": data.targets or 0,
             "links_added": len(links.added) if links is not None else 0,
             "links_removed": len(links.removed) if links is not None else 0,
+            "parse_skipped": sum(data.parse_skipped.values()),
         },
+        "parse_skipped": _parse_skipped_log(data),
         "placeholders_created": list(links.placeholders_created) if links is not None else [],
         "skipped": _bounded(
             outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []

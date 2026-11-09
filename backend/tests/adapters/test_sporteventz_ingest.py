@@ -302,3 +302,76 @@ def test_a_valid_empty_answer_is_quiet_until_seven_days_without_records(sync_ses
     failures, alerted = sync_session.execute(text(SOURCE_ROW)).one()
     assert failures == 1
     assert alerted is not None
+
+
+# --- skip counts and a changed record shape (B2-R1-1) --------------------------------------------
+
+
+def _last_run(session: Any) -> ImportRun:
+    run = (
+        session.execute(select(ImportRun).where(ImportRun.source == "sporteventz").order_by(ImportRun.id.desc()))
+        .scalars()
+        .first()
+    )
+    assert run is not None
+    return run
+
+
+def _run_json(run: ImportRun) -> dict[str, Any]:
+    assert run.raw_path is not None
+    return json.loads((Path(run.raw_path) / "run.json").read_text(encoding="utf-8"))
+
+
+def test_the_skip_counts_by_reason_reach_the_run_log_and_run_json(sync_session, loaded_snapshot) -> None:
+    """FR-030: other sports are skipped *and counted*, and A13 and ``run.json`` show the count."""
+    pages = _pages()
+    rugby = {"@id": "rugby-1", "Sport": {"#text": "Rugby"}, "Begin": "Friday, 06 November 2026 05:00"}
+    payload = json.loads(pages[1].body)
+    payload["Records"].append(rugby)
+    pages[1] = RawPage(url=pages[1].url, status=200, body=json.dumps(payload).encode(), content_type="text/plain")
+    adapter = SporteventzAdapter(fetcher=None)
+    items = [item for page in pages for item in adapter.parse(page)]
+    result = ScrapeResult.build(
+        source="sporteventz",
+        run_id="r-skips",
+        started_at=NOW,
+        finished_at=NOW,
+        fetched_on="vps2",
+        pages=pages,
+        items=items,
+        parse_skipped=adapter.skip_counts(),
+    )
+
+    outcome = ingest.apply(args=[result.as_task_arg()]).get()
+
+    assert outcome["status"] == "succeeded"  # an other-sport skip is expected, not a partial run
+    run = _last_run(sync_session)
+    assert run.log["parse_skipped"] == {"count": 1, "by_reason": {"other_sport": 1}}
+    assert run.log["counts"]["parse_skipped"] == 1
+    assert _run_json(run)["parse_skipped"] == {"count": 1, "by_reason": {"other_sport": 1}}
+
+
+def test_a_changed_record_shape_fails_the_run_at_once_inside_the_grace(sync_session, loaded_snapshot) -> None:
+    """FR-037: the 7-day quiet grace never hides a changed page; the breaker counts it."""
+    _run("r-1")  # a run with records yesterday: the grace is open
+    result = ScrapeResult.build(
+        source="sporteventz",
+        run_id="r-renamed",
+        started_at=NOW,
+        finished_at=NOW,
+        fetched_on="vps2",
+        pages=_pages(),
+        items=[],
+        error="layout_changed",
+        parse_skipped={"missing_teams": 54},
+    )
+
+    outcome = ingest.apply(args=[result.as_task_arg()]).get()
+
+    assert outcome["status"] == "failed"
+    failures, _alerted = sync_session.execute(text(SOURCE_ROW)).one()
+    assert failures == 1
+    run = _last_run(sync_session)
+    assert run.error == "layout_changed"
+    assert run.log["parse_skipped"] == {"count": 54, "by_reason": {"missing_teams": 54}}
+    assert _run_json(run)["parse_skipped"]["by_reason"] == {"missing_teams": 54}

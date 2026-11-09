@@ -275,3 +275,76 @@ def test_a_live_cycle_leaves_the_datasets_alone(sync_session) -> None:
     record_live_cycle(sync_session, status="succeeded", items_found=4, finished_at=NOW)
 
     assert dataset_versions(sync_session) == before
+
+
+def _sporteventz_row(sync_session) -> tuple:
+    return sync_session.execute(
+        text("SELECT consecutive_failures, breaker_opened_at FROM sources WHERE name = 'sporteventz'")
+    ).one()
+
+
+def test_a_failed_sporteventz_run_inside_the_quiet_grace_still_counts(
+    sync_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """B2-R1-1, FR-037: the 7-day grace covers a valid empty answer only, never a failed run."""
+    from app.adapters.config import get_adapter_settings
+
+    monkeypatch.setenv("SOURCE_BREAKER_THRESHOLD", "3")  # an earlier test leaves a cached 10
+    get_adapter_settings.cache_clear()
+    sync_session.execute(
+        text("UPDATE sources SET consecutive_failures = 0, breaker_opened_at = NULL WHERE name = 'sporteventz'")
+    )
+    # A run with records an hour ago, so the source is well inside its quiet window.
+    sync_session.execute(
+        text(
+            "INSERT INTO import_runs (source, started_at, finished_at, status, items_found) "
+            "VALUES ('sporteventz', :at, :at, 'succeeded', 40)"
+        ),
+        {"at": NOW.replace(hour=11)},
+    )
+    alerts = Recorder()
+
+    for _ in range(3):
+        record_run(
+            sync_session,
+            source="sporteventz",
+            status="failed",
+            items_found=0,
+            finished_at=NOW,
+            pages=8,
+            alert=alerts,
+            now=NOW,
+        )
+
+    failures, breaker = _sporteventz_row(sync_session)
+    assert failures == 3
+    assert breaker is not None
+    assert alerts.sent == ["⛔ المصدر ‹sporteventz› متوقف بعد ‹3› محاولات فاشلة"]
+
+
+def test_a_valid_empty_sporteventz_run_inside_the_grace_is_quiet(sync_session) -> None:
+    sync_session.execute(
+        text("UPDATE sources SET consecutive_failures = 0, breaker_opened_at = NULL WHERE name = 'sporteventz'")
+    )
+    sync_session.execute(
+        text(
+            "INSERT INTO import_runs (source, started_at, finished_at, status, items_found) "
+            "VALUES ('sporteventz', :at, :at, 'succeeded', 40)"
+        ),
+        {"at": NOW.replace(hour=11)},
+    )
+    alerts = Recorder()
+
+    record_run(
+        sync_session,
+        source="sporteventz",
+        status="succeeded",
+        items_found=0,
+        finished_at=NOW,
+        pages=8,
+        alert=alerts,
+        now=NOW,
+    )
+
+    assert _sporteventz_row(sync_session) == (0, None)
+    assert alerts.sent == []
