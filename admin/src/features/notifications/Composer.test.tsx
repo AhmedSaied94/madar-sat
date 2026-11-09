@@ -106,6 +106,7 @@ const outboxRow = {
   due_at: '2026-11-06T21:00:00Z',
   sent_at: null,
   created_at: '2026-11-06T20:00:00Z',
+  etag: '"00000000000000000000000000009016"',
 };
 
 interface Served {
@@ -117,7 +118,16 @@ interface Served {
 }
 
 /** Everything the composer reads and writes, so a test can assert what reached the API. */
-function serve(overrides: { device?: unknown; reachDevices?: number; conflict?: boolean; testRefused?: string } = {}): Served {
+function serve(
+  overrides: {
+    device?: unknown;
+    reachDevices?: number;
+    conflict?: boolean;
+    testRefused?: string;
+    /** What the outbox says the test row did, when the composer reads it back (A-R1-8). */
+    testOutcome?: { status: string; error: string | null };
+  } = {},
+): Served {
   const served: Served = { posts: [], tests: [], reach: [], devicePuts: [], deviceReads: 0 };
   let savedDevice: unknown = 'device' in overrides ? overrides.device : device;
 
@@ -153,9 +163,16 @@ function serve(overrides: { device?: unknown; reachDevices?: number; conflict?: 
       if (overrides.testRefused !== undefined) {
         return HttpResponse.json(refusal(overrides.testRefused), { status: 422 });
       }
-      return HttpResponse.json(envelope({ ...outboxRow, status: 'sent', sent: 1, sent_at: '2026-11-06T20:00:05Z' }), {
-        status: 201,
-      });
+      // The real API answers with the row as queued: nothing has been sent yet.
+      return HttpResponse.json(envelope(outboxRow), { status: 201 });
+    }),
+    http.get('*/admin/api/notifications', () => {
+      const outcome = overrides.testOutcome ?? { status: 'pending', error: null };
+      const sent = outcome.status === 'sent' ? 1 : 0;
+      const failed = outcome.status === 'failed' ? 1 : 0;
+      return HttpResponse.json(
+        envelope([{ ...outboxRow, ...outcome, recipients: 1, sent, failed }], { next_cursor: null }),
+      );
     }),
   );
 
@@ -198,8 +215,9 @@ describe('the composer', () => {
 
     await userEvent.type(screen.getByLabelText('العنوان'), 'عنوان');
 
-    expect(screen.getByText('Android')).toBeInTheDocument();
-    expect(screen.getByText('iPhone (PWA مثبّت)')).toBeInTheDocument();
+    const previews = screen.getByRole('complementary', { name: 'معاينة' });
+    expect(within(previews).getByText('Android')).toBeInTheDocument();
+    expect(within(previews).getByText('iPhone (PWA مثبّت)')).toBeInTheDocument();
     expect(screen.getAllByText('عنوان')).toHaveLength(2);
 
     await userEvent.type(screen.getByLabelText('النص'), 'نص');
@@ -290,6 +308,47 @@ describe('the composer', () => {
     expect(served.posts[0]).toMatchObject({ target: { type: 'match', id: 48213 } });
   });
 
+  it('turns a picked channel into the channel route, for the announcement and the test (A-R1-7)', async () => {
+    const served = serve();
+    renderComposer();
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'اختر قناة' }));
+    const pick = await screen.findAllByRole('button', { name: 'اختيار' });
+    await userEvent.click(pick[0] as HTMLElement);
+
+    expect(await screen.findByText('/channel/5512')).toBeInTheDocument();
+    expect(screen.getByText('beIN SPORTS 1')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال تجريبي لجهازي' }));
+    await waitFor(() => expect(served.tests).toHaveLength(1));
+    expect(served.tests[0]).toMatchObject({ target: { type: 'channel', id: 5512 } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال الآن' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إرسال' }));
+
+    await waitFor(() => expect(served.posts).toHaveLength(1));
+    expect(served.posts[0]).toMatchObject({ target: { type: 'channel', id: 5512 } });
+  });
+
+  it('clears a channel deep link back to none', async () => {
+    const served = serve();
+    renderComposer();
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'اختر قناة' }));
+    const pick = await screen.findAllByRole('button', { name: 'اختيار' });
+    await userEvent.click(pick[0] as HTMLElement);
+    await userEvent.click(await screen.findByRole('button', { name: 'إزالة الرابط' }));
+
+    expect(screen.queryByText('/channel/5512')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال الآن' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'إرسال' }));
+    await waitFor(() => expect(served.posts).toHaveLength(1));
+    expect(served.posts[0]).toMatchObject({ target: { type: 'none', id: null } });
+  });
+
   it('refuses a scheduled time in the past, and sends the Cairo instant for one in the future', async () => {
     const served = serve();
     renderComposer();
@@ -314,18 +373,53 @@ describe('the composer', () => {
     expect(served.posts[0]).toMatchObject({ send_at: '2031-01-01T08:00:00.000Z' });
   });
 
-  it('names the saved test device and reports the row it produced', async () => {
-    const served = serve();
+  it('names the saved test device, with its platform in an LTR island', async () => {
+    serve();
+    renderComposer();
+
+    const island = (await screen.findByText(/0\.6\.0\+60/)).closest('bdi') as HTMLElement;
+    expect(island).toHaveAttribute('dir', 'ltr');
+    expect(within(island).getByText('Android')).toBeInTheDocument();
+  });
+
+  it('reports a queued test send as queued, never as sent (A-R1-8)', async () => {
+    const served = serve({ testOutcome: { status: 'pending', error: null } });
     renderComposer();
 
     await fill();
-    expect(await screen.findByText(/0\.6\.0\+60/)).toBeInTheDocument();
-
     await userEvent.click(screen.getByRole('button', { name: 'إرسال تجريبي لجهازي' }));
 
     await waitFor(() => expect(served.tests).toHaveLength(1));
     expect(served.tests[0]).toMatchObject({ title: TITLE, body: BODY });
-    expect(await screen.findByText(/أُرسل التجريبي/)).toBeInTheDocument();
+    const result = await screen.findByTestId('test-result');
+    expect(result).toHaveTextContent('التجريبي في صندوق الإرسال');
+    expect(result).not.toHaveTextContent('أُرسل التجريبي');
+    expect(within(result).getByText('Android').closest('bdi')).toHaveAttribute('dir', 'ltr');
+  });
+
+  it('reports a test send as sent once its outbox row says so (A-R1-8)', async () => {
+    serve({ testOutcome: { status: 'sent', error: null } });
+    renderComposer();
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال تجريبي لجهازي' }));
+
+    const result = await screen.findByTestId('test-result');
+    await waitFor(() => expect(result).toHaveTextContent('أُرسل التجريبي إلى'));
+    expect(within(result).getByText('Android').closest('bdi')).toHaveAttribute('dir', 'ltr');
+  });
+
+  it('reports a failed test send with the push service’s reason (A-R1-8)', async () => {
+    serve({ testOutcome: { status: 'failed', error: 'FCM 503' } });
+    renderComposer();
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال تجريبي لجهازي' }));
+
+    const result = await screen.findByTestId('test-result');
+    await waitFor(() => expect(result).toHaveTextContent('فشل الإرسال التجريبي'));
+    expect(within(result).getByText('FCM 503').closest('bdi')).toHaveAttribute('dir', 'ltr');
+    expect(result).not.toHaveTextContent('أُرسل التجريبي');
   });
 
   it('asks for a device id when none is saved, and saves one with If-Match', async () => {
@@ -365,6 +459,7 @@ describe('the composer', () => {
 
     expect(await screen.findByText('الجهاز المحفوظ بلا رمز إشعار. أعد تسجيل الجهاز')).toBeInTheDocument();
     expect(screen.queryByText(/أُرسل التجريبي/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('test-result')).not.toBeInTheDocument();
   });
 
   it('keeps send disabled until both title and body have something', async () => {

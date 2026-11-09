@@ -39,10 +39,15 @@ interface Outbox {
   due_at: string | null;
   sent_at: string | null;
   created_at: string;
+  etag: string;
 }
+
+/** A row's own version (a quoted 32-hex hash, as `lock_and_check` computes it). */
+const version = (id: number, n = 1): string => `"${String(id).padStart(4, '0')}${String(n).padStart(28, '0')}"`;
 
 const goal: Outbox = {
   id: 9012,
+  etag: version(9012),
   type: 'goal',
   status: 'sent',
   error: null,
@@ -60,6 +65,7 @@ const goal: Outbox = {
 const pendingAnnouncement: Outbox = {
   ...goal,
   id: 9013,
+  etag: version(9013),
   type: 'announcement',
   status: 'pending',
   target: { kind: 'all', label: null, id: null },
@@ -73,6 +79,7 @@ const pendingAnnouncement: Outbox = {
 const failedGoal: Outbox = {
   ...goal,
   id: 9014,
+  etag: version(9014),
   status: 'failed',
   error: 'FCM 503',
   recipients: 312,
@@ -82,11 +89,12 @@ const failedGoal: Outbox = {
   target: { kind: 'match_core', label: 'غامبا أوساكا × بوريرام', id: 48214 },
 };
 
-const correction: Outbox = { ...goal, id: 9015, type: 'goal', is_correction: true };
+const correction: Outbox = { ...goal, id: 9015, etag: version(9015), type: 'goal', is_correction: true };
 
 const testSend: Outbox = {
   ...goal,
   id: 9016,
+  etag: version(9016),
   type: 'announcement',
   is_test: true,
   target: { kind: 'match_core', label: 'ميلان × بولونيا', id: 48215 },
@@ -95,6 +103,7 @@ const testSend: Outbox = {
 const cancelled: Outbox = {
   ...goal,
   id: 9017,
+  etag: version(9017),
   type: 'announcement',
   status: 'cancelled',
   error: 'admin',
@@ -307,15 +316,21 @@ describe('A15 the log', () => {
     expect(screen.getByRole('button', { name: 'إعادة المحاولة' })).toBeInTheDocument();
   });
 
-  it('cancels a pending announcement with the version the list carried', async () => {
+  it('cancels a pending announcement with the row’s own version, not the list’s ETag (A-R1-1)', async () => {
     const cancelled: { url: string; ifMatch: string | null }[] = [];
     server.use(
       http.get('*/admin/api/notifications', () =>
-        HttpResponse.json(envelope([pendingAnnouncement], { next_cursor: null }), { headers: { ETag: '"outbox-1"' } }),
+        HttpResponse.json(envelope([pendingAnnouncement], { next_cursor: null }), { headers: { ETag: 'W/"outbox-1"' } }),
       ),
       http.post('*/admin/api/notifications/:id/cancel', ({ request, params }) => {
-        cancelled.push({ url: String(params['id']), ifMatch: request.headers.get('If-Match') });
-        return HttpResponse.json(envelope({ ...pendingAnnouncement, status: 'cancelled', error: 'admin' }));
+        const ifMatch = request.headers.get('If-Match');
+        cancelled.push({ url: String(params['id']), ifMatch });
+        // The server compares If-Match with the row's version and nothing else.
+        if (ifMatch !== pendingAnnouncement.etag) return HttpResponse.json(refusal('edit_conflict'), { status: 409 });
+        return HttpResponse.json(
+          envelope({ ...pendingAnnouncement, status: 'cancelled', error: 'admin', etag: version(9013, 2) }),
+          { headers: { ETag: version(9013, 2) } },
+        );
       }),
     );
     restoreAs('admin');
@@ -327,7 +342,8 @@ describe('A15 the log', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'إلغاء الإعلان' }));
 
     await waitFor(() => expect(cancelled).toHaveLength(1));
-    expect(cancelled[0]).toEqual({ url: '9013', ifMatch: '"outbox-1"' });
+    expect(cancelled[0]).toEqual({ url: '9013', ifMatch: version(9013) });
+    expect(await screen.findByText('أُلغي الإعلان')).toBeInTheDocument();
   });
 
   it('opens ConflictDialog when the cancel loses a race', async () => {

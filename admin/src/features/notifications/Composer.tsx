@@ -1,6 +1,8 @@
+import { clsx } from 'clsx';
 import { useEffect, useState, type ReactElement } from 'react';
 
 import { createAnnouncement, putTestDevice, sendTest } from '../../api/generated/admin';
+import type { NotificationRow, TestDeviceRow } from '../../api/generated/admin.schemas';
 import { ApiError, etagOf, INVALID_RESPONSE } from '../../api/http';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
@@ -8,6 +10,7 @@ import { Counter, Segmented, Select } from '../../components/FormControls/FormCo
 import { Field } from '../../components/Field/Field';
 import { Icon } from '../../components/Icon/Icon';
 import { useToast } from '../../components/Toast/Toast';
+import { focusRing } from '../../components/focus';
 import { cairoWallTimeToUtc, formatCairoTime } from '../../lib/cairoTime';
 import { useRefreshAdmin } from '../../lib/useRefreshAdmin';
 import { copyForErrorCode, notifications as copy } from '../../i18n/ar';
@@ -15,7 +18,7 @@ import { useCompetitions } from '../competitions/queries';
 import { ChannelPicker } from '../matches/ChannelPicker';
 import { TeamPicker } from '../matches/TeamPicker';
 import { MatchPicker, type PickedMatch } from './MatchPicker';
-import { useReach, useTestDevice } from './queries';
+import { useReach, useTestDevice, useTestOutcome } from './queries';
 
 // A15's composer (contract admin-screens "Composer", board "Notifications"): an inline announcement —
 // title and body with their counters, an optional deep link whose route the server builds, one of the
@@ -59,6 +62,9 @@ export function Composer(): ReactElement | null {
   const [posting, setPosting] = useState(false);
   const [deviceId, setDeviceId] = useState('');
   const [reachFor, setReachFor] = useState<{ kind: AudienceKind; id: number | null }>({ kind: 'all', id: null });
+  const [channelLink, setChannelLink] = useState(false);
+  const [testRow, setTestRow] = useState<NotificationRow | null>(null);
+  const outcome = useTestOutcome(testRow?.id ?? null);
 
   const device = useTestDevice();
   const saved = device.data?.data ?? null;
@@ -82,6 +88,16 @@ export function Composer(): ReactElement | null {
 
   function pickTarget(match: PickedMatch): void {
     setTarget({ id: match.id, label: match.label, extra: { route: match.route, type: 'match' } });
+  }
+
+  /** A channel as the deep link (A-R1-7): the server builds `/channel/{id}`, shown here as it will be. */
+  function pickChannelTarget(channel: { id: number; name: string; display_name: string | null }): void {
+    setTarget({
+      id: channel.id,
+      label: displayName(channel.name, channel.display_name),
+      extra: { route: `/channel/${channel.id}`, type: 'channel' },
+    });
+    setChannelLink(false);
   }
 
   function onKind(kind: AudienceKind): void {
@@ -148,14 +164,16 @@ export function Composer(): ReactElement | null {
   }
 
   async function onTestSend(): Promise<void> {
+    setTestRow(null);
     try {
       const envelope = await sendTest({
         title,
         body,
         target: { type: target?.extra?.type ?? 'none', id: target?.id ?? null },
       });
-      if (!envelope.success) throw new ApiError(INVALID_RESPONSE, null);
-      toast.show({ kind: 'success', title: copy.composer.testSent(deviceName(saved)) });
+      if (!envelope.success || envelope.data === null) throw new ApiError(INVALID_RESPONSE, null);
+      // The 201 is the row as queued, not a delivery: the result line follows the row (A-R1-8).
+      setTestRow(envelope.data);
       refresh();
     } catch (error) {
       const code = error instanceof ApiError ? error.code : INVALID_RESPONSE;
@@ -227,10 +245,25 @@ export function Composer(): ReactElement | null {
         <div className="flex min-w-0 flex-col gap-2">
           <span className="text-caption font-semibold text-text-secondary">{copy.composer.target}</span>
           {target === null ? (
-            <MatchPicker trigger={copy.composer.pickMatch} onPick={pickTarget} />
+            <div className="flex min-w-0 flex-col gap-2">
+              <MatchPicker trigger={copy.composer.pickMatch} onPick={pickTarget} />
+              <button
+                type="button"
+                aria-expanded={channelLink}
+                onClick={() => setChannelLink((current) => !current)}
+                className={clsx(
+                  'text-label inline-flex h-8 items-center gap-2 self-start rounded-md bg-surface-2 px-3 font-semibold text-text-primary hover:bg-surface-3',
+                  focusRing,
+                )}
+              >
+                <Icon name="tv" size="sm" />
+                {copy.composer.pickChannel}
+              </button>
+              {channelLink ? <ChannelPicker selectedId={null} onSelect={pickChannelTarget} /> : null}
+            </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2 rounded-md bg-bg px-3 py-2">
-              <Icon name="ball" size="sm" className="text-text-tertiary" />
+              <Icon name={target.extra?.type === 'channel' ? 'tv' : 'ball'} size="sm" className="text-text-tertiary" />
               <bdi className="text-label min-w-0 flex-1 truncate text-text-primary">{target.label}</bdi>
               <bdi dir="ltr" className="text-micro font-mono text-text-tertiary">
                 {target.extra?.route}
@@ -309,9 +342,7 @@ export function Composer(): ReactElement | null {
         ) : audienceKind === 'competition' ? (
           <CompetitionChoice value={audienceId} onPick={setAudience} />
         ) : audienceKind === 'match' ? (
-          <MatchPicker
-            onPick={(match) => setAudience({ id: match.id, label: match.label })}
-          />
+          <MatchPicker selectedId={audienceId} onPick={(match) => setAudience({ id: match.id, label: match.label })} />
         ) : audienceKind === 'channel' ? (
           <ChannelChoice value={audienceId} onPick={setAudience} />
         ) : null}
@@ -342,10 +373,7 @@ export function Composer(): ReactElement | null {
           </span>
         ) : (
           <span className="text-caption text-text-secondary">
-            {copy.composer.platforms[saved.platform] ?? saved.platform} ·{' '}
-            <bdi dir="ltr" className="font-mono">
-              {saved.app_version ?? '—'}
-            </bdi>
+            <DeviceIsland device={saved} />
           </span>
         )}
         <span className="flex-1" />
@@ -354,6 +382,10 @@ export function Composer(): ReactElement | null {
           {when === 'scheduled' ? copy.composer.schedule : copy.composer.send}
         </Button>
       </div>
+
+      {testRow === null ? null : (
+        <TestResult row={outcome.row ?? testRow} gaveUp={outcome.gaveUp} device={saved} />
+      )}
 
         </div>
 
@@ -382,10 +414,52 @@ export function Composer(): ReactElement | null {
   );
 }
 
-/** The account's device as one line: «Android · 0.6.0+60». */
-function deviceName(device: { platform: string; app_version: string | null } | null): string {
-  if (!device) return '—';
-  return `${device.platform} · ${device.app_version ?? '—'}`;
+/** The saved device as an LTR island, «Android · 0.6.0+60», never concatenated into Arabic text. */
+function DeviceIsland({ device }: { device: Pick<TestDeviceRow, 'platform' | 'app_version'> | null }): ReactElement {
+  if (device === null) return <bdi dir="ltr">—</bdi>;
+  return (
+    <bdi dir="ltr">
+      <span>{copy.composer.platforms[device.platform] ?? device.platform}</span>
+      {' · '}
+      <span className="font-mono tabular-nums">{device.app_version ?? '—'}</span>
+    </bdi>
+  );
+}
+
+/** What the test send's outbox row did: queued, then sent or failed with its reason (A-R1-8). */
+function TestResult({
+  row,
+  gaveUp,
+  device,
+}: {
+  row: NotificationRow;
+  gaveUp: boolean;
+  device: Pick<TestDeviceRow, 'platform' | 'app_version'> | null;
+}): ReactElement {
+  const failed = row.status === 'failed' || row.status === 'cancelled';
+  const lead = row.status === 'sent' ? copy.composer.testDelivered : failed ? copy.composer.testFailed : copy.composer.testQueued;
+  const reason = row.error === null ? null : (copy.reason[row.error] ?? null);
+  return (
+    <p
+      data-testid="test-result"
+      role="status"
+      aria-live="polite"
+      className={clsx('text-caption rounded-md px-3 py-2', failed ? 'bg-error-container text-error' : 'bg-bg text-text-secondary')}
+    >
+      {lead} <DeviceIsland device={device} />
+      {failed && row.error !== null ? (
+        <>
+          {' · '}
+          {reason ?? (
+            <bdi dir="ltr" className="font-mono">
+              {row.error}
+            </bdi>
+          )}
+        </>
+      ) : null}
+      {gaveUp ? ` · ${copy.composer.testUnconfirmed}` : null}
+    </p>
+  );
 }
 
 function ifMatchHeader(envelope: unknown): Record<string, string> {

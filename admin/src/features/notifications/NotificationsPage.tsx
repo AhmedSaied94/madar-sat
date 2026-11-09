@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { cancelNotification } from '../../api/generated/admin';
 import type { NotificationRow } from '../../api/generated/admin.schemas';
-import { ApiError, etagOf, INVALID_RESPONSE } from '../../api/http';
+import { ApiError, INVALID_RESPONSE } from '../../api/http';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { ConflictDialog } from '../../components/ConfirmDialog/ConflictDialog';
@@ -99,7 +99,6 @@ export function NotificationsPage(): ReactElement {
   });
   const rows = outbox.data?.data ?? [];
   const nextCursor = (outbox.data?.meta as { next_cursor?: string | null } | undefined)?.next_cursor ?? null;
-  const etag = etagOf(outbox.data);
 
   function setFilter(key: 'type' | 'status', value: string): void {
     const next = new URLSearchParams(params);
@@ -115,7 +114,8 @@ export function NotificationsPage(): ReactElement {
     const row = cancelling;
     setBusy(true);
     try {
-      await cancelNotification(row.id, etag ? { headers: { 'If-Match': etag } } : {});
+      // The row's own version: the list's dataset ETag never matches it (A-R1-1).
+      await cancelNotification(row.id, { headers: { 'If-Match': row.etag } });
       toast.show({ kind: 'success', title: copy.cancelDone });
       setCancelling(null);
       refresh();

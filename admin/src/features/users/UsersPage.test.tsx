@@ -22,10 +22,15 @@ interface Row {
   locked_for_s: number | null;
   last_login_at: string | null;
   must_change_password: boolean;
+  etag: string;
 }
+
+/** A row's own version, as the server's `lock_and_check` computes it (a quoted 32-hex hash). */
+const version = (id: number, n = 1): string => `"${String(id).padStart(4, '0')}${String(n).padStart(28, '0')}"`;
 
 const admin: Row = {
   id: 1,
+  etag: version(1),
   email: 'mohamed@example.com',
   name: 'محمد علي',
   role: 'admin',
@@ -37,6 +42,7 @@ const admin: Row = {
 
 const active: Row = {
   id: 4,
+  etag: version(4),
   email: 'sara@example.com',
   name: 'سارة حسن',
   role: 'editor',
@@ -48,6 +54,7 @@ const active: Row = {
 
 const locked: Row = {
   id: 5,
+  etag: version(5),
   email: 'youssef@example.com',
   name: 'يوسف عمر',
   role: 'editor',
@@ -59,6 +66,7 @@ const locked: Row = {
 
 const disabled: Row = {
   id: 6,
+  etag: version(6),
   email: 'nour@example.com',
   name: 'نور كمال',
   role: 'editor',
@@ -80,7 +88,13 @@ function serve(
 ): Served {
   const served: Served = { patches: [], creates: [], resets: [] };
   const rows = options.rows ?? [admin, active, locked, disabled];
-  const etag = options.etag ?? '"users-1"';
+  // The list's dataset ETag: the server never matches it against a row (A-R1-1).
+  const etag = options.etag ?? 'W/"users-1"';
+  const current = new Map(rows.map((row) => [String(row.id), row.etag]));
+  const stale = (id: string, ifMatch: string | null) =>
+    ifMatch !== current.get(id)
+      ? HttpResponse.json(refusal('edit_conflict', { current_etag: current.get(id) ?? null }), { status: 409 })
+      : null;
 
   server.use(
     http.get('*/admin/api/users', () => HttpResponse.json(envelope(rows), { headers: { ETag: etag } })),
@@ -88,20 +102,35 @@ function serve(
       const body = (await request.json()) as Record<string, unknown>;
       served.creates.push(body);
       return HttpResponse.json(
-        envelope({ user: { ...active, id: 7, email: body['email'], name: body['name'], role: body['role'] }, temporary_password: options.createTemporary ?? 'k7Q-rv2m-X9tp' }),
+        envelope({ user: { ...active, id: 7, etag: version(7), email: body['email'], name: body['name'], role: body['role'] }, temporary_password: options.createTemporary ?? 'k7Q-rv2m-X9tp' }),
         { status: 201, headers: { ETag: '"users-2"', 'Cache-Control': 'no-store' } },
       );
     }),
     http.patch('*/admin/api/users/:id', async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
-      served.patches.push({ url: String(params['id']), body, ifMatch: request.headers.get('If-Match') });
-      return HttpResponse.json(envelope({ ...active, ...body }), { headers: { ETag: '"users-2"' } });
+      const id = String(params['id']);
+      const ifMatch = request.headers.get('If-Match');
+      served.patches.push({ url: id, body, ifMatch });
+      const refused = stale(id, ifMatch);
+      if (refused) return refused;
+      const next = version(Number(id), 2);
+      current.set(id, next);
+      const row = rows.find((candidate) => String(candidate.id) === id) ?? active;
+      return HttpResponse.json(envelope({ ...row, ...body, etag: next }), { headers: { ETag: next } });
     }),
     http.post('*/admin/api/users/:id/reset-password', ({ request, params }) => {
-      served.resets.push({ url: String(params['id']), ifMatch: request.headers.get('If-Match') });
+      const id = String(params['id']);
+      const ifMatch = request.headers.get('If-Match');
+      served.resets.push({ url: id, ifMatch });
+      const refused = stale(id, ifMatch);
+      if (refused) return refused;
+      // A reset sets the must-change flag, so the row's version moves.
+      const next = version(Number(id), 3);
+      current.set(id, next);
+      const row = rows.find((candidate) => String(candidate.id) === id) ?? active;
       return HttpResponse.json(
-        envelope({ user: active, temporary_password: options.resetTemporary ?? 'r2T-bv8n-Q1wm' }),
-        { headers: { ETag: '"users-2"', 'Cache-Control': 'no-store' } },
+        envelope({ user: { ...row, must_change_password: true, etag: next }, temporary_password: options.resetTemporary ?? 'r2T-bv8n-Q1wm' }),
+        { headers: { ETag: next, 'Cache-Control': 'no-store' } },
       );
     }),
   );
@@ -184,7 +213,7 @@ describe('A16 the accounts', () => {
     expect(cached).not.toContain('k7Q-rv2m-X9tp');
   });
 
-  it('changes a role, echoing the version it read', async () => {
+  it('changes a role, echoing the row’s own version, not the list’s ETag (A-R1-1)', async () => {
     const served = serve();
     renderUsers();
 
@@ -197,7 +226,80 @@ describe('A16 the accounts', () => {
     await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
 
     await waitFor(() => expect(served.patches).toHaveLength(1));
-    expect(served.patches[0]).toMatchObject({ url: '4', body: { role: 'admin' }, ifMatch: '"users-1"' });
+    expect(served.patches[0]).toMatchObject({ url: '4', body: { role: 'admin' }, ifMatch: version(4) });
+    expect(await screen.findByText('تم الحفظ')).toBeInTheDocument();
+  });
+
+  it('saves the account after a reset with the version the reset returned (A-R1-1)', async () => {
+    const served = serve();
+    renderUsers();
+
+    await screen.findByText('يوسف عمر');
+    await userEvent.click(within(await rowOf('يوسف عمر')).getByRole('button', { name: 'خيارات' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'إعادة تعيين كلمة المرور' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'إعادة تعيين' }));
+    await screen.findByText('r2T-bv8n-Q1wm');
+
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'حفظ' }));
+    await waitFor(() => expect(served.patches).toHaveLength(1));
+    expect(served.patches[0]?.ifMatch).toBe(version(5, 3));
+    expect(screen.queryByText(/حُفظت نسخة أحدث من/)).not.toBeInTheDocument();
+  });
+
+  it('still sends a row’s version after the list refetches (A-R1-1)', async () => {
+    const served = serve();
+    const { queryClient } = renderUsers();
+
+    await screen.findByText('سارة حسن');
+    await queryClient.refetchQueries();
+    await userEvent.click(within(await rowOf('سارة حسن')).getByRole('button', { name: 'خيارات' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'تعديل' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'حفظ' }));
+
+    await waitFor(() => expect(served.patches).toHaveLength(1));
+    expect(served.patches[0]?.ifMatch).toBe(version(4));
+  });
+
+  it('opens each account’s own values when edit moves from one account to another (A-R1-2)', async () => {
+    const served = serve();
+    renderUsers();
+
+    await screen.findByText('سارة حسن');
+    await userEvent.click(within(await rowOf('سارة حسن')).getByRole('button', { name: 'خيارات' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'تعديل' }));
+    let drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByLabelText('الاسم')).toHaveValue('سارة حسن');
+    // Touch A's form without saving: the edit must not travel to B.
+    await userEvent.click(within(drawer).getByRole('radio', { name: 'مدير' }));
+
+    await userEvent.click(within(await rowOf('يوسف عمر')).getByRole('button', { name: 'خيارات' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'تعديل' }));
+    drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByLabelText('الاسم')).toHaveValue('يوسف عمر');
+    expect(within(drawer).getByLabelText('البريد الإلكتروني')).toHaveValue('youssef@example.com');
+    expect(within(drawer).getByRole('radio', { name: 'محرر' })).toBeChecked();
+
+    await userEvent.click(within(drawer).getByRole('button', { name: 'حفظ' }));
+    await waitFor(() => expect(served.patches).toHaveLength(1));
+    expect(served.patches[0]).toMatchObject({ url: '5', body: { name: 'يوسف عمر', role: 'editor' } });
+  });
+
+  it('does not carry a reset’s temporary password into the next account’s drawer (A-R1-2)', async () => {
+    serve();
+    renderUsers();
+
+    await screen.findByText('يوسف عمر');
+    await userEvent.click(within(await rowOf('يوسف عمر')).getByRole('button', { name: 'خيارات' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'إعادة تعيين كلمة المرور' }));
+    const confirm = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'إعادة تعيين' }));
+    expect(await screen.findByText('r2T-bv8n-Q1wm')).toBeInTheDocument();
+
+    await userEvent.click(within(await rowOf('سارة حسن')).getByRole('button', { name: 'خيارات' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'تعديل' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByLabelText('الاسم')).toHaveValue('سارة حسن');
+    expect(screen.queryByText('r2T-bv8n-Q1wm')).not.toBeInTheDocument();
   });
 
   it('resets a password through ConfirmDialog and shows the new one once', async () => {
@@ -213,7 +315,7 @@ describe('A16 the accounts', () => {
     await userEvent.click(within(confirm).getByRole('button', { name: 'إعادة تعيين' }));
 
     await waitFor(() => expect(served.resets).toHaveLength(1));
-    expect(served.resets[0]).toEqual({ url: '5', ifMatch: '"users-1"' });
+    expect(served.resets[0]).toEqual({ url: '5', ifMatch: version(5) });
     expect(await screen.findByText('r2T-bv8n-Q1wm')).toBeInTheDocument();
   });
 
@@ -227,13 +329,13 @@ describe('A16 the accounts', () => {
     const confirm = await screen.findByRole('alertdialog');
     await userEvent.click(within(confirm).getByRole('button', { name: 'تعطيل' }));
 
-    await waitFor(() => expect(served.patches.at(-1)).toMatchObject({ body: { is_active: false } }));
+    await waitFor(() => expect(served.patches.at(-1)).toMatchObject({ url: '5', body: { is_active: false }, ifMatch: version(5) }));
 
     await screen.findByText('نور كمال');
     await userEvent.click(within(await rowOf('نور كمال')).getByRole('button', { name: 'خيارات' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'إعادة تنشيط' }));
 
-    await waitFor(() => expect(served.patches.at(-1)).toMatchObject({ url: '6', body: { is_active: true } }));
+    await waitFor(() => expect(served.patches.at(-1)).toMatchObject({ url: '6', body: { is_active: true }, ifMatch: version(6) }));
   });
 
   it('says cannot_change_self in the drawer for the signed-in account', async () => {
