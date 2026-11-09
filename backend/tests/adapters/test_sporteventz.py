@@ -239,7 +239,9 @@ def _renamed(key: str, to: str, sport: str = "basketball") -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode()
 
 
-@pytest.mark.parametrize(("key", "reason"), [("Team1", "missing_teams"), ("Begin", "unreadable_begin")])
+@pytest.mark.parametrize(
+    ("key", "reason"), [("Team1", "missing_teams"), ("Begin", "unreadable_begin"), ("Sport", "missing_sport")]
+)
 def test_a_saved_answer_with_a_field_renamed_is_a_changed_page(key: str, reason: str) -> None:
     """FR-037: records that no longer read are a changed page at once, not a quiet week."""
     adapter = _adapter()
@@ -250,6 +252,27 @@ def test_a_saved_answer_with_a_field_renamed_is_a_changed_page(key: str, reason:
     # The refused records are still counted, so the failed run can say why.
     assert len(adapter.skipped) == len(_saved_records())
     assert {entry["reason"] for entry in adapter.skipped} == {reason}
+
+
+def test_a_saved_answer_with_sport_reshaped_is_a_changed_page() -> None:
+    """FR-037: a ``Sport`` that no longer carries ``#text`` is a moved field, not another sport."""
+    payload = json.loads((FIXTURES / "basketball.json").read_bytes())
+    for record in payload["Records"]:
+        record["Sport"] = {"name": "Basketball"}
+    adapter = _adapter()
+
+    with pytest.raises(LayoutChanged, match="missing_sport"):
+        adapter.parse(_data_page(json.dumps(payload, ensure_ascii=False).encode(), url=_data_url()))
+
+    assert {entry["reason"] for entry in adapter.skipped} == {"missing_sport"}
+
+
+def test_one_record_without_a_sport_among_good_ones_is_skipped_as_missing_sport() -> None:
+    adapter = _adapter()
+    page = _data_page(_payload(_record(**{"@id": "1"}), _record(**{"@id": "2", "Sport": None})), url=_data_url())
+
+    assert [item.external_id for item in adapter.parse(page)] == ["1"]
+    assert adapter.skipped == [{"ref": "2", "reason": "missing_sport"}]
 
 
 def test_records_that_are_not_objects_are_a_changed_page() -> None:

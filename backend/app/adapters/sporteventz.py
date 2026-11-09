@@ -209,6 +209,10 @@ class SporteventzAdapter:
 
     def _fixture(self, record: dict[str, object]) -> ParsedFixture | None:
         sport_text = _text(record.get("Sport"))
+        if not _squash(sport_text):
+            # No sport text means the field moved or changed shape, not another sport (B2-R2-1).
+            self._skip(_ref(record), "missing_sport")
+            return None
         sport = SPORT_MAP.get(_squash(sport_text))
         if sport is None:
             reason = "football" if _squash(sport_text) in FOOTBALL_SPORTS else "other_sport"

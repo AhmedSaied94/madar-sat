@@ -287,6 +287,12 @@ These tasks come from [reviews/b2-round-1.md](reviews/b2-round-1.md).
 
 - [X] B2-R1-1 [US4] Make a changed sporteventz record shape alarm at once and count every skip, in `backend/app/adapters/sporteventz.py`, `backend/app/adapters/tasks.py` and `backend/app/adapters/health.py`: today a record whose `Sport`, `Begin`, `Team1` or `Team2` no longer reads is only appended to `adapter.skipped`, which nothing reads (the fetch task keeps `items` only and `ingest` builds a fresh adapter), so a renamed field gives a `succeeded` run with 0 items that the 7-day zero-items grace keeps silent. After the fix, skip counts by reason reach the run's log and `run.json`, and a data answer with records but none usable, other than other-sport skips, raises `LayoutChanged`. Write the failing tests first in `backend/tests/adapters/test_sporteventz.py` (a saved page with `Team1` renamed fails the run) and `test_health.py` (a `failed` sporteventz run inside the grace still counts toward the breaker). (HIGH, per FR-037, FR-030)
 
+### Review fixes (round 2)
+
+These tasks come from [reviews/b2-round-2.md](reviews/b2-round-2.md).
+
+- [X] B2-R2-1 [US4] Make a renamed or reshaped `Sport` field fail the run at once in `backend/app/adapters/sporteventz.py` (`_fixture`, :211-216, and `EXPECTED_SKIPS`, :67-69): today an empty `Sport` text (the key renamed, or its object no longer carrying `#text`) is skipped as `other_sport`, an expected skip, so the saved basketball answer with `Sport` renamed parses to 0 items, skips `{"other_sport": 79}` and no `LayoutChanged`, and the 7-day quiet grace keeps it silent. After the fix, an empty or unreadable `Sport` is its own unexpected reason (for example `missing_sport`) and raises `LayoutChanged` when no record reads; consider also failing a sport page whose records are all of other sports (each saved page holds only its own sport). Write the failing tests first in `backend/tests/adapters/test_sporteventz.py`: add `Sport` to the parametrized rename test, plus a case with `Sport` reshaped to `{"name": "Basketball"}`. List the new reason in `docs/runbooks/imports-and-sources.md` and `docs/runbooks/source-alerts.md`. (HIGH, per FR-037, B2-R1-1)
+
 ---
 
 ## Lane A
