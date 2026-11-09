@@ -11,6 +11,7 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../core/theme/madar_tokens.dart';
 import '../../../design/components/banner.dart';
+import '../../../design/components/button.dart';
 import '../../../design/components/form_controls.dart';
 import '../../../design/components/list_row.dart';
 import '../../../l10n/app_localizations.dart';
@@ -243,7 +244,16 @@ class _PermissionOff extends StatelessWidget {
               ),
             ),
             const SizedBox(width: MadarSpace.s2),
-            TextButton(onPressed: onEnable, child: Text(l.s15DeniedAction)),
+            // The board's filled `xs` button: `postponed` with `bg` text, which passes WCAG AA
+            // in both themes where a bare `TextButton`'s volt label doesn't (review M-R1-1).
+            MadarButton(
+              label: l.s15DeniedAction,
+              onPressed: onEnable,
+              variant: MadarButtonVariant.secondary,
+              size: MadarButtonSize.extraSmall,
+              background: colors.postponed,
+              foreground: colors.bg,
+            ),
           ],
         ),
       ),

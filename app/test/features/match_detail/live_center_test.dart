@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/config/remote_config.dart';
+import 'package:madar_sat/core/format/bidi.dart';
 import 'package:madar_sat/core/network/generated/export.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
 import 'package:madar_sat/core/theme/madar_tokens.dart';
@@ -147,11 +148,18 @@ void main() {
 
     testWidgets('a goal row carries the running score only when it adds up', (tester) async {
       await pump(tester, _live());
-      expect(find.text('هدف · 1 – 0'), findsOneWidget);
+      final goalRow = find.byWidgetPredicate(
+        (w) => w is EventTimelineItem && w.event.type == MatchEventType.goal,
+      );
+      expect(find.descendant(of: goalRow, matching: find.byType(ScoreParts)), findsOneWidget);
+      final score = tester.widget<ScoreParts>(
+        find.descendant(of: goalRow, matching: find.byType(ScoreParts)),
+      );
+      expect((score.home, score.away), ('1', '0'));
 
       await pump(tester, _live(score: const Score(home: 2, away: 0, homePen: null, awayPen: null)));
       expect(find.text('هدف'), findsOneWidget);
-      expect(find.textContaining('هدف ·'), findsNothing);
+      expect(find.byType(ScoreParts), findsNothing);
     });
 
     testWidgets('no player shows type and minute only', (tester) async {
@@ -207,7 +215,8 @@ void main() {
                 minute: '90+12',
                 player: null,
               ),
-              teamName: 'الأهلي',
+              homeName: 'الأهلي',
+              awayName: 'الزمالك',
             ),
           ),
         ),
@@ -218,12 +227,28 @@ void main() {
       expect(minute.size.width, greaterThanOrEqualTo(minute.getMaxIntrinsicWidth(double.infinity)));
     });
 
+    testWidgets('no text in a goal row holds a raw score run (constitution III)', (tester) async {
+      await pump(tester, _live());
+      final goalRow = find.byWidgetPredicate(
+        (w) => w is EventTimelineItem && w.event.type == MatchEventType.goal,
+      );
+      final rawScore = RegExp(r'\d\s*[-–—]\s*\d');
+      final texts = tester
+          .widgetList<Text>(find.descendant(of: goalRow, matching: find.byType(Text)))
+          .map((t) => t.data ?? t.textSpan?.toPlainText() ?? '')
+          .toList();
+      expect(texts, isNotEmpty);
+      for (final text in texts) {
+        expect(rawScore.hasMatch(text), isFalse, reason: '«$text» is a raw score inside RTL text');
+      }
+    });
+
     testWidgets('each row has one Arabic screen-reader label', (tester) async {
       final handle = tester.ensureSemantics();
       await pump(tester, _live());
 
       expect(
-        find.bySemanticsLabel('هدف · 1 – 0، محمد صلاح، الأهلي، الدقيقة 23'),
+        find.bySemanticsLabel('هدف، النتيجة الأهلي 1 والزمالك 0، محمد صلاح، الأهلي، الدقيقة 23'),
         findsOneWidget,
       );
       expect(
@@ -393,7 +418,7 @@ void main() {
         lessThan(tester.getTopLeft(find.text('مويسيس كايسيدو')).dy),
       );
       expect(find.text('هدف'), findsOneWidget);
-      expect(find.textContaining('هدف ·'), findsNothing);
+      expect(find.byType(ScoreParts), findsNothing);
     });
   });
 }

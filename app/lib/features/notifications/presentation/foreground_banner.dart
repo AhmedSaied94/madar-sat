@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/platform/push_service.dart';
 import '../../../core/theme/madar_tokens.dart';
+import '../../../design/components/button.dart';
 import '../../../l10n/app_localizations.dart';
 import '../data/push_routes.dart';
 import 'push_route_listener.dart';
@@ -123,7 +124,14 @@ class ForegroundBanner extends StatelessWidget {
                 ),
               ),
               if (push.route != null)
-                TextButton(onPressed: onView, child: Text(l.pushBannerView)),
+                // Ghost, so the label is `accent-text`: volt `accent` text on a light surface
+                // is about 1.1:1 (WCAG AA in both themes, review M-R1-1).
+                MadarButton(
+                  label: l.pushBannerView,
+                  onPressed: onView,
+                  variant: MadarButtonVariant.ghost,
+                  size: MadarButtonSize.extraSmall,
+                ),
               // No `tooltip`: this sits above the navigator, where there's no overlay for it.
               Semantics(
                 button: true,

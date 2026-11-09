@@ -1930,11 +1930,22 @@ abstract class AppLocalizations {
   /// **'هدف'**
   String get tlGoal;
 
-  /// No description provided for @tlGoalWithScore.
+  /// No description provided for @tlCaptionDivider.
   ///
   /// In ar, this message translates to:
-  /// **'هدف · {score}'**
-  String tlGoalWithScore(String score);
+  /// **'·'**
+  String get tlCaptionDivider;
+
+  /// No description provided for @tlRunningScoreSemantics.
+  ///
+  /// In ar, this message translates to:
+  /// **'النتيجة {home} {homeScore} و{away} {awayScore}'**
+  String tlRunningScoreSemantics(
+    String home,
+    String homeScore,
+    String away,
+    String awayScore,
+  );
 
   /// No description provided for @tlOwnGoal.
   ///

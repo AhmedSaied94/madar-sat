@@ -1099,8 +1099,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tlGoal => 'هدف';
 
   @override
-  String tlGoalWithScore(String score) {
-    return 'هدف · $score';
+  String get tlCaptionDivider => '·';
+
+  @override
+  String tlRunningScoreSemantics(
+    String home,
+    String homeScore,
+    String away,
+    String awayScore,
+  ) {
+    return 'النتيجة $home $homeScore و$away $awayScore';
   }
 
   @override
