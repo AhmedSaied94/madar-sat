@@ -429,6 +429,11 @@ export type AdminUserRowLockedForS = number | null;
 export interface AdminUserRow {
   email: string;
   /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
+  /**
    * @minimum 1
    * @maximum 9223372036854776000
    */
@@ -1944,6 +1949,11 @@ export interface NotificationRow {
   created_at: string;
   due_at: string;
   error: NotificationRowError;
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  etag: string;
   /**
    * @minimum 0
    * @maximum 2147483647

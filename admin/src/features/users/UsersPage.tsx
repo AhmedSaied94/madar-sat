@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react';
 
 import { createUser, patchUser, resetPassword } from '../../api/generated/admin';
 import type { AdminUserRow } from '../../api/generated/admin.schemas';
-import { ApiError, etagOf, INVALID_RESPONSE } from '../../api/http';
+import { ApiError, INVALID_RESPONSE } from '../../api/http';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { ConflictDialog } from '../../components/ConfirmDialog/ConflictDialog';
@@ -56,7 +56,6 @@ export function UsersPage(): ReactElement {
   if (session?.admin.role !== 'admin') return <NotPermitted />;
 
   const rows = list.data?.data ?? [];
-  const etag = etagOf(list.data);
   const me = session.admin.id;
 
   function failed(code: string, inline = false): void {
@@ -68,7 +67,8 @@ export function UsersPage(): ReactElement {
     setBusy(true);
     setFailure(null);
     try {
-      await patchUser(user.id, body, etag ? { headers: { 'If-Match': etag } } : {});
+      // Each row carries its own version; the list's dataset ETag never matches it (A-R1-1).
+      await patchUser(user.id, body, { headers: { 'If-Match': user.etag } });
       toast.show({ kind: 'success', title: common.saved });
       setPanel(null);
       setMenuFor(null);
@@ -89,8 +89,9 @@ export function UsersPage(): ReactElement {
     setBusy(true);
     setFailure(null);
     try {
-      const envelope = await resetPassword(user.id, etag ? { headers: { 'If-Match': etag } } : {});
-      setPanel({ kind: 'edit', user });
+      const envelope = await resetPassword(user.id, { headers: { 'If-Match': user.etag } });
+      // The reset moved the row's version (it set the must-change flag): the drawer saves with the new one.
+      setPanel({ kind: 'edit', user: envelope.data?.user ?? user });
       setTemporary(envelope.data?.temporary_password ?? null);
       refresh();
     } catch (error) {
@@ -217,6 +218,7 @@ export function UsersPage(): ReactElement {
                               role="menuitem"
                               onClick={() => {
                                 setTemporary(null);
+                                setFailure(null);
                                 setPanel({ kind: 'edit', user });
                                 setMenuFor(null);
                               }}
@@ -261,8 +263,8 @@ export function UsersPage(): ReactElement {
 
       {panel?.kind === 'create' ? (
         <UserDrawer
+          key="create"
           title={copy.newTitle}
-          etag={etag}
           onClose={() => {
             setTemporary(null);
             setPanel(null);
@@ -275,15 +277,18 @@ export function UsersPage(): ReactElement {
         />
       ) : null}
 
+      {/* Keyed per account: a drawer moved from one account to another starts from that account's own
+          values, never the last one's edits or temporary password (A-R1-2). */}
       {panel?.kind === 'edit' ? (
         <UserDrawer
+          key={`edit-${panel.user.id}`}
           title={copy.editTitle}
           user={panel.user}
           temporary={temporary}
-          etag={etag}
           isSelf={panel.user.id === me}
           onClose={() => {
             setTemporary(null);
+            setFailure(null);
             setPanel(null);
           }}
           onSave={(body) => void patch(panel.user, body)}
@@ -341,7 +346,6 @@ interface DrawerProps {
   title: string;
   user?: AdminUserRow;
   temporary?: string | null;
-  etag: string | null;
   isSelf?: boolean;
   failure?: string | null;
   onClose: () => void;
@@ -356,7 +360,6 @@ function UserDrawer({
   title,
   user,
   temporary = null,
-  etag,
   isSelf = false,
   failure,
   onClose,
@@ -509,8 +512,6 @@ function UserDrawer({
           </Button>
         )}
       </div>
-      {/* The ETag this drawer read is the version every save must echo (constitution VI). */}
-      <span hidden data-etag={etag ?? ''} />
     </aside>
   );
 }
