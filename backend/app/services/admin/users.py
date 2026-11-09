@@ -63,6 +63,7 @@ def to_row(user: AdminUser, locked_for_s: int | None) -> a.AdminUserRow:
         locked_for_s=locked_for_s,
         last_login_at=user.last_login_at,
         must_change_password=user.must_change_password,
+        etag=version(user),
     )
 
 
@@ -91,7 +92,10 @@ async def _email_taken(session: AsyncSession, email: str) -> bool:
 
 
 async def create(session: AsyncSession, admin: AuthedAdmin, body: a.UserCreate) -> tuple[AdminUser, str]:
-    """A new account with a temporary password; it starts active and unflagged."""
+    """A new account with a temporary password; it starts active and flagged (FR-025).
+
+    The flag sends the first sign-in to the change-password step, so the password the admin saw dies there.
+    """
     email = str(body.email).strip().lower()
     if await _email_taken(session, email):
         raise ApiError(409, "email_taken")
@@ -103,7 +107,7 @@ async def create(session: AsyncSession, admin: AuthedAdmin, body: a.UserCreate) 
         role=body.role.value,
         password_hash=hash_password(password),
         is_active=True,
-        must_change_password=False,
+        must_change_password=True,
     )
     session.add(user)
     try:

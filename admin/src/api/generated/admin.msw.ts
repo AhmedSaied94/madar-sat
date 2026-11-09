@@ -702,10 +702,10 @@ export const getUploadMediaAdminApiMediaPostResponseMock415 = (): ErrorEnvelope 
 
 export const getUploadMediaAdminApiMediaPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"media_invalid","message":"media invalid"},"meta":{},"success":false})
 
-export const getListNotificationsAdminApiNotificationsGetResponseMock = (): EnvelopeListNotificationRow => ({"data":[{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+export const getListNotificationsAdminApiNotificationsGetResponseMock = (): EnvelopeListNotificationRow => ({"data":[{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
 
-export const getListNotificationsAdminApiNotificationsGetResponseMock200 = (): EnvelopeListNotificationRow => ({"data":[{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+export const getListNotificationsAdminApiNotificationsGetResponseMock200 = (): EnvelopeListNotificationRow => ({"data":[{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
 
 
@@ -717,10 +717,10 @@ export const getListNotificationsAdminApiNotificationsGetResponseMock403 = (): E
 
 export const getListNotificationsAdminApiNotificationsGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
-export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock201 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock201 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -751,10 +751,10 @@ export const getGetReachAdminApiNotificationsReachGetResponseMock403 = (): Error
 
 export const getGetReachAdminApiNotificationsReachGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
-export const getSendTestAdminApiNotificationsTestPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getSendTestAdminApiNotificationsTestPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getSendTestAdminApiNotificationsTestPostResponseMock201 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getSendTestAdminApiNotificationsTestPostResponseMock201 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getSendTestAdminApiNotificationsTestPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -799,10 +799,10 @@ export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock422 =
 
 export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock200 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock200 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -1279,10 +1279,10 @@ export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock422 = ():
 
 export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getListUsersAdminApiUsersGetResponseMock = (): EnvelopeListAdminUserRow => ({"data":[{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListUsersAdminApiUsersGetResponseMock = (): EnvelopeListAdminUserRow => ({"data":[{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getListUsersAdminApiUsersGetResponseMock200 = (): EnvelopeListAdminUserRow => ({"data":[{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getListUsersAdminApiUsersGetResponseMock200 = (): EnvelopeListAdminUserRow => ({"data":[{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 
@@ -1291,10 +1291,10 @@ export const getListUsersAdminApiUsersGetResponseMock401 = (): ErrorEnvelope => 
 
 export const getListUsersAdminApiUsersGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
 
-export const getCreateUserAdminApiUsersPostResponseMock = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateUserAdminApiUsersPostResponseMock = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getCreateUserAdminApiUsersPostResponseMock201 = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getCreateUserAdminApiUsersPostResponseMock201 = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getCreateUserAdminApiUsersPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -1308,10 +1308,10 @@ export const getCreateUserAdminApiUsersPostResponseMock409 = (): ErrorEnvelope =
 
 export const getCreateUserAdminApiUsersPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
 
-export const getPatchUserAdminApiUsersUserIdPatchResponseMock = (): EnvelopeAdminUserRow => ({"data":{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock = (): EnvelopeAdminUserRow => ({"data":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getPatchUserAdminApiUsersUserIdPatchResponseMock200 = (): EnvelopeAdminUserRow => ({"data":{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock200 = (): EnvelopeAdminUserRow => ({"data":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getPatchUserAdminApiUsersUserIdPatchResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
@@ -1331,10 +1331,10 @@ export const getPatchUserAdminApiUsersUserIdPatchResponseMock422 = (): ErrorEnve
 
 export const getPatchUserAdminApiUsersUserIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
-export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
-export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock200 = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock200 = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
 
 export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})

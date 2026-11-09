@@ -1827,6 +1827,9 @@ export const listNotificationsQueryParams = zod.object({
   "limit": zod.number().min(1).max(listNotificationsQueryLimitMax).default(listNotificationsQueryLimitDefault)
 })
 
+export const listNotificationsResponseDataItemEtagMin = 3;
+export const listNotificationsResponseDataItemEtagMax = 80;
+
 export const listNotificationsResponseDataItemFailedMin = 0;
 export const listNotificationsResponseDataItemFailedMax = 2147483647;
 
@@ -1845,6 +1848,7 @@ export const listNotificationsResponse = zod.object({
   "created_at": zod.string().datetime({}),
   "due_at": zod.string().datetime({}),
   "error": zod.union([zod.string(),zod.null()]),
+  "etag": zod.string().min(listNotificationsResponseDataItemEtagMin).max(listNotificationsResponseDataItemEtagMax),
   "failed": zod.number().min(listNotificationsResponseDataItemFailedMin).max(listNotificationsResponseDataItemFailedMax),
   "id": zod.number().min(1).max(listNotificationsResponseDataItemIdMax),
   "is_correction": zod.boolean(),
@@ -2023,6 +2027,9 @@ export const cancelNotificationHeader = zod.object({
   "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
 })
 
+export const cancelNotificationResponseDataEtagMin = 3;
+export const cancelNotificationResponseDataEtagMax = 80;
+
 export const cancelNotificationResponseDataFailedMin = 0;
 export const cancelNotificationResponseDataFailedMax = 2147483647;
 
@@ -2041,6 +2048,7 @@ export const cancelNotificationResponse = zod.object({
   "created_at": zod.string().datetime({}),
   "due_at": zod.string().datetime({}),
   "error": zod.union([zod.string(),zod.null()]),
+  "etag": zod.string().min(cancelNotificationResponseDataEtagMin).max(cancelNotificationResponseDataEtagMax),
   "failed": zod.number().min(cancelNotificationResponseDataFailedMin).max(cancelNotificationResponseDataFailedMax),
   "id": zod.number().min(1).max(cancelNotificationResponseDataIdMax),
   "is_correction": zod.boolean(),
@@ -3343,6 +3351,9 @@ export const mapNameResponse = zod.object({
 /**
  * @summary A16: every staff account, with its lock time and temporary-password flag
  */
+export const listUsersResponseDataItemEtagMin = 3;
+export const listUsersResponseDataItemEtagMax = 80;
+
 export const listUsersResponseDataItemIdMax = 9223372036854776000;
 
 export const listUsersResponseDataItemLockedForSMinOne = 0;
@@ -3353,6 +3364,7 @@ export const listUsersResponseDataItemLockedForSMaxOne = 2147483647;
 export const listUsersResponse = zod.object({
   "data": zod.union([zod.array(zod.object({
   "email": zod.string().email(),
+  "etag": zod.string().min(listUsersResponseDataItemEtagMin).max(listUsersResponseDataItemEtagMax),
   "id": zod.number().min(1).max(listUsersResponseDataItemIdMax),
   "is_active": zod.boolean(),
   "last_login_at": zod.union([zod.string().datetime({}),zod.null()]),
@@ -3371,7 +3383,7 @@ export const listUsersResponse = zod.object({
 
 
 /**
- * @summary A16: create an account; it gets a temporary password and can sign in at once
+ * @summary A16: create an account; it gets a temporary password it must change at the first sign-in
  */
 export const createUserBodyEmailMax = 254;
 
@@ -3411,6 +3423,9 @@ export const patchUserBody = zod.object({
   "role": zod.union([zod.enum(['editor', 'admin']),zod.null()]).optional()
 })
 
+export const patchUserResponseDataEtagMin = 3;
+export const patchUserResponseDataEtagMax = 80;
+
 export const patchUserResponseDataIdMax = 9223372036854776000;
 
 export const patchUserResponseDataLockedForSMinOne = 0;
@@ -3421,6 +3436,7 @@ export const patchUserResponseDataLockedForSMaxOne = 2147483647;
 export const patchUserResponse = zod.object({
   "data": zod.union([zod.object({
   "email": zod.string().email(),
+  "etag": zod.string().min(patchUserResponseDataEtagMin).max(patchUserResponseDataEtagMax),
   "id": zod.number().min(1).max(patchUserResponseDataIdMax),
   "is_active": zod.boolean(),
   "last_login_at": zod.union([zod.string().datetime({}),zod.null()]),
@@ -3453,6 +3469,9 @@ export const resetPasswordHeader = zod.object({
   "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
 })
 
+export const resetPasswordResponseDataUserEtagMin = 3;
+export const resetPasswordResponseDataUserEtagMax = 80;
+
 export const resetPasswordResponseDataUserIdMax = 9223372036854776000;
 
 export const resetPasswordResponseDataUserLockedForSMinOne = 0;
@@ -3465,6 +3484,7 @@ export const resetPasswordResponse = zod.object({
   "temporary_password": zod.string(),
   "user": zod.object({
   "email": zod.string().email(),
+  "etag": zod.string().min(resetPasswordResponseDataUserEtagMin).max(resetPasswordResponseDataUserEtagMax),
   "id": zod.number().min(1).max(resetPasswordResponseDataUserIdMax),
   "is_active": zod.boolean(),
   "last_login_at": zod.union([zod.string().datetime({}),zod.null()]),

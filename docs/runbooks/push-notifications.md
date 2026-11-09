@@ -120,13 +120,37 @@ goes late.
 are cancelled with `error = type_off` and nothing is sent. An unknown name logs an error and is
 ignored. `kickoff_reminder` can be listed too.
 
+The key may be missing from `.env` (it is not set before the first match night), so the block
+replaces the line when it is there and appends it when it isn't. Only a recreate makes the container
+read `.env` again (`restart` keeps the old environment), and the last line fails loudly unless
+`worker-notify` itself now reports the list.
+
 ```bash
 ssh madar-vps2
-cd /srv/madar
-sudo sed -i 's/^PUSH_TYPES_OFF=.*/PUSH_TYPES_OFF=goal,match_started/' .env || \
-  echo 'PUSH_TYPES_OFF=goal,match_started' | sudo tee -a .env
-dc up -d worker-notify          # restart does not re-read .env
-dc exec worker-notify printenv PUSH_TYPES_OFF
+sudo -iu deploy                 # the rest runs in the deploy shell: /srv/madar/.env is mode 600, owner deploy
+cd /srv/madar/infra
+export IMAGE_TAG=$(cat /srv/madar/current_tag 2>/dev/null || echo none)
+dc() { docker compose --env-file /srv/madar/.env -f compose/vps2.yml "$@"; }
+
+OFF=goal,match_started          # the types to stop, comma-separated, no spaces
+if grep -q '^PUSH_TYPES_OFF=' /srv/madar/.env; then
+  sed -i "s/^PUSH_TYPES_OFF=.*/PUSH_TYPES_OFF=$OFF/" /srv/madar/.env
+else
+  printf 'PUSH_TYPES_OFF=%s\n' "$OFF" >> /srv/madar/.env
+fi
+grep '^PUSH_TYPES_OFF=' /srv/madar/.env                 # exactly one line, with the list
+dc up -d --no-deps --force-recreate worker-notify      # re-reads .env; `restart` would not
+got=$(dc exec -T worker-notify printenv PUSH_TYPES_OFF)
+[ -n "$got" ] && [ "$got" = "$OFF" ] && echo "OFF: $got" || { echo "NOT APPLIED: worker-notify has '$got'" >&2; false; }
+```
+
+To turn every type back on, empty the value in the same shell and check that it is empty:
+
+```bash
+sed -i 's/^PUSH_TYPES_OFF=.*/PUSH_TYPES_OFF=/' /srv/madar/.env
+dc up -d --no-deps --force-recreate worker-notify
+got=$(dc exec -T worker-notify printenv PUSH_TYPES_OFF)
+[ -z "$got" ] && echo "every type on" || { echo "STILL OFF: $got" >&2; false; }
 ```
 
 History still happens while the switch is on: a frequency hold that ends writes its

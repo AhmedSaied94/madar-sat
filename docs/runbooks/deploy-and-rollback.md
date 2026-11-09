@@ -143,9 +143,9 @@ the off switch to hand:
 2. A16 and A17 (accounts, audit) can follow at once: they are admin-app reads and writes.
 3. The push PR last. **Merging it starts every automatic type for every follower, PWA users included**
    (FR-021), so nothing is set in `.env` first: `PUSH_TYPES_OFF` stays unset until the owner is watching
-   the first pushes. To stop everything after a problem,
-   `echo 'PUSH_TYPES_OFF=goal,match_started,kickoff_reminder,channels_updated,frequency_changed,announcement' >> .env`
-   on VPS-2 and `dc up -d worker-notify` (under a minute, [push-notifications.md](push-notifications.md#the-off-switch-under-a-minute)).
+   the first pushes. To stop everything after a problem, run [the off switch](push-notifications.md#the-off-switch-under-a-minute)
+   on VPS-2 with `OFF=goal,match_started,kickoff_reminder,channels_updated,frequency_changed,announcement`
+   (under a minute; it appends the key when `.env` doesn't have it yet, and recreates `worker-notify`).
 4. The new app build follows as soon as Lane M's screens are in it.
 
 **During a rollback to the release before D6**, a new build's `PUT /v1/devices/me` can carry

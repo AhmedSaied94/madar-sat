@@ -252,6 +252,7 @@ async def view(
         due_at=row.due_at,
         sent_at=row.sent_at,
         created_at=row.created_at,
+        etag=row_version(row),
     )
 
 

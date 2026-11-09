@@ -5593,7 +5593,7 @@ export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TErr
 
 
 /**
- * @summary A16: create an account; it gets a temporary password and can sign in at once
+ * @summary A16: create an account; it gets a temporary password it must change at the first sign-in
  */
 export const createUser = (
     userCreate: UserCreate,
@@ -5641,7 +5641,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateUserMutationError = ErrorType<ErrorEnvelope>
 
     /**
- * @summary A16: create an account; it gets a temporary password and can sign in at once
+ * @summary A16: create an account; it gets a temporary password it must change at the first sign-in
  */
 export const useCreateUser = <TError = ErrorType<ErrorEnvelope>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError,{data: UserCreate}, TContext>, request?: SecondParameter<typeof adminHttp>}

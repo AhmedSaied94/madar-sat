@@ -142,40 +142,68 @@ def test_the_run_stops_at_its_time_limit_and_queues_itself(sync_session, frozen_
 
 
 def _followers(session, bag) -> dict[str, Device]:
-    by_match = support.new_device(session, token="m", push_token="push-m")
-    support.follow(session, by_match, match=bag.match.id)
-    by_team = support.new_device(session, token="t", push_token="push-t")
-    support.follow(session, by_team, team=bag.home.id)
-    by_competition = support.new_device(session, token="c", push_token="push-c")
-    support.follow(session, by_competition, competition=bag.competition.id)
+    """One device per kind of follow, plus one that follows nothing."""
     from app.db.models import DeviceFollow
 
-    by_channel = support.new_device(session, token="ch", push_token="push-bag")
+    by_match = support.new_device(session, token="m", push_token="push-m")
+    support.follow(session, by_match, match=bag.match.id)
+    by_home = support.new_device(session, token="t", push_token="push-t")
+    support.follow(session, by_home, team=bag.home.id)
+    by_away = support.new_device(session, token="a", push_token="push-a")
+    support.follow(session, by_away, team=bag.away.id)
+    by_competition = support.new_device(session, token="c", push_token="push-c")
+    support.follow(session, by_competition, competition=bag.competition.id)
+    by_channel = support.new_device(session, token="ch", push_token="push-ch")
     session.add(DeviceFollow(device_id=by_channel.id, channel_id=bag.channels[0].id))
     session.flush()
     unrelated = support.new_device(session, token="u", push_token="push-u")  # follows nothing
     return {
         "match": by_match,
-        "team": by_team,
+        "home": by_home,
+        "away": by_away,
         "competition": by_competition,
         "channel": by_channel,
         "unrelated": unrelated,
     }
 
 
-def test_each_audience_kind_reaches_its_own_followers(sync_session, frozen_now):
+def _dispatch_one(session, now, row: NotificationOutbox) -> set[str]:
+    """Dispatch with only ``row`` due, so the tokens sent are that row's audience and nothing else's."""
+    sender = FakePushSender()
+    dispatch_due(session, sender, now)
+    session.refresh(row)
+    assert row.status == "sent", (row.type, row.audience, row.status, row.error)
+    tokens = sender.tokens_sent
+    assert len(tokens) == len(set(tokens)), "a device was sent the same row twice"
+    return set(tokens)
+
+
+def _owners(followers: dict[str, Device], tokens: set[str]) -> set[str]:
+    by_token = {device.push_token: name for name, device in followers.items()}
+    return {by_token[token] for token in tokens}
+
+
+def test_each_audience_kind_reaches_exactly_its_own_followers(sync_session, frozen_now):
+    """B1-R1-6 (FR-017, SC-004): one row per dispatch, and the exact device set per kind."""
     bag = _bag(sync_session, frozen_now)
     followers = _followers(sync_session, bag)
 
     cases = {
-        "match_core": ({"kind": "match_core", "match_id": bag.match.id}, {"match", "team"}),
+        # The match's core: the match and both teams, never the competition or a channel.
+        "match_core": ({"kind": "match_core", "match_id": bag.match.id}, {"match", "home", "away"}),
+        # A first channel goes only to the match's own followers.
         "match_only": ({"kind": "match_only", "match_id": bag.match.id}, {"match"}),
+        # Channel changes and reminders reach the competition too.
+        "match_followers": (
+            {"kind": "match_followers", "match_id": bag.match.id},
+            {"match", "home", "away", "competition"},
+        ),
         "channel": ({"kind": "channel", "channel_id": bag.channels[0].id}, {"channel"}),
-        "team": ({"kind": "team", "team_id": bag.home.id}, {"match", "team"}),
-        "competition": ({"kind": "competition", "competition_id": bag.competition.id}, {"match", "competition"}),
+        "team": ({"kind": "team", "team_id": bag.home.id}, {"home"}),
+        "competition": ({"kind": "competition", "competition_id": bag.competition.id}, {"competition"}),
     }
-    for kind, (audience, _owners) in cases.items():
-        _row(
+    for kind, (audience, owners) in cases.items():
+        row = _row(
             sync_session,
             frozen_now,
             row_type="announcement",
@@ -183,14 +211,67 @@ def test_each_audience_kind_reaches_its_own_followers(sync_session, frozen_now):
             payload={"title": kind, "body": "نص", "route": "/"},
             audience=audience,
         )
+        assert _owners(followers, _dispatch_one(sync_session, frozen_now, row)) == owners, kind
 
-    sender = FakePushSender()
-    dispatch_due(sync_session, sender, frozen_now)
 
-    sent = set(sender.tokens_sent)
-    for kind, (_audience, owners) in cases.items():
-        assert {followers[owner].push_token for owner in owners} <= sent, kind
-    assert followers["unrelated"].push_token not in sent
+def test_a_goal_reaches_the_match_and_its_teams_only(sync_session, frozen_now):
+    """A goal is ``match_core``: a competition follower or a channel follower gets no goal (B1-R1-6)."""
+    bag = _bag(sync_session, frozen_now, status="live", status_source="feed", kickoff_in=timedelta(minutes=-10))
+    followers = _followers(sync_session, bag)
+    row = _row(
+        sync_session,
+        frozen_now,
+        row_type="goal",
+        match_id=bag.match.id,
+        payload={"side": "home", "home": 1, "away": 0, "generation": 0},
+    )
+
+    assert _owners(followers, _dispatch_one(sync_session, frozen_now, row)) == {"match", "home", "away"}
+
+
+def test_the_master_switch_silences_follow_based_kinds(sync_session, frozen_now):
+    """US1 scenario 15: ``prefs.enabled = false`` stops a goal and a reminder, whatever the type's own switch."""
+    live = _bag(sync_session, frozen_now, status="live", status_source="feed", kickoff_in=timedelta(minutes=-10))
+    later = _bag(sync_session, frozen_now, kickoff_in=timedelta(minutes=20))
+    off_prefs = {"enabled": False, "types": {"goal": {"on": True}, "kickoff_reminder": {"on": True}}}
+    on = support.new_device(sync_session, token="on", push_token="push-on")
+    off = support.new_device(sync_session, token="off", push_token="push-off", prefs=off_prefs)
+    for device in (on, off):
+        support.follow(sync_session, device, match=live.match.id)
+        support.follow(sync_session, device, match=later.match.id)
+
+    goal = _row(
+        sync_session,
+        frozen_now,
+        row_type="goal",
+        match_id=live.match.id,
+        payload={"side": "home", "home": 1, "away": 0, "generation": 0},
+    )
+    assert _dispatch_one(sync_session, frozen_now, goal) == {on.push_token}
+
+    reminder = _row(
+        sync_session,
+        frozen_now,
+        row_type="kickoff_reminder",
+        match_id=later.match.id,
+        payload={"kickoff_at": later.match.kickoff_at.isoformat()},
+        audience={"kind": "match_followers", "match_id": later.match.id},
+    )
+    assert _dispatch_one(sync_session, frozen_now, reminder) == {on.push_token}
+
+
+def test_match_started_reaches_a_follower_who_turned_it_on(sync_session, frozen_now):
+    """``match_started`` is off by default; a follower who opts in gets it (US1 scenario 5)."""
+    bag = _bag(sync_session, frozen_now, status="live", status_source="feed", kickoff_in=timedelta(minutes=-1))
+    default = support.new_device(sync_session, token="d", push_token="push-default")
+    opted_in = support.new_device(
+        sync_session, token="o", push_token="push-opted-in", prefs={"types": {"match_started": {"on": True}}}
+    )
+    for device in (default, opted_in):
+        support.follow(sync_session, device, match=bag.match.id)
+    row = _row(sync_session, frozen_now, row_type="match_started", match_id=bag.match.id)
+
+    assert _dispatch_one(sync_session, frozen_now, row) == {opted_in.push_token}
 
 
 def test_an_all_audience_needs_no_follow_and_honours_the_switches(sync_session, frozen_now):

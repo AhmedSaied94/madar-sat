@@ -659,7 +659,7 @@ The push pipeline is in: `producers.py` (poll and editor saves), `channel_change
 
 #### After merge
 
-- [ ] **T037 The push deploy.** Merge at a time you can watch the first pushes, with [the off switch](runbooks/push-notifications.md#the-off-switch-under-a-minute) to hand: `PUSH_TYPES_OFF` is one line in VPS-2's `.env` and takes effect in under a minute after `dc up -d worker-notify`.
+- [ ] **T037 The push deploy.** Merge at a time you can watch the first pushes, with [the off switch](runbooks/push-notifications.md#the-off-switch-under-a-minute) to hand: `PUSH_TYPES_OFF` is one line in VPS-2's `.env` (the block appends it when the key isn't there yet), and it takes effect in under a minute once `worker-notify` is recreated; the block's last line fails unless the worker reports the list.
 - [ ] **T041 The all-devices load test (SC-002, SC-008).** Needs your approval of a window with no live match. It seeds 50,000 `loadtest-` devices, sends to `all` with a goal row mid-send, and records the finish time, the goal's wait and VPS-2's load ([load-testing](runbooks/load-testing.md#the-all-devices-send-sc-002-sc-008)).
 - [ ] **T042 The quickstart walk on the deployed hosts.** The off switch within a minute, a cancelled row in the log, and a frequency saved and set back inside the hold on [the test channel](../specs/006-d06-notifications-and-live-center/quickstart.md#the-test-channel), never a real one.
 - [ ] **T038, T039 The sporteventz rows.** Run `repair-matches sport` on the host for the count, build the map where `old_app/migration/data/` is kept, and apply it ([imports-and-sources](runbooks/imports-and-sources.md#relabelling-a-sporteventz-rows-sport)). Nothing guesses a sport.

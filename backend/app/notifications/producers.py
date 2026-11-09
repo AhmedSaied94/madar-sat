@@ -116,22 +116,36 @@ def _sent_this_generation(session: Session, match_id: int, generation: int) -> b
     )
 
 
-def record_poll(session: Session, match: Match, readings: Sequence[Any], now: datetime) -> int:
+def record_poll(
+    session: Session,
+    match: Match,
+    readings: Sequence[Any],
+    now: datetime,
+    *,
+    status_before: str | None = None,
+) -> int:
     """The poller's producer: match start, goals, corrections and the final score. Returns rows written.
 
     ``readings`` is what the poll saw, one per usable source; the bar never reads a shoot-out count.
+    ``status_before`` is the row's status before this poll applied its decision: ``final_score`` is
+    written only by the poll that moved the row to ``finished`` (FR-007), so a row the watchdog
+    finished, or a finished row polled again, never gets one. ``None`` (unknown) writes none.
     """
     live = session.get(MatchLiveState, match.id)
     memory: dict[str, Any] = dict(live.push_memory or {}) if live is not None else {}
     was_empty = memory.get("home") is None or memory.get("away") is None
     written = 0
 
+    # ``live_seen``: absent before the first evaluation, ``False`` once the producers saw the match
+    # before it was in play, ``True`` once they saw it in play. Only a match whose first evaluation is
+    # already in play is a silent baseline (B1-R1-1): a scheduled match has no score, so the score
+    # baseline alone can't tell "first look" from "kickoff" (FR-003).
     in_play = match.status in IN_PLAY
-    if in_play:
+    if in_play and match.status_source != "clock":
         kickoff = match.kickoff_at
+        seen_before_kickoff = memory.get("live_seen") is False or (not was_empty and "live_seen" not in memory)
         due = (
-            not was_empty
-            and not memory.get("live_seen")
+            seen_before_kickoff
             and match.status_source == "feed"
             and kickoff is not None
             and now - kickoff <= STARTED_WINDOW
@@ -150,6 +164,8 @@ def record_poll(session: Session, match: Match, readings: Sequence[Any], now: da
                 )
             )
         memory["live_seen"] = True
+    elif not in_play and match.status not in FINAL_STATUSES and "live_seen" not in memory:
+        memory["live_seen"] = False
 
     accepted = None if match.status == "penalties" else _accepted(match)
     memory, messages = evaluate(
@@ -195,12 +211,13 @@ def record_poll(session: Session, match: Match, readings: Sequence[Any], now: da
     if live is not None:
         live.push_memory = memory
 
-    written += _final_score(session, match, now)
+    if status_before is not None and status_before != "finished":
+        written += _final_score(session, match, now)
     return written
 
 
 def _final_score(session: Session, match: Match, now: datetime) -> int:
-    """A real final score from the feed; the watchdog's finish never calls this (FR-007)."""
+    """A real final score from the feed, from the poll that finished the row (FR-007)."""
     if match.status != "finished" or match.status_source != "feed" or _accepted(match) is None:
         return 0
     return int(

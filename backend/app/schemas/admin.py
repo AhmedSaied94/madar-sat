@@ -894,6 +894,7 @@ class NotificationRow(BaseModel):
     due_at: datetime
     sent_at: datetime | None
     created_at: datetime
+    etag: Etag  # the row's own version: what `POST notifications/{id}/cancel` checks as If-Match (B1-R1-2)
 
 
 class NotificationReach(BaseModel):
@@ -962,6 +963,7 @@ class AdminUserRow(BaseModel):
     locked_for_s: Int32 | None
     last_login_at: datetime | None
     must_change_password: bool
+    etag: Etag  # the account's own version: what PATCH and reset-password check as If-Match (B1-R1-2)
 
 
 class UserCreate(_Body):
