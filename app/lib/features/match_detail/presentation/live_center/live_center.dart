@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/remote_config.dart';
 import '../../../../core/network/generated/models/match_detail.dart';
-import '../../../../core/network/generated/models/match_event_side.dart';
 import '../../../../core/theme/madar_line.dart';
 import '../../../../core/theme/madar_tokens.dart';
 import '../../../../design/components/event_timeline_item.dart';
@@ -242,7 +241,8 @@ class _TimelineSliver extends StatelessWidget {
           TimelineEventRow(:final event, :final runningScore) => EventTimelineItem(
               event: event,
               runningScore: runningScore,
-              teamName: event.side == MatchEventSide.home ? match.home.name : match.away.name,
+              homeName: match.home.name,
+              awayName: match.away.name,
             ),
         },
       ),

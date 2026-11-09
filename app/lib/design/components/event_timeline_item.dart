@@ -19,49 +19,63 @@ class EventTimelineItem extends StatelessWidget {
   const EventTimelineItem({
     super.key,
     required this.event,
-    required this.teamName,
+    required this.homeName,
+    required this.awayName,
     this.runningScore,
   });
 
   final MatchEvent event;
 
-  /// The team the event is credited to, for the spoken label.
-  final String teamName;
+  /// Both teams, for the spoken label: the event's own team, and each team beside its number
+  /// in a running score.
+  final String homeName;
+  final String awayName;
 
   /// The score after this goal, shown only when the known goals add up (FR-053).
   final ({int home, int away})? runningScore;
 
   bool get _isHome => event.side == MatchEventSide.home;
 
-  String _typeLabel(AppLocalizations l) {
-    final score = runningScore;
-    return switch (event.type) {
-      MatchEventType.goal when score != null => l.tlGoalWithScore(
-          '${MadarDigits.plain(score.home)} – ${MadarDigits.plain(score.away)}',
-        ),
-      MatchEventType.goal => l.tlGoal,
-      MatchEventType.ownGoal => l.tlOwnGoal,
-      MatchEventType.penalty => l.tlPenalty,
-      MatchEventType.missedPenalty => l.tlMissedPenalty,
-      MatchEventType.redCard => l.tlRedCard,
-      MatchEventType.$unknown => '',
-    };
-  }
+  /// The running score on a goal, or null: only a goal carries it.
+  ({int home, int away})? get _score =>
+      event.type == MatchEventType.goal ? runningScore : null;
+
+  String _typeLabel(AppLocalizations l) => switch (event.type) {
+        MatchEventType.goal => l.tlGoal,
+        MatchEventType.ownGoal => l.tlOwnGoal,
+        MatchEventType.penalty => l.tlPenalty,
+        MatchEventType.missedPenalty => l.tlMissedPenalty,
+        MatchEventType.redCard => l.tlRedCard,
+        MatchEventType.$unknown => '',
+      };
 
   String _semantics(AppLocalizations l) {
     final minute = _bareMinute(event.minute);
+    final score = _score;
     return [
       _typeLabel(l),
+      if (score != null)
+        l.tlRunningScoreSemantics(
+          homeName,
+          MadarDigits.plain(score.home),
+          awayName,
+          MadarDigits.plain(score.away),
+        ),
       if (event.player != null) event.player!,
-      teamName,
+      _isHome ? homeName : awayName,
       l.tlMinuteLabel(minute),
-    ].join('، ');
+    ].join(l.listSeparator);
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final cell = _EventCell(event: event, typeLabel: _typeLabel(l), alignEnd: !_isHome);
+    final cell = _EventCell(
+      event: event,
+      typeLabel: _typeLabel(l),
+      score: _score,
+      alignEnd: !_isHome,
+    );
     return Semantics(
       container: true,
       label: _semantics(l),
@@ -180,10 +194,16 @@ class _MinutePill extends StatelessWidget {
 }
 
 class _EventCell extends StatelessWidget {
-  const _EventCell({required this.event, required this.typeLabel, required this.alignEnd});
+  const _EventCell({
+    required this.event,
+    required this.typeLabel,
+    required this.score,
+    required this.alignEnd,
+  });
 
   final MatchEvent event;
   final String typeLabel;
+  final ({int home, int away})? score;
 
   /// Away's cell mirrors home's, so the tile sits on the outer edge either way.
   final bool alignEnd;
@@ -192,6 +212,7 @@ class _EventCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.madarColors;
     final player = event.player;
+    final captionStyle = MadarText.textCaption.copyWith(color: colors.textTertiary);
     final text = Flexible(
       child: Column(
         crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -205,10 +226,7 @@ class _EventCell extends StatelessWidget {
               textAlign: alignEnd ? TextAlign.end : TextAlign.start,
               style: MadarText.textStrong.copyWith(color: colors.textPrimary),
             ),
-          Text(
-            typeLabel,
-            style: MadarText.textCaption.copyWith(color: colors.textTertiary),
-          ),
+          _Caption(label: typeLabel, score: score, style: captionStyle),
         ],
       ),
     );
@@ -221,6 +239,39 @@ class _EventCell extends StatelessWidget {
             ? [text, const SizedBox(width: MadarSpace.s2), tile]
             : [tile, const SizedBox(width: MadarSpace.s2), text],
       ),
+    );
+  }
+}
+
+/// «هدف · 1-0»: the Arabic word, then the score from two isolated numbers, home's on the right
+/// beside home's side. A raw `1 - 0` string never enters the Arabic text (constitution III).
+class _Caption extends StatelessWidget {
+  const _Caption({required this.label, required this.score, required this.style});
+
+  final String label;
+  final ({int home, int away})? score;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = this.score;
+    if (score == null) return Text(label, style: style);
+    final l = AppLocalizations.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: style),
+        Padding(
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s1),
+          child: Text(l.tlCaptionDivider, style: style),
+        ),
+        ScoreParts(
+          home: MadarDigits.plain(score.home),
+          away: MadarDigits.plain(score.away),
+          separator: l.scoreSeparator,
+          style: style.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+        ),
+      ],
     );
   }
 }
