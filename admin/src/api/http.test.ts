@@ -256,3 +256,50 @@ describe('adminHttp', () => {
     expect(failure).toMatchObject({ code: 'edit_conflict', status: 409, meta: { current_etag: '"b"' } });
   });
 });
+
+// The forced password change has one choke point: `requestWithRetry`'s catch. A flagged account's
+// 403 is reported to the session, which redirects, and it is never mistaken for an expired token
+// (contract admin-screens "Change password").
+describe('a flagged account', () => {
+  const flagged = () =>
+    HttpResponse.json(
+      { success: false, data: null, error: { code: 'password_change_required', message: 'change it' }, meta: {} },
+      { status: 403 },
+    );
+
+  it('reports password_change_required to the session, without ending it', async () => {
+    setAccessToken('token-1');
+    const reported: string[] = [];
+    let expired = 0;
+    bindSession({ onPasswordChangeRequired: () => reported.push('flag'), onExpired: () => (expired += 1) });
+    server.use(mswHttp.get('*/admin/api/sources', flagged));
+
+    await expect(adminHttp({ method: 'GET', url: '/admin/api/sources' })).rejects.toMatchObject({
+      code: 'password_change_required',
+      status: 403,
+    });
+
+    expect(reported).toHaveLength(1);
+    expect(expired).toBe(0);
+    expect(getAccessToken()).toBe('token-1');
+  });
+
+  it('does not refresh and retry on the flag, because the token is still valid', async () => {
+    setAccessToken('token-1');
+    let refreshes = 0;
+    bindSession({});
+    server.use(
+      mswHttp.get('*/admin/api/sources', flagged),
+      mswHttp.post('*/admin/api/auth/refresh', () => {
+        refreshes += 1;
+        return HttpResponse.json({ success: true, data: sessionBody, error: null, meta: {} });
+      }),
+    );
+
+    await expect(adminHttp({ method: 'GET', url: '/admin/api/sources' })).rejects.toMatchObject({
+      code: 'password_change_required',
+    });
+
+    expect(refreshes).toBe(0);
+  });
+});

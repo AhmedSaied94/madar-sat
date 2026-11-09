@@ -23,6 +23,8 @@ export interface SidebarNavItem {
   count?: { value: number; tone: SidebarCountTone };
   /** A V2 section: visible, but marked so editors know the plan. */
   planned?: boolean;
+  /** Admin only (`admin`): an editor never sees it, and the server refuses it too. */
+  adminOnly?: boolean;
 }
 
 export interface SidebarNavGroup {

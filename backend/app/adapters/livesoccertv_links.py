@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, or_, select, text
@@ -34,6 +35,7 @@ from app.adapters.resolve import CHANNEL_ALIAS_SQL
 from app.adapters.unresolved import record_unresolved
 from app.db.models import AuditLog, Channel, Match, MatchChannel
 from app.domain.arabic import ar_normalize
+from app.notifications.channel_changes import report_link_change
 
 SOURCE = "livesoccertv"
 PLACEHOLDER_SQL = """
@@ -120,11 +122,14 @@ def apply_broadcasts(
     channels: Sequence[BroadcastChannel],
     countries: Sequence[str] | None = None,
     bump: bool = True,
+    now: datetime | None = None,
 ) -> LinkOutcome:
     """Link one match's broadcasters, creating hidden placeholders where Madar has no channel.
 
     ``bump=False`` leaves the dataset versions to the caller, which bumps them as the last write of
-    its own transaction (an ingest writes its run log and the source health first).
+    its own transaction (an ingest writes its run log and the source health first). ``now`` dates the
+    channel-change rows, so a test can hold the clock: they are written in this transaction too
+    (FR-038).
     """
     outcome = LinkOutcome()
     configured = _configured(countries)
@@ -189,6 +194,11 @@ def apply_broadcasts(
                 desired.append(row.id)
 
     _reconcile_links(session, match_id=match_id, desired=desired, outcome=outcome)
+    if outcome.added or outcome.removed:
+        moment = now if now is not None else datetime.now(UTC)
+        for action, changed in (("added", outcome.added), ("removed", outcome.removed)):
+            for channel_id in changed:
+                report_link_change(session, match_id, channel_id, action, SOURCE, moment)
     outcome.datasets = _datasets(outcome)
     if bump:
         bump_datasets(session, outcome.datasets)

@@ -59,6 +59,13 @@ def _fetch_with(fetcher: HttpFetcher) -> Callable[[str, str], Any]:
     return fetch
 
 
+def _kick_dispatch() -> None:
+    """Queue one dispatch run after a poll that wrote a push row (research R3)."""
+    from app.notifications.tasks import dispatch_due
+
+    dispatch_due.apply_async(queue="notifications")
+
+
 def _deps(client: redis.Redis, fetcher: HttpFetcher) -> Any:
     from app.adapters.health import record_live_cycle
     from app.adapters.raw_store import RawStore
@@ -78,6 +85,7 @@ def _deps(client: redis.Redis, fetcher: HttpFetcher) -> Any:
         record_live_cycle=record_live_cycle,
         clock=_now,
         monotonic=time.monotonic,
+        kick_dispatch=_kick_dispatch,
     )
 
 

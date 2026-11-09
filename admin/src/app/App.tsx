@@ -4,25 +4,29 @@ import { createBrowserRouter, Navigate, RouterProvider, useLocation, type RouteO
 
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { ToastProvider } from '../components/Toast/Toast';
+import { ChangePasswordPage } from '../features/auth/ChangePasswordPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { SessionProvider, useSession } from '../features/auth/session';
+import { AuditPage } from '../features/audit/AuditPage';
 import { ChannelsPage } from '../features/channels/ChannelsPage';
 import { CommentatorsPage } from '../features/commentators/CommentatorsPage';
 import { CompetitionsPage } from '../features/competitions/CompetitionsPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { MatchEditor } from '../features/matches/MatchEditor';
 import { MatchesPage } from '../features/matches/MatchesPage';
+import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { SatellitesPage } from '../features/satellites/SatellitesPage';
 import { SourceRunPage } from '../features/sources/SourceRunPage';
 import { SourcesPage } from '../features/sources/SourcesPage';
 import { RightsHoldersPage } from '../features/rights/RightsHoldersPage';
 import { TeamsPage } from '../features/teams/TeamsPage';
+import { UsersPage } from '../features/users/UsersPage';
 import { Shell } from '../features/shell/Shell';
 import { shell } from '../i18n/ar';
 
 /** The A0 shell for a signed-in editor; anyone else goes to /login and comes back afterwards. */
 function SignedInShell(): ReactElement {
-  const { session, restoring, signOut } = useSession();
+  const { session, restoring, mustChangePassword, signOut } = useSession();
   const location = useLocation();
 
   // On a reload the access token is gone (it lives in memory only); wait for the refresh cookie to
@@ -36,6 +40,14 @@ function SignedInShell(): ReactElement {
   }
   if (!session) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  // A flagged account can do nothing but change its password (contract admin-accounts): the form is
+  // the only screen, and `/change-password` remembers where the editor was going.
+  if (mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  }
+  if (mustChangePassword) {
+    return <ChangePasswordPage />;
   }
   return <Shell user={session.admin} onLogout={signOut} />;
 }
@@ -65,6 +77,9 @@ export const appRoutes: RouteObject[] = [
       { path: 'commentators', element: <CommentatorsPage /> },
       { path: 'sources', element: <SourcesPage /> },
       { path: 'import-runs/:id', element: <SourceRunPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
+      { path: 'users', element: <UsersPage /> },
+      { path: 'audit', element: <AuditPage /> },
       { path: '*', element: <ComingSoon /> },
     ],
   },

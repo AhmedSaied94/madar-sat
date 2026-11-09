@@ -228,6 +228,36 @@ class TestIngest:
         assert run.error == "layout_changed"
         assert run.http_errors == 3
 
+    @pytest.mark.parametrize("reason", ["budget_reached", "not_configured"])
+    def test_a_run_that_stops_on_purpose_is_stopped_not_failed(
+        self,
+        sync_session,
+        loaded_snapshot,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        reason: str,
+    ) -> None:
+        """D6 FR-034/FR-035: no key and an exhausted budget end the run on purpose, with a reason."""
+        self._prepare(monkeypatch, sync_session, tmp_path)
+        stopped = ScrapeResult.failed(
+            source="api_football",
+            run_id=f"r-{reason}",
+            started_at=NOW,
+            finished_at=NOW,
+            fetched_on="home-box",
+            http_errors=0,
+            error=reason,
+        )
+
+        summary = ingest.apply(args=(stopped.as_task_arg(),)).get()
+
+        assert summary["status"] == "stopped"
+        from app.db.models import ImportRun
+
+        run = sync_session.query(ImportRun).order_by(ImportRun.id.desc()).first()
+        assert run is not None
+        assert (run.status, run.error) == ("stopped", reason)
+
     def test_a_partial_run_is_partial(
         self, sync_session, loaded_snapshot, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:

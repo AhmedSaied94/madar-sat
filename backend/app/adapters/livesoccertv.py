@@ -510,6 +510,7 @@ def plan_targets(
                 Match.away_team_name,
             )
             .where(
+                Match.sport == "football",
                 Match.kickoff_at.is_not(None),
                 Match.kickoff_at >= start,
                 Match.kickoff_at <= end,

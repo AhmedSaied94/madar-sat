@@ -84,6 +84,7 @@ Every service logs JSON with a `ts`, and the importers add `source` and `run`. `
 | `تغيّر ملف robots.txt للموقع ‹host›` | A site's rules differ from the committed copy | The diff against `backend/app/live/robots/` | [live-poller.md](live-poller.md): update the deny list |
 | `⚠️ المصدر ‹name›` | A run succeeded and found nothing | The same `report runs` output, and the source's page by hand | [source-alerts.md](source-alerts.md) (the zero-items section): a layout change is a parser fix with a saved-page test |
 | A slot is missing in `report runs` | The schedule fired but no run row exists: the queue had no consumer, or the fetch never reached `ingest` | `dc logs worker-imports beat` for `scheduled`/`skipped`, and whether it names `scrape_home` | [§4](#4-a-source-is-blocked) |
+| A run is `stopped` | It stopped on purpose and sent nothing: `budget_reached` or `not_configured` (D6 FR-035). No alert is sent, and it is not a gap in `report runs` | `import_runs.error` for that source, and `API_FOOTBALL_KEY` on VPS-2 | [source-alerts.md](source-alerts.md#a-stopped-run-is-not-an-alert): set the key or wait for the provider's reset. `budget_unreadable` is a real failure (Redis) |
 
 The report is the evidence for the last two rows:
 
@@ -95,6 +96,20 @@ dc exec worker-imports python -m app.adapters.report coverage --days 4
 A slot is `missing` when no `import_runs` row started within five minutes of it, and `manual` when
 an audited «تشغيل الآن» or resume queued that run. Both are explained in [imports-and-sources.md](imports-and-sources.md#read-what-a-run-did).
 
+## 3b. A push row failed
+
+A notification delivery problem opens the `push` problem in `live_problems`, so it reaches the same
+alert channel: one alert when it opens, one when it closes. It opens when a row ends `failed`, or when
+a finished row with at least 10 devices had more than 20 % failures, and closes on the next finished row
+under that rate. A test send and a cancelled row never alert, and a dead token is not a failure.
+
+Read the row first: `SELECT id, type, status, error, sent, failed FROM notification_outbox ORDER BY id DESC LIMIT 10;`
+`error` is a short reason (`late`, `type_off`, `no_net_change`, `score_fell`, `match_finished`) or the push
+service's text, such as `FCM 503`. A service-level error is the FCM path: check the key and
+`dc logs worker-notify` ([push-notifications.md](push-notifications.md)), then use the safe re-send there.
+A reason that names a behaviour (`late`, `type_off`) means nothing is broken: the switch or the clock
+stopped it, and the row's presence is the answer to "why did nothing go out?".
+
 ## 4. A source is blocked
 
 "Blocked" means the source answers 403/429 or a captcha from the machine that fetched it. The fix is
@@ -105,6 +120,7 @@ to move the fetch, not to raise the retry count:
 | To the home box (default) | `YSSCORES_FETCH_QUEUE=scrape_home`, `LIVESOCCERTV_FETCH_QUEUE=scrape_home` in `.env`, both hosts' workers healthy, the box's timer running ([home-box.md](home-box.md)) | ysscores only answers a residential address (R21) |
 | To VPS-2 | The same two variables set to `scrape` in VPS-2's `.env`, then `dc up -d worker-scrape` | The box is offline and the source tolerates a datacenter IP |
 | `yallakora` | Nothing to move: it always fetches from VPS-2 on `scrape`. Keep it paused in A13 and tell B2 | A 403 from VPS-2 also threatens the live poller, which shares the host and its bucket ([imports-and-sources.md](imports-and-sources.md#yallakora)) |
+| `sporteventz` | Nothing to move: it fetches from VPS-2 on `scrape`, one request per 700 ms. Pause it in A13 if it blocks | It is optional until D7; the owner may drop the source ([imports-and-sources.md](imports-and-sources.md#sporteventz)) |
 | To the bridge | Leave `legacy` (the Sat Air bridge) enabled; it needs nothing on the home box | The source is down and the fixtures are already in Sat Air |
 
 The variables and the per-source commands are in

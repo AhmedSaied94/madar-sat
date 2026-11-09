@@ -14,6 +14,7 @@ import 'design/components/brand_splash.dart';
 import 'design/components/display_scope.dart';
 import 'features/devices/data/device_sync.dart';
 import 'features/devices/data/push_token_sync.dart';
+import 'features/notifications/presentation/foreground_banner.dart';
 import 'features/notifications/presentation/push_route_listener.dart';
 import 'features/system/data/connectivity.dart';
 
@@ -138,7 +139,10 @@ class _MadarAppState extends ConsumerState<MadarApp> {
                 router: _router,
                 child: Directionality(
                   textDirection: TextDirection.rtl,
-                  child: BrandSplashGate(child: child ?? const SizedBox.shrink()),
+                  child: ForegroundBannerHost(
+                    router: _router,
+                    child: BrandSplashGate(child: child ?? const SizedBox.shrink()),
+                  ),
                 ),
               ),
             ),

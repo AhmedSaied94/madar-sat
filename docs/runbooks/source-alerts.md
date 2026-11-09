@@ -66,6 +66,24 @@ plan is a quiet result, not a fault.
 matches («لا يوجد مباريات اليوم») counts as a failure on each of its three runs, and the third opens
 the breaker. That is rare, because the list covers many leagues. Check the page, then resume in A13.
 
+**sporteventz's quiet days.** It lists about 40 events in two weeks, so a valid answer with no
+records is normal: its zero-items alarm waits 7 days after the last run that had records (D6
+FR-039). The grace covers only an answer with no records. A changed page fails the run with
+`error = layout_changed`, which counts toward the breaker at once, grace or not: a missing access
+key or `Records` key, or a sport's answer whose records all fail to read (a renamed `Team1`/`Team2`
+or `Sport`, a new `Begin` format; a record with no sport text is `missing_sport`, never another sport). Records skipped as another sport (`football`, `other_sport`) or as a team
+playing itself (`same_team_twice`) never fail a run. Every run's `import_runs.log` and `run.json`
+carry `parse_skipped`, the refused records counted by reason, so A13 shows why a run failed or came
+back light. If the alarm does fire, check the four sport pages in a browser before touching the parser.
+
+## A stopped run is not an alert
+
+`status = 'stopped'` with `error = budget_reached` or `not_configured` means the run stopped on
+purpose and sent nothing (D6 FR-035). It sends no Telegram alert, does not touch the breaker, and
+`report runs` counts its slot as answered. `not_configured` is the normal state while
+`API_FOOTBALL_KEY` is unset; `budget_reached` clears at the provider's daily reset.
+`budget_unreadable` is different: Redis was unavailable, the run is `failed`, and it counts.
+
 ## Moving a fetch to the other host
 
 If the site blocks the host, move the fetch rather than disabling the source:
@@ -76,6 +94,13 @@ If the site blocks the host, move the fetch rather than disabling the source:
 3. Resume the source in A13 and watch the next run.
 
 The queue name is the only thing that changes: `schedule_fetch` reads it on every pass.
+
+## The `push` problem
+
+`live_problems` carries one problem key, `push`, with the copy in `app/live/problems.py` `_OPENED` and
+`_CLOSED`. It is not about a source: it opens on a failed push row (or a finished row over the 20 % rate
+with at least 10 devices), closes on the next good one, and is read in A13 with the other problems. Test
+sends and cancelled rows are ignored, and dead tokens are not failures.
 
 ## Alerts that are not about a source
 

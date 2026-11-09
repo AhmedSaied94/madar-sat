@@ -16,23 +16,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_now
 from app.api.envelope import Envelope, ok
-from app.api.errors import ApiError
+from app.api.errors import ApiError, unauthenticated
 from app.auth import passwords
+from app.auth.admins import revoke_refresh_tokens_async
 from app.auth.csrf import CSRF_COOKIE, csrf_matches, new_csrf_value
 from app.auth.limits import LoginLimiter, client_ip, get_redis
-from app.auth.roles import AuthedAdmin, require_editor
+from app.auth.roles import AuthedAdmin, require_signed_in
 from app.auth.tokens import (
     ACCESS_TTL,
     REFRESH_TTL,
     RefreshInvalid,
+    hash_refresh_token,
     issue_access_token,
     issue_refresh_token,
     revoke_refresh_token,
     rotate_refresh_token,
 )
+from app.db.models import AdminRefreshToken
 from app.db.models import AdminUser as AdminRow
 from app.db.session import get_session
-from app.schemas.admin import AdminUser, LoginRequest, Session
+from app.schemas.admin import AdminUser, ChangePasswordRequest, LoginRequest, Session
+from app.services.admin import writer
 
 router = APIRouter(prefix="/admin/api/auth", tags=["auth"])
 
@@ -47,7 +51,13 @@ _LOGIN_OK = {
             "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature",
             "token_type": "Bearer",
             "expires_in": 900,
-            "admin": {"id": 3, "email": "editor@example.com", "name": "محرر", "role": "editor"},
+            "admin": {
+                "id": 3,
+                "email": "editor@example.com",
+                "name": "محرر",
+                "role": "editor",
+                "must_change_password": False,
+            },
         },
         "error": None,
         "meta": {"generated_at": "2026-10-29T13:00:00Z"},
@@ -103,7 +113,13 @@ _UNAUTHENTICATED = {
 _ME_OK = {
     "value": {
         "success": True,
-        "data": {"id": 3, "email": "editor@example.com", "name": "محرر", "role": "editor"},
+        "data": {
+            "id": 3,
+            "email": "editor@example.com",
+            "name": "محرر",
+            "role": "editor",
+            "must_change_password": False,
+        },
         "error": None,
         "meta": {"generated_at": "2026-10-29T13:00:00Z"},
     }
@@ -147,7 +163,13 @@ def _session_of(admin: AdminRow, now: datetime) -> Session:
     return Session(
         access_token=issue_access_token(admin.id, admin.role, now),
         expires_in=int(ACCESS_TTL.total_seconds()),
-        admin=AdminUser(id=admin.id, email=admin.email, name=admin.name, role=admin.role),
+        admin=AdminUser(
+            id=admin.id,
+            email=admin.email,
+            name=admin.name,
+            role=admin.role,
+            must_change_password=admin.must_change_password,
+        ),
     )
 
 
@@ -297,5 +319,90 @@ async def logout(
     },
     summary="Current admin",
 )
-async def me(admin: AuthedAdmin = Depends(require_editor)) -> Envelope[AdminUser]:
-    return ok(AdminUser(id=admin.id, email=admin.email, name=admin.name, role=admin.role))
+async def me(
+    admin: AuthedAdmin = Depends(require_signed_in),
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[AdminUser]:
+    row = await session.get(AdminRow, admin.id)
+    if row is None:  # the dependency loaded it, so this is a race with a deletion the schema forbids
+        raise unauthenticated()
+    return ok(
+        AdminUser(
+            id=row.id,
+            email=row.email,
+            name=row.name,
+            role=row.role,
+            must_change_password=row.must_change_password,
+        )
+    )
+
+
+@router.post(
+    "/change-password",
+    response_model=Envelope[Session],
+    responses={
+        200: {
+            "description": "Changed; every other session of the account is revoked",
+            **_example({"login_ok": _LOGIN_OK}),
+        },
+        401: {
+            "description": "The current password is wrong",
+            **_example({"invalid_credentials": _INVALID_CREDENTIALS}),
+        },
+        422: {"description": "Too short, or unchanged", **_example({"validation_error": _VALIDATION_ERROR})},
+        429: {"description": "Temporarily locked", **_example({"account_locked": _ACCOUNT_LOCKED})},
+    },
+    summary="Change my password",
+)
+async def change_password(
+    body: ChangePasswordRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    redis: Any = Depends(get_redis),
+    admin: AuthedAdmin = Depends(require_signed_in),
+    madar_refresh: str | None = _REFRESH_COOKIE,
+    now: datetime = Depends(get_now),
+) -> Envelope[Session]:
+    """An account flagged for a temporary password may only reach this route (research R19)."""
+    if len(body.new_password) < passwords.MIN_LENGTH:
+        raise ApiError(422, "password_too_short")
+    if body.new_password == body.current_password:
+        raise ApiError(422, "password_unchanged")
+
+    limiter = LoginLimiter(redis)
+    email, ip = admin.email, client_ip(request)
+    attempt = await limiter.reserve(email, ip)
+    if not attempt.allowed:
+        raise ApiError(
+            429,
+            "account_locked",
+            meta={"retry_after_s": attempt.retry_after_s},
+            headers={"Retry-After": str(attempt.retry_after_s)},
+        )
+
+    row = await session.get(AdminRow, admin.id)
+    if row is None:
+        raise unauthenticated()
+    verdict = await anyio.to_thread.run_sync(passwords.verify_password, row.password_hash, body.current_password)
+    if not verdict.ok:
+        raise ApiError(401, "invalid_credentials", meta={"attempts_remaining": attempt.attempts_remaining})
+
+    await limiter.clear(email, ip)
+    row.password_hash = await anyio.to_thread.run_sync(passwords.hash_password, body.new_password)
+    row.must_change_password = False
+
+    # Every other session ends; the one that made the change keeps its refresh cookie (admin-api).
+    keep_family = None
+    if madar_refresh:
+        keep_family = await session.scalar(
+            select(AdminRefreshToken.family_id).where(
+                AdminRefreshToken.token_hash == hash_refresh_token(madar_refresh),
+                AdminRefreshToken.admin_user_id == row.id,
+            )
+        )
+    await revoke_refresh_tokens_async(session, row.id, keep_family_id=keep_family)
+    writer.add_audit(session, admin, "admin_users", row.id, "update", {"password": "changed"})
+    await writer.bump_datasets(session, ("admin_users",))
+    await session.commit()
+
+    return ok(_session_of(row, now))

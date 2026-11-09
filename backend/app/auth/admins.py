@@ -10,6 +10,7 @@ from typing import Any
 
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.auth.passwords import MAX_LENGTH, MIN_LENGTH, hash_password
@@ -65,6 +66,16 @@ def revoke_refresh_tokens(session: Session, admin_id: int) -> None:
     )
 
 
+async def revoke_refresh_tokens_async(session: AsyncSession, admin_id: int, *, keep_family_id: Any = None) -> None:
+    """The async twin of :func:`revoke_refresh_tokens`; ``keep_family_id`` keeps the caller's session."""
+    statement = update(AdminRefreshToken).where(
+        AdminRefreshToken.admin_user_id == admin_id, AdminRefreshToken.revoked_at.is_(None)
+    )
+    if keep_family_id is not None:
+        statement = statement.where(AdminRefreshToken.family_id != keep_family_id)
+    await session.execute(statement.values(revoked_at=func.now()))
+
+
 def create_admin(session: Session, email: str, name: str, role: str, password: str) -> AdminUser:
     clean_email = _clean_email(email)
     clean_name = name.strip()
@@ -88,6 +99,8 @@ def set_password(session: Session, email: str, password: str) -> AdminUser:
     validate_password(password)
     admin = _require_admin(session, email)
     admin.password_hash = hash_password(password)
+    # A password set from the CLI is the owner's, not a temporary one (research R19).
+    admin.must_change_password = False
     revoke_refresh_tokens(session, admin.id)
     _audit(session, admin, "update", {"password": "changed"})
     return admin

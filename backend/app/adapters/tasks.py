@@ -39,6 +39,7 @@ from app.adapters.livesoccertv import (
 from app.adapters.messages import KIND_BROADCASTS, KIND_FIXTURES, Kind, MessageTooLarge, ScrapeResult
 from app.adapters.ratelimit import RateLimiter
 from app.adapters.satair_bridge import BridgeNotConfigured, SatairBridgeAdapter
+from app.adapters.sporteventz import SporteventzAdapter
 from app.adapters.yallakora import YallakoraAdapter
 from app.adapters.ysscores import YsscoresAdapter
 from app.domain.time import CAIRO
@@ -64,6 +65,8 @@ MAX_LOG_ITEMS = 20
 # Run detail reads a raw page over Redis, so the admin API needs no way into VPS-2's disk (D5 R13).
 MAX_RAW_VIEW_BYTES = 512 * 1024
 RAW_VIEW_TTL = 5 * 60
+# A run that stopped on purpose, with its reason in ``error`` (D6 FR-035, R22).
+STOP_REASONS = frozenset({"budget_reached", "not_configured"})
 
 
 class IngestionRouter:
@@ -86,7 +89,7 @@ class IngestionRouter:
     ) -> dict[str, str] | None:
         if name == "adapters.fetch":
             source = (args[0] if args else (kwargs or {}).get("source")) or ""
-            if source in {"legacy", "yallakora"}:
+            if source in {"legacy", "yallakora", "sporteventz"}:
                 return {"queue": "scrape"}
             if source == "ysscores":
                 return {"queue": get_adapter_settings().ysscores_fetch_queue}
@@ -141,6 +144,8 @@ def adapter_for(source: str, fetcher: HttpFetcher | None = None) -> SourceAdapte
         return LivesoccertvAdapter(fetcher=fetcher)
     if source == "yallakora":
         return YallakoraAdapter(fetcher=fetcher)
+    if source == "sporteventz":
+        return SporteventzAdapter(fetcher=fetcher)
     raise ValueError(f"unknown source {source!r}")
 
 
@@ -205,9 +210,11 @@ def fetch(
                 kind=kind,
                 targets=len(planned) if source == LIVESOCCERTV else None,
                 unmatched=unmatched,
+                parse_skipped=_skip_counts_of(adapter),
             )
         except LayoutChanged as exc:
-            # Every adapter's layout change lands here, with the pages it did fetch (B2-R1-9).
+            # Every adapter's layout change lands here, with the pages it did fetch (B2-R1-9), and
+            # what the parser refused before it gave up, so the run says why (B2-R1-1).
             result = _failed(
                 source,
                 started,
@@ -216,6 +223,7 @@ def fetch(
                 error="layout_changed",
                 kind=kind,
                 targets=len(planned),
+                parse_skipped=_skip_counts_of(adapter),
             )
             log.warning("layout_changed", extra={"source": source, "why": str(exc), "pages": len(_pages_of(adapter))})
         except BridgeNotConfigured:
@@ -285,6 +293,17 @@ def _http_errors_of(fetcher: HttpFetcher | None) -> int:
     return fetcher.http_errors if fetcher is not None else 0
 
 
+def _skip_counts_of(adapter: SourceAdapter | None) -> dict[str, int]:
+    """The parser's refusals by reason, for an adapter that counts them (sporteventz, B2-R1-1)."""
+    counts = getattr(adapter, "skip_counts", None)
+    return dict(counts()) if callable(counts) else {}
+
+
+def _parse_skipped_log(data: ScrapeResult) -> dict[str, Any]:
+    """``{"count", "by_reason"}`` of the records ``parse`` refused, for A13 and ``run.json`` (FR-030)."""
+    return {"count": sum(data.parse_skipped.values()), "by_reason": dict(sorted(data.parse_skipped.items()))}
+
+
 def _failed(
     source: str,
     started: datetime,
@@ -294,6 +313,7 @@ def _failed(
     error: str,
     kind: Kind = KIND_FIXTURES,
     targets: int = 0,
+    parse_skipped: dict[str, int] | None = None,
 ) -> ScrapeResult:
     """A failed fetch still travels, with the pages it did collect, so the run row records it (R15).
 
@@ -314,6 +334,7 @@ def _failed(
                 error=error,
                 kind=kind,
                 targets=targets if kind == KIND_BROADCASTS else None,
+                parse_skipped=parse_skipped,
             )
         except MessageTooLarge:
             log.warning(
@@ -382,8 +403,10 @@ def ingest(self: Any, result: dict[str, Any]) -> dict[str, Any]:
                 )
                 run.raw_path = str(run_dir)
 
-                adapter = adapter_for(data.source)
-                if data.error or (not data.pages and data.kind == "fixtures"):
+                if data.error:
+                    # A stop on purpose is not a failure: no key, or the budget is spent (FR-035).
+                    run.status = "stopped" if data.error in STOP_REASONS else "failed"
+                elif not data.pages and data.kind == "fixtures":
                     run.status = "failed"
                 elif _source_is_paused(session, data.source):
                     run.status = "succeeded"
@@ -391,6 +414,7 @@ def ingest(self: Any, result: dict[str, Any]) -> dict[str, Any]:
                 elif data.kind == KIND_BROADCASTS:
                     links = _ingest_broadcasts(session, data, run)
                 else:
+                    adapter = adapter_for(data.source)
                     pipeline = UpsertPipeline(
                         session, source=data.source, media_hosts=settings.media_rehost_allowed_hosts
                     )
@@ -530,7 +554,9 @@ def _write_run_json(
             "unchanged": outcome.unchanged if outcome is not None else 0,
             "links_added": len(links.added) if links is not None else 0,
             "links_removed": len(links.removed) if links is not None else 0,
+            "parse_skipped": sum(data.parse_skipped.values()),
         },
+        "parse_skipped": _parse_skipped_log(data),
         "skipped": (outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []),
         "unresolved": outcome.unresolved if outcome is not None else [],
         "waiting": outcome.waiting if outcome is not None else [],
@@ -561,7 +587,9 @@ def _compact_log(
             "targets": data.targets or 0,
             "links_added": len(links.added) if links is not None else 0,
             "links_removed": len(links.removed) if links is not None else 0,
+            "parse_skipped": sum(data.parse_skipped.values()),
         },
+        "parse_skipped": _parse_skipped_log(data),
         "placeholders_created": list(links.placeholders_created) if links is not None else [],
         "skipped": _bounded(
             outcome.skipped if outcome is not None else list(links.skipped) if links is not None else []
@@ -693,6 +721,7 @@ def schedule_fetch(self: Any, source: str, manual: bool = False, window: str = "
         "ysscores": get_adapter_settings().ysscores_fetch_queue,
         "legacy": "scrape",
         "yallakora": "scrape",
+        "sporteventz": "scrape",
     }.get(source)
     if source_queue is None:
         raise ValueError(f"unknown source {source!r}")

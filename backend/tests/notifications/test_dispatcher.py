@@ -412,3 +412,22 @@ def test_a_device_that_got_the_message_is_never_sent_it_again_when_another_stays
     assert (outbox.status, outbox.sent, outbox.failed) == ("sent", 1, 1)
     assert sorted(sender.tokens_sent) == ["push-cut-off", "push-reached"]
     assert dispatch_due(sync_session, sender, frozen_now).claimed == []
+
+
+def test_a_live_type_is_claimed_before_an_older_announcement(sync_session, frozen_now):
+    """R8: a big send must not hold a goal, so priority beats due time in the claim order."""
+    session = sync_session
+    session.execute(
+        text(
+            "INSERT INTO notification_outbox (type, dedupe_key, payload, audience, due_at, status) VALUES "
+            "('announcement', 'announcement:old', '{}', '{}', :earlier, 'pending'), "
+            "('goal', 'goal:1:0:home:1', '{}', '{}', :now, 'pending')"
+        ),
+        {"now": frozen_now, "earlier": frozen_now - timedelta(minutes=5)},
+    )
+    session.flush()
+
+    claimed = claim(session, frozen_now, limit=1)
+
+    row = session.get(NotificationOutbox, claimed[0])
+    assert row is not None and row.type == "goal"

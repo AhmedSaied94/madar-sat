@@ -3,6 +3,8 @@
  * Do not edit manually.
  * Madar Sat Admin API
  * Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` needs `Authorization: Bearer <access_token>` and the role in its row of the contract. Writes need `If-Match` with the entity's `ETag`.
+
+Error codes added on D6: `password_change_required` (a flagged account may only read `auth/me` and change its password), `notification_not_cancellable` (only a pending announcement cancels), `send_at_in_past`, `text_not_allowed` (a card-sharing label), `test_device_not_set`, `test_device_no_token`, `device_not_found`, `email_taken`, `cannot_change_self`, `last_admin`, `password_too_short`, `password_unchanged`.
  * OpenAPI spec version: 1.0.0
  */
 import {
@@ -26,6 +28,8 @@ import type {
   EnvelopeAdminSatellite,
   EnvelopeAdminTeam,
   EnvelopeAdminUser,
+  EnvelopeAdminUserRow,
+  EnvelopeAuditDetail,
   EnvelopeBulkResult,
   EnvelopeDashboard,
   EnvelopeHealthStatus,
@@ -36,28 +40,82 @@ import type {
   EnvelopeListAdminMatchRow,
   EnvelopeListAdminRightsHolderRow,
   EnvelopeListAdminSatellite,
+  EnvelopeListAdminUserRow,
+  EnvelopeListAuditRow,
   EnvelopeListBroadcastPreset,
   EnvelopeListChannelItem,
+  EnvelopeListFrequencyHistoryRow,
   EnvelopeListHiddenChannelName,
   EnvelopeListImportRunRow,
+  EnvelopeListNotificationRow,
   EnvelopeListSourceHealth,
   EnvelopeListTeamItem,
   EnvelopeListUnresolvedNameRow,
   EnvelopeMediaAsset,
   EnvelopeNoneType,
+  EnvelopeNotificationReach,
+  EnvelopeNotificationRow,
   EnvelopeRawPage,
   EnvelopeSession,
   EnvelopeSourceHealth,
   EnvelopeSourceRunQueued,
+  EnvelopeUnionTestDeviceRowNoneType,
   EnvelopeUnresolvedNameRow,
+  EnvelopeUserWithPassword,
   ErrorEnvelope
 } from './admin.schemas';
 
 
-export const getLoginAdminApiAuthLoginPostResponseMock = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+export const getListAuditEntriesAdminApiAuditGetResponseMock = (): EnvelopeListAuditRow => ({"data":[{"action":"update","actor":{"id":3,"kind":"admin","name":"محرر"},"created_at":"2026-11-06T17:00:00Z","entity":"channel","entity_id":412,"has_notification":true,"id":7711,"summary_fields":["frequency_mhz"]}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
 
-export const getLoginAdminApiAuthLoginPostResponseMock200 = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+export const getListAuditEntriesAdminApiAuditGetResponseMock200 = (): EnvelopeListAuditRow => ({"data":[{"action":"update","actor":{"id":3,"kind":"admin","name":"محرر"},"created_at":"2026-11-06T17:00:00Z","entity":"channel","entity_id":412,"has_notification":true,"id":7711,"summary_fields":["frequency_mhz"]}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
+
+
+export const getListAuditEntriesAdminApiAuditGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getListAuditEntriesAdminApiAuditGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getListAuditEntriesAdminApiAuditGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetResponseMock = (): EnvelopeAuditDetail => ({"data":{"action":"update","actor":{"id":3,"kind":"admin","name":"محرر"},"created_at":"2026-11-06T17:00:00Z","diff":{"frequency_mhz":[11766,11843]},"entity":"channel","entity_id":412,"has_notification":true,"id":7711,"notification":{"failed":0,"id":9012,"sent":118,"status":"sent","type":"frequency_changed"},"summary_fields":["frequency_mhz"]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetResponseMock200 = (): EnvelopeAuditDetail => ({"data":{"action":"update","actor":{"id":3,"kind":"admin","name":"محرر"},"created_at":"2026-11-06T17:00:00Z","diff":{"frequency_mhz":[11766,11843]},"entity":"channel","entity_id":412,"has_notification":true,"id":7711,"notification":{"failed":0,"id":9012,"sent":118,"status":"sent","type":"frequency_changed"},"summary_fields":["frequency_mhz"]},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"audit_not_found","message":"audit not found"},"meta":{},"success":false})
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+export const getChangePasswordAdminApiAuthChangePasswordPostResponseMock = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostResponseMock200 = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"invalid_credentials","message":"invalid credentials"},"meta":{"attempts_remaining":3},"success":false})
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"invalid request"},"meta":{"errors":[{"loc":["body","email"],"type":"value_error"}]},"success":false})
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostResponseMock429 = (): ErrorEnvelope => ({"data":null,"error":{"code":"account_locked","message":"account locked"},"meta":{"retry_after_s":872},"success":false})
+
+export const getLoginAdminApiAuthLoginPostResponseMock = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+
+
+export const getLoginAdminApiAuthLoginPostResponseMock200 = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
 
 
 export const getLoginAdminApiAuthLoginPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"invalid_credentials","message":"invalid credentials"},"meta":{"attempts_remaining":3},"success":false})
@@ -79,18 +137,18 @@ export const getLogoutAdminApiAuthLogoutPostResponseMock403 = (): ErrorEnvelope 
 
 export const getLogoutAdminApiAuthLogoutPostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
-export const getMeAdminApiAuthMeGetResponseMock = (): EnvelopeAdminUser => ({"data":{"email":"editor@example.com","id":3,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+export const getMeAdminApiAuthMeGetResponseMock = (): EnvelopeAdminUser => ({"data":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
 
 
-export const getMeAdminApiAuthMeGetResponseMock200 = (): EnvelopeAdminUser => ({"data":{"email":"editor@example.com","id":3,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+export const getMeAdminApiAuthMeGetResponseMock200 = (): EnvelopeAdminUser => ({"data":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
 
 
 export const getMeAdminApiAuthMeGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"unauthenticated","message":"unauthenticated"},"meta":{},"success":false})
 
-export const getRefreshAdminApiAuthRefreshPostResponseMock = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+export const getRefreshAdminApiAuthRefreshPostResponseMock = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
 
 
-export const getRefreshAdminApiAuthRefreshPostResponseMock200 = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
+export const getRefreshAdminApiAuthRefreshPostResponseMock200 = (): EnvelopeSession => ({"data":{"access_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature","admin":{"email":"editor@example.com","id":3,"must_change_password":false,"name":"محرر","role":"editor"},"expires_in":900,"token_type":"Bearer"},"error":null,"meta":{"generated_at":"2026-10-29T13:00:00Z"},"success":true})
 
 
 export const getRefreshAdminApiAuthRefreshPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"refresh_invalid","message":"refresh invalid"},"meta":{},"success":false})
@@ -207,6 +265,24 @@ export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock422 = (): 
 
 
 export const getPatchChannelAdminApiChannelsChannelIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock = (): EnvelopeListFrequencyHistoryRow => ({"data":[{"actor":"محرر","detected_at":"2026-11-06T17:05:00Z","id":55,"new":"11843 H 27500","old":"11766 H 27500","source":"admin"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock200 = (): EnvelopeListFrequencyHistoryRow => ({"data":[{"actor":"محرر","detected_at":"2026-11-06T17:05:00Z","id":55,"new":"11843 H 27500","old":"11766 H 27500","source":"admin"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"channel_not_found","message":"channel not found"},"meta":{},"success":false})
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
 
 export const getListCommentatorsAdminApiCommentatorsGetResponseMock = (): EnvelopeListAdminCommentator => ({"data":[{"audio":"https://media.example/audio/ef/ef56.mp4","audio_asset_id":32,"id":7,"name":"معلق تجريبي","photo":"https://media.example/logo/ab/ab12cd.webp","photo_asset_id":31,"usage":{"match_channels":340,"matches":120}}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
 
@@ -625,6 +701,126 @@ export const getUploadMediaAdminApiMediaPostResponseMock415 = (): ErrorEnvelope 
 
 
 export const getUploadMediaAdminApiMediaPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"media_invalid","message":"media invalid"},"meta":{},"success":false})
+
+export const getListNotificationsAdminApiNotificationsGetResponseMock = (): EnvelopeListNotificationRow => ({"data":[{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
+
+export const getListNotificationsAdminApiNotificationsGetResponseMock200 = (): EnvelopeListNotificationRow => ({"data":[{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z","next_cursor":null},"success":true})
+
+
+
+export const getListNotificationsAdminApiNotificationsGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getListNotificationsAdminApiNotificationsGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getListNotificationsAdminApiNotificationsGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock201 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"match_not_found","message":"match not found"},"meta":{},"success":false})
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getGetReachAdminApiNotificationsReachGetResponseMock = (): EnvelopeNotificationReach => ({"data":{"devices":41230},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetReachAdminApiNotificationsReachGetResponseMock200 = (): EnvelopeNotificationReach => ({"data":{"devices":41230},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetReachAdminApiNotificationsReachGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetReachAdminApiNotificationsReachGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getGetReachAdminApiNotificationsReachGetResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getSendTestAdminApiNotificationsTestPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getSendTestAdminApiNotificationsTestPostResponseMock201 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getSendTestAdminApiNotificationsTestPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getSendTestAdminApiNotificationsTestPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getSendTestAdminApiNotificationsTestPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock = (): EnvelopeUnionTestDeviceRowNoneType => ({"data":{"app_version":"0.6.0+60","device_id":812,"has_push_token":true,"platform":"android"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock200 = (): EnvelopeUnionTestDeviceRowNoneType => ({"data":{"app_version":"0.6.0+60","device_id":812,"has_push_token":true,"platform":"android"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock = (): EnvelopeUnionTestDeviceRowNoneType => ({"data":{"app_version":"0.6.0+60","device_id":812,"has_push_token":true,"platform":"android"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock200 = (): EnvelopeUnionTestDeviceRowNoneType => ({"data":{"app_version":"0.6.0+60","device_id":812,"has_push_token":true,"platform":"android"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"device_not_found","message":"device not found"},"meta":{},"success":false})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock200 = (): EnvelopeNotificationRow => ({"data":{"created_at":"2026-11-06T18:40:00Z","due_at":"2026-11-06T18:40:00Z","error":null,"etag":"\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"","failed":12,"id":9012,"is_correction":false,"is_test":false,"recipients":2410,"sent":2398,"sent_at":"2026-11-06T18:40:09Z","status":"sent","target":{"id":48213,"kind":"match_core","label":"الأهلي × الزمالك"},"type":"goal"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"notification_not_found","message":"notification not found"},"meta":{},"success":false})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
 export const getListRightsHoldersAdminApiRightsHoldersGetResponseMock = (): EnvelopeListAdminRightsHolderRow => ({"data":[{"competitions":["الدوري المصري الممتاز"],"etag":"\"7c1e5a09d3b84f26a0e9c5d71b3f8a42\"","id":3,"logo":"https://media.example/logo/ab/ab12cd.webp","name":"Eleven Sports","satellites":["نايل سات"],"sort_order":1}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
 
@@ -1083,6 +1279,297 @@ export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock422 = ():
 
 export const getMapNameAdminApiUnresolvedNamesNameIdMapPostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
 
+export const getListUsersAdminApiUsersGetResponseMock = (): EnvelopeListAdminUserRow => ({"data":[{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getListUsersAdminApiUsersGetResponseMock200 = (): EnvelopeListAdminUserRow => ({"data":[{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}],"error":null,"meta":{"count":1,"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+
+export const getListUsersAdminApiUsersGetResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getListUsersAdminApiUsersGetResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+export const getCreateUserAdminApiUsersPostResponseMock = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCreateUserAdminApiUsersPostResponseMock201 = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getCreateUserAdminApiUsersPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getCreateUserAdminApiUsersPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getCreateUserAdminApiUsersPostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"email_taken","message":"email taken"},"meta":{},"success":false})
+
+
+export const getCreateUserAdminApiUsersPostResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock = (): EnvelopeAdminUserRow => ({"data":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock200 = (): EnvelopeAdminUserRow => ({"data":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"admin_user_not_found","message":"admin user not found"},"meta":{},"success":false})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"cannot_change_self","message":"cannot change self"},"meta":{},"success":false})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock422 = (): ErrorEnvelope => ({"data":null,"error":{"code":"validation_error","message":"validation error"},"meta":{"errors":[{"loc":["body","stadium"],"type":"string_too_long"}]},"success":false})
+
+
+export const getPatchUserAdminApiUsersUserIdPatchResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock200 = (): EnvelopeUserWithPassword => ({"data":{"temporary_password":"a temporary passphrase","user":{"email":"editor@example.com","etag":"\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"","id":3,"is_active":true,"last_login_at":"2026-11-06T09:12:00Z","locked_for_s":660,"must_change_password":false,"name":"محرر","role":"editor"}},"error":null,"meta":{"generated_at":"2026-10-30T14:00:00Z"},"success":true})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock401 = (): ErrorEnvelope => ({"data":null,"error":{"code":"token_expired","message":"token expired"},"meta":{},"success":false})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock403 = (): ErrorEnvelope => ({"data":null,"error":{"code":"forbidden","message":"forbidden"},"meta":{"required_role":"admin"},"success":false})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock404 = (): ErrorEnvelope => ({"data":null,"error":{"code":"admin_user_not_found","message":"admin user not found"},"meta":{},"success":false})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock409 = (): ErrorEnvelope => ({"data":null,"error":{"code":"edit_conflict","message":"edit conflict"},"meta":{"changed_at":"2026-10-30T13:58:41Z","changed_by":{"kind":"admin","name":"سارة"},"current_etag":"\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""},"success":false})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock422 = (overrideResponse: Partial< ErrorEnvelope > = {}): ErrorEnvelope => ({data: null, error: {code: faker.string.alpha({length: {min: 10, max: 20}}), message: faker.string.alpha({length: {min: 10, max: 20}})}, meta: {}, success: false, ...overrideResponse})
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock428 = (): ErrorEnvelope => ({"data":null,"error":{"code":"precondition_required","message":"precondition required"},"meta":{},"success":false})
+
+
+export const getListAuditEntriesAdminApiAuditGetMockHandler = (overrideResponse?: EnvelopeListAuditRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAuditRow> | EnvelopeListAuditRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListAuditEntriesAdminApiAuditGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListAuditEntriesAdminApiAuditGetMockHandler200 = (overrideResponse?: EnvelopeListAuditRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAuditRow> | EnvelopeListAuditRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListAuditEntriesAdminApiAuditGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListAuditEntriesAdminApiAuditGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getListAuditEntriesAdminApiAuditGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListAuditEntriesAdminApiAuditGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListAuditEntriesAdminApiAuditGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListAuditEntriesAdminApiAuditGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListAuditEntriesAdminApiAuditGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListAuditEntriesAdminApiAuditGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetMockHandler = (overrideResponse?: EnvelopeAuditDetail | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeAuditDetail> | EnvelopeAuditDetail), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit/:auditId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetAuditEntryAdminApiAuditAuditIdGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetMockHandler200 = (overrideResponse?: EnvelopeAuditDetail | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeAuditDetail> | EnvelopeAuditDetail), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit/:auditId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetAuditEntryAdminApiAuditAuditIdGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit/:auditId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetAuditEntryAdminApiAuditAuditIdGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit/:auditId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetAuditEntryAdminApiAuditAuditIdGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit/:auditId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetAuditEntryAdminApiAuditAuditIdGetResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetAuditEntryAdminApiAuditAuditIdGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/audit/:auditId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetAuditEntryAdminApiAuditAuditIdGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getChangePasswordAdminApiAuthChangePasswordPostMockHandler = (overrideResponse?: EnvelopeSession | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSession> | EnvelopeSession), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/auth/change-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChangePasswordAdminApiAuthChangePasswordPostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostMockHandler200 = (overrideResponse?: EnvelopeSession | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSession> | EnvelopeSession), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/auth/change-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChangePasswordAdminApiAuthChangePasswordPostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/auth/change-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChangePasswordAdminApiAuthChangePasswordPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/auth/change-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChangePasswordAdminApiAuthChangePasswordPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChangePasswordAdminApiAuthChangePasswordPostMockHandler429 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/auth/change-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChangePasswordAdminApiAuthChangePasswordPostResponseMock429()),
+      { status: 429,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
 
 export const getLoginAdminApiAuthLoginPostMockHandler = (overrideResponse?: EnvelopeSession | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeSession> | EnvelopeSession), options?: RequestHandlerOptions) => {
   return http.post('*/admin/api/auth/login', async (info) => {
@@ -1793,6 +2280,94 @@ export const getPatchChannelAdminApiChannelsChannelIdPatchMockHandler428 = (over
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getPatchChannelAdminApiChannelsChannelIdPatchResponseMock428()),
       { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler = (overrideResponse?: EnvelopeListFrequencyHistoryRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListFrequencyHistoryRow> | EnvelopeListFrequencyHistoryRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler200 = (overrideResponse?: EnvelopeListFrequencyHistoryRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListFrequencyHistoryRow> | EnvelopeListFrequencyHistoryRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/channels/:channelId/frequency-changes', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetResponseMock422()),
+      { status: 422,
         headers: { 'Content-Type': 'application/json' }
       })
   }, options)
@@ -3731,6 +4306,556 @@ export const getUploadMediaAdminApiMediaPostMockHandler422 = (overrideResponse?:
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getUploadMediaAdminApiMediaPostResponseMock422()),
       { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getListNotificationsAdminApiNotificationsGetMockHandler = (overrideResponse?: EnvelopeListNotificationRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListNotificationRow> | EnvelopeListNotificationRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNotificationsAdminApiNotificationsGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNotificationsAdminApiNotificationsGetMockHandler200 = (overrideResponse?: EnvelopeListNotificationRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListNotificationRow> | EnvelopeListNotificationRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNotificationsAdminApiNotificationsGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNotificationsAdminApiNotificationsGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getListNotificationsAdminApiNotificationsGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNotificationsAdminApiNotificationsGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNotificationsAdminApiNotificationsGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNotificationsAdminApiNotificationsGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListNotificationsAdminApiNotificationsGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListNotificationsAdminApiNotificationsGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler = (overrideResponse?: EnvelopeNotificationRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeNotificationRow> | EnvelopeNotificationRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler201 = (overrideResponse?: EnvelopeNotificationRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeNotificationRow> | EnvelopeNotificationRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock201()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/announcements', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateAnnouncementAdminApiNotificationsAnnouncementsPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getGetReachAdminApiNotificationsReachGetMockHandler = (overrideResponse?: EnvelopeNotificationReach | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeNotificationReach> | EnvelopeNotificationReach), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/reach', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetReachAdminApiNotificationsReachGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetReachAdminApiNotificationsReachGetMockHandler200 = (overrideResponse?: EnvelopeNotificationReach | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeNotificationReach> | EnvelopeNotificationReach), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/reach', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetReachAdminApiNotificationsReachGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetReachAdminApiNotificationsReachGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/reach', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetReachAdminApiNotificationsReachGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetReachAdminApiNotificationsReachGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/reach', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetReachAdminApiNotificationsReachGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetReachAdminApiNotificationsReachGetMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/reach', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetReachAdminApiNotificationsReachGetResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getSendTestAdminApiNotificationsTestPostMockHandler = (overrideResponse?: EnvelopeNotificationRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeNotificationRow> | EnvelopeNotificationRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/test', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSendTestAdminApiNotificationsTestPostResponseMock()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getSendTestAdminApiNotificationsTestPostMockHandler201 = (overrideResponse?: EnvelopeNotificationRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeNotificationRow> | EnvelopeNotificationRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/test', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSendTestAdminApiNotificationsTestPostResponseMock201()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getSendTestAdminApiNotificationsTestPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/test', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSendTestAdminApiNotificationsTestPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getSendTestAdminApiNotificationsTestPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/test', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSendTestAdminApiNotificationsTestPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getSendTestAdminApiNotificationsTestPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/test', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSendTestAdminApiNotificationsTestPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetMockHandler = (overrideResponse?: EnvelopeUnionTestDeviceRowNoneType | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeUnionTestDeviceRowNoneType> | EnvelopeUnionTestDeviceRowNoneType), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetMockHandler200 = (overrideResponse?: EnvelopeUnionTestDeviceRowNoneType | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeUnionTestDeviceRowNoneType> | EnvelopeUnionTestDeviceRowNoneType), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getGetTestDeviceAdminApiNotificationsTestDeviceGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getGetTestDeviceAdminApiNotificationsTestDeviceGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler = (overrideResponse?: EnvelopeUnionTestDeviceRowNoneType | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EnvelopeUnionTestDeviceRowNoneType> | EnvelopeUnionTestDeviceRowNoneType), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler200 = (overrideResponse?: EnvelopeUnionTestDeviceRowNoneType | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EnvelopeUnionTestDeviceRowNoneType> | EnvelopeUnionTestDeviceRowNoneType), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.put('*/admin/api/notifications/test-device', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPutTestDeviceAdminApiNotificationsTestDevicePutResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler = (overrideResponse?: EnvelopeNotificationRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeNotificationRow> | EnvelopeNotificationRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler200 = (overrideResponse?: EnvelopeNotificationRow | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeNotificationRow> | EnvelopeNotificationRow), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/notifications/:notificationId/cancel', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCancelNotificationAdminApiNotificationsNotificationIdCancelPostResponseMock428()),
+      { status: 428,
         headers: { 'Content-Type': 'application/json' }
       })
   }, options)
@@ -5852,7 +6977,355 @@ export const getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler428 = (ove
       })
   }, options)
 }
+
+export const getListUsersAdminApiUsersGetMockHandler = (overrideResponse?: EnvelopeListAdminUserRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAdminUserRow> | EnvelopeListAdminUserRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListUsersAdminApiUsersGetResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListUsersAdminApiUsersGetMockHandler200 = (overrideResponse?: EnvelopeListAdminUserRow | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EnvelopeListAdminUserRow> | EnvelopeListAdminUserRow), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListUsersAdminApiUsersGetResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListUsersAdminApiUsersGetMockHandler304 = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/users', async (info) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+    return new HttpResponse(null,
+      { status: 304,
+        
+      })
+  }, options)
+}
+
+
+export const getListUsersAdminApiUsersGetMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListUsersAdminApiUsersGetResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getListUsersAdminApiUsersGetMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.get('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListUsersAdminApiUsersGetResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getCreateUserAdminApiUsersPostMockHandler = (overrideResponse?: EnvelopeUserWithPassword | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUserWithPassword> | EnvelopeUserWithPassword), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateUserAdminApiUsersPostResponseMock()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateUserAdminApiUsersPostMockHandler201 = (overrideResponse?: EnvelopeUserWithPassword | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUserWithPassword> | EnvelopeUserWithPassword), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateUserAdminApiUsersPostResponseMock201()),
+      { status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateUserAdminApiUsersPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateUserAdminApiUsersPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateUserAdminApiUsersPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateUserAdminApiUsersPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateUserAdminApiUsersPostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateUserAdminApiUsersPostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getCreateUserAdminApiUsersPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCreateUserAdminApiUsersPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler = (overrideResponse?: EnvelopeAdminUserRow | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<EnvelopeAdminUserRow> | EnvelopeAdminUserRow), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler200 = (overrideResponse?: EnvelopeAdminUserRow | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<EnvelopeAdminUserRow> | EnvelopeAdminUserRow), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getPatchUserAdminApiUsersUserIdPatchMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.patch('*/admin/api/users/:userId', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPatchUserAdminApiUsersUserIdPatchResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler = (overrideResponse?: EnvelopeUserWithPassword | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUserWithPassword> | EnvelopeUserWithPassword), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler200 = (overrideResponse?: EnvelopeUserWithPassword | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EnvelopeUserWithPassword> | EnvelopeUserWithPassword), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock200()),
+      { status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler401 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock401()),
+      { status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler403 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock403()),
+      { status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler404 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock404()),
+      { status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler409 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock409()),
+      { status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler422 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock422()),
+      { status: 422,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
+
+
+export const getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler428 = (overrideResponse?: ErrorEnvelope | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErrorEnvelope> | ErrorEnvelope), options?: RequestHandlerOptions) => {
+  return http.post('*/admin/api/users/:userId/reset-password', async (info) => {
+  
+    return new HttpResponse(JSON.stringify(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetPasswordAdminApiUsersUserIdResetPasswordPostResponseMock428()),
+      { status: 428,
+        headers: { 'Content-Type': 'application/json' }
+      })
+  }, options)
+}
 export const getMadarSatAdminAPIMock = () => [
+  getListAuditEntriesAdminApiAuditGetMockHandler(),
+  getGetAuditEntryAdminApiAuditAuditIdGetMockHandler(),
+  getChangePasswordAdminApiAuthChangePasswordPostMockHandler(),
   getLoginAdminApiAuthLoginPostMockHandler(),
   getLogoutAdminApiAuthLogoutPostMockHandler(),
   getMeAdminApiAuthMeGetMockHandler(),
@@ -5863,6 +7336,7 @@ export const getMadarSatAdminAPIMock = () => [
   getDeleteChannelAdminApiChannelsChannelIdDeleteMockHandler(),
   getGetChannelAdminApiChannelsChannelIdGetMockHandler(),
   getPatchChannelAdminApiChannelsChannelIdPatchMockHandler(),
+  getChannelFrequencyChangesAdminApiChannelsChannelIdFrequencyChangesGetMockHandler(),
   getListCommentatorsAdminApiCommentatorsGetMockHandler(),
   getCreateCommentatorAdminApiCommentatorsPostMockHandler(),
   getDeleteCommentatorAdminApiCommentatorsCommentatorIdDeleteMockHandler(),
@@ -5887,6 +7361,13 @@ export const getMadarSatAdminAPIMock = () => [
   getGetMatchAdminApiMatchesMatchIdGetMockHandler(),
   getPatchMatchAdminApiMatchesMatchIdPatchMockHandler(),
   getUploadMediaAdminApiMediaPostMockHandler(),
+  getListNotificationsAdminApiNotificationsGetMockHandler(),
+  getCreateAnnouncementAdminApiNotificationsAnnouncementsPostMockHandler(),
+  getGetReachAdminApiNotificationsReachGetMockHandler(),
+  getSendTestAdminApiNotificationsTestPostMockHandler(),
+  getGetTestDeviceAdminApiNotificationsTestDeviceGetMockHandler(),
+  getPutTestDeviceAdminApiNotificationsTestDevicePutMockHandler(),
+  getCancelNotificationAdminApiNotificationsNotificationIdCancelPostMockHandler(),
   getListRightsHoldersAdminApiRightsHoldersGetMockHandler(),
   getCreateRightsHolderAdminApiRightsHoldersPostMockHandler(),
   getReorderRightsHoldersAdminApiRightsHoldersReorderPostMockHandler(),
@@ -5911,5 +7392,9 @@ export const getMadarSatAdminAPIMock = () => [
   getPatchTeamAdminApiTeamsTeamIdPatchMockHandler(),
   getListNamesAdminApiUnresolvedNamesGetMockHandler(),
   getIgnoreNameAdminApiUnresolvedNamesNameIdIgnorePostMockHandler(),
-  getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler()
+  getMapNameAdminApiUnresolvedNamesNameIdMapPostMockHandler(),
+  getListUsersAdminApiUsersGetMockHandler(),
+  getCreateUserAdminApiUsersPostMockHandler(),
+  getPatchUserAdminApiUsersUserIdPatchMockHandler(),
+  getResetPasswordAdminApiUsersUserIdResetPasswordPostMockHandler()
 ]

@@ -63,6 +63,13 @@ def build_beat_schedule() -> dict[str, dict[str, Any]]:
             "kwargs": {"window": "today"},
             "options": {"queue": SCHEDULE_QUEUE},
         },
+        # D6 FR-037: other-sport fixtures for today to +3, every 6 h.
+        "sporteventz-6h": {
+            "task": "adapters.schedule_fetch",
+            "schedule": crontab(minute=10, hour="*/6"),
+            "args": ("sporteventz",),
+            "options": {"queue": SCHEDULE_QUEUE},
+        },
         "prune-raw-pages": {
             "task": "adapters.prune_raw_pages",
             "schedule": crontab(minute=15, hour=3),

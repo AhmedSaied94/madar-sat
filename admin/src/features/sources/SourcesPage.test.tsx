@@ -355,3 +355,60 @@ describe('rawPollInterval (A13 raw page)', () => {
     expect(rawPollInterval(undefined, 0)).toBe(false);
   });
 });
+
+// A13's stopped runs (contract admin-screens "A13: stopped runs"): a run the scheduler chose not to
+// start is not a fault, so the card keeps a neutral tone and says which of the two reasons it was.
+describe('A13 stopped runs', () => {
+  const stoppedCard = (error: 'not_configured' | 'budget_reached') => ({
+    ...ysscores,
+    name: 'apifootball',
+    last_run: {
+      ...ysscores.last_run,
+      id: 9130,
+      status: 'stopped',
+      items_found: 0,
+      items_upserted: 0,
+      http_errors: 0,
+      error,
+    },
+  });
+
+  function serveSource(card: Record<string, unknown>, runs_: readonly Record<string, unknown>[] = []): void {
+    server.use(
+      mswHttp.get('*/admin/api/sources', () => HttpResponse.json(envelope([card]))),
+      mswHttp.get('*/admin/api/sources/:name/runs', () => HttpResponse.json(envelope(runs_, { next_cursor: null }))),
+    );
+  }
+
+  it('says «غير مُعدّ» in a neutral tone when the source has no configuration', async () => {
+    serveSource(stoppedCard('not_configured'));
+    renderRtl(<SourcesPage />, { wrapper: Providers });
+
+    const chip = await screen.findByText('غير مُعدّ');
+    expect(chip.closest('[data-health]')).toHaveAttribute('data-health', 'neutral');
+  });
+
+  it('says «بلغ الحد اليومي» in the same neutral tone', async () => {
+    serveSource(stoppedCard('budget_reached'));
+    renderRtl(<SourcesPage />, { wrapper: Providers });
+
+    const chip = await screen.findByText('بلغ الحد اليومي');
+    expect(chip.closest('[data-health]')).toHaveAttribute('data-health', 'neutral');
+  });
+
+  it('keeps a stopped run out of «فشل» in the run history, with its reason', async () => {
+    const stoppedRun = {
+      ...runs[0],
+      id: 9131,
+      status: 'stopped',
+      error: 'budget_reached',
+    };
+    serveSource(ysscores, [stoppedRun]);
+    renderRtl(<SourcesPage />, { wrapper: Providers });
+
+    const row = within(await screen.findByTestId('run-9131'));
+    expect(row.getByText('متوقف')).toBeInTheDocument();
+    expect(row.getByText('بلغ الحد اليومي')).toBeInTheDocument();
+    expect(row.queryByText('فشل')).not.toBeInTheDocument();
+  });
+});

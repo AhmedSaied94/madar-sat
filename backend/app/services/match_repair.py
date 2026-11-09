@@ -268,3 +268,63 @@ def fill_teams(session: Session, now: datetime) -> FillResult:
         session.flush()
         bump_datasets(session, ["matches"])
     return result
+
+
+# --- ``repair-matches sport``: the rows sporteventz labelled football (research R23) -------------------
+
+
+@dataclass(slots=True)
+class SportResult:
+    """What ``repair-matches sport`` found, changed and left alone. Nothing is ever deleted."""
+
+    listed: list[tuple[int, str]] = field(default_factory=list)
+    changed: list[tuple[int, str, str]] = field(default_factory=list)
+    unchanged: list[int] = field(default_factory=list)
+
+
+def sporteventz_sports(session: Session) -> dict[int, str]:
+    """Every match with a ``sporteventz`` external id, and the sport it is labelled with."""
+    rows = session.execute(
+        select(Match.id, Match.sport)
+        .join(MatchExternalId, MatchExternalId.match_id == Match.id)
+        .where(MatchExternalId.source == "sporteventz")
+    ).all()
+    return {match_id: sport for match_id, sport in rows}
+
+
+def repair_sports(session: Session, mapping: dict[int, str], now: datetime) -> SportResult:
+    """Apply a reviewer's map, all or nothing. A dry run writes the audit rows and the caller rolls them back.
+
+    An id that isn't a ``sporteventz`` row refuses the whole run, so a stale map can't guess. A row left
+    out of the map stays as it is and is reported; a re-run with the same map changes nothing.
+    """
+    labels = sporteventz_sports(session)
+    unknown = sorted(set(mapping) - set(labels))
+    if unknown:
+        raise RepairRefused(f"not a sporteventz row: {', '.join(str(i) for i in unknown)}")
+
+    result = SportResult()
+    for match_id, sport in sorted(mapping.items()):
+        current = labels[match_id]
+        if sport == current:
+            result.unchanged.append(match_id)
+            continue
+        match = session.get(Match, match_id)
+        if match is None:  # the label query saw it, so this is a concurrent delete the schema forbids
+            raise RepairRefused(f"match {match_id} vanished")
+        match.sport = sport
+        session.add(
+            AuditLog(
+                admin_user_id=None,
+                source=None,
+                entity="matches",
+                entity_id=match_id,
+                action="update",
+                diff={"sport": [current, sport]},
+            )
+        )
+        result.changed.append((match_id, current, sport))
+    session.flush()
+
+    result.listed = sorted((match_id, sport) for match_id, sport in labels.items() if sport == "football")
+    return result

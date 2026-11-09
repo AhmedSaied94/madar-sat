@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -6,6 +8,45 @@ import 'app_config.dart';
 import 'build_info.dart';
 
 part 'remote_config.g.dart';
+
+/// The `features` parameter: what is switched on for this build (research R15, FR-050).
+@immutable
+class AppFeatures {
+  const AppFeatures({this.liveCenter = false, this.lineups = false});
+
+  /// S3's live center.
+  final bool liveCenter;
+
+  /// The التشكيل tab inside it.
+  final bool lineups;
+
+  /// The bundled value, as `setDefaults` sends it.
+  static const String bundledJson = '{"live_center":false,"lineups":false}';
+
+  /// [raw] read flag by flag. Bad JSON, or a flag that isn't a boolean, keeps [bundled]'s value.
+  static AppFeatures parse(String? raw, {required AppFeatures bundled}) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw ?? '');
+    } on FormatException {
+      return bundled;
+    }
+    if (decoded is! Map<String, Object?>) return bundled;
+    final liveCenter = decoded['live_center'];
+    final lineups = decoded['lineups'];
+    return AppFeatures(
+      liveCenter: liveCenter is bool ? liveCenter : bundled.liveCenter,
+      lineups: lineups is bool ? lineups : bundled.lineups,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AppFeatures && other.liveCenter == liveCenter && other.lineups == lineups;
+
+  @override
+  int get hashCode => Object.hash(liveCenter, lineups);
+}
 
 /// The Remote Config values D3 reads (system-design §5.1, research R28), with the bundled
 /// flavor values as their defaults.
@@ -21,6 +62,7 @@ class RemoteConfigValues {
     required this.minSupportedBuild,
     required this.latestBuild,
     required this.livePollIntervalSeconds,
+    this.features = const AppFeatures(),
   });
 
   /// The bundled defaults: the flavor's own hosts, no forced update, 30 s live polling.
@@ -49,6 +91,9 @@ class RemoteConfigValues {
   /// S2's live poll interval, in seconds.
   final int livePollIntervalSeconds;
 
+  /// What is switched on; both flags are off in the bundle (FR-050).
+  final AppFeatures features;
+
   /// True when this build may run: a floor of 0 never blocks anything (R28).
   bool get updateRequired => minSupportedBuild > BuildInfo.buildNumber;
 
@@ -72,6 +117,7 @@ class RemoteConfigValues {
       livePollIntervalSeconds: seconds != null && seconds >= 10 && seconds <= 600
           ? seconds
           : bundled.livePollIntervalSeconds,
+      features: AppFeatures.parse(raw['features'], bundled: bundled.features),
     );
   }
 }
@@ -92,3 +138,11 @@ String mediaBaseUrl(Ref ref) => ref.watch(remoteConfigProvider).mediaBaseUrl;
 /// The live poll interval from Remote Config, in place of D2's bundled constant.
 @riverpod
 Duration livePollInterval(Ref ref) => ref.watch(remoteConfigProvider).livePollInterval;
+
+/// Whether S3's live center is on (FR-050). It applies from the next launch.
+@riverpod
+bool liveCenterEnabled(Ref ref) => ref.watch(remoteConfigProvider).features.liveCenter;
+
+/// Whether the التشكيل tab may show (FR-056).
+@riverpod
+bool lineupsEnabled(Ref ref) => ref.watch(remoteConfigProvider).features.lineups;

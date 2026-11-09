@@ -85,6 +85,7 @@ ChannelCarriage channelEntry({
   String? provider,
   String? package,
   String? frequencyNote,
+  DateTime? changedAt,
 }) =>
     ChannelCarriage(
       id: id,
@@ -101,7 +102,7 @@ ChannelCarriage channelEntry({
       package: package,
       beam: Beam.wide,
       country: null,
-      frequencyChangedAt: null,
+      frequencyChangedAt: changedAt,
     );
 
 /// A channel line on a match: what the server puts in `broadcast.headline`.

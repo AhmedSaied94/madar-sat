@@ -6,6 +6,7 @@ import '../../../core/format/digits.dart';
 import '../../../core/network/generated/models/carriage_entry.dart';
 import '../../../core/network/generated/models/commentator_ref.dart';
 import '../../../core/network/generated/models/platform_entry.dart';
+import '../../../core/network/generated/models/status.dart';
 import '../../../core/network/generated/models/platform_group.dart';
 import '../../../core/network/generated/models/satellite_ref.dart';
 import '../../../core/theme/madar_line.dart';
@@ -44,8 +45,11 @@ class WhereToWatchSlivers {
     required this.receptionOf,
     required this.onWatchReception,
     required this.onRefresh,
+    this.toolbarKey,
     required this.matchId,
     required this.kickoffAt,
+    required this.status,
+    required this.estimated,
     this.showChooseSatellites = false,
     this.onChooseSatellites,
   });
@@ -69,11 +73,18 @@ class WhereToWatchSlivers {
   final void Function(Uri url) onWatchReception;
   final VoidCallback onRefresh;
 
+  /// On the toolbar, so a push's `?section=channels` can scroll to it.
+  final GlobalKey? toolbarKey;
+
   /// The match the empty state offers to follow (S3, US2 scenario 9).
   final int matchId;
 
   /// Its kickoff, or null while unknown.
   final DateTime? kickoffAt;
+
+  /// Its status and estimate after the live merge, for the follow button's note (FR-060).
+  final Status status;
+  final bool estimated;
 
   /// True while the O10 default satellites stand in: the toolbar then offers «حدد أقمارك».
   final bool showChooseSatellites;
@@ -83,6 +94,7 @@ class WhereToWatchSlivers {
     final slivers = <Widget>[
       SliverToBoxAdapter(
         child: _Toolbar(
+          key: toolbarKey,
           showChooseSatellites: showChooseSatellites,
           onChooseSatellites: onChooseSatellites,
           title: l.s3WhereToWatch,
@@ -97,7 +109,7 @@ class WhereToWatchSlivers {
     ];
 
     if (all.isEmpty) {
-      return [...slivers, SliverToBoxAdapter(child: _NoChannels(matchId: matchId, kickoffAt: kickoffAt))];
+      return [...slivers, SliverToBoxAdapter(child: _NoChannels(matchId: matchId, kickoffAt: kickoffAt, status: status, estimated: estimated))];
     }
     if (shown.isEmpty) {
       return [...slivers, SliverToBoxAdapter(child: _Note(text: l.s3NoResults))];
@@ -260,6 +272,7 @@ class WhereToWatchSlivers {
 
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
+    super.key,
     required this.showChooseSatellites,
     required this.onChooseSatellites,
     required this.title,
@@ -669,10 +682,17 @@ class _Note extends StatelessWidget {
 /// «لم تُضف القنوات الناقلة بعد», with «تابع المباراة» as the next action (US2 scenario 9):
 /// following the match means its reminder reaches the device when a channel is found.
 class _NoChannels extends StatelessWidget {
-  const _NoChannels({required this.matchId, required this.kickoffAt});
+  const _NoChannels({
+    required this.matchId,
+    required this.kickoffAt,
+    required this.status,
+    required this.estimated,
+  });
 
   final int matchId;
   final DateTime? kickoffAt;
+  final Status status;
+  final bool estimated;
 
   @override
   Widget build(BuildContext context) {
@@ -680,7 +700,12 @@ class _NoChannels extends StatelessWidget {
     return EmptyState(
       title: l.s3NoChannelsTitle,
       body: l.s3NoChannelsBody,
-      action: MatchFollowButton(matchId: matchId, kickoffAt: kickoffAt),
+      action: MatchFollowButton(
+        matchId: matchId,
+        kickoffAt: kickoffAt,
+        status: status,
+        estimated: estimated,
+      ),
     );
   }
 }

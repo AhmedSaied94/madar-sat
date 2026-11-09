@@ -46,7 +46,7 @@ final class DeviceIdentityControllerProvider
 }
 
 String _$deviceIdentityControllerHash() =>
-    r'f39728762dfa77e22352ddeb9c12ee5523de01fc';
+    r'20b6c615e0eef07fd529efb06d7e9ceb3a36c91e';
 
 /// The identity in force, read from secure storage on start.
 ///

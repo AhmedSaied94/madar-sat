@@ -23,6 +23,8 @@ import { useSources, useSourceRuns } from './queries';
 /** The chip's tone from the breaker and the last 24 hours' error rate. */
 export function healthTone(source: SourceHealth): HealthTone {
   if (source.breaker === 'open') return 'open';
+  // A run the scheduler chose not to start is not a fault: no red, no amber (contract A13).
+  if (source.last_run?.status === 'stopped') return 'neutral';
   if (source.last_run?.status === 'failed' || (source.error_rate_24h ?? 0) >= 0.5) return 'near_limit';
   return 'ok';
 }
@@ -76,7 +78,13 @@ function SourceCard({
           {live === null ? source.name : copy.live.name}
         </bdi>
         <HealthChip health={tone}>
-          {tone === 'open' ? copy.breakerOpen : tone === 'near_limit' ? copy.runStatus.partial : copy.healthy}
+          {tone === 'open'
+            ? copy.breakerOpen
+            : tone === 'neutral'
+              ? copy.stopped[reasonOf(source)]
+              : tone === 'near_limit'
+                ? copy.runStatus.partial
+                : copy.healthy}
         </HealthChip>
       </div>
 
@@ -184,7 +192,19 @@ const RUN_STATUS_KEY: Record<ImportRunRow['status'], keyof typeof copy.runStatus
   succeeded: 'succeeded',
   partial: 'partial',
   failed: 'failed',
+  stopped: 'stopped',
 };
+
+/** A stopped run's reason, from the two the scheduler uses; anything else stays as it came. */
+export function reasonOf(source: SourceHealth): 'not_configured' | 'budget_reached' {
+  return source.last_run?.error === 'budget_reached' ? 'budget_reached' : 'not_configured';
+}
+
+/** The reason of a stopped run, in Arabic (contract A13). */
+function stoppedReason(error: string | null): string | null {
+  if (error === null) return null;
+  return error === 'not_configured' ? copy.stopped.not_configured : error === 'budget_reached' ? copy.stopped.budget_reached : error;
+}
 
 export function SourcesPage(): ReactElement {
   const { data, isPending, isError, error } = useSources();
@@ -285,20 +305,27 @@ export function SourcesPage(): ReactElement {
                       {formatCairoTime(run.started_at)} · {formatCairoTime(run.started_at)}
                     </td>
                     <td className="text-caption p-2">
-                      <span
-                        data-status={run.status}
-                        className={clsx(
-                          'text-micro rounded-xs px-2 py-1',
-                          run.status === 'failed'
-                            ? 'bg-error-container text-error'
-                            : run.status === 'partial'
-                              ? 'bg-postponed-container text-postponed'
-                              : run.status === 'running'
-                                ? 'bg-surface-2 text-text-secondary'
-                                : 'bg-free-container text-free',
-                        )}
-                      >
-                        {copy.runStatus[RUN_STATUS_KEY[run.status]]}
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span
+                          data-status={run.status}
+                          className={clsx(
+                            'text-micro rounded-xs px-2 py-1',
+                            run.status === 'failed'
+                              ? 'bg-error-container text-error'
+                              : run.status === 'partial'
+                                ? 'bg-postponed-container text-postponed'
+                                : run.status === 'running'
+                                  ? 'bg-surface-2 text-text-secondary'
+                                  : run.status === 'stopped'
+                                    ? 'bg-surface-2 text-text-tertiary'
+                                    : 'bg-free-container text-free',
+                          )}
+                        >
+                          {copy.runStatus[RUN_STATUS_KEY[run.status]]}
+                        </span>
+                        {run.status === 'stopped' && stoppedReason(run.error) !== null ? (
+                          <span className="text-micro text-text-tertiary">{stoppedReason(run.error)}</span>
+                        ) : null}
                       </span>
                     </td>
                     <td className="text-caption p-2 text-end tabular-nums text-text-primary">{run.items_found}</td>

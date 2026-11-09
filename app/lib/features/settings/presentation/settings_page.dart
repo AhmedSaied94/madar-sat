@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/build_info.dart';
+import '../../../core/format/digits.dart';
 import '../../../core/format/time.dart';
 import '../../../core/l10n/error_copy.dart';
 import '../../../core/links/url_opener.dart';
@@ -21,12 +23,14 @@ import '../../devices/data/device_repository.dart';
 import '../../follows/data/follows_repository.dart';
 import '../../my_satellites/data/my_satellites_provider.dart';
 import '../../onboarding/presentation/steps/satellites_step.dart';
+import 'notification_settings.dart';
+import 'settings_section.dart';
 import '../../../core/config/app_config.dart';
 
-/// S15 Settings, D3's core scope: التوقيت, المظهر, أقماري, خطوات البداية and عن التطبيق.
+/// S15 Settings: التوقيت, المظهر, الإشعارات, أقماري, خطوات البداية and عن التطبيق.
 ///
-/// Notifications, the competitions order and the data group wait for V1/D8 (contract
-/// app-screens); this screen shows only what the app honors today.
+/// The competitions order and the data group wait for V1/D8 (contract app-screens); this
+/// screen shows only what the app honors today.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key, this.section});
 
@@ -73,8 +77,8 @@ class SettingsPage extends ConsumerWidget {
                 padding: const EdgeInsetsDirectional.only(bottom: MadarSpace.s8),
                 children: [
                   if (showAll || section == 'time') ...[
-                    _SectionTitle(l.s15SectionTime),
-                    _Card(
+                    SettingsSectionTitle(l.s15SectionTime),
+                    SettingsCard(
                       children: [
                         MadarListRow(
                           icon: Icons.public,
@@ -124,8 +128,8 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ],
                   if (showAll || section == 'appearance') ...[
-                    _SectionTitle(l.s15SectionAppearance),
-                    _Card(
+                    SettingsSectionTitle(l.s15SectionAppearance),
+                    SettingsCard(
                       children: [
                         Padding(
                           padding: const EdgeInsetsDirectional.fromSTEB(
@@ -198,9 +202,10 @@ class SettingsPage extends ConsumerWidget {
                       ],
                     ),
                   ],
+                  if (showAll) const NotificationSettingsGroup(),
                   if (showAll || section == 'satellites') ...[
-                    _SectionTitle(l.s15SectionSatellites),
-                    _Card(
+                    SettingsSectionTitle(l.s15SectionSatellites),
+                    SettingsCard(
                       children: [
                         MadarListRow(
                           icon: Icons.satellite_alt,
@@ -213,8 +218,8 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ],
                   if (showAll) ...[
-                    _SectionTitle(l.s15SectionOnboarding),
-                    _Card(
+                    SettingsSectionTitle(l.s15SectionOnboarding),
+                    SettingsCard(
                       children: [
                         MadarListRow(
                           icon: Icons.restart_alt,
@@ -224,14 +229,26 @@ class SettingsPage extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    _SectionTitle(l.s15SectionAbout),
-                    _Card(
+                    SettingsSectionTitle(l.s15SectionAbout),
+                    SettingsCard(
                       children: [
                         MadarListRow(
                           icon: Icons.info_outline,
                           title: l.s15Version,
                           value: BuildInfo.label,
                         ),
+                        if (settings.deviceId case final id?)
+                          MadarListRow(
+                            icon: Icons.tag,
+                            title: l.s15DeviceId,
+                            value: MadarDigits.plain(id),
+                            trailing: Icon(
+                              Icons.copy,
+                              size: MadarText.textBody.fontSize,
+                              color: colors.textTertiary,
+                            ),
+                            onTap: () => _copyDeviceId(context, l, id),
+                          ),
                         if (AppConfig.privacyUrl.isNotEmpty)
                           MadarListRow(
                             icon: Icons.shield_outlined,
@@ -259,6 +276,13 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// So an admin can save this device as their test device (FR-062).
+  static Future<void> _copyDeviceId(BuildContext context, AppLocalizations l, int id) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await Clipboard.setData(ClipboardData(text: MadarDigits.plain(id)));
+    messenger?.showSnackBar(SnackBar(content: Text(l.s15DeviceIdCopied)));
   }
 
   /// «نايل سات، بدر», or the prompt while nothing is chosen.
@@ -384,39 +408,4 @@ class _ZoneSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(
-          MadarSpace.s6,
-          MadarSpace.s5,
-          MadarSpace.s6,
-          MadarSpace.s2,
-        ),
-        child: Text(
-          title,
-          style: MadarText.textCaption.copyWith(
-            color: context.madarColors.textTertiary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: MadarSpace.s4),
-        child: MadarListGroup(children: children),
-      );
 }

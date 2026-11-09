@@ -1,4 +1,9 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
+
+import '../network/generated/models/notification_type.dart';
 
 /// The device's own settings (D3, research R27): one immutable value read from drift's
 /// `app_settings` table, so every screen sees the same theme, zone, clock format, font scale
@@ -74,6 +79,67 @@ abstract final class SettingsKeys {
   static const String fontScale = 'font.scale';
   static const String satelliteIds = 'satellites.my';
   static const String notificationsAsked = 'notifications.asked';
+  static const String notificationPrefs = 'notifications.prefs';
+  static const String deviceId = 'device.id';
+}
+
+/// What the fan chose in S15's الإشعارات group (FR-063). Turning the master off keeps the
+/// per-type choices, and a type never touched has SD §6.8's default.
+@immutable
+class NotificationChoices {
+  const NotificationChoices({this.enabled = true, this.types = const {}});
+
+  /// The master switch.
+  final bool enabled;
+
+  /// The types the fan has changed.
+  final Map<NotificationType, bool> types;
+
+  /// Every type is on by default except the kickoff alert.
+  static bool defaultOn(NotificationType type) => type != NotificationType.matchStarted;
+
+  bool isOn(NotificationType type) => types[type] ?? defaultOn(type);
+
+  NotificationChoices withEnabled(bool value) => NotificationChoices(enabled: value, types: types);
+
+  NotificationChoices withType(NotificationType type, bool on) =>
+      NotificationChoices(enabled: enabled, types: {...types, type: on});
+
+  String encode() => jsonEncode({
+        'enabled': enabled,
+        'types': {for (final entry in types.entries) entry.key.json: entry.value},
+      });
+
+  /// The stored document back. Anything unreadable gives the defaults, like every setting.
+  static NotificationChoices decode(String stored) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(stored);
+    } on FormatException {
+      return const NotificationChoices();
+    }
+    if (decoded is! Map<String, Object?>) return const NotificationChoices();
+    final enabled = decoded['enabled'];
+    final types = decoded['types'];
+    return NotificationChoices(
+      enabled: enabled is bool ? enabled : true,
+      types: {
+        if (types is Map<String, Object?>)
+          for (final type in NotificationType.$valuesDefined)
+            if (types[type.json] case final bool on) type: on,
+      },
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is NotificationChoices && other.enabled == enabled && mapEquals(other.types, types);
+
+  @override
+  int get hashCode => Object.hash(
+        enabled,
+        Object.hashAllUnordered(types.entries.map((entry) => Object.hash(entry.key, entry.value))),
+      );
 }
 
 /// Everything the app reads once at start and on every change.
@@ -87,6 +153,8 @@ class AppSettingsValue {
     this.timeFormat = MadarTimeFormat.h12,
     this.fontScale = MadarFontScale.normal,
     this.satelliteIds = const {},
+    this.notifications,
+    this.deviceId,
   });
 
   /// The onboarding step last shown (S1.1 … S1.5), resumed at launch.
@@ -102,6 +170,16 @@ class AppSettingsValue {
 
   /// My satellites, as the user chose them; empty means "the O10 default set stands".
   final Set<int> satelliteIds;
+
+  /// S15's choices, or null while the fan has changed none. Then no prefs are sent, so the
+  /// server's defaults stand, and a rollback's refusal of a new field can't reach this device.
+  final NotificationChoices? notifications;
+
+  /// The choices in force.
+  NotificationChoices get notificationChoices => notifications ?? const NotificationChoices();
+
+  /// This device's ID on the server, shown in S15 once known (FR-062). It isn't a secret.
+  final int? deviceId;
 
   ThemeMode get themeMode => switch (theme) {
         MadarThemeChoice.dark => ThemeMode.dark,
@@ -125,6 +203,8 @@ class AppSettingsValue {
     MadarTimeFormat? timeFormat,
     MadarFontScale? fontScale,
     Set<int>? satelliteIds,
+    NotificationChoices? notifications,
+    int? deviceId,
   }) =>
       AppSettingsValue(
         onboardingStep: onboardingStep ?? this.onboardingStep,
@@ -134,6 +214,8 @@ class AppSettingsValue {
         timeFormat: timeFormat ?? this.timeFormat,
         fontScale: fontScale ?? this.fontScale,
         satelliteIds: satelliteIds ?? this.satelliteIds,
+        notifications: notifications ?? this.notifications,
+        deviceId: deviceId ?? this.deviceId,
       );
 
   /// A stored map back into the typed value. Anything unreadable falls back to the bundled
@@ -165,6 +247,11 @@ class AppSettingsValue {
         orElse: () => MadarFontScale.normal,
       ),
       satelliteIds: ids,
+      notifications: switch (stored[SettingsKeys.notificationPrefs]) {
+        final String document => NotificationChoices.decode(document),
+        null => null,
+      },
+      deviceId: int.tryParse(stored[SettingsKeys.deviceId] ?? ''),
     );
   }
 }

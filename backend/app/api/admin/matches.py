@@ -160,5 +160,9 @@ async def patch_match(
 ) -> Envelope[a.AdminMatch]:
     match = await service.update(session, admin, match_id, body, if_match, now)
     await session.commit()
+    # An editor's save that produced a push queues the dispatcher, as a poll does (research R3).
+    from app.notifications.kick import kick_if_due_async
+
+    await kick_if_due_async(session, now)
     set_etag(response, await versions.match_version(session, match))
     return ok(await match_view.view(session, match, now))

@@ -1,9 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:madar_sat/core/network/generated/models/match_detail.dart';
+import 'package:madar_sat/core/network/generated/models/score.dart';
 import 'package:madar_sat/core/network/generated/models/status.dart';
 import 'package:madar_sat/core/settings/app_settings.dart';
+import 'package:madar_sat/core/theme/madar_theme.dart';
 import 'package:madar_sat/design/components/display_scope.dart';
 import 'package:madar_sat/features/match_detail/presentation/match_hero.dart';
+import 'package:madar_sat/l10n/app_localizations.dart';
 
 import '../../fixtures/sample_match_detail.dart';
 import '../../fixtures/sample_models.dart';
@@ -172,6 +176,100 @@ void main() {
       );
 
       expect(find.text('الأربعاء 28 أكتوبر · لم يُحدد'), findsOneWidget);
+    });
+  });
+
+  group('the score highlight (FR-054)', () {
+    MatchDetail withScore(int home, int away) => sampleMatchDetail(
+          status: Status.live,
+          score: Score(home: home, away: away, homePen: null, awayPen: null),
+          minute: '67',
+        );
+
+    Future<void> pumpScore(
+      WidgetTester tester,
+      MatchDetail match, {
+      bool reducedMotion = false,
+      bool highlight = true,
+    }) =>
+        tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('ar'),
+            supportedLocales: const [Locale('ar')],
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            theme: MadarTheme.dark,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: reducedMotion),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: MatchHero(match: match, now: kickoff, highlightScore: highlight),
+            ),
+          ),
+        );
+
+    /// The highlight's colour right now; transparent at rest.
+    Color? surface(WidgetTester tester) {
+      final box = tester.widget<DecoratedBox>(find.byKey(ScoreFlash.surfaceKey));
+      return (box.decoration as BoxDecoration).color;
+    }
+
+    testWidgets('nothing on first paint', (tester) async {
+      await pumpScore(tester, withScore(1, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)?.a, 0);
+    });
+
+    testWidgets('once on a rise, for 1.2 s', (tester) async {
+      await pumpScore(tester, withScore(1, 0));
+      await pumpScore(tester, withScore(2, 0));
+
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)!.a, greaterThan(0));
+
+      await tester.pump(const Duration(milliseconds: 1200));
+      expect(surface(tester)?.a, 0);
+
+      // A rebuild with the same score does not flash again.
+      await pumpScore(tester, withScore(2, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)?.a, 0);
+    });
+
+    testWidgets('on a rise of either side', (tester) async {
+      await pumpScore(tester, withScore(1, 0));
+      await pumpScore(tester, withScore(1, 1));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)!.a, greaterThan(0));
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('a score appearing where there was none counts as first paint', (tester) async {
+      await pumpScore(tester, sampleMatchDetail());
+      await pumpScore(tester, withScore(1, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)?.a, 0);
+    });
+
+    testWidgets('nothing on a fall', (tester) async {
+      await pumpScore(tester, withScore(2, 0));
+      await pumpScore(tester, withScore(1, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)?.a, 0);
+    });
+
+    testWidgets('nothing under reduced motion', (tester) async {
+      await pumpScore(tester, withScore(1, 0), reducedMotion: true);
+      await pumpScore(tester, withScore(2, 0), reducedMotion: true);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)?.a, 0);
+    });
+
+    testWidgets('nothing with the live center off', (tester) async {
+      await pumpScore(tester, withScore(1, 0), highlight: false);
+      await pumpScore(tester, withScore(2, 0), highlight: false);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(surface(tester)?.a, 0);
     });
   });
 }

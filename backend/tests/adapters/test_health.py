@@ -107,6 +107,32 @@ def test_an_open_breaker_pauses_the_source(sync_session) -> None:
     assert source_is_paused(sync_session, "livesoccertv", now=NOW) is True
 
 
+def test_a_stopped_run_touches_neither_the_breaker_nor_the_zero_alarm(sync_session) -> None:
+    """FR-035: a run that stopped on purpose is not a failure and is not an empty source."""
+    alerts = Recorder()
+
+    health_outcome = record_run(
+        sync_session,
+        source="api_football",
+        status="stopped",
+        items_found=0,
+        finished_at=NOW,
+        pages=1,
+        alert=alerts,
+        now=NOW,
+    )
+
+    row = sync_session.execute(
+        text(
+            "SELECT consecutive_failures, breaker_opened_at, last_success_at, last_zero_alert_on "
+            "FROM sources WHERE name = 'api_football'"
+        )
+    ).one()
+    assert tuple(row) == (0, None, None, None)
+    assert alerts.sent == []
+    assert health_outcome.zero_alert_sent is False
+
+
 def test_zero_items_with_pages_alerts_once_per_cairo_day(sync_session, monkeypatch: pytest.MonkeyPatch) -> None:
     # Keep the breaker out of this test: it is the alarm that is being measured.
     monkeypatch.setenv("SOURCE_BREAKER_THRESHOLD", "10")
@@ -249,3 +275,76 @@ def test_a_live_cycle_leaves_the_datasets_alone(sync_session) -> None:
     record_live_cycle(sync_session, status="succeeded", items_found=4, finished_at=NOW)
 
     assert dataset_versions(sync_session) == before
+
+
+def _sporteventz_row(sync_session) -> tuple:
+    return sync_session.execute(
+        text("SELECT consecutive_failures, breaker_opened_at FROM sources WHERE name = 'sporteventz'")
+    ).one()
+
+
+def test_a_failed_sporteventz_run_inside_the_quiet_grace_still_counts(
+    sync_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """B2-R1-1, FR-037: the 7-day grace covers a valid empty answer only, never a failed run."""
+    from app.adapters.config import get_adapter_settings
+
+    monkeypatch.setenv("SOURCE_BREAKER_THRESHOLD", "3")  # an earlier test leaves a cached 10
+    get_adapter_settings.cache_clear()
+    sync_session.execute(
+        text("UPDATE sources SET consecutive_failures = 0, breaker_opened_at = NULL WHERE name = 'sporteventz'")
+    )
+    # A run with records an hour ago, so the source is well inside its quiet window.
+    sync_session.execute(
+        text(
+            "INSERT INTO import_runs (source, started_at, finished_at, status, items_found) "
+            "VALUES ('sporteventz', :at, :at, 'succeeded', 40)"
+        ),
+        {"at": NOW.replace(hour=11)},
+    )
+    alerts = Recorder()
+
+    for _ in range(3):
+        record_run(
+            sync_session,
+            source="sporteventz",
+            status="failed",
+            items_found=0,
+            finished_at=NOW,
+            pages=8,
+            alert=alerts,
+            now=NOW,
+        )
+
+    failures, breaker = _sporteventz_row(sync_session)
+    assert failures == 3
+    assert breaker is not None
+    assert alerts.sent == ["⛔ المصدر ‹sporteventz› متوقف بعد ‹3› محاولات فاشلة"]
+
+
+def test_a_valid_empty_sporteventz_run_inside_the_grace_is_quiet(sync_session) -> None:
+    sync_session.execute(
+        text("UPDATE sources SET consecutive_failures = 0, breaker_opened_at = NULL WHERE name = 'sporteventz'")
+    )
+    sync_session.execute(
+        text(
+            "INSERT INTO import_runs (source, started_at, finished_at, status, items_found) "
+            "VALUES ('sporteventz', :at, :at, 'succeeded', 40)"
+        ),
+        {"at": NOW.replace(hour=11)},
+    )
+    alerts = Recorder()
+
+    record_run(
+        sync_session,
+        source="sporteventz",
+        status="succeeded",
+        items_found=0,
+        finished_at=NOW,
+        pages=8,
+        alert=alerts,
+        now=NOW,
+    )
+
+    assert _sporteventz_row(sync_session) == (0, None)
+    assert alerts.sent == []

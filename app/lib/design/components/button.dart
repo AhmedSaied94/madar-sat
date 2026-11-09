@@ -23,6 +23,8 @@ class MadarButton extends StatelessWidget {
     this.trailingIcon,
     this.busy = false,
     this.expanded = false,
+    this.background,
+    this.foreground,
   });
 
   final String label;
@@ -42,16 +44,24 @@ class MadarButton extends StatelessWidget {
   /// Fills the width it is given (the onboarding footer and the dialog's action).
   final bool expanded;
 
+  /// Replace the variant's fill and label colour, for an action inside a status-tinted row:
+  /// S15's «تفعيل» is `postponed` with `bg` text on the `postponed-container` warning
+  /// (`FollowSheet.html`). Both are tokens, and the pair must pass WCAG AA in both themes.
+  final Color? background;
+  final Color? foreground;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.madarColors;
-    final (background, foreground, border) = switch (variant) {
+    final (variantBackground, variantForeground, border) = switch (variant) {
       MadarButtonVariant.primary => (colors.accent, colors.onAccent, null),
       MadarButtonVariant.secondary => (colors.surface2, colors.textPrimary, null),
       MadarButtonVariant.outline => (null, colors.textPrimary, colors.dividerStrong),
       MadarButtonVariant.ghost => (null, colors.accentText, null),
       MadarButtonVariant.danger => (colors.errorContainer, colors.error, null),
     };
+    final background = this.background ?? variantBackground;
+    final foreground = this.foreground ?? variantForeground;
     final height = switch (size) {
       MadarButtonSize.regular => MadarLayout.touchMin,
       MadarButtonSize.small => MadarSpace.s8 + MadarSpace.s2,

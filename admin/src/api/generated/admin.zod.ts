@@ -3,9 +3,165 @@
  * Do not edit manually.
  * Madar Sat Admin API
  * Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` needs `Authorization: Bearer <access_token>` and the role in its row of the contract. Writes need `If-Match` with the entity's `ETag`.
+
+Error codes added on D6: `password_change_required` (a flagged account may only read `auth/me` and change its password), `notification_not_cancellable` (only a pending announcement cancels), `send_at_in_past`, `text_not_allowed` (a card-sharing label), `test_device_not_set`, `test_device_no_token`, `device_not_found`, `email_taken`, `cannot_change_self`, `last_admin`, `password_too_short`, `password_unchanged`.
  * OpenAPI spec version: 1.0.0
  */
 import * as zod from 'zod';
+
+/**
+ * @summary A17: the audit log, by actor, entity or window
+ */
+
+export const listAuditEntriesQuerySourceMaxOne = 64;
+
+export const listAuditEntriesQueryEntityMaxOne = 64;
+
+export const listAuditEntriesQueryEntityIdMaxOne = 9223372036854776000;
+
+export const listAuditEntriesQueryCursorMaxOne = 200;
+
+export const listAuditEntriesQueryLimitDefault = 50;
+export const listAuditEntriesQueryLimitMax = 100;
+
+
+
+export const listAuditEntriesQueryParams = zod.object({
+  "admin_user_id": zod.union([zod.number().min(1),zod.null()]).optional(),
+  "source": zod.union([zod.string().min(1).max(listAuditEntriesQuerySourceMaxOne),zod.null()]).optional(),
+  "entity": zod.union([zod.string().min(1).max(listAuditEntriesQueryEntityMaxOne),zod.null()]).optional(),
+  "entity_id": zod.union([zod.number().min(1).max(listAuditEntriesQueryEntityIdMaxOne),zod.null()]).optional(),
+  "from": zod.union([zod.string().datetime({}),zod.null()]).optional(),
+  "to": zod.union([zod.string().datetime({}),zod.null()]).optional(),
+  "cursor": zod.union([zod.string().max(listAuditEntriesQueryCursorMaxOne),zod.null()]).optional(),
+  "limit": zod.number().min(1).max(listAuditEntriesQueryLimitMax).default(listAuditEntriesQueryLimitDefault).describe('Page size; the default is 50')
+})
+
+export const listAuditEntriesResponseDataItemEntityIdMaxOne = 9223372036854776000;
+
+export const listAuditEntriesResponseDataItemIdMax = 9223372036854776000;
+
+
+
+export const listAuditEntriesResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "action": zod.string(),
+  "actor": zod.object({
+  "id": zod.union([zod.number(),zod.null()]),
+  "kind": zod.enum(['admin', 'importer', 'system']),
+  "name": zod.union([zod.string(),zod.null()])
+}),
+  "created_at": zod.string().datetime({}),
+  "entity": zod.string(),
+  "entity_id": zod.union([zod.number().min(1).max(listAuditEntriesResponseDataItemEntityIdMaxOne),zod.null()]),
+  "has_notification": zod.boolean(),
+  "id": zod.number().min(1).max(listAuditEntriesResponseDataItemIdMax),
+  "summary_fields": zod.array(zod.string())
+})),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A17: one entry with its diff and its notification
+ */
+export const getAuditEntryPathAuditIdMax = 9223372036854776000;
+
+
+
+export const getAuditEntryParams = zod.object({
+  "audit_id": zod.number().min(1).max(getAuditEntryPathAuditIdMax)
+})
+
+export const getAuditEntryResponseDataEntityIdMaxOne = 9223372036854776000;
+
+export const getAuditEntryResponseDataIdMax = 9223372036854776000;
+
+export const getAuditEntryResponseDataNotificationFailedMin = 0;
+export const getAuditEntryResponseDataNotificationFailedMax = 2147483647;
+
+export const getAuditEntryResponseDataNotificationIdMax = 9223372036854776000;
+
+export const getAuditEntryResponseDataNotificationSentMin = 0;
+export const getAuditEntryResponseDataNotificationSentMax = 2147483647;
+
+
+
+export const getAuditEntryResponse = zod.object({
+  "data": zod.union([zod.object({
+  "action": zod.string(),
+  "actor": zod.object({
+  "id": zod.union([zod.number(),zod.null()]),
+  "kind": zod.enum(['admin', 'importer', 'system']),
+  "name": zod.union([zod.string(),zod.null()])
+}),
+  "created_at": zod.string().datetime({}),
+  "diff": zod.record(zod.string(), zod.unknown()),
+  "entity": zod.string(),
+  "entity_id": zod.union([zod.number().min(1).max(getAuditEntryResponseDataEntityIdMaxOne),zod.null()]),
+  "has_notification": zod.boolean(),
+  "id": zod.number().min(1).max(getAuditEntryResponseDataIdMax),
+  "notification": zod.union([zod.object({
+  "failed": zod.number().min(getAuditEntryResponseDataNotificationFailedMin).max(getAuditEntryResponseDataNotificationFailedMax),
+  "id": zod.number().min(1).max(getAuditEntryResponseDataNotificationIdMax),
+  "sent": zod.number().min(getAuditEntryResponseDataNotificationSentMin).max(getAuditEntryResponseDataNotificationSentMax),
+  "status": zod.enum(['pending', 'sending', 'sent', 'failed', 'cancelled']),
+  "type": zod.enum(['kickoff_reminder', 'goal', 'final_score', 'match_started', 'channels_updated', 'frequency_changed', 'announcement']).describe('The seven types of SD §6.8; unknown types are refused (research R4).')
+}),zod.null()]),
+  "summary_fields": zod.array(zod.string())
+}).describe('``diff`` exactly as stored, old shapes included, and the outbox row that links to this entry.'),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * An account flagged for a temporary password may only reach this route (research R19).
+ * @summary Change my password
+ */
+export const changePasswordBodyCurrentPasswordMax = 256;
+
+export const changePasswordBodyNewPasswordMax = 256;
+
+
+
+export const changePasswordBody = zod.object({
+  "current_password": zod.string().min(1).max(changePasswordBodyCurrentPasswordMax),
+  "new_password": zod.string().min(1).max(changePasswordBodyNewPasswordMax)
+}).describe('A flagged account\'s own change; the length rules answer ``422 password_too_short`` (admin-api).')
+
+export const changePasswordResponseDataAdminMustChangePasswordDefault = false;export const changePasswordResponseDataExpiresInDefault = 900;export const changePasswordResponseDataTokenTypeDefault = "Bearer";
+
+export const changePasswordResponse = zod.object({
+  "data": zod.union([zod.object({
+  "access_token": zod.string(),
+  "admin": zod.object({
+  "email": zod.string().email(),
+  "id": zod.number(),
+  "must_change_password": zod.boolean().optional(),
+  "name": zod.string(),
+  "role": zod.enum(['editor', 'admin'])
+}),
+  "expires_in": zod.number(),
+  "token_type": zod.literal("Bearer")
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
 
 /**
  * @summary Log in
@@ -21,7 +177,7 @@ export const loginBody = zod.object({
   "password": zod.string().min(1).max(loginBodyPasswordMax)
 })
 
-export const loginResponseDataExpiresInDefault = 900;export const loginResponseDataTokenTypeDefault = "Bearer";
+export const loginResponseDataAdminMustChangePasswordDefault = false;export const loginResponseDataExpiresInDefault = 900;export const loginResponseDataTokenTypeDefault = "Bearer";
 
 export const loginResponse = zod.object({
   "data": zod.union([zod.object({
@@ -29,6 +185,7 @@ export const loginResponse = zod.object({
   "admin": zod.object({
   "email": zod.string().email(),
   "id": zod.number(),
+  "must_change_password": zod.boolean().optional(),
   "name": zod.string(),
   "role": zod.enum(['editor', 'admin'])
 }),
@@ -65,10 +222,13 @@ export const logoutResponse = zod.object({
 /**
  * @summary Current admin
  */
+export const meResponseDataMustChangePasswordDefault = false;
+
 export const meResponse = zod.object({
   "data": zod.union([zod.object({
   "email": zod.string().email(),
   "id": zod.number(),
+  "must_change_password": zod.boolean().optional(),
   "name": zod.string(),
   "role": zod.enum(['editor', 'admin'])
 }),zod.null()]),
@@ -88,7 +248,7 @@ export const refreshHeader = zod.object({
   "X-CSRF-Token": zod.union([zod.string(),zod.null()]).optional().describe('Must equal the madar_csrf cookie')
 })
 
-export const refreshResponseDataExpiresInDefault = 900;export const refreshResponseDataTokenTypeDefault = "Bearer";
+export const refreshResponseDataAdminMustChangePasswordDefault = false;export const refreshResponseDataExpiresInDefault = 900;export const refreshResponseDataTokenTypeDefault = "Bearer";
 
 export const refreshResponse = zod.object({
   "data": zod.union([zod.object({
@@ -96,6 +256,7 @@ export const refreshResponse = zod.object({
   "admin": zod.object({
   "email": zod.string().email(),
   "id": zod.number(),
+  "must_change_password": zod.boolean().optional(),
   "name": zod.string(),
   "role": zod.enum(['editor', 'admin'])
 }),
@@ -403,6 +564,39 @@ export const patchChannelResponse = zod.object({
   "show_in_match": zod.boolean(),
   "sort_order": zod.union([zod.number(),zod.null()])
 }),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A8: the frequency changes followers were told about, newest first
+ */
+export const channelFrequencyChangesPathChannelIdMax = 9223372036854776000;
+
+
+
+export const channelFrequencyChangesParams = zod.object({
+  "channel_id": zod.number().min(1).max(channelFrequencyChangesPathChannelIdMax)
+})
+
+export const channelFrequencyChangesResponseDataItemIdMax = 9223372036854776000;
+
+
+
+export const channelFrequencyChangesResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "actor": zod.union([zod.string(),zod.null()]),
+  "detected_at": zod.string().datetime({}),
+  "id": zod.number().min(1).max(channelFrequencyChangesResponseDataItemIdMax),
+  "new": zod.string(),
+  "old": zod.string(),
+  "source": zod.string()
+}).describe('What followers of a carriage were told; ``actor`` from the row\'s own audit id (research R6, R20).')),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
   "message": zod.string()
@@ -864,7 +1058,7 @@ export const getDashboardResponse = zod.object({
   "items_found": zod.number().min(getDashboardResponseDataSourcesItemLastRunItemsFoundMin).max(getDashboardResponseDataSourcesItemLastRunItemsFoundMax),
   "items_upserted": zod.number().min(getDashboardResponseDataSourcesItemLastRunItemsUpsertedMin).max(getDashboardResponseDataSourcesItemLastRunItemsUpsertedMax),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed', 'stopped'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
   "live": zod.union([zod.object({
@@ -1010,7 +1204,7 @@ export const getImportRunResponse = zod.object({
   "pages": zod.number().min(getImportRunResponseDataPagesMin).max(getImportRunResponseDataPagesMax),
   "raw_path": zod.union([zod.string(),zod.null()]),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed']),
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed', 'stopped']),
   "worker": zod.union([zod.string(),zod.null()])
 }),zod.null()]),
   "error": zod.union([zod.object({
@@ -1604,6 +1798,271 @@ export const uploadMediaResponse = zod.object({
   "kind": zod.enum(['image', 'audio']),
   "url": zod.string(),
   "width": zod.union([zod.number(),zod.null()])
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Read the outbox log
+ */
+export const listNotificationsQueryTypeRegExpOne = new RegExp('^[a-z_]{1,32}$');
+export const listNotificationsQueryStatusRegExpOne = new RegExp('^[a-z]{1,16}$');
+export const listNotificationsQueryCursorMaxOne = 200;
+
+export const listNotificationsQueryLimitDefault = 50;
+export const listNotificationsQueryLimitMax = 100;
+
+
+
+export const listNotificationsQueryParams = zod.object({
+  "type": zod.union([zod.string().regex(listNotificationsQueryTypeRegExpOne),zod.null()]).optional(),
+  "status": zod.union([zod.string().regex(listNotificationsQueryStatusRegExpOne),zod.null()]).optional(),
+  "cursor": zod.union([zod.string().max(listNotificationsQueryCursorMaxOne),zod.null()]).optional(),
+  "limit": zod.number().min(1).max(listNotificationsQueryLimitMax).default(listNotificationsQueryLimitDefault)
+})
+
+export const listNotificationsResponseDataItemEtagMin = 3;
+export const listNotificationsResponseDataItemEtagMax = 80;
+
+export const listNotificationsResponseDataItemFailedMin = 0;
+export const listNotificationsResponseDataItemFailedMax = 2147483647;
+
+export const listNotificationsResponseDataItemIdMax = 9223372036854776000;
+
+export const listNotificationsResponseDataItemRecipientsMin = 0;
+export const listNotificationsResponseDataItemRecipientsMax = 2147483647;
+
+export const listNotificationsResponseDataItemSentMin = 0;
+export const listNotificationsResponseDataItemSentMax = 2147483647;
+
+
+
+export const listNotificationsResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "created_at": zod.string().datetime({}),
+  "due_at": zod.string().datetime({}),
+  "error": zod.union([zod.string(),zod.null()]),
+  "etag": zod.string().min(listNotificationsResponseDataItemEtagMin).max(listNotificationsResponseDataItemEtagMax),
+  "failed": zod.number().min(listNotificationsResponseDataItemFailedMin).max(listNotificationsResponseDataItemFailedMax),
+  "id": zod.number().min(1).max(listNotificationsResponseDataItemIdMax),
+  "is_correction": zod.boolean(),
+  "is_test": zod.boolean(),
+  "recipients": zod.number().min(listNotificationsResponseDataItemRecipientsMin).max(listNotificationsResponseDataItemRecipientsMax),
+  "sent": zod.number().min(listNotificationsResponseDataItemSentMin).max(listNotificationsResponseDataItemSentMax),
+  "sent_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "status": zod.enum(['pending', 'sending', 'sent', 'failed', 'cancelled']),
+  "target": zod.object({
+  "id": zod.union([zod.number(),zod.null()]),
+  "kind": zod.enum(['match_followers', 'match_core', 'match_only', 'channel', 'team', 'competition', 'all', 'device']),
+  "label": zod.union([zod.string(),zod.null()])
+}).describe('Where a row went, built from current data; ``label`` is null for ``all`` (admin-api).'),
+  "type": zod.enum(['kickoff_reminder', 'goal', 'final_score', 'match_started', 'channels_updated', 'frequency_changed', 'announcement']).describe('The seven types of SD §6.8; unknown types are refused (research R4).')
+})),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Compose an announcement or a scheduled notification
+ */
+export const createAnnouncementBodyAudienceIdMaxOne = 9223372036854776000;
+
+export const createAnnouncementBodyBodyMax = 180;
+
+export const createAnnouncementBodyTargetIdMaxOne = 9223372036854776000;
+
+export const createAnnouncementBodyTitleMax = 65;
+
+
+
+export const createAnnouncementBody = zod.object({
+  "audience": zod.object({
+  "id": zod.union([zod.number().min(1).max(createAnnouncementBodyAudienceIdMaxOne),zod.null()]).optional(),
+  "kind": zod.enum(['all', 'team', 'competition', 'match', 'channel'])
+}),
+  "body": zod.string().min(1).max(createAnnouncementBodyBodyMax),
+  "send_at": zod.union([zod.string().datetime({}),zod.null()]).optional(),
+  "target": zod.object({
+  "id": zod.union([zod.number().min(1).max(createAnnouncementBodyTargetIdMaxOne),zod.null()]).optional(),
+  "type": zod.enum(['none', 'match', 'channel'])
+}),
+  "title": zod.string().min(1).max(createAnnouncementBodyTitleMax)
+}).describe('A15\'s composer; the route is built here, never sent as text (admin-api).')
+
+
+/**
+ * @summary Count the devices an audience reaches
+ */
+export const getReachQueryKindDefault = "all";
+export const getReachQueryKindRegExp = new RegExp('^(all|team|competition|match|channel)$');
+export const getReachQueryIdMaxOne = 9223372036854776000;
+
+
+
+export const getReachQueryParams = zod.object({
+  "kind": zod.string().regex(getReachQueryKindRegExp).default(getReachQueryKindDefault),
+  "id": zod.union([zod.number().min(1).max(getReachQueryIdMaxOne),zod.null()]).optional()
+})
+
+export const getReachResponseDataDevicesMin = 0;
+export const getReachResponseDataDevicesMax = 2147483647;
+
+
+
+export const getReachResponse = zod.object({
+  "data": zod.union([zod.object({
+  "devices": zod.number().min(getReachResponseDataDevicesMin).max(getReachResponseDataDevicesMax)
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Send a test notification to my saved device
+ */
+export const sendTestBodyBodyMax = 180;
+
+export const sendTestBodyTargetIdMaxOne = 9223372036854776000;
+
+export const sendTestBodyTitleMax = 65;
+
+
+
+export const sendTestBody = zod.object({
+  "body": zod.string().min(1).max(sendTestBodyBodyMax),
+  "target": zod.object({
+  "id": zod.union([zod.number().min(1).max(sendTestBodyTargetIdMaxOne),zod.null()]).optional(),
+  "type": zod.enum(['none', 'match', 'channel'])
+}),
+  "title": zod.string().min(1).max(sendTestBodyTitleMax)
+}).describe('A test send goes to the admin\'s saved device, prefs ignored (admin-api).')
+
+
+/**
+ * @summary My test device
+ */
+export const getTestDeviceResponseDataDeviceIdMax = 9223372036854776000;
+
+
+
+export const getTestDeviceResponse = zod.object({
+  "data": zod.union([zod.object({
+  "app_version": zod.union([zod.string(),zod.null()]),
+  "device_id": zod.number().min(1).max(getTestDeviceResponseDataDeviceIdMax),
+  "has_push_token": zod.boolean(),
+  "platform": zod.string()
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Save my test device (`If-Match` required)
+ */
+export const putTestDeviceHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const putTestDeviceBodyDeviceIdMax = 9223372036854776000;
+
+
+
+export const putTestDeviceBody = zod.object({
+  "device_id": zod.number().min(1).max(putTestDeviceBodyDeviceIdMax)
+})
+
+export const putTestDeviceResponseDataDeviceIdMax = 9223372036854776000;
+
+
+
+export const putTestDeviceResponse = zod.object({
+  "data": zod.union([zod.object({
+  "app_version": zod.union([zod.string(),zod.null()]),
+  "device_id": zod.number().min(1).max(putTestDeviceResponseDataDeviceIdMax),
+  "has_push_token": zod.boolean(),
+  "platform": zod.string()
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Cancel a pending announcement (`If-Match` required)
+ */
+export const cancelNotificationPathNotificationIdMax = 9223372036854776000;
+
+
+
+export const cancelNotificationParams = zod.object({
+  "notification_id": zod.number().min(1).max(cancelNotificationPathNotificationIdMax)
+})
+
+export const cancelNotificationHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const cancelNotificationResponseDataEtagMin = 3;
+export const cancelNotificationResponseDataEtagMax = 80;
+
+export const cancelNotificationResponseDataFailedMin = 0;
+export const cancelNotificationResponseDataFailedMax = 2147483647;
+
+export const cancelNotificationResponseDataIdMax = 9223372036854776000;
+
+export const cancelNotificationResponseDataRecipientsMin = 0;
+export const cancelNotificationResponseDataRecipientsMax = 2147483647;
+
+export const cancelNotificationResponseDataSentMin = 0;
+export const cancelNotificationResponseDataSentMax = 2147483647;
+
+
+
+export const cancelNotificationResponse = zod.object({
+  "data": zod.union([zod.object({
+  "created_at": zod.string().datetime({}),
+  "due_at": zod.string().datetime({}),
+  "error": zod.union([zod.string(),zod.null()]),
+  "etag": zod.string().min(cancelNotificationResponseDataEtagMin).max(cancelNotificationResponseDataEtagMax),
+  "failed": zod.number().min(cancelNotificationResponseDataFailedMin).max(cancelNotificationResponseDataFailedMax),
+  "id": zod.number().min(1).max(cancelNotificationResponseDataIdMax),
+  "is_correction": zod.boolean(),
+  "is_test": zod.boolean(),
+  "recipients": zod.number().min(cancelNotificationResponseDataRecipientsMin).max(cancelNotificationResponseDataRecipientsMax),
+  "sent": zod.number().min(cancelNotificationResponseDataSentMin).max(cancelNotificationResponseDataSentMax),
+  "sent_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "status": zod.enum(['pending', 'sending', 'sent', 'failed', 'cancelled']),
+  "target": zod.object({
+  "id": zod.union([zod.number(),zod.null()]),
+  "kind": zod.enum(['match_followers', 'match_core', 'match_only', 'channel', 'team', 'competition', 'all', 'device']),
+  "label": zod.union([zod.string(),zod.null()])
+}).describe('Where a row went, built from current data; ``label`` is null for ``all`` (admin-api).'),
+  "type": zod.enum(['kickoff_reminder', 'goal', 'final_score', 'match_started', 'channels_updated', 'frequency_changed', 'announcement']).describe('The seven types of SD §6.8; unknown types are refused (research R4).')
 }),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
@@ -2227,7 +2686,7 @@ export const listSourcesResponse = zod.object({
   "items_found": zod.number().min(listSourcesResponseDataItemLastRunItemsFoundMin).max(listSourcesResponseDataItemLastRunItemsFoundMax),
   "items_upserted": zod.number().min(listSourcesResponseDataItemLastRunItemsUpsertedMin).max(listSourcesResponseDataItemLastRunItemsUpsertedMax),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed', 'stopped'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
   "live": zod.union([zod.object({
@@ -2309,7 +2768,7 @@ export const pauseSourceResponse = zod.object({
   "items_found": zod.number().min(pauseSourceResponseDataLastRunItemsFoundMin).max(pauseSourceResponseDataLastRunItemsFoundMax),
   "items_upserted": zod.number().min(pauseSourceResponseDataLastRunItemsUpsertedMin).max(pauseSourceResponseDataLastRunItemsUpsertedMax),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed', 'stopped'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
   "live": zod.union([zod.object({
@@ -2391,7 +2850,7 @@ export const resumeSourceResponse = zod.object({
   "items_found": zod.number().min(resumeSourceResponseDataLastRunItemsFoundMin).max(resumeSourceResponseDataLastRunItemsFoundMax),
   "items_upserted": zod.number().min(resumeSourceResponseDataLastRunItemsUpsertedMin).max(resumeSourceResponseDataLastRunItemsUpsertedMax),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed', 'stopped'])
 }),zod.null()]),
   "last_success_at": zod.union([zod.string().datetime({}),zod.null()]),
   "live": zod.union([zod.object({
@@ -2476,7 +2935,7 @@ export const listSourceRunsResponse = zod.object({
   "items_found": zod.number().min(listSourceRunsResponseDataItemItemsFoundMin).max(listSourceRunsResponseDataItemItemsFoundMax),
   "items_upserted": zod.number().min(listSourceRunsResponseDataItemItemsUpsertedMin).max(listSourceRunsResponseDataItemItemsUpsertedMax),
   "started_at": zod.string().datetime({}),
-  "status": zod.enum(['running', 'succeeded', 'partial', 'failed'])
+  "status": zod.enum(['running', 'succeeded', 'partial', 'failed', 'stopped'])
 })),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
@@ -2880,6 +3339,161 @@ export const mapNameResponse = zod.object({
   "name": zod.string()
 }))
 }),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A16: every staff account, with its lock time and temporary-password flag
+ */
+export const listUsersResponseDataItemEtagMin = 3;
+export const listUsersResponseDataItemEtagMax = 80;
+
+export const listUsersResponseDataItemIdMax = 9223372036854776000;
+
+export const listUsersResponseDataItemLockedForSMinOne = 0;
+export const listUsersResponseDataItemLockedForSMaxOne = 2147483647;
+
+
+
+export const listUsersResponse = zod.object({
+  "data": zod.union([zod.array(zod.object({
+  "email": zod.string().email(),
+  "etag": zod.string().min(listUsersResponseDataItemEtagMin).max(listUsersResponseDataItemEtagMax),
+  "id": zod.number().min(1).max(listUsersResponseDataItemIdMax),
+  "is_active": zod.boolean(),
+  "last_login_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "locked_for_s": zod.union([zod.number().min(listUsersResponseDataItemLockedForSMinOne).max(listUsersResponseDataItemLockedForSMaxOne),zod.null()]),
+  "must_change_password": zod.boolean(),
+  "name": zod.string(),
+  "role": zod.enum(['editor', 'admin'])
+})),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A16: create an account; it gets a temporary password it must change at the first sign-in
+ */
+export const createUserBodyEmailMax = 254;
+
+export const createUserBodyNameMax = 80;
+
+
+
+export const createUserBody = zod.object({
+  "email": zod.string().email().max(createUserBodyEmailMax),
+  "name": zod.string().min(1).max(createUserBodyNameMax),
+  "role": zod.enum(['editor', 'admin'])
+})
+
+
+/**
+ * @summary A16: rename, change the role or switch an account on/off
+ */
+export const patchUserPathUserIdMax = 9223372036854776000;
+
+
+
+export const patchUserParams = zod.object({
+  "user_id": zod.number().min(1).max(patchUserPathUserIdMax)
+})
+
+export const patchUserHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const patchUserBodyNameMaxOne = 80;
+
+
+
+export const patchUserBody = zod.object({
+  "is_active": zod.union([zod.boolean(),zod.null()]).optional(),
+  "name": zod.union([zod.string().min(1).max(patchUserBodyNameMaxOne),zod.null()]).optional(),
+  "role": zod.union([zod.enum(['editor', 'admin']),zod.null()]).optional()
+})
+
+export const patchUserResponseDataEtagMin = 3;
+export const patchUserResponseDataEtagMax = 80;
+
+export const patchUserResponseDataIdMax = 9223372036854776000;
+
+export const patchUserResponseDataLockedForSMinOne = 0;
+export const patchUserResponseDataLockedForSMaxOne = 2147483647;
+
+
+
+export const patchUserResponse = zod.object({
+  "data": zod.union([zod.object({
+  "email": zod.string().email(),
+  "etag": zod.string().min(patchUserResponseDataEtagMin).max(patchUserResponseDataEtagMax),
+  "id": zod.number().min(1).max(patchUserResponseDataIdMax),
+  "is_active": zod.boolean(),
+  "last_login_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "locked_for_s": zod.union([zod.number().min(patchUserResponseDataLockedForSMinOne).max(patchUserResponseDataLockedForSMaxOne),zod.null()]),
+  "must_change_password": zod.boolean(),
+  "name": zod.string(),
+  "role": zod.enum(['editor', 'admin'])
+}),zod.null()]),
+  "error": zod.union([zod.object({
+  "code": zod.string(),
+  "message": zod.string()
+}),zod.null()]),
+  "meta": zod.record(zod.string(), zod.unknown()),
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary A16: reset an account's password; it must change it at the next sign-in
+ */
+export const resetPasswordPathUserIdMax = 9223372036854776000;
+
+
+
+export const resetPasswordParams = zod.object({
+  "user_id": zod.number().min(1).max(resetPasswordPathUserIdMax)
+})
+
+export const resetPasswordHeader = zod.object({
+  "If-Match": zod.union([zod.string(),zod.null()]).optional().describe('The entity\'s current ETag, e.g. `\"3f9a…\"`. Required: without it the answer is `428`.')
+})
+
+export const resetPasswordResponseDataUserEtagMin = 3;
+export const resetPasswordResponseDataUserEtagMax = 80;
+
+export const resetPasswordResponseDataUserIdMax = 9223372036854776000;
+
+export const resetPasswordResponseDataUserLockedForSMinOne = 0;
+export const resetPasswordResponseDataUserLockedForSMaxOne = 2147483647;
+
+
+
+export const resetPasswordResponse = zod.object({
+  "data": zod.union([zod.object({
+  "temporary_password": zod.string(),
+  "user": zod.object({
+  "email": zod.string().email(),
+  "etag": zod.string().min(resetPasswordResponseDataUserEtagMin).max(resetPasswordResponseDataUserEtagMax),
+  "id": zod.number().min(1).max(resetPasswordResponseDataUserIdMax),
+  "is_active": zod.boolean(),
+  "last_login_at": zod.union([zod.string().datetime({}),zod.null()]),
+  "locked_for_s": zod.union([zod.number().min(resetPasswordResponseDataUserLockedForSMinOne).max(resetPasswordResponseDataUserLockedForSMaxOne),zod.null()]),
+  "must_change_password": zod.boolean(),
+  "name": zod.string(),
+  "role": zod.enum(['editor', 'admin'])
+})
+}).describe('The temporary password is returned once, with ``Cache-Control: no-store``, and never stored in clear.'),zod.null()]),
   "error": zod.union([zod.object({
   "code": zod.string(),
   "message": zod.string()

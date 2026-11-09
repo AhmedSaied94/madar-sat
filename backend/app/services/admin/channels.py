@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import EntityNotFound
 from app.auth.roles import AuthedAdmin
-from app.db.models import Channel, HiddenChannelName, Satellite
+from app.db.models import AdminUser, AuditLog, Channel, ChannelFrequencyChange, HiddenChannelName, Satellite
 from app.domain.lockable import CHANNEL_LOCKABLE
 from app.schemas import admin as a
 from app.schemas.public import Access, Beam, Category, Frequency, Kind, Polarization
@@ -105,6 +105,42 @@ async def view(session: AsyncSession, channel: Channel) -> a.AdminChannel:
 
 async def version(session: AsyncSession, channel: Channel) -> str:
     return versions.row_version(channel)
+
+
+HISTORY_LIMIT = 100
+
+
+def _readout(mhz: int, polarization: str, symbol_rate: int) -> str:
+    """The readout the app shows: Latin and LTR, never translated (A8's history)."""
+    return f"{mhz} {polarization} {symbol_rate}"
+
+
+async def frequency_changes(session: AsyncSession, channel_id: int) -> list[a.FrequencyHistoryRow]:
+    """The newest 100 changes, with the admin from the row's own audit entry (research R20).
+
+    ``actor`` comes from ``audit_log`` behind ``audit_log_id``, not from the outbox row, which is
+    pruned after 30 days; an importer's row has no admin and stays null.
+    """
+    await get(session, channel_id)
+    rows = await session.execute(
+        select(ChannelFrequencyChange, AdminUser.name)
+        .outerjoin(AuditLog, AuditLog.id == ChannelFrequencyChange.audit_log_id)
+        .outerjoin(AdminUser, AdminUser.id == AuditLog.admin_user_id)
+        .where(ChannelFrequencyChange.channel_id == channel_id)
+        .order_by(ChannelFrequencyChange.detected_at.desc(), ChannelFrequencyChange.id.desc())
+        .limit(HISTORY_LIMIT)
+    )
+    return [
+        a.FrequencyHistoryRow(
+            id=change.id,
+            old=_readout(change.old_frequency_mhz, change.old_polarization, change.old_symbol_rate),
+            new=_readout(change.new_frequency_mhz, change.new_polarization, change.new_symbol_rate),
+            source=change.source,
+            actor=admin_name,
+            detected_at=change.detected_at,
+        )
+        for change, admin_name in rows
+    ]
 
 
 def kind_errors(kind: str, state: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -206,6 +242,12 @@ async def update(
 
     state = {key: getattr(channel, key) for key in (*PLAIN_COLUMNS, "frequency_mhz")}
     await _check(session, channel.kind, state, changes, needs_tuning=became_satellite)
+    from app.notifications.producers import frequency_hold
+
+    async def then(audit: Any) -> None:
+        # Keyed on the save's audit row, which the writer flushed just before this (R6).
+        await frequency_hold(session, channel, before, audit.id, now)
+
     await writer.save_update(
         session,
         admin,
@@ -215,6 +257,7 @@ async def update(
         datasets=writer.CHANNEL_CHANGED,
         now=now,
         lockable=CHANNEL_LOCKABLE,
+        then=then,
     )
     return channel
 

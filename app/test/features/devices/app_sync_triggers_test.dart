@@ -110,6 +110,8 @@ void main() {
   testWidgets('a failed follow send is retried when the app returns to the foreground',
       (tester) async {
     await database.writeSetting(SettingsKeys.onboardingDone, 'true');
+    // The ID is known, so no device update is forced ahead of the follows (FR-062).
+    await database.writeSetting(SettingsKeys.deviceId, '812');
     await pumpApp(tester);
 
     adapter.enqueueOffline();

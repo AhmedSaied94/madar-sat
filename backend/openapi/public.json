@@ -2234,6 +2234,11 @@
             "title": "Estimated",
             "type": "boolean"
           },
+          "event_count": {
+            "default": 0,
+            "title": "Event Count",
+            "type": "integer"
+          },
           "match_id": {
             "title": "Match Id",
             "type": "integer"
@@ -2786,6 +2791,11 @@
       "NotificationPrefs": {
         "additionalProperties": false,
         "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "types": {
             "additionalProperties": {
               "$ref": "#/components/schemas/NotificationPref"

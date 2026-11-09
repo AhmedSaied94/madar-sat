@@ -78,6 +78,23 @@ def test_matches_outside_the_window_or_not_scheduled_are_not_planned(sync_sessio
     assert plan_targets(sync_session, now=NOW, recent=MemoryRecentFetches()).targets == []
 
 
+def test_planning_skips_matches_of_another_sport(sync_session) -> None:
+    """FR-039: LiveSoccerTV lists football; a basketball row's teams are not its fixtures."""
+    home, away = _mapped_pair(sync_session)
+    new_match(
+        sync_session,
+        kickoff_at=NOW + timedelta(hours=3),
+        home_team_id=home.id,
+        away_team_id=away.id,
+        sport="basketball",
+    )
+
+    plan = plan_targets(sync_session, now=NOW, recent=MemoryRecentFetches())
+
+    assert plan.targets == []
+    assert plan.unmapped == []
+
+
 def test_the_t60_window_is_fifty_five_to_seventy_minutes(sync_session) -> None:
     home, away = _mapped_pair(sync_session)
     inside = new_match(sync_session, kickoff_at=NOW + timedelta(minutes=60), home_team_id=home.id, away_team_id=away.id)

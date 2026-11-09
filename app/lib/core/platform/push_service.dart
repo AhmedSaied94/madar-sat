@@ -8,8 +8,36 @@ import '../config/app_config.dart';
 import 'crash_reporter.dart';
 import 'firebase_bootstrap.dart';
 import 'install_guide.dart';
+import 'push_routes.dart';
 
 part 'push_service.g.dart';
+
+/// What the platform says about notifications for this app (S15's platform state).
+///
+/// Named apart from the [PushPermission] provider below. The no-Google-Play state that
+/// constitution 1.4.0 adds for S15 becomes one more case here.
+enum PushPermissionState {
+  /// Granted, so pushes can show.
+  allowed,
+
+  /// Refused: only the device's settings can change it, on most platforms.
+  denied,
+
+  /// Never asked, for example after «ليس الآن» in S1.4. The prompt can still appear.
+  notAsked,
+}
+
+/// A push received while the app is open. It shows a banner and moves nothing (FR-059).
+@immutable
+class ForegroundPush {
+  const ForegroundPush({required this.title, required this.body, this.route});
+
+  final String title;
+  final String body;
+
+  /// Where «عرض» goes, or null when the message names no route this build knows.
+  final PushRoute? route;
+}
 
 /// Push on Android and the web behind one interface (research R25, R26, contract
 /// app-screens). Feature code never imports `firebase_messaging`: it asks this, and the
@@ -30,9 +58,15 @@ abstract interface class PushService {
   /// Each new token, so it reaches `PUT /v1/devices/me` once per change (US2 scenario 7).
   Stream<String?> get tokenChanges;
 
-  /// The routes a message opens: `data.route` of a message received in the foreground, or
-  /// of the message that launched the app from a notification tap.
+  /// The platform's answer right now. It never prompts.
+  Future<PushPermissionState> permission();
+
+  /// The routes a tapped notification opens: `data.route` of a message tapped in the
+  /// background, or of the one that launched the app. Only known shapes come through.
   Stream<String> get openedRoutes;
+
+  /// Messages received while the app is open.
+  Stream<ForegroundPush> get foregroundMessages;
 }
 
 /// The answer on a build with no Firebase identifiers: every method is a no-op, so the app
@@ -53,7 +87,13 @@ class NoPushService implements PushService {
   Stream<String?> get tokenChanges => const Stream.empty();
 
   @override
+  Future<PushPermissionState> permission() async => PushPermissionState.denied;
+
+  @override
   Stream<String> get openedRoutes => const Stream.empty();
+
+  @override
+  Stream<ForegroundPush> get foregroundMessages => const Stream.empty();
 }
 
 /// The `firebase_messaging` calls [FirebasePushService] makes, as an interface.
@@ -63,6 +103,9 @@ class NoPushService implements PushService {
 /// plugin.
 abstract interface class PushMessaging {
   Future<AuthorizationStatus> requestPermission();
+
+  /// The current answer, without prompting.
+  Future<AuthorizationStatus> permission();
 
   /// Registers for push; the id arrives on [onRegistered] (plugin v17 replaced the FCM
   /// token API with this pair).
@@ -88,6 +131,10 @@ class FirebasePushMessaging implements PushMessaging {
     final settings = await _messaging.requestPermission(alert: true, badge: true, sound: true);
     return settings.authorizationStatus;
   }
+
+  @override
+  Future<AuthorizationStatus> permission() async =>
+      (await _messaging.getNotificationSettings()).authorizationStatus;
 
   @override
   Future<void> register({String? vapidKey}) => _messaging.register(vapidKey: vapidKey);
@@ -176,16 +223,18 @@ class FirebasePushService implements PushService {
       _messaging.onRegistered.map<String?>((String id) => id).distinct();
 
   @override
+  Future<PushPermissionState> permission() async => switch (await _messaging.permission()) {
+    AuthorizationStatus.authorized || AuthorizationStatus.provisional => PushPermissionState.allowed,
+    AuthorizationStatus.denied || AuthorizationStatus.deniedPermanently => PushPermissionState.denied,
+    AuthorizationStatus.notDetermined => PushPermissionState.notAsked,
+  };
+
+  @override
   Stream<String> get openedRoutes => Stream<String>.multi((controller) {
-    final subscriptions = [
-      _messaging.onMessageOpenedApp.listen((message) => _addRoute(controller, message)),
-      _messaging.onMessage.listen((message) => _addRoute(controller, message)),
-    ];
-    controller.onCancel = () async {
-      for (final subscription in subscriptions) {
-        await subscription.cancel();
-      }
-    };
+    final subscription = _messaging.onMessageOpenedApp.listen(
+      (message) => _addRoute(controller, message),
+    );
+    controller.onCancel = subscription.cancel;
     if (_isWeb) return;
     unawaited(
       _messaging.getInitialMessage.then((message) {
@@ -194,9 +243,26 @@ class FirebasePushService implements PushService {
     );
   }, isBroadcast: false);
 
+  @override
+  Stream<ForegroundPush> get foregroundMessages =>
+      _messaging.onMessage.map(_foregroundPush).where((push) => push != null).cast<ForegroundPush>();
+
   static void _addRoute(MultiStreamController<String> controller, RemoteMessage message) {
+    final route = _routeOf(message);
+    if (route != null) controller.add(route.location);
+  }
+
+  static PushRoute? _routeOf(RemoteMessage message) {
     final route = message.data['route'];
-    if (route is String && route.startsWith('/')) controller.add(route);
+    return route is String ? parsePushRoute(route) : null;
+  }
+
+  /// A data-only message has nothing to show, so it's dropped.
+  static ForegroundPush? _foregroundPush(RemoteMessage message) {
+    final title = message.notification?.title ?? '';
+    final body = message.notification?.body ?? '';
+    if (title.isEmpty && body.isEmpty) return null;
+    return ForegroundPush(title: title, body: body, route: _routeOf(message));
   }
 }
 

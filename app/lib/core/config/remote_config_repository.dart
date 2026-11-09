@@ -30,6 +30,7 @@ class RemoteConfigRepository {
         'min_supported_build': '${RemoteConfigValues.buildNumberFloor}',
         'latest_build': '${RemoteConfigValues.buildNumberFloor}',
         'live_poll_interval_s': '${RemoteConfigValues.defaultLivePollSeconds}',
+        'features': AppFeatures.bundledJson,
       });
       await remote.setConfigSettings(
         RemoteConfigSettings(
@@ -53,6 +54,7 @@ class RemoteConfigRepository {
           'min_supported_build',
           'latest_build',
           'live_poll_interval_s',
+          'features',
         ])
           key: remote.getString(key),
       },

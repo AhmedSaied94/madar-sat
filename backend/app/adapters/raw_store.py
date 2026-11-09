@@ -24,6 +24,9 @@ RUN_INFO = "run.json"
 # A fetched page's extension, per source: ysscores answers HTML, the bridge JSON (data-model).
 SUFFIX = {"ysscores": "html", "legacy": "json"}
 DEFAULT_SUFFIX = "html"
+# sporteventz's data answers are `text/plain` JSON from a `com_magictable` URL, while its sport
+# pages are HTML, so one source carries both extensions (D6 R21).
+DATA_URL_MARKER = "com_magictable"
 CONTENT_TYPES = {"html": "text/html", "json": "application/json"}
 GONE: dict[str, Any] = {"gone": True}
 _PAGE_FILE = re.compile(r"^(\d+)\.([a-z]+)\.gz$")
@@ -45,8 +48,8 @@ class RawStore:
         """Write the pages gzipped and ``run.json``; return the run folder."""
         run_dir = self.root / source / run_day.isoformat() / _safe(run_id)
         run_dir.mkdir(parents=True, exist_ok=True)
-        suffix = SUFFIX.get(source, DEFAULT_SUFFIX)
         for n, page in enumerate(pages, start=1):
+            suffix = _page_suffix(source, page)
             (run_dir / f"{n}.{suffix}.gz").write_bytes(gzip.compress(page.body, mtime=0))
         (run_dir / RUN_INFO).write_text(
             json.dumps(dict(run_info or {}), ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
@@ -76,6 +79,15 @@ class RawStore:
                 except OSError:
                     pass  # something else in there; keep the day folder
         return removed
+
+
+def _page_suffix(source: str, page: RawPage) -> str:
+    """HTML or JSON for one page: sporteventz mixes both in one run, so its URL decides."""
+    if DATA_URL_MARKER in page.url:
+        return "json"
+    if page.content_type and "json" in page.content_type.lower():
+        return "json"
+    return SUFFIX.get(source, DEFAULT_SUFFIX)
 
 
 def read_page(root: str | Path, raw_path: str | None, page: int, *, max_bytes: int) -> dict[str, Any]:

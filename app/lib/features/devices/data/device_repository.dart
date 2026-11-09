@@ -4,10 +4,13 @@ import 'package:retrofit/retrofit.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/config/build_info.dart';
+import '../../../core/db/database_provider.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/network/dio_failure.dart';
 import '../../../core/network/dio_provider.dart';
 import '../../../core/network/generated/export.dart';
+import '../../../core/settings/app_settings.dart';
+import '../../../core/settings/settings_providers.dart';
 import 'device_identity_provider.dart';
 
 part 'device_repository.g.dart';
@@ -23,11 +26,15 @@ class DeviceRepository {
     required this.client,
     required this.identityReader,
     required this.tokenWriter,
+    this.deviceIdWriter,
   });
 
   final MadarApiClient client;
   final Future<DeviceIdentity> Function() identityReader;
   final Future<void> Function(String? token) tokenWriter;
+
+  /// Keeps the ID the server answers with, so S15 can show it (FR-062).
+  final Future<void> Function(int id)? deviceIdWriter;
 
   /// `POST /v1/devices` once per install: it answers the device id and a token, which is
   /// kept in secure storage for `Authorization: Device`. A known install id rotates the
@@ -47,6 +54,7 @@ class DeviceRepository {
     final registered = response.data.data;
     if (registered == null) throw const ApiFailure();
     await tokenWriter(registered.deviceToken);
+    await deviceIdWriter?.call(registered.deviceId);
   }
 
   /// `PUT /v1/devices/me`: the fields set on [body] change, the ones left null are not sent
@@ -54,6 +62,8 @@ class DeviceRepository {
   Future<void> update(DeviceUpdate body) async {
     final response = await _call(() => client.updateDeviceV1DevicesMePut(body: body));
     _requireSuccess(response.data.success, response.data.error);
+    final device = response.data.data;
+    if (device != null) await deviceIdWriter?.call(device.deviceId);
   }
 
   /// `PUT /v1/devices/me/follows`: the whole set, atomically.
@@ -116,4 +126,10 @@ DeviceRepository deviceRepository(Ref ref) => DeviceRepository(
       identityReader: () => ref.read(deviceIdentityControllerProvider.future),
       tokenWriter: (token) =>
           ref.read(deviceIdentityControllerProvider.notifier).setToken(token),
+      deviceIdWriter: (id) async {
+        final database = ref.read(appDatabaseProvider);
+        if (await database.readSetting(SettingsKeys.deviceId) == '$id') return;
+        await database.writeSetting(SettingsKeys.deviceId, '$id');
+        ref.invalidate(appSettingsProvider);
+      },
     );

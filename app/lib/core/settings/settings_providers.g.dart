@@ -54,7 +54,7 @@ final class AppSettingsProvider
   AppSettings create() => AppSettings();
 }
 
-String _$appSettingsHash() => r'32b0b9d21b6b6766f75a330a2d803b5e51104d59';
+String _$appSettingsHash() => r'4b499c835884bc5408713c87393e8a5915f9bc9f';
 
 /// The device's settings (data-model, drift v3).
 ///

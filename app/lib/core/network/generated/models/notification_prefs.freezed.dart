@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$NotificationPrefs {
 
- Map<String, NotificationPref>? get types;
+ Map<String, NotificationPref>? get types; bool get enabled;
 /// Create a copy of NotificationPrefs
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $NotificationPrefsCopyWith<NotificationPrefs> get copyWith => _$NotificationPref
 @override
 bool operator ==(Object other) {
   final _this = this as NotificationPrefs;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotificationPrefs&&const DeepCollectionEquality().equals(other.types, _this.types));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotificationPrefs&&const DeepCollectionEquality().equals(other.types, _this.types)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as NotificationPrefs;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.types));
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.types),_this.enabled);
 }
 
 @override
 String toString() {
   final _this = this as NotificationPrefs;
-  return 'NotificationPrefs(types: ${_this.types})';
+  return 'NotificationPrefs(types: ${_this.types}, enabled: ${_this.enabled})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $NotificationPrefsCopyWith<$Res>  {
   factory $NotificationPrefsCopyWith(NotificationPrefs value, $Res Function(NotificationPrefs) _then) = _$NotificationPrefsCopyWithImpl;
 @useResult
 $Res call({
- Map<String, NotificationPref>? types
+ Map<String, NotificationPref>? types, bool enabled
 });
 
 
@@ -71,10 +71,11 @@ class _$NotificationPrefsCopyWithImpl<$Res>
 
 /// Create a copy of NotificationPrefs
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? types = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? types = freezed,Object? enabled = null,}) {
   return _then(NotificationPrefs(
 types: freezed == types ? _self.types : types // ignore: cast_nullable_to_non_nullable
-as Map<String, NotificationPref>?,
+as Map<String, NotificationPref>?,enabled: null == enabled ? _self.enabled : enabled // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -159,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, NotificationPref>? types)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, NotificationPref>? types,  bool enabled)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _NotificationPrefs() when $default != null:
-return $default(_that.types);case _:
+return $default(_that.types,_that.enabled);case _:
   return orElse();
 
 }
@@ -180,10 +181,10 @@ return $default(_that.types);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, NotificationPref>? types)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, NotificationPref>? types,  bool enabled)  $default,) {final _that = this;
 switch (_that) {
 case _NotificationPrefs():
-return $default(_that.types);case _:
+return $default(_that.types,_that.enabled);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +201,10 @@ return $default(_that.types);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, NotificationPref>? types)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, NotificationPref>? types,  bool enabled)?  $default,) {final _that = this;
 switch (_that) {
 case _NotificationPrefs() when $default != null:
-return $default(_that.types);case _:
+return $default(_that.types,_that.enabled);case _:
   return null;
 
 }
@@ -215,7 +216,7 @@ return $default(_that.types);case _:
 @JsonSerializable()
 
 class _NotificationPrefs implements NotificationPrefs {
-  const _NotificationPrefs({ Map<String, NotificationPref>? types}): _types = types;
+  const _NotificationPrefs({ Map<String, NotificationPref>? types, this.enabled = true}): _types = types;
   factory _NotificationPrefs.fromJson(Map<String, dynamic> json) => _$NotificationPrefsFromJson(json);
 
  final  Map<String, NotificationPref>? _types;
@@ -227,6 +228,7 @@ class _NotificationPrefs implements NotificationPrefs {
   return EqualUnmodifiableMapView(value);
 }
 
+@override@JsonKey() final  bool enabled;
 
 /// Create a copy of NotificationPrefs
 /// with the given fields replaced by the non-null parameter values.
@@ -241,18 +243,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotificationPrefs&&const DeepCollectionEquality().equals(other.types, _types));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotificationPrefs&&const DeepCollectionEquality().equals(other.types, _types)&&(identical(other.enabled, enabled) || other.enabled == enabled));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_types));
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_types),enabled);
 }
 
 @override
 String toString() {
-    return 'NotificationPrefs(types: $types)';
+    return 'NotificationPrefs(types: $types, enabled: $enabled)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$NotificationPrefsCopyWith<$Res> implements $NotificationP
   factory _$NotificationPrefsCopyWith(_NotificationPrefs value, $Res Function(_NotificationPrefs) _then) = __$NotificationPrefsCopyWithImpl;
 @override @useResult
 $Res call({
- Map<String, NotificationPref>? types
+ Map<String, NotificationPref>? types, bool enabled
 });
 
 
@@ -280,10 +282,11 @@ class __$NotificationPrefsCopyWithImpl<$Res>
 
 /// Create a copy of NotificationPrefs
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? types = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? types = freezed,Object? enabled = null,}) {
   return _then(_NotificationPrefs(
 types: freezed == types ? _self._types : types // ignore: cast_nullable_to_non_nullable
-as Map<String, NotificationPref>?,
+as Map<String, NotificationPref>?,enabled: null == enabled ? _self.enabled : enabled // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

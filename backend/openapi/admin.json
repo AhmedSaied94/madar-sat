@@ -1736,6 +1736,11 @@
             "title": "Id",
             "type": "integer"
           },
+          "must_change_password": {
+            "default": false,
+            "title": "Must Change Password",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -1751,6 +1756,494 @@
           "role"
         ],
         "title": "AdminUser",
+        "type": "object"
+      },
+      "AdminUserRow": {
+        "examples": [
+          {
+            "email": "editor@example.com",
+            "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"",
+            "id": 3,
+            "is_active": true,
+            "last_login_at": "2026-11-06T09:12:00Z",
+            "locked_for_s": 660,
+            "must_change_password": false,
+            "name": "\u0645\u062d\u0631\u0631",
+            "role": "editor"
+          }
+        ],
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "etag": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "locked_for_s": {
+            "anyOf": [
+              {
+                "maximum": 2147483647.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked For S"
+          },
+          "must_change_password": {
+            "title": "Must Change Password",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/AdminRole"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "is_active",
+          "locked_for_s",
+          "last_login_at",
+          "must_change_password",
+          "etag"
+        ],
+        "title": "AdminUserRow",
+        "type": "object"
+      },
+      "AnnouncementAudience": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "enum": [
+              "all",
+              "team",
+              "competition",
+              "match",
+              "channel"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "AnnouncementAudience",
+        "type": "object"
+      },
+      "AnnouncementCreate": {
+        "additionalProperties": false,
+        "description": "A15's composer; the route is built here, never sent as text (admin-api).",
+        "examples": [
+          {
+            "audience": {
+              "kind": "all"
+            },
+            "body": "\u0627\u0644\u0623\u0647\u0644\u064a \u00d7 \u0627\u0644\u0632\u0645\u0627\u0644\u0643 \u0641\u064a \u0627\u0644\u062b\u0627\u0645\u0646\u0629 \u0645\u0633\u0627\u0621\u064b",
+            "target": {
+              "id": 48213,
+              "type": "match"
+            },
+            "title": "\u0645\u0628\u0627\u0631\u0627\u0629 \u0627\u0644\u0644\u064a\u0644\u0629"
+          }
+        ],
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/AnnouncementAudience"
+          },
+          "body": {
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "send_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send At"
+          },
+          "target": {
+            "$ref": "#/components/schemas/AnnouncementTarget"
+          },
+          "title": {
+            "maxLength": 65,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "target",
+          "audience"
+        ],
+        "title": "AnnouncementCreate",
+        "type": "object"
+      },
+      "AnnouncementTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "type": {
+            "enum": [
+              "none",
+              "match",
+              "channel"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "AnnouncementTarget",
+        "type": "object"
+      },
+      "AuditActor": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "enum": [
+              "admin",
+              "importer",
+              "system"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "title": "AuditActor",
+        "type": "object"
+      },
+      "AuditDetail": {
+        "description": "``diff`` exactly as stored, old shapes included, and the outbox row that links to this entry.",
+        "examples": [
+          {
+            "action": "update",
+            "actor": {
+              "id": 3,
+              "kind": "admin",
+              "name": "\u0645\u062d\u0631\u0631"
+            },
+            "created_at": "2026-11-06T17:00:00Z",
+            "diff": {
+              "frequency_mhz": [
+                11766,
+                11843
+              ]
+            },
+            "entity": "channel",
+            "entity_id": 412,
+            "has_notification": true,
+            "id": 7711,
+            "notification": {
+              "failed": 0,
+              "id": 9012,
+              "sent": 118,
+              "status": "sent",
+              "type": "frequency_changed"
+            },
+            "summary_fields": [
+              "frequency_mhz"
+            ]
+          }
+        ],
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/AuditActor"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "diff": {
+            "additionalProperties": true,
+            "title": "Diff",
+            "type": "object"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "has_notification": {
+            "title": "Has Notification",
+            "type": "boolean"
+          },
+          "id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "notification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditNotification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Summary Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "actor",
+          "entity",
+          "entity_id",
+          "action",
+          "summary_fields",
+          "has_notification",
+          "diff",
+          "notification"
+        ],
+        "title": "AuditDetail",
+        "type": "object"
+      },
+      "AuditNotification": {
+        "properties": {
+          "failed": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "sent": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Sent",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "sending",
+              "sent",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NotificationType"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "sent",
+          "failed"
+        ],
+        "title": "AuditNotification",
+        "type": "object"
+      },
+      "AuditRow": {
+        "examples": [
+          {
+            "action": "update",
+            "actor": {
+              "id": 3,
+              "kind": "admin",
+              "name": "\u0645\u062d\u0631\u0631"
+            },
+            "created_at": "2026-11-06T17:00:00Z",
+            "entity": "channel",
+            "entity_id": 412,
+            "has_notification": true,
+            "id": 7711,
+            "summary_fields": [
+              "frequency_mhz"
+            ]
+          }
+        ],
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/AuditActor"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "has_notification": {
+            "title": "Has Notification",
+            "type": "boolean"
+          },
+          "id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "summary_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Summary Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "actor",
+          "entity",
+          "entity_id",
+          "action",
+          "summary_fields",
+          "has_notification"
+        ],
+        "title": "AuditRow",
         "type": "object"
       },
       "Beam": {
@@ -2055,6 +2548,30 @@
         ],
         "title": "Category",
         "type": "string"
+      },
+      "ChangePasswordRequest": {
+        "additionalProperties": false,
+        "description": "A flagged account's own change; the length rules answer ``422 password_too_short`` (admin-api).",
+        "properties": {
+          "current_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest",
+        "type": "object"
       },
       "ChangedBy": {
         "description": "Who last changed an entity: an admin (by name) or an importer (by source name).",
@@ -3460,6 +3977,47 @@
         "title": "Envelope[AdminTeam]",
         "type": "object"
       },
+      "Envelope_AdminUserRow_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[AdminUserRow]",
+        "type": "object"
+      },
       "Envelope_AdminUser_": {
         "properties": {
           "data": {
@@ -3499,6 +4057,47 @@
           "meta"
         ],
         "title": "Envelope[AdminUser]",
+        "type": "object"
+      },
+      "Envelope_AuditDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[AuditDetail]",
         "type": "object"
       },
       "Envelope_BulkResult_": {
@@ -3782,6 +4381,88 @@
         "title": "Envelope[NoneType]",
         "type": "object"
       },
+      "Envelope_NotificationReach_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotificationReach"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[NotificationReach]",
+        "type": "object"
+      },
+      "Envelope_NotificationRow_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotificationRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[NotificationRow]",
+        "type": "object"
+      },
       "Envelope_RawPage_": {
         "properties": {
           "data": {
@@ -3946,6 +4627,47 @@
         "title": "Envelope[SourceRunQueued]",
         "type": "object"
       },
+      "Envelope_Union_TestDeviceRow__NoneType__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TestDeviceRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[Union[TestDeviceRow, NoneType]]",
+        "type": "object"
+      },
       "Envelope_UnresolvedNameRow_": {
         "properties": {
           "data": {
@@ -3985,6 +4707,47 @@
           "meta"
         ],
         "title": "Envelope[UnresolvedNameRow]",
+        "type": "object"
+      },
+      "Envelope_UserWithPassword_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserWithPassword"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[UserWithPassword]",
         "type": "object"
       },
       "Envelope_list_AdminCommentator__": {
@@ -4212,6 +4975,96 @@
         "title": "Envelope[list[AdminSatellite]]",
         "type": "object"
       },
+      "Envelope_list_AdminUserRow__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AdminUserRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[AdminUserRow]]",
+        "type": "object"
+      },
+      "Envelope_list_AuditRow__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AuditRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[AuditRow]]",
+        "type": "object"
+      },
       "Envelope_list_BroadcastPreset__": {
         "properties": {
           "data": {
@@ -4302,6 +5155,51 @@
         "title": "Envelope[list[ChannelItem]]",
         "type": "object"
       },
+      "Envelope_list_FrequencyHistoryRow__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FrequencyHistoryRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[FrequencyHistoryRow]]",
+        "type": "object"
+      },
       "Envelope_list_HiddenChannelName__": {
         "properties": {
           "data": {
@@ -4390,6 +5288,51 @@
           "meta"
         ],
         "title": "Envelope[list[ImportRunRow]]",
+        "type": "object"
+      },
+      "Envelope_list_NotificationRow__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NotificationRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error",
+          "meta"
+        ],
+        "title": "Envelope[list[NotificationRow]]",
         "type": "object"
       },
       "Envelope_list_SourceHealth__": {
@@ -4615,6 +5558,65 @@
         "title": "Frequency",
         "type": "object"
       },
+      "FrequencyHistoryRow": {
+        "description": "What followers of a carriage were told; ``actor`` from the row's own audit id (research R6, R20).",
+        "examples": [
+          {
+            "actor": "\u0645\u062d\u0631\u0631",
+            "detected_at": "2026-11-06T17:05:00Z",
+            "id": 55,
+            "new": "11843 H 27500",
+            "old": "11766 H 27500",
+            "source": "admin"
+          }
+        ],
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "detected_at": {
+            "format": "date-time",
+            "title": "Detected At",
+            "type": "string"
+          },
+          "id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "new": {
+            "title": "New",
+            "type": "string"
+          },
+          "old": {
+            "title": "Old",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "old",
+          "new",
+          "source",
+          "actor",
+          "detected_at"
+        ],
+        "title": "FrequencyHistoryRow",
+        "type": "object"
+      },
       "HealthStatus": {
         "properties": {
           "db": {
@@ -4800,7 +5802,8 @@
               "running",
               "succeeded",
               "partial",
-              "failed"
+              "failed",
+              "stopped"
             ],
             "title": "Status",
             "type": "string"
@@ -4905,7 +5908,8 @@
               "running",
               "succeeded",
               "partial",
-              "failed"
+              "failed",
+              "stopped"
             ],
             "title": "Status",
             "type": "string"
@@ -5452,6 +6456,219 @@
         ],
         "title": "MediaAsset",
         "type": "object"
+      },
+      "NotificationReach": {
+        "examples": [
+          {
+            "devices": 41230
+          }
+        ],
+        "properties": {
+          "devices": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Devices",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "devices"
+        ],
+        "title": "NotificationReach",
+        "type": "object"
+      },
+      "NotificationRow": {
+        "examples": [
+          {
+            "created_at": "2026-11-06T18:40:00Z",
+            "due_at": "2026-11-06T18:40:00Z",
+            "etag": "\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"",
+            "failed": 12,
+            "id": 9012,
+            "is_correction": false,
+            "is_test": false,
+            "recipients": 2410,
+            "sent": 2398,
+            "sent_at": "2026-11-06T18:40:09Z",
+            "status": "sent",
+            "target": {
+              "id": 48213,
+              "kind": "match_core",
+              "label": "\u0627\u0644\u0623\u0647\u0644\u064a \u00d7 \u0627\u0644\u0632\u0645\u0627\u0644\u0643"
+            },
+            "type": "goal"
+          }
+        ],
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "due_at": {
+            "format": "date-time",
+            "title": "Due At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "etag": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Etag",
+            "type": "string"
+          },
+          "failed": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_correction": {
+            "title": "Is Correction",
+            "type": "boolean"
+          },
+          "is_test": {
+            "title": "Is Test",
+            "type": "boolean"
+          },
+          "recipients": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Recipients",
+            "type": "integer"
+          },
+          "sent": {
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Sent",
+            "type": "integer"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "sending",
+              "sent",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "$ref": "#/components/schemas/NotificationTarget"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NotificationType"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "error",
+          "target",
+          "is_test",
+          "is_correction",
+          "recipients",
+          "sent",
+          "failed",
+          "due_at",
+          "sent_at",
+          "created_at",
+          "etag"
+        ],
+        "title": "NotificationRow",
+        "type": "object"
+      },
+      "NotificationTarget": {
+        "description": "Where a row went, built from current data; ``label`` is null for ``all`` (admin-api).",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "enum": [
+              "match_followers",
+              "match_core",
+              "match_only",
+              "channel",
+              "team",
+              "competition",
+              "all",
+              "device"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "id"
+        ],
+        "title": "NotificationTarget",
+        "type": "object"
+      },
+      "NotificationType": {
+        "description": "The seven types of SD \u00a76.8; unknown types are refused (research R4).",
+        "enum": [
+          "kickoff_reminder",
+          "goal",
+          "final_score",
+          "match_started",
+          "channels_updated",
+          "frequency_changed",
+          "announcement"
+        ],
+        "title": "NotificationType",
+        "type": "string"
       },
       "OrderItem": {
         "additionalProperties": false,
@@ -6901,6 +8118,95 @@
         "title": "TeamRef",
         "type": "object"
       },
+      "TestDevicePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Device Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "device_id"
+        ],
+        "title": "TestDevicePatch",
+        "type": "object"
+      },
+      "TestDeviceRow": {
+        "examples": [
+          {
+            "app_version": "0.6.0+60",
+            "device_id": 812,
+            "has_push_token": true,
+            "platform": "android"
+          }
+        ],
+        "properties": {
+          "app_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version"
+          },
+          "device_id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Device Id",
+            "type": "integer"
+          },
+          "has_push_token": {
+            "title": "Has Push Token",
+            "type": "boolean"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "platform",
+          "app_version",
+          "has_push_token"
+        ],
+        "title": "TestDeviceRow",
+        "type": "object"
+      },
+      "TestSendCreate": {
+        "additionalProperties": false,
+        "description": "A test send goes to the admin's saved device, prefs ignored (admin-api).",
+        "properties": {
+          "body": {
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "target": {
+            "$ref": "#/components/schemas/AnnouncementTarget"
+          },
+          "title": {
+            "maxLength": 65,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "target"
+        ],
+        "title": "TestSendCreate",
+        "type": "object"
+      },
       "UnresolvedContext": {
         "description": "Where the source last showed the name. Written by the importers, so each part may be absent.",
         "properties": {
@@ -7142,16 +8448,735 @@
         ],
         "title": "UnresolvedSuggestion",
         "type": "object"
+      },
+      "UserCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "format": "email",
+            "maxLength": 254,
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/AdminRole"
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "role"
+        ],
+        "title": "UserCreate",
+        "type": "object"
+      },
+      "UserPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "UserPatch",
+        "type": "object"
+      },
+      "UserWithPassword": {
+        "description": "The temporary password is returned once, with ``Cache-Control: no-store``, and never stored in clear.",
+        "examples": [
+          {
+            "temporary_password": "a temporary passphrase",
+            "user": {
+              "email": "editor@example.com",
+              "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"",
+              "id": 3,
+              "is_active": true,
+              "last_login_at": "2026-11-06T09:12:00Z",
+              "locked_for_s": 660,
+              "must_change_password": false,
+              "name": "\u0645\u062d\u0631\u0631",
+              "role": "editor"
+            }
+          }
+        ],
+        "properties": {
+          "temporary_password": {
+            "title": "Temporary Password",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUserRow"
+          }
+        },
+        "required": [
+          "user",
+          "temporary_password"
+        ],
+        "title": "UserWithPassword",
+        "type": "object"
       }
     }
   },
   "info": {
-    "description": "Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` needs `Authorization: Bearer <access_token>` and the role in its row of the contract. Writes need `If-Match` with the entity's `ETag`.",
+    "description": "Admin API, reachable only over WireGuard (constitution V). Every route except `auth/*` and `healthz` needs `Authorization: Bearer <access_token>` and the role in its row of the contract. Writes need `If-Match` with the entity's `ETag`.\n\nError codes added on D6: `password_change_required` (a flagged account may only read `auth/me` and change its password), `notification_not_cancellable` (only a pending announcement cancels), `send_at_in_past`, `text_not_allowed` (a card-sharing label), `test_device_not_set`, `test_device_no_token`, `device_not_found`, `email_taken`, `cannot_change_self`, `last_admin`, `password_too_short`, `password_unchanged`.",
     "title": "Madar Sat Admin API",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/admin/api/audit": {
+      "get": {
+        "operationId": "list_audit_entries_admin_api_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "admin_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Admin User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size; the default is 50",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Page size; the default is 50",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "audit_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "action": "update",
+                          "actor": {
+                            "id": 3,
+                            "kind": "admin",
+                            "name": "\u0645\u062d\u0631\u0631"
+                          },
+                          "created_at": "2026-11-06T17:00:00Z",
+                          "entity": "channel",
+                          "entity_id": 412,
+                          "has_notification": true,
+                          "id": 7711,
+                          "summary_fields": [
+                            "frequency_mhz"
+                          ]
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z",
+                        "next_cursor": null
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AuditRow__"
+                }
+              }
+            },
+            "description": "Newest first, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "A17: the audit log, by actor, entity or window",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/admin/api/audit/{audit_id}": {
+      "get": {
+        "operationId": "get_audit_entry_admin_api_audit__audit_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "audit_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Audit Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "audit_detail_ok": {
+                    "value": {
+                      "data": {
+                        "action": "update",
+                        "actor": {
+                          "id": 3,
+                          "kind": "admin",
+                          "name": "\u0645\u062d\u0631\u0631"
+                        },
+                        "created_at": "2026-11-06T17:00:00Z",
+                        "diff": {
+                          "frequency_mhz": [
+                            11766,
+                            11843
+                          ]
+                        },
+                        "entity": "channel",
+                        "entity_id": 412,
+                        "has_notification": true,
+                        "id": 7711,
+                        "notification": {
+                          "failed": 0,
+                          "id": 9012,
+                          "sent": 118,
+                          "status": "sent",
+                          "type": "frequency_changed"
+                        },
+                        "summary_fields": [
+                          "frequency_mhz"
+                        ]
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AuditDetail_"
+                }
+              }
+            },
+            "description": "The row, its stored `diff` and the push it started"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "audit_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "audit_not_found",
+                        "message": "audit not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A17: one entry with its diff and its notification",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/admin/api/auth/change-password": {
+      "post": {
+        "description": "An account flagged for a temporary password may only reach this route (research R19).",
+        "operationId": "change_password_admin_api_auth_change_password_post",
+        "parameters": [
+          {
+            "description": "Opaque refresh token (HttpOnly)",
+            "in": "cookie",
+            "name": "madar_refresh",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque refresh token (HttpOnly)",
+              "title": "Madar Refresh"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "login_ok": {
+                    "value": {
+                      "data": {
+                        "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzIn0.signature",
+                        "admin": {
+                          "email": "editor@example.com",
+                          "id": 3,
+                          "must_change_password": false,
+                          "name": "\u0645\u062d\u0631\u0631",
+                          "role": "editor"
+                        },
+                        "expires_in": 900,
+                        "token_type": "Bearer"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-29T13:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Session_"
+                }
+              }
+            },
+            "description": "Changed; every other session of the account is revoked"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_credentials": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "invalid_credentials",
+                        "message": "invalid credentials"
+                      },
+                      "meta": {
+                        "attempts_remaining": 3
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The current password is wrong"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "invalid request"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "email"
+                            ],
+                            "type": "value_error"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too short, or unchanged"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "account_locked": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "account_locked",
+                        "message": "account locked"
+                      },
+                      "meta": {
+                        "retry_after_s": 872
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Temporarily locked"
+          }
+        },
+        "summary": "Change my password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/admin/api/auth/login": {
       "post": {
         "operationId": "login_admin_api_auth_login_post",
@@ -7177,6 +9202,7 @@
                         "admin": {
                           "email": "editor@example.com",
                           "id": 3,
+                          "must_change_password": false,
                           "name": "\u0645\u062d\u0631\u0631",
                           "role": "editor"
                         },
@@ -7427,6 +9453,7 @@
                       "data": {
                         "email": "editor@example.com",
                         "id": 3,
+                        "must_change_password": false,
                         "name": "\u0645\u062d\u0631\u0631",
                         "role": "editor"
                       },
@@ -7546,6 +9573,7 @@
                         "admin": {
                           "email": "editor@example.com",
                           "id": 3,
+                          "must_change_password": false,
                           "name": "\u0645\u062d\u0631\u0631",
                           "role": "editor"
                         },
@@ -8957,6 +10985,165 @@
           }
         },
         "summary": "Update a channel; the fields it changes are locked against importers",
+        "tags": [
+          "channels"
+        ]
+      }
+    },
+    "/admin/api/channels/{channel_id}/frequency-changes": {
+      "get": {
+        "operationId": "channel_frequency_changes_admin_api_channels__channel_id__frequency_changes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Channel Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "frequency_changes_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "actor": "\u0645\u062d\u0631\u0631",
+                          "detected_at": "2026-11-06T17:05:00Z",
+                          "id": 55,
+                          "new": "11843 H 27500",
+                          "old": "11766 H 27500",
+                          "source": "admin"
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_FrequencyHistoryRow__"
+                }
+              }
+            },
+            "description": "The newest 100 changes, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "channel_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "channel_not_found",
+                        "message": "channel not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A8: the frequency changes followers were told about, newest first",
         "tags": [
           "channels"
         ]
@@ -13700,6 +15887,1348 @@
         "summary": "Upload an image (\u2264 2 MB) or a voice clip (\u2264 1 MB)",
         "tags": [
           "media"
+        ]
+      }
+    },
+    "/admin/api/notifications": {
+      "get": {
+        "operationId": "list_notifications_admin_api_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z_]{1,32}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{1,16}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notifications_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "created_at": "2026-11-06T18:40:00Z",
+                          "due_at": "2026-11-06T18:40:00Z",
+                          "error": null,
+                          "etag": "\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"",
+                          "failed": 12,
+                          "id": 9012,
+                          "is_correction": false,
+                          "is_test": false,
+                          "recipients": 2410,
+                          "sent": 2398,
+                          "sent_at": "2026-11-06T18:40:09Z",
+                          "status": "sent",
+                          "target": {
+                            "id": 48213,
+                            "kind": "match_core",
+                            "label": "\u0627\u0644\u0623\u0647\u0644\u064a \u00d7 \u0627\u0644\u0632\u0645\u0627\u0644\u0643"
+                          },
+                          "type": "goal"
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z",
+                        "next_cursor": null
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_NotificationRow__"
+                }
+              }
+            },
+            "description": "The log, newest first, with its `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Read the outbox log",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/admin/api/notifications/announcements": {
+      "post": {
+        "operationId": "create_announcement_admin_api_notifications_announcements_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notification_ok": {
+                    "value": {
+                      "data": {
+                        "created_at": "2026-11-06T18:40:00Z",
+                        "due_at": "2026-11-06T18:40:00Z",
+                        "error": null,
+                        "etag": "\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"",
+                        "failed": 12,
+                        "id": 9012,
+                        "is_correction": false,
+                        "is_test": false,
+                        "recipients": 2410,
+                        "sent": 2398,
+                        "sent_at": "2026-11-06T18:40:09Z",
+                        "status": "sent",
+                        "target": {
+                          "id": 48213,
+                          "kind": "match_core",
+                          "label": "\u0627\u0644\u0623\u0647\u0644\u064a \u00d7 \u0627\u0644\u0632\u0645\u0627\u0644\u0643"
+                        },
+                        "type": "goal"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NotificationRow_"
+                }
+              }
+            },
+            "description": "Queued; `due_at` is now or `send_at`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "match_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "match_not_found",
+                        "message": "match not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Compose an announcement or a scheduled notification",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/admin/api/notifications/reach": {
+      "get": {
+        "operationId": "get_reach_admin_api_notifications_reach_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "pattern": "^(all|team|competition|match|channel)$",
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "reach_ok": {
+                    "value": {
+                      "data": {
+                        "devices": 41230
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NotificationReach_"
+                }
+              }
+            },
+            "description": "How many devices the audience reaches"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Count the devices an audience reaches",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/admin/api/notifications/test": {
+      "post": {
+        "operationId": "send_test_admin_api_notifications_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSendCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notification_ok": {
+                    "value": {
+                      "data": {
+                        "created_at": "2026-11-06T18:40:00Z",
+                        "due_at": "2026-11-06T18:40:00Z",
+                        "error": null,
+                        "etag": "\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"",
+                        "failed": 12,
+                        "id": 9012,
+                        "is_correction": false,
+                        "is_test": false,
+                        "recipients": 2410,
+                        "sent": 2398,
+                        "sent_at": "2026-11-06T18:40:09Z",
+                        "status": "sent",
+                        "target": {
+                          "id": 48213,
+                          "kind": "match_core",
+                          "label": "\u0627\u0644\u0623\u0647\u0644\u064a \u00d7 \u0627\u0644\u0632\u0645\u0627\u0644\u0643"
+                        },
+                        "type": "goal"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NotificationRow_"
+                }
+              }
+            },
+            "description": "Queued to the caller's test device"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Send a test notification to my saved device",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/admin/api/notifications/test-device": {
+      "get": {
+        "operationId": "get_test_device_admin_api_notifications_test_device_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "test_device_ok": {
+                    "value": {
+                      "data": {
+                        "app_version": "0.6.0+60",
+                        "device_id": 812,
+                        "has_push_token": true,
+                        "platform": "android"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Union_TestDeviceRow__NoneType__"
+                }
+              }
+            },
+            "description": "My saved test device, or null",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          }
+        },
+        "summary": "My test device",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "put_test_device_admin_api_notifications_test_device_put",
+        "parameters": [
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDevicePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "test_device_ok": {
+                    "value": {
+                      "data": {
+                        "app_version": "0.6.0+60",
+                        "device_id": 812,
+                        "has_push_token": true,
+                        "platform": "android"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Union_TestDeviceRow__NoneType__"
+                }
+              }
+            },
+            "description": "Saved",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "device_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "device_not_found",
+                        "message": "device not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "Save my test device (`If-Match` required)",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/admin/api/notifications/{notification_id}/cancel": {
+      "post": {
+        "operationId": "cancel_notification_admin_api_notifications__notification_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Notification Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notification_ok": {
+                    "value": {
+                      "data": {
+                        "created_at": "2026-11-06T18:40:00Z",
+                        "due_at": "2026-11-06T18:40:00Z",
+                        "error": null,
+                        "etag": "\"5d0e8a3b71c94f26b0a1d7e3c94b2f18\"",
+                        "failed": 12,
+                        "id": 9012,
+                        "is_correction": false,
+                        "is_test": false,
+                        "recipients": 2410,
+                        "sent": 2398,
+                        "sent_at": "2026-11-06T18:40:09Z",
+                        "status": "sent",
+                        "target": {
+                          "id": 48213,
+                          "kind": "match_core",
+                          "label": "\u0627\u0644\u0623\u0647\u0644\u064a \u00d7 \u0627\u0644\u0632\u0645\u0627\u0644\u0643"
+                        },
+                        "type": "goal"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NotificationRow_"
+                }
+              }
+            },
+            "description": "Cancelled"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notification_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "notification_not_found",
+                        "message": "notification not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "Cancel a pending announcement (`If-Match` required)",
+        "tags": [
+          "notifications"
         ]
       }
     },
@@ -18825,6 +22354,859 @@
         "summary": "Map a name to an entity: writes the alias, used from the next run",
         "tags": [
           "unresolved-names"
+        ]
+      }
+    },
+    "/admin/api/users": {
+      "get": {
+        "operationId": "list_users_admin_api_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "users_ok": {
+                    "value": {
+                      "data": [
+                        {
+                          "email": "editor@example.com",
+                          "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"",
+                          "id": 3,
+                          "is_active": true,
+                          "last_login_at": "2026-11-06T09:12:00Z",
+                          "locked_for_s": 660,
+                          "must_change_password": false,
+                          "name": "\u0645\u062d\u0631\u0631",
+                          "role": "editor"
+                        }
+                      ],
+                      "error": null,
+                      "meta": {
+                        "count": 1,
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AdminUserRow__"
+                }
+              }
+            },
+            "description": "Accounts, with the list's `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The list hasn't changed since `If-None-Match`; no body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          }
+        },
+        "summary": "A16: every staff account, with its lock time and temporary-password flag",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "create_user_admin_api_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "user_created": {
+                    "value": {
+                      "data": {
+                        "temporary_password": "a temporary passphrase",
+                        "user": {
+                          "email": "editor@example.com",
+                          "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"",
+                          "id": 3,
+                          "is_active": true,
+                          "last_login_at": "2026-11-06T09:12:00Z",
+                          "locked_for_s": 660,
+                          "must_change_password": false,
+                          "name": "\u0645\u062d\u0631\u0631",
+                          "role": "editor"
+                        }
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_UserWithPassword_"
+                }
+              }
+            },
+            "description": "Created; the temporary password is shown once (`no-store`)",
+            "headers": {
+              "Cache-Control": {
+                "description": "`no-store`: the password must not be cached",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "email_taken": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "email_taken",
+                        "message": "email taken"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The email is already used"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "A16: create an account; it gets a temporary password it must change at the first sign-in",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/admin/api/users/{user_id}": {
+      "patch": {
+        "operationId": "patch_user_admin_api_users__user_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "User Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "user_ok": {
+                    "value": {
+                      "data": {
+                        "email": "editor@example.com",
+                        "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"",
+                        "id": 3,
+                        "is_active": true,
+                        "last_login_at": "2026-11-06T09:12:00Z",
+                        "locked_for_s": 660,
+                        "must_change_password": false,
+                        "name": "\u0645\u062d\u0631\u0631",
+                        "role": "editor"
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AdminUserRow_"
+                }
+              }
+            },
+            "description": "The saved account, with its new `ETag`",
+            "headers": {
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "admin_user_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "admin_user_not_found",
+                        "message": "admin user not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "cannot_change_self": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "cannot_change_self",
+                        "message": "cannot change self"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "last_admin": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "last_admin",
+                        "message": "last admin"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale, or the change is refused (`cannot_change_self`, `last_admin`)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation_error": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "validation_error",
+                        "message": "validation error"
+                      },
+                      "meta": {
+                        "errors": [
+                          {
+                            "loc": [
+                              "body",
+                              "stadium"
+                            ],
+                            "type": "string_too_long"
+                          }
+                        ]
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "A16: rename, change the role or switch an account on/off",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/admin/api/users/{user_id}/reset-password": {
+      "post": {
+        "operationId": "reset_password_admin_api_users__user_id__reset_password_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "User Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current ETag, e.g. `\"3f9a\u2026\"`. Required: without it the answer is `428`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "user_reset": {
+                    "value": {
+                      "data": {
+                        "temporary_password": "a temporary passphrase",
+                        "user": {
+                          "email": "editor@example.com",
+                          "etag": "\"a41c7e09b3d25f86c1e0947d2b6a3f5e\"",
+                          "id": 3,
+                          "is_active": true,
+                          "last_login_at": "2026-11-06T09:12:00Z",
+                          "locked_for_s": 660,
+                          "must_change_password": false,
+                          "name": "\u0645\u062d\u0631\u0631",
+                          "role": "editor"
+                        }
+                      },
+                      "error": null,
+                      "meta": {
+                        "generated_at": "2026-10-30T14:00:00Z"
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_UserWithPassword_"
+                }
+              }
+            },
+            "description": "The account's new temporary password (`no-store`); every session is revoked",
+            "headers": {
+              "Cache-Control": {
+                "description": "`no-store`: the password must not be cached",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "description": "The entity's strong version (first 32 hex of its SHA-256), quoted. Send it as `If-Match`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "token_expired": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "token_expired",
+                        "message": "token expired"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  },
+                  "unauthenticated": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "unauthenticated",
+                        "message": "unauthenticated"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No bearer token, a bad one, or an expired one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "forbidden",
+                        "message": "forbidden"
+                      },
+                      "meta": {
+                        "required_role": "admin"
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The role is below the route's requirement"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "admin_user_not_found": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "admin_user_not_found",
+                        "message": "admin user not found"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "edit_conflict": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:58:41Z",
+                        "changed_by": {
+                          "kind": "admin",
+                          "name": "\u0633\u0627\u0631\u0629"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  },
+                  "edit_conflict_source": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "edit_conflict",
+                        "message": "edit conflict"
+                      },
+                      "meta": {
+                        "changed_at": "2026-10-30T13:00:12Z",
+                        "changed_by": {
+                          "kind": "source",
+                          "name": "ysscores"
+                        },
+                        "current_etag": "\"3f9a0c1d5b7e2a64c8d01f93be5a7d20\""
+                      },
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is stale: someone else changed the entity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "precondition_required": {
+                    "value": {
+                      "data": null,
+                      "error": {
+                        "code": "precondition_required",
+                        "message": "precondition required"
+                      },
+                      "meta": {},
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`If-Match` is missing"
+          }
+        },
+        "summary": "A16: reset an account's password; it must change it at the next sign-in",
+        "tags": [
+          "users"
         ]
       }
     }

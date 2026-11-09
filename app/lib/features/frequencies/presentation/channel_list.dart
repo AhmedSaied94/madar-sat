@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/format/clock.dart';
 import '../../../core/network/generated/models/category.dart';
 import '../../../core/network/generated/models/channel_carriage.dart';
 import '../../../core/theme/madar_line.dart';
@@ -17,6 +18,14 @@ import 'open_reception.dart';
 ///
 /// The rows build lazily, so a satellite with 130 channels stays cheap. Opening a row shows
 /// the S3 details in place, one row at a time.
+/// How long a changed frequency keeps its badge on S5.2 (PB S5.2, FR-061).
+const Duration _changedBadgeFor = Duration(days: 30);
+
+/// [changedAt] when it's recent enough for the badge, otherwise null.
+@visibleForTesting
+DateTime? changedRecently(DateTime? changedAt, {required DateTime now}) =>
+    changedAt != null && now.difference(changedAt) <= _changedBadgeFor ? changedAt : null;
+
 class ChannelList extends ConsumerWidget {
   const ChannelList({
     super.key,
@@ -40,6 +49,7 @@ class ChannelList extends ConsumerWidget {
     final query = ref.watch(channelSearchProvider(satelliteId));
     final openId = ref.watch(expandedChannelProvider(satelliteId));
     final rows = filterChannels(channels, category: category, query: query);
+    final now = ref.watch(clockProvider)();
 
     if (rows.isEmpty) {
       return query.trim().isNotEmpty
@@ -62,6 +72,7 @@ class ChannelList extends ConsumerWidget {
         final open = channel.id == openId;
         return CarriageRow(
           key: ValueKey(channel.id),
+          changedAt: changedRecently(channel.frequencyChangedAt, now: now),
           carriage: open ? channel : _inSatellite(channel),
           expanded: open,
           onTap: () => ref.read(expandedChannelProvider(satelliteId).notifier).toggle(channel.id),

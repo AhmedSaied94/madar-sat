@@ -13,6 +13,13 @@ importScripts('https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging-compat.js');
 importScripts('firebase-config.js');
 
+// The routes a push may open, the same shapes as `parsePushRoute` in
+// lib/core/platform/push_routes.dart. test/web/messaging_sw_routes_test.dart reads this pattern
+// between its markers and checks it against that function's table. Change both.
+// push-route-pattern:start
+const PUSH_ROUTE_PATTERN = /^\/(?:match\/[1-9][0-9]{0,9}(?:\?section=channels)?|channel\/[1-9][0-9]{0,9})?$/;
+// push-route-pattern:end
+
 if (self.MADAR_FIREBASE_CONFIG && self.MADAR_FIREBASE_CONFIG.apiKey) {
   firebase.initializeApp(self.MADAR_FIREBASE_CONFIG);
 
@@ -32,18 +39,23 @@ if (self.MADAR_FIREBASE_CONFIG && self.MADAR_FIREBASE_CONFIG.apiKey) {
     });
   });
 
+  // A route of no known shape opens the app and goes nowhere (FR-059). `navigate` rejects on a
+  // window this worker doesn't control, such as a PWA open in a background tab, so that falls
+  // back to a new window.
   self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const route = (event.notification.data || {}).route || '/';
+    const raw = (event.notification.data || {}).route;
+    const route = typeof raw === 'string' && PUSH_ROUTE_PATTERN.test(raw) ? raw : null;
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
         for (const client of windows) {
           if ('focus' in client) {
             client.focus();
-            return client.navigate(route);
+            if (route === null) return undefined;
+            return client.navigate(route).catch(() => clients.openWindow(route));
           }
         }
-        return clients.openWindow(route);
+        return clients.openWindow(route === null ? '/' : route);
       }),
     );
   });
