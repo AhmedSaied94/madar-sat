@@ -64,6 +64,9 @@ MAX_BROADCAST_LABEL = 80
 SLOT_SEPARATOR = " · "
 # The old tool's end-of-match marker, kept because a football row can appear on these pages.
 FOOTBALL_SPORTS = frozenset({"football", "soccer", "footballsoccer"})
+# Skips that mean the record itself still reads: a sport this run doesn't import, or the site's
+# known broken pair. Every other reason says a field moved or changed shape (B2-R1-1, FR-037).
+EXPECTED_SKIPS = frozenset({"football", "other_sport", "same_team_twice"})
 
 _MAGIC_LINK = re.compile(r"index\.php\?option=com_magictable[^\"'`\s<>\\]+", re.IGNORECASE)
 _ACCESS_KEY = re.compile(r"[?&]accesskey=\d+", re.IGNORECASE)
@@ -187,12 +190,21 @@ class SporteventzAdapter:
         records = payload["Records"]
         records = records if isinstance(records, list) else ([records] if records else [])
         items: list[ParsedFixture] = []
+        first_skip = len(self.skipped)
         for record in records:
             if not isinstance(record, dict):
+                self._skip("?", "not_an_object")
                 continue
             item = self._fixture(record)
             if item is not None:
                 items.append(item)
+        if records and not items:
+            # Records that all fail to read are a changed page, at once: the 7-day quiet grace is
+            # for an answer with no records, never for one whose records no longer read (FR-037).
+            unreadable = _by_reason(self.skipped[first_skip:], exclude=EXPECTED_SKIPS)
+            if unreadable:
+                found = ", ".join(f"{reason}={count}" for reason, count in unreadable.items())
+                raise LayoutChanged(f"none of the {len(records)} records reads ({found})")
         return items
 
     def _fixture(self, record: dict[str, object]) -> ParsedFixture | None:
@@ -234,6 +246,10 @@ class SporteventzAdapter:
     def _skip(self, ref: str, reason: str) -> None:
         self.skipped.append({"ref": ref, "reason": reason})
 
+    def skip_counts(self) -> dict[str, int]:
+        """What ``parse`` refused so far, counted by reason, for the run's log and ``run.json``."""
+        return _by_reason(self.skipped)
+
     # --- normalize -----------------------------------------------------------------------
 
     def normalize(self, item: ParsedFixture) -> NormalizedFixture:
@@ -255,6 +271,15 @@ class SporteventzAdapter:
             sport=item.sport,
             broadcasts=item.broadcasts,
         )
+
+
+def _by_reason(skipped: list[dict[str, str]], *, exclude: frozenset[str] = frozenset()) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for entry in skipped:
+        reason = entry["reason"]
+        if reason not in exclude:
+            counts[reason] = counts.get(reason, 0) + 1
+    return counts
 
 
 def _is_data_url(url: str) -> bool:

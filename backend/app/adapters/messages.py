@@ -39,6 +39,9 @@ MAX_BROADCAST_PAGES = 24
 MAX_TOTAL_BYTES = 16 * 1024 * 1024
 MAX_CHANNEL_NAME = 120
 MAX_COUNTRY = 80
+# ``parse_skipped``: what the parser refused, as reason → count (B2-R1-1). A handful of reasons exist.
+MAX_SKIP_REASONS = 20
+MAX_SKIP_REASON = 40
 # The two message kinds (contracts §ScrapeResult v2).
 Kind = Literal["fixtures", "broadcasts"]
 KIND_FIXTURES: Kind = "fixtures"
@@ -117,6 +120,10 @@ with warnings.catch_warnings():
         # Broadcasts only: how many matches were planned, and the ones no page answered for.
         targets: int | None = Field(default=None, ge=0)
         unmatched: list[UnmatchedMatch] = Field(default_factory=list)
+        # Fixtures only, optional: the records ``parse`` refused, counted by reason, so the run's
+        # log and ``run.json`` can show them (FR-030). Left off the wire when empty, so an ingest
+        # one release behind still reads every message that has none.
+        parse_skipped: dict[str, int] = Field(default_factory=dict)
 
         @classmethod
         def accepted_schemas(cls, current: int = CURRENT_SCHEMA) -> frozenset[int]:
@@ -134,6 +141,16 @@ with warnings.catch_warnings():
         @classmethod
         def _short_error(cls, value: str | None) -> str | None:
             return value[:MAX_ERROR] if value else None
+
+        @field_validator("parse_skipped")
+        @classmethod
+        def _bounded_skips(cls, value: dict[str, int]) -> dict[str, int]:
+            if len(value) > MAX_SKIP_REASONS:
+                raise ValueError(f"parse_skipped holds more than {MAX_SKIP_REASONS} reasons")
+            for reason, count in value.items():
+                if not reason or len(reason) > MAX_SKIP_REASON or count < 0:
+                    raise ValueError("a parse_skipped entry is a short reason and a count of 0 or more")
+            return value
 
         @model_validator(mode="after")
         def _items_match_the_kind(self) -> Self:
@@ -186,6 +203,7 @@ with warnings.catch_warnings():
             kind: Kind = KIND_FIXTURES,
             targets: int | None = None,
             unmatched: Sequence[UnmatchedMatch] = (),
+            parse_skipped: Mapping[str, int] | None = None,
         ) -> ScrapeResult:
             cap = cls.page_cap(kind, source)
             if len(pages) > cap:
@@ -206,6 +224,7 @@ with warnings.catch_warnings():
                 error=error,
                 targets=targets,
                 unmatched=list(unmatched),
+                parse_skipped=dict(parse_skipped or {}),
             )
 
         @classmethod
@@ -254,7 +273,7 @@ with warnings.catch_warnings():
 
         def as_task_arg(self) -> dict[str, Any]:
             """The payload ``adapters.ingest`` receives (JSON-serialisable)."""
-            return self.model_dump(mode="json")
+            return self.model_dump(mode="json", exclude=None if self.parse_skipped else {"parse_skipped"})
 
 
 def _inflate(page: PageMessage) -> bytes:

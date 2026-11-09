@@ -68,8 +68,13 @@ the breaker. That is rare, because the list covers many leagues. Check the page,
 
 **sporteventz's quiet days.** It lists about 40 events in two weeks, so a valid answer with no
 records is normal: its zero-items alarm waits 7 days after the last run that had records (D6
-FR-039). A missing access key or `Records` key is a changed page and alarms at once. If the alarm
-does fire, check the four sport pages in a browser before touching the parser.
+FR-039). The grace covers only an answer with no records. A changed page fails the run with
+`error = layout_changed`, which counts toward the breaker at once, grace or not: a missing access
+key or `Records` key, or a sport's answer whose records all fail to read (a renamed `Team1`/`Team2`,
+a new `Begin` format). Records skipped as another sport (`football`, `other_sport`) or as a team
+playing itself (`same_team_twice`) never fail a run. Every run's `import_runs.log` and `run.json`
+carry `parse_skipped`, the refused records counted by reason, so A13 shows why a run failed or came
+back light. If the alarm does fire, check the four sport pages in a browser before touching the parser.
 
 ## A stopped run is not an alert
 
