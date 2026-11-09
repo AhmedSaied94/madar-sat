@@ -426,7 +426,12 @@ function DeviceIsland({ device }: { device: Pick<TestDeviceRow, 'platform' | 'ap
   );
 }
 
-/** What the test send's outbox row did: queued, then sent or failed with its reason (A-R1-8). */
+/**
+ * What the test send's outbox row did: queued, then delivered, not delivered or failed, with its
+ * reason (A-R1-8). The dispatcher marks a row `sent` once it has walked the audience whatever its
+ * counts, so only `sent ≥ 1` means the device got it; a stale or rejected token ends `sent: 0`
+ * (A-R2-1, FR-042).
+ */
 function TestResult({
   row,
   gaveUp,
@@ -436,8 +441,16 @@ function TestResult({
   gaveUp: boolean;
   device: Pick<TestDeviceRow, 'platform' | 'app_version'> | null;
 }): ReactElement {
-  const failed = row.status === 'failed' || row.status === 'cancelled';
-  const lead = row.status === 'sent' ? copy.composer.testDelivered : failed ? copy.composer.testFailed : copy.composer.testQueued;
+  const finished = row.status === 'sent';
+  const delivered = finished && row.sent > 0;
+  const failed = row.status === 'failed' || row.status === 'cancelled' || (finished && !delivered);
+  const lead = delivered
+    ? copy.composer.testDelivered
+    : finished
+      ? copy.composer.testNotDelivered
+      : failed
+        ? copy.composer.testFailed
+        : copy.composer.testQueued;
   const reason = row.error === null ? null : (copy.reason[row.error] ?? null);
   return (
     <p

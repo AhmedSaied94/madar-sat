@@ -125,7 +125,7 @@ function serve(
     conflict?: boolean;
     testRefused?: string;
     /** What the outbox says the test row did, when the composer reads it back (A-R1-8). */
-    testOutcome?: { status: string; error: string | null };
+    testOutcome?: { status: string; error: string | null; sent?: number; failed?: number };
   } = {},
 ): Served {
   const served: Served = { posts: [], tests: [], reach: [], devicePuts: [], deviceReads: 0 };
@@ -167,11 +167,12 @@ function serve(
       return HttpResponse.json(envelope(outboxRow), { status: 201 });
     }),
     http.get('*/admin/api/notifications', () => {
-      const outcome = overrides.testOutcome ?? { status: 'pending', error: null };
-      const sent = outcome.status === 'sent' ? 1 : 0;
-      const failed = outcome.status === 'failed' ? 1 : 0;
+      const { status, error, ...counts } = overrides.testOutcome ?? { status: 'pending', error: null };
+      // The row's own counts when the test gives them; else what its status usually means.
+      const sent = counts.sent ?? (status === 'sent' ? 1 : 0);
+      const failed = counts.failed ?? (status === 'failed' ? 1 : 0);
       return HttpResponse.json(
-        envelope([{ ...outboxRow, ...outcome, recipients: 1, sent, failed }], { next_cursor: null }),
+        envelope([{ ...outboxRow, status, error, recipients: 1, sent, failed }], { next_cursor: null }),
       );
     }),
   );
@@ -420,6 +421,35 @@ describe('the composer', () => {
     await waitFor(() => expect(result).toHaveTextContent('فشل الإرسال التجريبي'));
     expect(within(result).getByText('FCM 503').closest('bdi')).toHaveAttribute('dir', 'ltr');
     expect(result).not.toHaveTextContent('أُرسل التجريبي');
+  });
+
+  it.each([
+    ['rejected by the push service', 1],
+    ['dropped as a stale token', 0],
+  ])('reports a finished test send that reached nobody (%s) as not delivered (A-R2-1)', async (_case, failed) => {
+    // The dispatcher marks a row sent once it has walked the audience, whatever its counts.
+    serve({ testOutcome: { status: 'sent', error: null, sent: 0, failed } });
+    renderComposer();
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال تجريبي لجهازي' }));
+
+    const result = await screen.findByTestId('test-result');
+    await waitFor(() => expect(result).toHaveTextContent('لم يصل التجريبي إلى'));
+    expect(result).not.toHaveTextContent('أُرسل التجريبي');
+    expect(within(result).getByText('Android').closest('bdi')).toHaveAttribute('dir', 'ltr');
+  });
+
+  it('gives the reason of a finished test send that reached nobody, when the row has one (A-R2-1)', async () => {
+    serve({ testOutcome: { status: 'sent', error: 'FCM INVALID_ARGUMENT', sent: 0, failed: 1 } });
+    renderComposer();
+
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'إرسال تجريبي لجهازي' }));
+
+    const result = await screen.findByTestId('test-result');
+    await waitFor(() => expect(result).toHaveTextContent('لم يصل التجريبي إلى'));
+    expect(within(result).getByText('FCM INVALID_ARGUMENT').closest('bdi')).toHaveAttribute('dir', 'ltr');
   });
 
   it('asks for a device id when none is saved, and saves one with If-Match', async () => {

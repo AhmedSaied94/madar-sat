@@ -817,6 +817,7 @@ export const notifications = {
     testQueued: 'التجريبي في صندوق الإرسال، بانتظار إرساله إلى',
     testDelivered: 'أُرسل التجريبي إلى',
     testFailed: 'فشل الإرسال التجريبي إلى',
+    testNotDelivered: 'لم يصل التجريبي إلى',
     testUnconfirmed: 'لم يؤكد صندوق الإرسال النتيجة بعد',
     noDevice: 'لا جهاز محفوظ بعد',
     deviceId: 'معرّف الجهاز',

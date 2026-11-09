@@ -348,6 +348,12 @@ These tasks come from [reviews/a-round-1.md](reviews/a-round-1.md).
 - [X] A-R1-7 [US3] Offer a channel as the announcement's deep link in `admin/src/features/notifications/Composer.tsx` (:52 allows `channel`, but :229-231 offers only `MatchPicker` and `pickTarget` at :83 always sets `match`), using `ChannelPicker`'s single-select mode. Test both target types end to end in `Composer.test.tsx`, including the request's `target` and the preview's route. (HIGH, per US3 scenario 2, contracts/admin-screens.md composer)
 - [X] A-R1-8 [US3] Report the test send's real result in `admin/src/features/notifications/Composer.tsx` (`onTestSend`, :150-164): today any `201` toasts «أُرسل التجريبي إلى …» although the returned row is `pending`, and the raw platform is concatenated into the Arabic text. Show the row's status (queued, then sent or failed with its reason from the log), with the platform from `composer.platforms` in an LTR island. Test pending, sent and failed rows in `Composer.test.tsx`. (HIGH, per FR-042, T073)
 
+### Review fixes (round 2)
+
+These tasks come from [reviews/a-round-2.md](reviews/a-round-2.md).
+
+- [X] A-R2-1 [US3] Report a test send as delivered only when its row delivered something, in `admin/src/features/notifications/Composer.tsx` (`TestResult`, :439-440): today the wording comes from `row.status` alone, but the dispatcher marks a row `sent` once it has walked the audience whatever the counts (`backend/app/notifications/dispatcher.py:653`), so a stale (`UNREGISTERED`) token gives `sent: 0, failed: 0` and a rejected one `sent: 0, failed: 1`, and both read «أُرسل التجريبي إلى …» although nothing arrived. After the fix, a finished row with `sent ≥ 1` reads as delivered; a `sent` row with `sent: 0` reads as not delivered, with the reason when `error` has one (in Arabic from `copy.reason`, else raw in an LTR island), and `failed` stays as it is. Change the test mock at `admin/src/features/notifications/Composer.test.tsx:169-175` to take the row's counts, and add failing tests first for `{status: 'sent', sent: 0, failed: 1}` and `{status: 'sent', sent: 0, failed: 0}` that assert «أُرسل التجريبي» is absent. (HIGH, per FR-042, A-R1-8)
+
 ---
 
 ## Lane M
