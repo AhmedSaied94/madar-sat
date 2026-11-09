@@ -64,7 +64,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: '/match/:id',
         redirect: _requireIntegerId,
-        builder: (context, state) => MatchDetailPage(matchId: _idOf(state)),
+        builder: (context, state) => MatchDetailPage(
+          matchId: _idOf(state),
+          section: state.uri.queryParameters['section'],
+        ),
       ),
       GoRoute(
         path: '/my-satellites',

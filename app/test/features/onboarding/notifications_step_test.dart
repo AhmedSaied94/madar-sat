@@ -16,6 +16,12 @@ class _FakePush implements PushService {
   @override
   final bool canRequestPermission;
   final bool granted;
+
+  @override
+  Future<PushPermissionState> permission() async => PushPermissionState.allowed;
+
+  @override
+  Stream<ForegroundPush> get foregroundMessages => const Stream.empty();
   int prompts = 0;
 
   @override

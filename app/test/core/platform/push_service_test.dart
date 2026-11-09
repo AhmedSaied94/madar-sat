@@ -7,7 +7,10 @@ import 'package:madar_sat/core/platform/push_service.dart';
 
 /// A browser/OS answer, scripted: what `firebase_messaging` would say.
 class _FakeMessaging implements PushMessaging {
-  AuthorizationStatus permission = AuthorizationStatus.authorized;
+  AuthorizationStatus permissionAnswer = AuthorizationStatus.authorized;
+
+  /// What `permission()` answers.
+  AuthorizationStatus permissionNow = AuthorizationStatus.notDetermined;
 
   final List<String?> registeredWith = [];
   final StreamController<String> registered = StreamController<String>.broadcast();
@@ -23,8 +26,11 @@ class _FakeMessaging implements PushMessaging {
   @override
   Future<AuthorizationStatus> requestPermission() async {
     permissionCalls += 1;
-    return permission;
+    return permissionAnswer;
   }
+
+  @override
+  Future<AuthorizationStatus> permission() async => permissionNow;
 
   @override
   Future<void> register({String? vapidKey}) async {
@@ -106,10 +112,10 @@ void main() {
   });
 
   test('permission is granted only for authorized or provisional', () async {
-    messaging.permission = AuthorizationStatus.denied;
+    messaging.permissionAnswer = AuthorizationStatus.denied;
     expect(await service().requestPermission(), isFalse);
 
-    messaging.permission = AuthorizationStatus.provisional;
+    messaging.permissionAnswer = AuthorizationStatus.provisional;
     expect(await service().requestPermission(), isTrue);
   });
 
@@ -174,14 +180,83 @@ void main() {
     expect(tokens, ['fcm-1', 'fcm-2']);
   });
 
-  test('a foreground message opens its route, and one without a route opens nothing', () async {
-    final routes = service().openedRoutes;
-    final first = routes.first;
+  test('permission maps the platform answer, and never prompts', () async {
+    const answers = {
+      AuthorizationStatus.authorized: PushPermissionState.allowed,
+      AuthorizationStatus.provisional: PushPermissionState.allowed,
+      AuthorizationStatus.denied: PushPermissionState.denied,
+      AuthorizationStatus.deniedPermanently: PushPermissionState.denied,
+      AuthorizationStatus.notDetermined: PushPermissionState.notAsked,
+    };
+    for (final answer in answers.entries) {
+      messaging.permissionNow = answer.key;
+      expect(await service().permission(), answer.value);
+    }
+    expect(messaging.permissionCalls, 0);
+  });
 
-    messaging.foreground.add(const RemoteMessage(data: {'no_route': '1'}));
+  test('a foreground message emits no route: it can only show a banner', () async {
+    final emitted = <String>[];
+    final subscription = service().openedRoutes.listen(emitted.add);
+    addTearDown(subscription.cancel);
+
     messaging.foreground.add(const RemoteMessage(data: {'route': '/match/42'}));
+    await pumpEventQueue();
 
-    expect(await first, '/match/42');
+    expect(emitted, isEmpty);
+  });
+
+  test('a foreground message reaches the banner with its title, body and route', () async {
+    final first = service().foregroundMessages.first;
+
+    messaging.foreground.add(
+      const RemoteMessage(
+        notification: RemoteNotification(title: 'هدف', body: 'الأهلي 1 – 0'),
+        data: {'route': '/match/42'},
+      ),
+    );
+
+    final push = await first;
+    expect(push.title, 'هدف');
+    expect(push.body, 'الأهلي 1 – 0');
+    expect(push.route?.location, '/match/42');
+  });
+
+  test('a foreground message with a route this build refuses has none', () async {
+    final first = service().foregroundMessages.first;
+
+    messaging.foreground.add(
+      const RemoteMessage(
+        notification: RemoteNotification(title: 'هدف'),
+        data: {'route': '/evil'},
+      ),
+    );
+
+    expect((await first).route, isNull);
+  });
+
+  test('a foreground message with nothing to show is dropped', () async {
+    final emitted = <ForegroundPush>[];
+    final subscription = service().foregroundMessages.listen(emitted.add);
+    addTearDown(subscription.cancel);
+
+    messaging.foreground.add(const RemoteMessage(data: {'route': '/match/42'}));
+    await pumpEventQueue();
+
+    expect(emitted, isEmpty);
+  });
+
+  test('a tapped message opens only a route of a known shape', () async {
+    final emitted = <String>[];
+    final subscription = service().openedRoutes.listen(emitted.add);
+    addTearDown(subscription.cancel);
+
+    messaging.opened.add(const RemoteMessage(data: {'route': '/evil'}));
+    messaging.opened.add(const RemoteMessage(data: {'no_route': '1'}));
+    messaging.opened.add(const RemoteMessage(data: {'route': '/channel/9'}));
+    await pumpEventQueue();
+
+    expect(emitted, ['/channel/9']);
   });
 
   test('on the web the launch message is not read, and the app waits for a tap', () async {

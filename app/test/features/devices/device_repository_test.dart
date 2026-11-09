@@ -44,6 +44,12 @@ class _FakePush implements PushService {
   String? _token;
 
   @override
+  Future<PushPermissionState> permission() async => PushPermissionState.allowed;
+
+  @override
+  Stream<ForegroundPush> get foregroundMessages => const Stream.empty();
+
+  @override
   bool get canRequestPermission => true;
 
   @override
@@ -277,6 +283,86 @@ void main() {
       final failed = await database.readSyncState('follows');
       expect(failed!.dirty, isTrue);
       expect(failed.lastError, 'internal_error');
+    });
+
+    group('the device ID (FR-062, R18)', () {
+      Future<String?> stored() => database.readSetting(SettingsKeys.deviceId);
+
+      test('registering keeps it, so no extra PUT is forced', () async {
+        await launch();
+
+        expect(await stored(), '812');
+        expect(requestsTo('/v1/devices/me'), isEmpty);
+      });
+
+      test('an existing install with no ID forces one sync, then none', () async {
+        store.values[SecureKeys.deviceToken] = 'old-token';
+        store.values[SecureKeys.installId] = installId;
+        await database.writeSetting(SettingsKeys.onboardingDone, 'true');
+        await container.read(appSettingsProvider.future);
+        adapter.enqueueData(deviceBody);
+        container.listen(deviceSyncProvider, (_, _) {});
+
+        await container.read(deviceSyncProvider.notifier).sync();
+        await pumpEventQueue();
+        expect(requestsTo('/v1/devices'), isEmpty);
+        expect(requestsTo('/v1/devices/me'), hasLength(1));
+        expect(await stored(), '812');
+
+        await container.read(deviceSyncProvider.notifier).sync();
+        await pumpEventQueue();
+        expect(requestsTo('/v1/devices/me'), hasLength(1));
+      });
+
+      Future<void> existingInstall() async {
+        store.values[SecureKeys.deviceToken] = 'old-token';
+        store.values[SecureKeys.installId] = installId;
+        await database.writeSetting(SettingsKeys.onboardingDone, 'true');
+        await container.read(appSettingsProvider.future);
+        container.listen(deviceSyncProvider, (_, _) {});
+      }
+
+      test('a failed forced send holds up nothing, and tries again next time', () async {
+        await existingInstall();
+        await database.markSyncDirty('follows');
+        adapter
+          ..enqueueData(const {'teams': <int>[]})
+          ..enqueueOffline();
+
+        await container.read(deviceSyncProvider.notifier).sync();
+        await pumpEventQueue();
+
+        expect(requestsTo('/v1/devices/me/follows'), hasLength(1));
+        expect((await database.readSyncState('follows'))!.dirty, isFalse);
+        expect((await database.readSyncState('device'))?.dirty ?? false, isFalse);
+        expect(await stored(), isNull);
+
+        adapter.enqueueData(deviceBody);
+        await container.read(deviceSyncProvider.notifier).sync();
+        await pumpEventQueue();
+        expect(await stored(), '812');
+      });
+
+      test('an answer with no device is not asked for again this launch', () async {
+        await existingInstall();
+        adapter.enqueueData(null);
+
+        await container.read(deviceSyncProvider.notifier).sync();
+        await pumpEventQueue();
+        await container.read(deviceSyncProvider.notifier).sync();
+        await pumpEventQueue();
+
+        expect(requestsTo('/v1/devices/me'), hasLength(1));
+      });
+
+      test('forget() clears it', () async {
+        await launch();
+        expect(await stored(), '812');
+
+        await container.read(deviceIdentityControllerProvider.notifier).forget();
+
+        expect(await stored(), isNull);
+      });
     });
 
     test('a second launch with a stored token does not register again', () async {

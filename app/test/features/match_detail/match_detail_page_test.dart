@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:madar_sat/core/audio/clip_controller.dart';
+import 'package:madar_sat/core/config/remote_config.dart';
 import 'package:madar_sat/core/db/app_database.dart';
 import 'package:madar_sat/core/db/database_provider.dart';
 import 'package:madar_sat/core/format/bidi.dart';
@@ -18,8 +19,10 @@ import 'package:madar_sat/core/network/generated/export.dart';
 import 'package:madar_sat/core/network/swr_providers.dart';
 import 'package:madar_sat/core/network/swr_repository.dart';
 import 'package:madar_sat/core/theme/madar_theme.dart';
+import 'package:madar_sat/design/components/badges.dart';
 import 'package:madar_sat/design/components/carriage_row.dart';
 import 'package:madar_sat/design/components/empty_state.dart';
+import 'package:madar_sat/design/components/event_timeline_item.dart';
 import 'package:madar_sat/design/components/logo.dart';
 import 'package:madar_sat/design/components/search_field.dart';
 import 'package:madar_sat/design/components/skeleton.dart';
@@ -115,6 +118,7 @@ void main() {
     Brightness brightness = Brightness.dark,
     double textScale = 1,
     List<Override> overrides = const [],
+    String query = '',
   }) async {
     tester.view
       ..physicalSize = Size(360, height)
@@ -125,8 +129,10 @@ void main() {
         GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('home-stub'))),
         GoRoute(
           path: '/match/:id',
-          builder: (context, state) =>
-              MatchDetailPage(matchId: int.parse(state.pathParameters['id']!)),
+          builder: (context, state) => MatchDetailPage(
+            matchId: int.parse(state.pathParameters['id']!),
+            section: state.uri.queryParameters['section'],
+          ),
         ),
         for (final screen in const ['channel', 'team', 'competition'])
           GoRoute(
@@ -167,7 +173,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    unawaited(router.push('/match/$_matchId'));
+    unawaited(router.push('/match/$_matchId$query'));
     if (settle) await tester.pumpAndSettle();
   }
 
@@ -1226,6 +1232,271 @@ void main() {
       // Without the retry the reception links would stay off for the whole session.
       expect(api.requestsTo(_satellitesPath), hasLength(2));
       expect(find.text('فيديو الاستقبال'), findsOneWidget);
+    });
+  });
+
+  group('the live center on the page', () {
+    const on = RemoteConfigValues(
+      apiBaseUrl: 'https://api.test',
+      mediaBaseUrl: 'https://media.test',
+      minSupportedBuild: 0,
+      latestBuild: 0,
+      livePollIntervalSeconds: 30,
+      features: AppFeatures(liveCenter: true, lineups: true),
+    );
+    final flagOn = [remoteConfigProvider.overrideWithValue(on)];
+
+    LiveState liveAt(
+      int home, {
+      Status status = Status.live,
+      String minute = '67',
+      int eventCount = 0,
+    }) =>
+        LiveState(
+          matchId: _matchId,
+          eventCount: eventCount,
+          status: status,
+          estimated: false,
+          minute: minute,
+          period: Period.value2h,
+          score: Score(home: home, away: 0, homePen: null, awayPen: null),
+          statusLabel: null,
+          statusUpdatedAt: null,
+        );
+
+    const goal = MatchEvent(
+      type: MatchEventType.goal,
+      side: MatchEventSide.home,
+      minute: '12',
+      player: 'محمود كهربا',
+    );
+
+    MatchDetail withEvents({List<MatchEvent> events = const [goal]}) => standard(
+          status: Status.live,
+        ).copyWith(events: events);
+
+    /// One live poll, with the match's 60 s timer still far off.
+    Future<void> poll(WidgetTester tester) async {
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('sits after the hero and before «أين تشاهد»', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      await open(tester, overrides: flagOn);
+
+      final timeline = tester.getTopLeft(find.byType(EventTimelineItem)).dy;
+      expect(timeline, greaterThan(tester.getBottomLeft(find.byType(MatchHero)).dy - 1));
+      expect(timeline, lessThan(tester.getTopLeft(find.text('أين تشاهد')).dy));
+    });
+
+    testWidgets('a changed score reads the match once, and shows the new event', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      answerDetail(
+        withEvents(
+          events: const [
+            goal,
+            MatchEvent(
+              type: MatchEventType.goal,
+              side: MatchEventSide.home,
+              minute: '60',
+              player: 'حسين الشحات',
+            ),
+          ],
+        ),
+        etag: '"v2"',
+      );
+      await open(tester, overrides: flagOn);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [liveAt(2)];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before + 1);
+      expect(find.text('حسين الشحات'), findsOneWidget);
+    });
+
+    testWidgets('a changed status reads the match once', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      api.notModified(_matchPath);
+      await open(tester, overrides: flagOn);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [liveAt(1, status: Status.halftime)];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before + 1);
+    });
+
+    testWidgets('a new event with the same score reads the match once', (tester) async {
+      liveAnswer = [liveAt(1, eventCount: 1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      answerDetail(
+        withEvents(
+          events: const [
+            goal,
+            MatchEvent(
+              type: MatchEventType.redCard,
+              side: MatchEventSide.away,
+              minute: '60',
+              player: 'حسين الشحات',
+            ),
+          ],
+        ),
+        etag: '"v2"',
+      );
+      await open(tester, overrides: flagOn);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [liveAt(1, eventCount: 2)];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before + 1);
+      expect(find.text('حسين الشحات'), findsOneWidget);
+    });
+
+    testWidgets('a clock that moves alone reads nothing', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      await open(tester, overrides: flagOn);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [liveAt(1, minute: '68')];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before);
+    });
+
+    testWidgets('a state expiring to null reads nothing', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      await open(tester, overrides: flagOn);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before);
+    });
+
+    testWidgets('with the flag off, a changed score reads nothing extra', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(withEvents());
+      await open(tester);
+      final before = api.requestsTo(_matchPath).length;
+
+      liveAnswer = [liveAt(2)];
+      await poll(tester);
+
+      expect(api.requestsTo(_matchPath).length, before);
+      expect(find.byType(EventTimelineItem), findsNothing);
+    });
+
+    /// Enough rows that «أين تشاهد» starts well below what a phone builds.
+    MatchDetail longTimeline() => withEvents(
+          events: [
+            for (var i = 1; i <= 80; i++)
+              MatchEvent(
+                type: MatchEventType.redCard,
+                side: MatchEventSide.away,
+                minute: '$i',
+                player: 'لاعب $i',
+              ),
+          ],
+        );
+
+    testWidgets('«أين تشاهد» stays reachable under a long timeline', (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(longTimeline());
+      await open(tester, overrides: flagOn, height: 800);
+      expect(find.text('أين تشاهد'), findsNothing);
+
+      await tester.dragUntilVisible(
+        find.text('أين تشاهد'),
+        page(),
+        const Offset(0, -400),
+        maxIteration: 40,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('أين تشاهد'), findsOneWidget);
+    });
+
+    testWidgets('?section=channels scrolls once to the channels, even past unbuilt rows',
+        (tester) async {
+      liveAnswer = [liveAt(1)];
+      answerSatellites();
+      answerDetail(longTimeline());
+      api.notModified(_matchPath);
+      await open(tester, overrides: flagOn, height: 800, query: '?section=channels');
+
+      final toolbar = find.text('أين تشاهد');
+      expect(toolbar, findsOneWidget);
+      expect(tester.getTopLeft(toolbar).dy, lessThan(800));
+
+      // Once only: a scroll away is kept when the match is read again.
+      await tester.drag(page(), const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final offset = scrollOffset(tester);
+      await tester.pump(const Duration(seconds: 61));
+      await tester.pumpAndSettle();
+      expect(scrollOffset(tester), offset);
+    });
+
+    testWidgets('?section=channels scrolls with the flag off too', (tester) async {
+      answerSatellites();
+      answerDetail(standard(stadium: 'ستاد القاهرة'));
+      await open(tester, height: 300, query: '?section=channels');
+
+      expect(scrollOffset(tester), greaterThan(0));
+    });
+
+    testWidgets('a push for another match, same section, scrolls again', (tester) async {
+      answerSatellites();
+      answerDetail(standard(stadium: 'ستاد القاهرة'));
+      answerDetail(standard(stadium: 'ستاد القاهرة'));
+      api.answer(
+        '/v1/matches/9',
+        matchDetailJson(sampleMatchDetail(id: 9, carriages: standard().carriages)),
+        etag: '"v1"',
+      );
+      await open(tester, height: 300, query: '?section=channels');
+      // `go` to `go` keeps the same page, as go_router keys it by the route's pattern.
+      router.go('/match/$_matchId?section=channels');
+      await tester.pumpAndSettle();
+      await tester.drag(page(), const Offset(0, 600));
+      await tester.pumpAndSettle();
+      expect(scrollOffset(tester), 0);
+
+      router.go('/match/9?section=channels');
+      await tester.pumpAndSettle();
+
+      expect(scrollOffset(tester), greaterThan(0));
+    });
+
+    testWidgets('an unknown section changes nothing', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester, height: 300, query: '?section=other');
+
+      expect(scrollOffset(tester), 0);
+    });
+
+    testWidgets('S3\'s carriage rows never show the changed badge (FR-061)', (tester) async {
+      answerSatellites();
+      answerDetail(standard());
+      await open(tester);
+      expect(find.byType(ChangedBadge), findsNothing);
     });
   });
 

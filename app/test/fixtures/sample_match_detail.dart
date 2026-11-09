@@ -123,6 +123,8 @@ MatchDetail sampleMatchDetail({
   String? stadium,
   String? localBroadcasterEg,
   CommentatorRef? commentator,
+  List<MatchEvent> events = const [],
+  MatchLineups? lineups,
 }) {
   final kickoffAt = kickoff ?? sampleKickoffAt();
   return MatchDetail(
@@ -158,8 +160,8 @@ MatchDetail sampleMatchDetail({
     platforms: platforms,
     stadium: stadium,
     localBroadcasterEg: localBroadcasterEg,
-    events: const [],
-    lineups: null,
+    events: events,
+    lineups: lineups,
     feedId: null,
   );
 }

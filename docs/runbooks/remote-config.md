@@ -18,16 +18,45 @@ Code: `app/lib/core/config/remote_config.dart` (the keys, the validation and the
 
 ## `features`, the dark-ship switches
 
-One JSON object of on/off switches, so an unfinished screen can ship behind a value instead of behind a branch. Its value from D5 until D6:
+One JSON object of on/off switches, so an unfinished screen can ship behind a value instead of behind a branch. Both are `false` in the bundle:
 
 ```json
-{ "live_center": false }
+{ "live_center": false, "lineups": false }
 ```
 
-- `live_center` is D6's live centre. **No code reads it yet** (`grep -r live_center app/lib` is empty on D5, as the D5 contract requires), so the value changes nothing on screen today; keep it `false` until D6's lane adds the reader and says otherwise.
-- Ship a switch as `false` and turn it on when the screen is done, never the other way round: a phone that has never reached Firebase, or one started in flight mode, runs whatever the build bundled, and a switch that defaults to on ships the unfinished screen to it.
+| Switch | What it turns on |
+| --- | --- |
+| `live_center` | S3's live center: the timeline, and the score highlight. With it off, S3 looks as it did before D6 and asks the server for nothing extra |
+| `lineups` | The التشكيل tab inside the live center, for a match with lineups. It does nothing while `live_center` is off |
 
-**Owner step (T089):** in the Firebase console, add `features` with exactly the object above and **Publish changes**. A release build picks it up within an hour of its next start.
+The value is read flag by flag (`AppFeatures.parse`). Bad JSON keeps the bundle, and so does a flag that isn't a boolean, without affecting the other flag. A value applies from the app's next launch.
+
+Ship a switch as `false` and turn it on when the screen is done, never the other way round: a phone that has never reached Firebase, or one started in flight mode, runs whatever the build bundled, and a switch that defaults to on ships the unfinished screen to it.
+
+### On for testers
+
+There are no tester lists, and devices are anonymous. While Android is closed-test only and the public is on the PWA, a condition on the platform reaches exactly the testers (research R15).
+
+1. Firebase console → **Remote Config** → **Add condition**. Name it `Android testers`, with **Applies if** → **Platform** → **Android**.
+2. Open `features`, and **Add new** → **Conditional value** → `Android testers`, with this value:
+
+   ```json
+   { "live_center": true, "lineups": true }
+   ```
+
+3. Keep the default value at both `false`, and **Publish changes**.
+4. On a tester's phone, close and reopen the app. A release build fetches at most once an hour, so it can take an hour and one more launch. Open a live match with events on S3 and check the timeline shows.
+
+### On for everyone
+
+Do this only after the device walk in [D6's owner actions](../owner-actions.md#lane-m-app-5), and once the new PWA is out, since older builds ignore the flags.
+
+1. Set the default value of `features` to `{ "live_center": true, "lineups": true }`.
+2. Remove the conditional value and the `Android testers` condition, then **Publish changes**.
+
+### Turn it off
+
+Set the default value back to both `false`, remove any conditional value, and publish. S3 goes back to how it looked before D6 on each device's next launch. No release is needed.
 
 ## Set the parameters
 
